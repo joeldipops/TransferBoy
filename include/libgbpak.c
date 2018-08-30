@@ -38,7 +38,6 @@ int copy_gbRom_toRAM(byte* romData){
 
 	//copy banks to sdram
 	for(int bankCount = 0; bankCount < gbcart.rombanks; bankCount++) { //bank count
-
         //mbc1 exceptions
         if(gbcart.mapper == GB_MBC1 && (bankCount == 0x20 || bankCount == 0x40 || bankCount == 0x60))
             bankCount++;
@@ -72,38 +71,37 @@ int copy_gbRom_toRAM(byte* romData){
         for(unsigned long bankAddress = address; bankAddress <= 0xFFE0; bankAddress += SEGMENT_SIZE) { //bank offset
             memset(segment, 0xFF, SEGMENT_SIZE);
 
-            if (offset >= 22432) {
-                return 0;
-            }
-
             if(_get_gbRomAddr(bankAddress, segment) == 0) {
                 byte temp[offset];
 
                 // Increase romData's size by 32
                 memcpy(temp, romData, offset);
                 romData = malloc(offset + SEGMENT_SIZE);
+
+                if (offset >= 22400) {
+                    return -1;
+                }
+                // This line blows up when offset is larger than 22400.
+                // Some sort of size limit on memcpy.  WIll need to use an array of arrays I think.
                 memcpy(romData, temp, offset);
 
                 // Write tpak segment to RAM
 				memcpy(romData + offset, segment, SEGMENT_SIZE);
-				offset += SEGMENT_SIZE;
 
-				logInfo("%d", offset);
+				offset += SEGMENT_SIZE;
 			} else {
-                logInfo("Error - %d", offset);
                 return -1;
             }
         }
 	}
-    logInfo("Done!");
+
 	return 0;
 }
 
+int copy_save_toGbRam(byte * saveData) {
+	const int SEGMENT_SIZE = 0x20; // 32
 
-
-int copy_save_toGbRam(uint8_t *ram_data) {
-
-	if(gbcart.ram!=TRUE)
+	if(gbcart.ram != TRUE)
         return -1;
 
 	//security off for camera by now
@@ -119,43 +117,46 @@ int copy_save_toGbRam(uint8_t *ram_data) {
 	//mbc5
 	//128KByte RAM
 
+	uint8_t segment[SEGMENT_SIZE];
 
-	uint8_t rdata[32];
-
-	unsigned long addr=0xE000;
-	unsigned long ram_offset=0x00;
-	int tmp=0x00;
+	unsigned long address = 0xE000;
+	unsigned long offset = 0x00;
 
 	//copy rambanks to sdram
-	for(int bankc=0; bankc < gbcart.rambanks; bankc++) { //bank count
+	for(int bankCount = 0; bankCount < gbcart.rambanks; bankCount++) {
 
         //get power status 0=off 1=on
         if(_get_gbPower()!=1)
             return -4;
 
         //get access mode
-        //int as=_get_gbAccessState();
         _get_gbAccessState();
 
-        tmp = _set_gbRamBank(bankc);
-        if(tmp!=0)
+        if (_set_gbRamBank(bankCount) != 0)
             return -1;
 
-		int bank_width=0xFFE0;
+		int bankSize = 0xFFE0;
 		if(gbcart.mapper == GB_MBC2)
-            bank_width=0xE1E0;
+            bankSize = 0xE1E0;
 
-        for(unsigned long banko=addr; banko<=bank_width; banko+=0x20) { //bank offset
-            memset( rdata, 0xFF, 32 );
-			//write to cartspace
-			data_cache_hit_writeback_invalidate(rdata,32);
-            //dma_read_s(rdata, 0xb2000000+ram_offset, 0x20); //upper 32mb
-			data_cache_hit_writeback_invalidate(rdata,32);
+        for(unsigned long bankOffset = address; bankOffset <= bankSize; bankOffset += SEGMENT_SIZE) {
+			if(_set_gbRamAddr(bankOffset, segment) == 0) {
+                byte temp[offset];
 
-            memcpy(ram_data+ram_offset, rdata, 0x20);
+                // Increase ramData's size by 32
+                memcpy(temp, saveData, offset);
+                saveData = malloc(offset + SEGMENT_SIZE);
 
-			if(_set_gbRamAddr(banko, rdata)==0){
-                ram_offset+=0x20;
+                // Same issue here, but at 1024... odddddd.
+                if (offset >= 1024) {
+                    return -1;
+                }
+                memcpy(saveData, temp, offset);
+
+                // Write tpak segment to RAM
+				memcpy(saveData + offset, segment, SEGMENT_SIZE);
+
+				offset += SEGMENT_SIZE;
             } else {
 				return -1;
             }

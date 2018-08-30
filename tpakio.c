@@ -4,26 +4,28 @@
 #include "tpakio.h"
 
 static const bool isTPakWorking = true;
-
-void loadRom(natural controllerNumber, byte* output) {
-    // Read from disk until we can figure out transfer pak
-    if (isTPakWorking) {
-        if (init_gbpak()) {
+static bool pakInit[4]  = {false, false, false, false};
+bool initPak(natural controllerNumber) {
+    if (!pakInit[controllerNumber]) {
+        if(init_gbpak()) {
             logInfo("gbpak init error");
+            return false;
         }
 
+        pakInit[controllerNumber] = true;
+    }
+
+    return true;
+}
+
+void loadRom(natural controllerNumber, byte* output) {
+    if (initPak(controllerNumber)) {
         copy_gbRom_toRAM(output);
-        logInfo("Copied");
-    } else {
-        output = malloc(32);
     }
 }
 
 void loadSave(natural controllerNumber, byte* output) {
-    // Read from disk until we can figure out transfer pak
-    if (isTPakWorking) {
-        init_gbpak();
+    if (initPak(controllerNumber)) {
         copy_save_toGbRam(output);
-        output = malloc(32);
     }
 }

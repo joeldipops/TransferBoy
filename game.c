@@ -21,7 +21,7 @@ void gameLoop(OptionsHash* options) {
     if (identify_accessory(0) == ACCESSORY_MEMPAK) {
         loadRom(0, romData);
         loadSave(0, saveData);
-
+        logInfo("All Done!");
     } else {
         gameRender("No PAK inserted");
     }
