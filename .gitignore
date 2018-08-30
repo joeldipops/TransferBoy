@@ -1,0 +1,13 @@
+bin/
+obj/
+.git
+TransferBoy64.cbp
+TransferBoy64.depend
+TransferBoy64.layout
+transferboy64.z64
+transferboy64.elf
+transferboy64.dfs
+transferboy64.bin
+*.o
+*~
+
