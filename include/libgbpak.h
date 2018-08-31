@@ -43,8 +43,8 @@ typedef struct {
 int disable_gbRam(const GameboyCart gbcart);
 //int copy_gbRam_toRAM(const GameboyCart gbcart, uint8_t *ram_data);
 
-GameboyCart initialiseCart(char controllerNumber);
-char importRom(const GameboyCart cart, ByteArray* romData);
-char importSave(const GameboyCart cart, ByteArray* saveData);
-char exportSave(const GameboyCart cart, ByteArray* saveData);
+GameboyCart initialiseCart(const char controllerNumber);
+char importRom(const char controllerNumber, const GameboyCart cart, ByteArray* romData);
+char importSave(const char controllerNumber, const GameboyCart cart, ByteArray* saveData);
+char exportSave(const char controllerNumber, const GameboyCart cart, ByteArray* saveData);
 #endif

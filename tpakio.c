@@ -25,15 +25,12 @@ bool initPak(natural controllerNumber) {
 
 void loadRom(natural controllerNumber, ByteArray* output) {
     if (initPak(controllerNumber)) {
-        importRom(pakInit[controllerNumber], output);
+        importRom(controllerNumber, pakInit[controllerNumber], output);
     }
 }
 
 void loadSave(natural controllerNumber, ByteArray* output) {
-    logInfo("loading save");
     if (initPak(controllerNumber)) {
-        logInfo("initted");
-        importSave(pakInit[controllerNumber], output);
-        logInfo("save loaded");
+        importSave(controllerNumber, pakInit[controllerNumber], output);
     }
 }

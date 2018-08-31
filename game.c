@@ -20,9 +20,9 @@ void gameLoop(OptionsHash* options) {
     // Only interested in controller 1 while I figure things out.
     if (identify_accessory(0) == ACCESSORY_MEMPAK) {
         loadSave(0, saveData);
-        logInfo("Save size: %lu", saveData->Size);
+        logInfo("Save loaded");
         loadRom(0, romData);
-        logInfo("Save size: %lu", romData->Size);
+        logInfo("Rom loaded");
     } else {
         gameRender("No PAK inserted");
     }
