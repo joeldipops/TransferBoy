@@ -1,8 +1,7 @@
 #ifndef LIBGBPAK_INCLUDED
 #define LIBGBPAK_INCLUDED
 /*
- * libgbpak header
- *
+ * Completely bastardised from original code to fit my purpose and formatting standards.
  */
 
 #define GB_NORM		0x00
@@ -22,36 +21,30 @@
 #define BANKSIZE 16*1024
 
 typedef struct {
-          char mapper;
-          char ram;
-          char battery;
-          char rtc;
-          char rumble;
-          char sgb;
-          char gbc;
-          char title[12];
-          char _romsize;
-          char _ramsize;
-          int romsize;
-          int ramsize;
-          short rombanks;
-          short rambanks;
-          short bank;
-          short cpld;
-} cart;
+    char errorCode;
+    char mapper;
+    char ram;
+    char battery;
+    char rtc;
+    char rumble;
+    char sgb;
+    char gbc;
+    char title[12];
+    char _romsize;
+    char _ramsize;
+    int romsize;
+    int ramsize;
+    short rombanks;
+    short rambanks;
+    short bank;
+    short cpld;
+} GameboyCart;
 
+int disable_gbRam(const GameboyCart gbcart);
+//int copy_gbRam_toRAM(const GameboyCart gbcart, uint8_t *ram_data);
 
-
-int init_gbpak(void);
-int _get_gbPower(void);
-int _get_gbAccessState(void);
-int _set_gbRomBank(int bank);
-int _set_gbRamBank(int bank);
-int disable_gbRam(void);
-int _get_gbRomAddr(unsigned long addr, uint8_t *rdata);
-int _get_gbRamAddr(unsigned long addr, uint8_t *rdata);
-int _set_gbRamAddr(unsigned long addr, uint8_t *sdata);
-int copy_gbRom_toRAM(uint8_t *rom_data);
-int copy_gbRam_toRAM(uint8_t *ram_data);
-int copy_save_toGbRam(uint8_t *ram_data);
+GameboyCart initialiseCart(char controllerNumber);
+char importRom(const GameboyCart cart, ByteArray* romData);
+char importSave(const GameboyCart cart, ByteArray* saveData);
+char exportSave(const GameboyCart cart, ByteArray* saveData);
 #endif

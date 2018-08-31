@@ -4,28 +4,36 @@
 #include "tpakio.h"
 
 static const bool isTPakWorking = true;
-static bool pakInit[4]  = {false, false, false, false};
+static GameboyCart pakInit[4]  = {};
+
+/**
+ * @private
+ */
 bool initPak(natural controllerNumber) {
-    if (!pakInit[controllerNumber]) {
-        if(init_gbpak()) {
+    if (pakInit[controllerNumber].romsize == 0) {
+        GameboyCart result = initialiseCart(controllerNumber);
+        if (result.errorCode) {
             logInfo("gbpak init error");
             return false;
         }
 
-        pakInit[controllerNumber] = true;
+        pakInit[controllerNumber] = result;
     }
 
     return true;
 }
 
-void loadRom(natural controllerNumber, byte* output) {
+void loadRom(natural controllerNumber, ByteArray* output) {
     if (initPak(controllerNumber)) {
-        copy_gbRom_toRAM(output);
+        importRom(pakInit[controllerNumber], output);
     }
 }
 
-void loadSave(natural controllerNumber, byte* output) {
+void loadSave(natural controllerNumber, ByteArray* output) {
+    logInfo("loading save");
     if (initPak(controllerNumber)) {
-        copy_save_toGbRam(output);
+        logInfo("initted");
+        importSave(pakInit[controllerNumber], output);
+        logInfo("save loaded");
     }
 }

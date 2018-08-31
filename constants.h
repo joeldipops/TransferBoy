@@ -15,4 +15,10 @@ const natural VERTICAL_MENU_SPACING = 25;
 natural GLOBAL_BACKGROUND_COLOUR = 0;
 natural GLOBAL_TEXT_COLOUR = 0;
 
+
+typedef struct {
+    unsigned long Size;
+    byte* Data;
+} ByteArray;
+
 #endif

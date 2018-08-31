@@ -2,7 +2,7 @@
 #define TPAKIO_INCLUDED
 #include "constants.h"
 
-void loadRom(natural controllerNumber, byte* output);
-void loadSave(natural controllerNumber, byte* output);
+void loadRom(natural controllerNumber, ByteArray* output);
+void loadSave(natural controllerNumber, ByteArray* output);
 
 #endif
