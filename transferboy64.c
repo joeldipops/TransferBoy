@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <malloc.h>
 #include <stdint.h>
+#include <unistd.h>
 
 #include "constants.h"
 #include "options.h"
@@ -58,9 +59,15 @@ int main(void)
 }
 
 // cheating because the makefile doesn't work.
+void _exit(int status)
+{
+  (void) status;
+  abort();
+}
 #include "game.c"
 #include "menu.c"
 #include "options.c"
 #include "tpakio.c"
 #include "logger.c"
 #include "include/libgbpak.c"
+#include "include/gbc_bundle.c"
