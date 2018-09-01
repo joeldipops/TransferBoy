@@ -22,7 +22,7 @@
 #include <pthread.h>
 
 #include "logger.h"
-#include "constants.h"
+#include "utils.h"
 
 #include "libgbpak.h"
 

@@ -1,16 +1,27 @@
 #include "logger.h"
-#include "constants.h"
+#include "utils.h"
 #include <stdarg.h>
 #include <libdragon.h>
 
-void logInfo(const string text, ...) {
+void logAndPause(const string format, ...) {
     va_list args;
-    va_start(args, text);
+    va_start(args, format);
+
+    logInfo(format, args);
+
+    va_end(args);
+
+    while(true) {;}
+}
+
+void logInfo(const string format, ...) {
+    va_list args;
+    va_start(args, format);
 
     static display_context_t frame = null;
     string output = "";
 
-    vsprintf(output, text, args);
+    vsprintf(output, format, args);
     va_end(args);
 
     while (!(frame = display_lock()));

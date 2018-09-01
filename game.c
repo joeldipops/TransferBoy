@@ -1,27 +1,70 @@
-#include "constants.h"
+#include "utils.h"
 #include "game.h"
 #include "tpakio.h"
 #include "logger.h"
 #include "include/gbc_bundle.h"
+
 #include <libdragon.h>
 
 void gameRender(const string text) {
     logInfo(text);
 }
 
-void emulatorLoop(ByteArray* romData, ByteArray* saveData) {
+void mapGbInputs(const char controllerNumber, const GbButton* buttonMap, const struct controller_data* n64Input, struct player_input* gbInput) {
+    bool* pressedButtons = malloc(sizeof(bool) * 16);
+    getPressedButtons(n64Input, controllerNumber, pressedButtons);
+
+    for (int i = 0; i < 16; i++) {
+        if (!pressedButtons[i]) {
+            continue;
+        }
+
+        switch(buttonMap[i]) {
+            case GbA: gbInput->button_a = true; break;
+            case GbB: gbInput->button_b = true; break;
+            case GbStart: gbInput->button_start = true; break;
+            case GbSelect: gbInput->button_select = true; break;
+            case GbUp: gbInput->button_up = true; break;
+            case GbDown: gbInput->button_down = true; break;
+            case GbLeft: gbInput->button_left = true; break;
+            case GbRight: gbInput->button_right = true; break;
+            default: break;
+        }
+    }
+
+    free(pressedButtons);
+}
+
+void initialiseEmulator(struct gb_state* state, const ByteArray* romData, const ByteArray* saveData) {
+    memset(state, 0, sizeof(struct gb_state));
+
+    state_new_from_rom(state, romData->Data, romData->Size);
+    cpu_reset_state(state);
+
+    // Add bios here?
+    //dfs_init(DFS_DEFAULT_LOCATION);
+    //
+
+    state_load_extram(state, saveData->Data, saveData->Size);
+    init_emu_state(state);
+    cpu_init_emu_cpu_state(state);
+    lcd_init(state); // Here we're initing the code that renders the pixel buffer.
+}
+
+void emulatorLoop(const OptionsHash* options, const ByteArray* romData, ByteArray* saveData) {
     struct gb_state* emulatorState = malloc(sizeof(struct gb_state));
-    state_new_from_rom(emulatorState, romData->Data, romData->Size);
-    init_emu_state(emulatorState);
-    cpu_init_emu_cpu_state(emulatorState);
+    initialiseEmulator(emulatorState, romData, saveData);
 
     struct player_input* input;
     input = malloc(sizeof(struct player_input));
+    memset(input, 0, sizeof(struct player_input));
 
     while (!emulatorState->emu_state->quit) {
         emu_step_frame(emulatorState);
 
-        // TODO - GET INPUT FROM N64 Controller and map to input_state
+        controller_scan();
+        struct controller_data n64Input = get_keys_pressed();
+        mapGbInputs(0, options->ButtonMap, &n64Input, input);
 
         emu_process_inputs(emulatorState, input);
 
@@ -55,7 +98,7 @@ void gameLoop(OptionsHash* options) {
             controller_scan();
             struct controller_data buttons = get_keys_pressed();
             if(buttons.c[0].start) {
-                emulatorLoop(romData, saveData);
+                emulatorLoop(options, romData, saveData);
             }
             if(buttons.c[0].B) {
                 hasQuit = true;

@@ -1,16 +1,16 @@
 #ifndef OPTIONS_INCLUDED
 #define OPTIONS_INCLUDED
-#include "constants.h"
+#include "utils.h"
 
 typedef enum { BorderNone } Border;
 
 typedef struct {
-    Border border;
-    natural players;
-    Button startButton;
-    Button selectButton;
+    Border SelectedBorder;
+    char NumberOfPlayers;
+    GbButton ButtonMap[16];
 } OptionsHash;
 
-void optionsLoop(OptionsHash*);
+void initialiseOptions(OptionsHash* options);
+void optionsLoop(OptionsHash*  options);
 
 #endif

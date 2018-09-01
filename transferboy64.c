@@ -5,11 +5,11 @@
 #include <stdint.h>
 #include <unistd.h>
 
-#include "constants.h"
+#include "utils.h"
 #include "options.h"
 #include "menu.h"
 #include "game.h"
-
+#include "logger.h"
 #include <libdragon.h>
 
 static resolution_t res = RESOLUTION_320x240;
@@ -34,10 +34,7 @@ int main(void)
 
     // initialize options hash
     OptionsHash * options = malloc(sizeof *options);
-    options->border = BorderNone;
-    options->players = 1;
-    options->startButton = Start;
-    options->selectButton = R;
+    initialiseOptions(options);
 
     bool isDone = false;
 
@@ -64,6 +61,8 @@ void _exit(int status)
   (void) status;
   abort();
 }
+
+#include "utils.c"
 #include "game.c"
 #include "menu.c"
 #include "options.c"
