@@ -41,10 +41,29 @@ typedef struct {
 } GameboyCart;
 
 int disable_gbRam(const GameboyCart gbcart);
-//int copy_gbRam_toRAM(const GameboyCart gbcart, uint8_t *ram_data);
 
+/**
+ * Determines essential data about the catridge in the given TPak - size, Memory Bank configuration, title etc and loads into memory.
+ * @param controllerNumber The controller with a transfer pak.
+ */
 GameboyCart initialiseCart(const char controllerNumber);
+
+/**
+ * Loads the ROM of the given cartridge in to memory.
+ * @param controllerNumber controller the cartidge is plugged in to.
+ * @param gbcart Basic information about the cartridge.
+ * @out romData ROM of the cartridge is dumped in here.
+ */
 char importRom(const char controllerNumber, const GameboyCart cart, ByteArray* romData);
+
+/**
+ * Loads the Save RAM of the given cartridge in to memory.
+ * @param controllerNumber controller the cartidge is plugged in to.
+ * @param gbcart Basic information about the cartridge.
+ * @out ramData RAM of the cartridge is dumped in here.
+ */
 char importSave(const char controllerNumber, const GameboyCart cart, ByteArray* saveData);
+
+// TODO
 char exportSave(const char controllerNumber, const GameboyCart cart, ByteArray* saveData);
 #endif

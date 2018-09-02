@@ -10,7 +10,12 @@ typedef struct {
     GbButton ButtonMap[16];
 } OptionsHash;
 
+/**
+ * Set initial state of user-configurable options.
+ * @out The options struct to populate.
+ */
 void initialiseOptions(OptionsHash* options);
+
 void optionsLoop(OptionsHash*  options);
 
 #endif

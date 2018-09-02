@@ -6,13 +6,19 @@
 
 #include <libdragon.h>
 
+// Since the gameboy screen is much smaller than ours, position it somewhere.
+// Eventually configuable, especially for 2+ player.
 static const natural SCREEN_Y_OFFSET = 80;
 static const natural SCREEN_X_OFFSET = 80;
 
-void gameRender(const string text) {
-    logInfo(text);
-}
-
+/**
+ * Converts buttons pressed on the n64 controller into equivalents on the gameboy's.
+ * @param controllerNumber The controller to process.
+ * @param buttonMap Array indexed by N64Button identifying which buttons go where.
+ * @param n64Input struct containing which N64 buttons are currently pressed.
+ * @out gbInput struct of gb buttons to fill in.
+ * @private
+ */
 void mapGbInputs(const char controllerNumber, const GbButton* buttonMap, const struct controller_data* n64Input, struct player_input* gbInput) {
     bool* pressedButtons = malloc(sizeof(bool) * 16);
     getPressedButtons(n64Input, controllerNumber, pressedButtons);
@@ -38,6 +44,13 @@ void mapGbInputs(const char controllerNumber, const GbButton* buttonMap, const s
     free(pressedButtons);
 }
 
+/**
+ * Passes the gameboy cartridge data in to the emulator and fires it up.
+ * @param state emulator state object.
+ * @param romData ROM loaded from cartridge.
+ * @param saveData Save file RAM loaded from cartridge.
+  * @private
+ */
 void initialiseEmulator(struct gb_state* state, const ByteArray* romData, const ByteArray* saveData) {
     memset(state, 0, sizeof(struct gb_state));
 
@@ -54,6 +67,12 @@ void initialiseEmulator(struct gb_state* state, const ByteArray* romData, const 
     lcd_init(state); // Here we're initing the code that renders the pixel buffer.
 }
 
+/**
+ * Take the array of pixels produced by the emulator and throw it up on to the screen.
+ * @param pixelBuffer Array of pixels
+ * @param isColour True for GBC and super-game-boy enhanced, otherwise false.
+ * @private
+ */
 void renderPixels(const unsigned short* pixelBuffer, const bool isColour) {
     natural* pixels = malloc(GB_LCD_HEIGHT * GB_LCD_WIDTH);
     memset(pixels, 0xFF, GB_LCD_HEIGHT * GB_LCD_WIDTH);
@@ -104,6 +123,13 @@ void renderPixels(const unsigned short* pixelBuffer, const bool isColour) {
     free(pixels);
 }
 
+/**
+ * Main game loop for the emulator, taking input and displaying output.
+ * @param options Options configured from the options screen.
+ * @param romData Game ROM loaded from cartridge.
+ * @param saveData Save RAM loaded from cartridge.
+ * @private
+ */
 void emulatorLoop(const OptionsHash* options, const ByteArray* romData, ByteArray* saveData) {
     struct gb_state* emulatorState = malloc(sizeof(struct gb_state));
     initialiseEmulator(emulatorState, romData, saveData);
@@ -127,6 +153,9 @@ void emulatorLoop(const OptionsHash* options, const ByteArray* romData, ByteArra
     }
 }
 
+/**
+ * Loads Cartridge in to memory.  TODO - clean-up, helpers etc
+ */
 void gameLoop(OptionsHash* options) {
     // Find what controllers have games & tpacs plugged in
     ByteArray* romData = malloc(sizeof(ByteArray));
@@ -134,7 +163,7 @@ void gameLoop(OptionsHash* options) {
 
     bool hasQuit = false;
     while(!hasQuit) {
-        gameRender("Loading Cartridge...");
+        logInfo("Loading Cartridge...");
         get_accessories_present();
 
         // Only interested in controller 1 while I figure things out.
@@ -142,9 +171,9 @@ void gameLoop(OptionsHash* options) {
             loadSave(0, saveData);
             loadRom(0, romData);
 
-            gameRender("Cartidge Loaded.  Press Start");
+            logInfo("Cartidge Loaded.  Press Start");
         } else {
-            gameRender("No Cartridge Inserted");
+            logInfo("No Cartridge Inserted");
         }
 
         while(!hasQuit) {

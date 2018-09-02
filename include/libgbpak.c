@@ -28,7 +28,10 @@
 
 uint8_t data[32];
 
-int _set_gbPower(const char controllerNumber, int status) { //setstatus ???
+/**
+ * @private
+ */
+int _set_gbPower(const char controllerNumber, int status) {
     //1=on 2=off
 
     if(status) {
@@ -39,7 +42,7 @@ int _set_gbPower(const char controllerNumber, int status) { //setstatus ???
         status = 0xFE;
     }
 
-    int value=0;
+    int value = 0;
 
     memset(data, status, 32);
     value = write_mempak_address(controllerNumber, 0x8001, data);
@@ -48,8 +51,10 @@ int _set_gbPower(const char controllerNumber, int status) { //setstatus ???
 }
 
 
-//int get_gbPower(uint8_t *rdata){
-int _get_gbPower(const char controllerNumber) { //checkstatus???
+/**
+ * @private
+ */
+int _get_gbPower(const char controllerNumber) {
     uint8_t rdata[32];
     memset(rdata, 0xFF, 32);
     int value = -1;
@@ -65,136 +70,162 @@ int _get_gbPower(const char controllerNumber) { //checkstatus???
     return value;
 }
 
-
+/**
+ * @private
+ */
 int _get_gbAccessState(const char controllerNumber) {
     //real: get power ????
 
-	uint8_t rdata[32];
-	memset(rdata, 0xFF, 32);
+    uint8_t rdata[32];
+    memset(rdata, 0xFF, 32);
 
-	int value=0;
+    int value = 0;
 
     value = read_mempak_address(controllerNumber, 0xB010, rdata);
 
-	/*
-	 * Sets bit 2 of the first return value if the access mode was recently changed.
-	 * Will not set bit 2 again untill access mode is changed again.
-	 */
+    /*
+     * Sets bit 2 of the first return value if the access mode was recently changed.
+     * Will not set bit 2 again untill access mode is changed again.
+     */
 
-	if(rdata[0] == 0x89) { //mode 1
+    if(rdata[0] == 0x89) { //mode 1
         value = 1;
-	} else if(rdata[0]==0x80) { //mode 0 //0x84 bot changed?
+    } else if(rdata[0]==0x80) { //mode 0 //0x84 bot changed?
         value = 0;
     } else if(rdata[0]==0x84) {
         value = 2;
-	} else if(rdata[0]==0x40) { //no gbcart inserted
+    } else if(rdata[0]==0x40) { //no gbcart inserted
         value=3;
     } else {
         value=rdata[0];
     }
 
-	return value;
+    return value;
 }
 
+/**
+ * @private
+ */
+int _set_gbAccessState(const char controllerNumber, int status) {
 
-int _set_gbAccessState(const char controllerNumber, int status) { //set power ????
+    if(status) {
+        //mode 01
+        status = 0x01;
+    } else {
+        //mode 00
+        status = 0x00;
+    }
 
-	if(status) {
-		//mode 01
-		status = 0x01;
-	} else {
-		//mode 00
-		status = 0x00;
-	}
-
-	int value=0;
+    int value=0;
 
     memset(data, status, 32);
     value = write_mempak_address(controllerNumber, 0xB010, data);
-
-	return value;
-}
-
-
-int disable_gbRam(const GameboyCart gbcart) {
-
-	uint8_t sdata[32];
-	int value=0;
-
-	if(gbcart.mapper == GB_NORM) {
-		return -1; //no ram
-	} else {
-		//same for all mbc 1-5 :>
-
-		//protect ram again
-		memset(sdata, 0x00, 32);
-		value = write_mempak_address( 0, 0xA00C, sdata ); //prepare for ram enable
-		value = write_mempak_address( 0, 0xC000, sdata ); //set ram diable for reading/writing
-	}
 
     return value;
 }
 
 
+int disable_gbRam(const GameboyCart gbcart) {
+
+    uint8_t sdata[32];
+    int value=0;
+
+    if(gbcart.mapper == GB_NORM) {
+        return -1; //no ram
+    } else {
+        //same for all mbc 1-5 :>
+
+        //protect ram again
+        memset(sdata, 0x00, 32);
+        value = write_mempak_address(0, 0xA00C, sdata); //prepare for ram enable
+        value = write_mempak_address(0, 0xC000, sdata); //set ram diable for reading/writing
+    }
+
+    return value;
+}
+
+/**
+ * @private
+ */
 int _set_gbRamBank(const char controllerNumber, const GameboyCart gbcart, int bank) {
-	if(gbcart.ram!=TRUE) {
+    if(gbcart.ram!=TRUE) {
         return -1;
     }
 
-	//e.g. 00
-	bank = 0x01 * bank; // :D pointless
-	uint8_t sdata[32];
-	int value = 0;
+    //e.g. 00
+    bank = 0x01 * bank; // :D pointless
+    uint8_t sdata[32];
+    int value = 0;
 
-	if(gbcart.mapper==GB_NORM) {
-		return -1; //no ram
-	} else if(
-        ((gbcart.mapper==GB_MBC1 || gbcart.mapper==GB_MBC3 || gbcart.mapper==GB_HUC1) && bank <=0x03)
-		|| (gbcart.mapper==GB_MBC5 && bank <=0x0F) || (gbcart.mapper==GB_MBC4 && bank <=0x0F)
+    if(gbcart.mapper == GB_NORM) {
+        return -1; //no ram
+    } else if(
+        ((gbcart.mapper == GB_MBC1 || gbcart.mapper == GB_MBC3 || gbcart.mapper == GB_HUC1) && bank <=0x03)
+        || (gbcart.mapper == GB_MBC5 && bank <= 0x0F) || (gbcart.mapper == GB_MBC4 && bank <= 0x0F)
     ) {
-		memset(sdata, 0x00, 32);
-		value = write_mempak_address(controllerNumber, 0xA00C, sdata ); //prepare for ram enable
+        memset(sdata, 0x00, 32);
+        //prepare for ram enable
+        value = write_mempak_address(controllerNumber, 0xA00C, sdata);
 
-		memset(sdata, 0x0A, 32); // 0x00 disable(rom) 0x0A enable(ram)
-		value = write_mempak_address(controllerNumber, 0xC000, sdata ); //set ram enable for reading/writing
+        // 0x00 disable(rom) 0x0A enable(ram)
+        memset(sdata, 0x0A, 32);
+        //set ram enable for reading/writing
+        value = write_mempak_address(controllerNumber, 0xC000, sdata);
 
-		memset(sdata, 0x01, 32);
-		value = write_mempak_address(controllerNumber, 0xA00C, sdata ); //prepare for rambank switch
+        memset(sdata, 0x01, 32);
+        //prepare for rambank switch
+        value = write_mempak_address(controllerNumber, 0xA00C, sdata);
 
-		memset(sdata, 0x01, 32); //00h rombanking 01h rambanking
-		value = write_mempak_address(controllerNumber, 0xE000, sdata ); //switch to rambanking
+        //00h rombanking 01h rambanking
+        memset(sdata, 0x01, 32);
+        //switch to rambanking
+        value = write_mempak_address(controllerNumber, 0xE000, sdata);
 
-		memset(sdata, bank, 32); //00h ram bank 00-03h or 00-0Fh
-		value = write_mempak_address(controllerNumber, 0xC000, sdata ); //set rambank
-	} else if( (gbcart.mapper==GB_CAMERA && bank <=0x0F) ) {
+        //00h ram bank 00-03h or 00-0Fh
+        memset(sdata, bank, 32);
+        //set rambank
+        value = write_mempak_address(controllerNumber, 0xC000, sdata);
 
-		memset(sdata, 0x00, 32);
-		value = write_mempak_address(controllerNumber, 0xA00C, sdata ); //prepare for ram enable
+    } else if(gbcart.mapper == GB_CAMERA && bank <=0x0F) {
 
-		//create second test version with 0x00?
-		memset(sdata, 0x0A, 32); // disable only -> for 0A enable setting - set PHI=pin1 high first on hardware, too?
-		value = write_mempak_address(controllerNumber, 0xC000, sdata ); //set ram enable for reading/writing
+        //prepare for ram enable
+        memset(sdata, 0x00, 32);
+        value = write_mempak_address(controllerNumber, 0xA00C, sdata);
 
-		memset(sdata, 0x01, 32);
-		value = write_mempak_address(controllerNumber, 0xA00C, sdata ); //prepare for rambank switch
+        //create second test version with 0x00?
+        // disable only -> for 0A enable setting - set PHI=pin1 high first on hardware, too?
+        memset(sdata, 0x0A, 32);
+        //set ram enable for reading/writing
+        value = write_mempak_address(controllerNumber, 0xC000, sdata);
 
-		memset(sdata, 0x01, 32); //00h rombanking 01h rambanking
-		value = write_mempak_address(controllerNumber, 0xE000, sdata ); //switch to rambanking
+        //prepare for rambank switch
+        memset(sdata, 0x01, 32);
+        value = write_mempak_address(controllerNumber, 0xA00C, sdata);
 
-		memset(sdata, bank, 32); //00h ram bank 00-0Fh, bit 5 0x10 set cam registers
-		value = write_mempak_address(controllerNumber, 0xC000, sdata ); //set rambank
-	} else if(gbcart.mapper==GB_MBC2) {		//512x4bits RAM, built-in into the MBC2 chip
+        memset(sdata, 0x01, 32); //00h rombanking 01h rambanking
+        //switch to rambanking
+        value = write_mempak_address(controllerNumber, 0xE000, sdata);
 
-		//only one bank?
-		memset(sdata, 0x00, 32);
-		value = write_mempak_address(controllerNumber, 0xA00C, sdata ); //prepare for ram enable
+        //00h ram bank 00-0Fh, bit 5 0x10 set cam registers
+        memset(sdata, bank, 32);
+        //set rambank
+        value = write_mempak_address(controllerNumber, 0xC000, sdata);
+    } else if(gbcart.mapper == GB_MBC2) {
+        //512x4bits RAM, built-in into the MBC2 chip
 
-		memset(sdata, 0x0A, 32); // enable/disable with whatever as value in the correct range - was 0x01?
-		value = write_mempak_address(controllerNumber, 0xC000, sdata ); //set ram enable for reading/writing
-	} else {
-		//mapper not found or out of range
-		return -1;
-	}
+        //only one bank?
+        //prepare for ram enable
+        memset(sdata, 0x00, 32);
+        value = write_mempak_address(controllerNumber, 0xA00C, sdata);
+
+        // enable/disable with whatever as value in the correct range - was 0x01?
+        // set ram enable for reading/writing
+        memset(sdata, 0x0A, 32);
+        value = write_mempak_address(controllerNumber, 0xC000, sdata);
+    } else {
+        //mapper not found or out of range
+        return -1;
+    }
 
     return value;
 }
@@ -202,262 +233,267 @@ int _set_gbRamBank(const char controllerNumber, const GameboyCart gbcart, int ba
 
 int _set_gbRomBank(const char controllerNumber, GameboyCart* gbcart, int bank) {
 
-	//e.g. 00
-	bank = 0x01 * bank; // :D pointless
-	uint8_t sdata[32];
-	int value = 0;
+    //e.g. 00
+    bank = 0x01 * bank; // :D pointless
+    uint8_t sdata[32];
+    int value = 0;
 
-	if (gbcart->mapper == GB_NORM || bank == 0x00) {
-
-		memset( sdata, bank, 32 );
-		value = write_mempak_address( 0, 0xA00C, sdata );
-	} else if(gbcart->mapper == GB_MBC1 || gbcart->mapper == GB_HUC1) {
-		if (bank==0x20 || bank==0x40 || bank==0x60) //bank 0x20, 0x40, 0x60 isn't addressable
+    if (gbcart->mapper == GB_NORM || bank == 0x00) {
+        memset(sdata, bank, 32);
+        value = write_mempak_address( 0, 0xA00C, sdata);
+    } else if(gbcart->mapper == GB_MBC1 || gbcart->mapper == GB_HUC1) {
+        //bank 0x20, 0x40, 0x60 isn't addressable
+        if (bank == 0x20 || bank == 0x40 || bank == 0x60)
             return -1;
 
-		//NOTE: untested don't own a mbc1 cart with 32 banks or above ;_;
-		if (bank>0x20) { //don't need to set upper bits for every bank < 32
+        //NOTE: untested don't own a mbc1 cart with 32 banks or above ;_;
+        if (bank>0x20) { //don't need to set upper bits for every bank < 32
 
-			//set to setting mode :>
-			memset( sdata, 0x01, 32);
-			value = write_mempak_address(controllerNumber, 0xA00C, sdata );
-			if (value!=0x00)
+            //set to setting mode :>
+            memset(sdata, 0x01, 32);
+            value = write_mempak_address(controllerNumber, 0xA00C, sdata);
+            if (value!=0x00)
                 return value;
 
-			//0x00 rombanking mode 0x01 rambanking mode
-			//disable ram
-			memset( sdata, 0x00, 32 );
-			value = write_mempak_address(controllerNumber, 0xE016, sdata ); //0x6000
-			if (value!=0x00)
+            //0x00 rombanking mode 0x01 rambanking mode
+            //disable ram
+            memset(sdata, 0x00, 32);
+            value = write_mempak_address(controllerNumber, 0xE016, sdata); //0x6000
+            if (value != 0x00)
                 return value;
 
-			//set upper 2 bits (6,7)
-			//0h = +0 int
-			//1h = +32 int
-			//2h = +64 int
-			//3h = +96 int
-			if(bank>0x60) {
-				memset( sdata, 0x03, 32 );
-				bank-=0x60;
-			} else if(bank>0x40) {
-				memset( sdata, 0x02, 32 );
-				bank-=0x40;
-			} else {
-				memset( sdata, 0x01, 32 );
-				bank-=0x20;
+            //set upper 2 bits (6,7)
+            //0h = +0 int
+            //1h = +32 int
+            //2h = +64 int
+            //3h = +96 int
+            if(bank > 0x60) {
+                memset(sdata, 0x03, 32);
+                bank -= 0x60;
+            } else if(bank > 0x40) {
+                memset(sdata, 0x02, 32);
+                bank -= 0x40;
+            } else {
+                memset(sdata, 0x01, 32);
+                bank -= 0x20;
             }
 
-			//set bit 6 and 7
-			//8765 4321
-			//0XX0 0000
-			value = write_mempak_address(controllerNumber, 0xC000, sdata ); //write at 0x4000
-			if (value != 0x00)
+            //set bit 6 and 7
+            //8765 4321
+            //0XX0 0000
+            value = write_mempak_address(controllerNumber, 0xC000, sdata); //write at 0x4000
+            if (value != 0x00)
                 return value;
 
-			//TODO: disable high bits
-		}
+            //TODO: disable high bits
+        }
 
-		//lower bits
-		memset( sdata, 0x00, 32);
-		value = write_mempak_address(controllerNumber, 0xA00C, sdata );
-		if(value!=0x00)
+        //lower bits
+        memset(sdata, 0x00, 32);
+        value = write_mempak_address(controllerNumber, 0xA00C, sdata);
+        if(value != 0x00)
             return value;
 
-		//set bit 1-5
-		//8765 4321
-		//000X XXXX
-		memset( sdata, bank, 32 );
-		value = write_mempak_address(controllerNumber, 0xE100, sdata );
-		if(value!=0x00)
+        //set bit 1-5
+        //8765 4321
+        //000X XXXX
+        memset(sdata, bank, 32);
+        value = write_mempak_address(controllerNumber, 0xE100, sdata);
+        if(value != 0x00)
             return value;
 
-		memset( sdata, 0x01, 32);
-		value = write_mempak_address(controllerNumber, 0xA00C, sdata );
-        if(value!=0x00)
+        memset(sdata, 0x01, 32);
+        value = write_mempak_address(controllerNumber, 0xA00C, sdata);
+        if(value != 0x00)
             return value;
 
-	} else if(gbcart->mapper==GB_MBC2 && bank <=0x0F) {
+    } else if(gbcart->mapper==GB_MBC2 && bank <=0x0F) {
         //NOTE: untested don't own a mbc2 cart ;_;
 
-		memset( sdata, 0x00, 32);
-		value = write_mempak_address(controllerNumber, 0xA00C, sdata );
-		if(value!=0x00)
-            return value;
-
-		//max 16 (0x00 - 0x0F) banks here
-		memset( sdata, bank, 32 );
-		value = write_mempak_address(controllerNumber, 0xE100, sdata );
-		if(value!=0x00)
-            return value;
-
-		memset( sdata, 0x01, 32);
-		value = write_mempak_address(controllerNumber, 0xA00C, sdata );
-		if(value!=0x00)
-            return value;
-
-	} else if(gbcart->mapper==GB_MBC3 && bank <=0x7F) {
-        //NOTE: untested don't own a mbc3 cart ;_;
-
-		memset( sdata, 0x00, 32);
-		value = write_mempak_address(controllerNumber, 0xA00C, sdata );
-		if(value!=0x00)
-            return value;
-
-		//whole 7 bit can be used for addressing here
-		//128 (0x00 - 0x7F) banks max
-		memset( sdata, bank, 32 );
-		value = write_mempak_address(controllerNumber, 0xE100, sdata );
-		if(value!=0x00)
-            return value;
-
-		memset( sdata, 0x01, 32);
-		value = write_mempak_address(controllerNumber, 0xA00C, sdata );
-		if(value!=0x00)
-            return value;
-
-	} else if(gbcart->mapper==GB_CAMERA && bank <=0x3F) { //camera
-        //NOTE: untested don't own mbc5 cart ;_;
-
-		memset( sdata, 0x00, 32);
-		value = write_mempak_address(controllerNumber, 0xA00C, sdata );
-		if(value!=0x00)
-            return value;
-
-		//whole 7 bit can be used for addressing here
-		//64 (0x00 - 0x3F) banks max
-		memset( sdata, bank, 32 );
-		value = write_mempak_address(controllerNumber, 0xE100, sdata );
+        memset( sdata, 0x00, 32);
+        value = write_mempak_address(controllerNumber, 0xA00C, sdata );
         if(value!=0x00)
             return value;
 
-		memset( sdata, 0x01, 32);
-		value = write_mempak_address(controllerNumber, 0xA00C, sdata );
-		if(value!=0x00)
+        //max 16 (0x00 - 0x0F) banks here
+        memset( sdata, bank, 32 );
+        value = write_mempak_address(controllerNumber, 0xE100, sdata );
+        if(value!=0x00)
             return value;
 
-	} else if(gbcart->mapper == GB_MBC5 || gbcart->mapper == GB_MBC4) {
+        memset( sdata, 0x01, 32);
+        value = write_mempak_address(controllerNumber, 0xA00C, sdata );
+        if(value!=0x00)
+            return value;
+
+    } else if(gbcart->mapper==GB_MBC3 && bank <=0x7F) {
+        //NOTE: untested don't own a mbc3 cart ;_;
+
+        memset( sdata, 0x00, 32);
+        value = write_mempak_address(controllerNumber, 0xA00C, sdata );
+        if(value!=0x00)
+            return value;
+
+        //whole 7 bit can be used for addressing here
+        //128 (0x00 - 0x7F) banks max
+        memset( sdata, bank, 32 );
+        value = write_mempak_address(controllerNumber, 0xE100, sdata );
+        if(value!=0x00)
+            return value;
+
+        memset( sdata, 0x01, 32);
+        value = write_mempak_address(controllerNumber, 0xA00C, sdata );
+        if(value!=0x00)
+            return value;
+
+    } else if(gbcart->mapper==GB_CAMERA && bank <=0x3F) { //camera
         //NOTE: untested don't own mbc5 cart ;_;
 
-		int bank5=bank; //preset < 0x100
-
-		if(bank>0xFF) {
-
-			//set to setting mode :>
-			memset( sdata, 0x01, 32);
-			value = write_mempak_address(controllerNumber, 0xA00C, sdata );
-			if(value!=0x00)
-                return value;
-
-			//0x00 rombanking mode 0x01 rambanking mode
-			//disable ram
-			memset( sdata, 0x00, 32 );
-			value = write_mempak_address(controllerNumber, 0xE016, sdata ); //0x6000
-			if(value!=0x00)
-                return value;
-
-			//set bit 9 enable
-			//9 8765 4321
-			//X 0000 0000
-			memset( sdata, 0x01, 32 );
-			value = write_mempak_address(controllerNumber, 0xC000, sdata ); //write at 0x4000
-			if(value!=0x00)
-                return value;
-
-			bank5=bank-0x100; //set for lower bits
-		}
-
-
-		//lower bits
-		memset( sdata, 0x00, 32);
-		value = write_mempak_address(controllerNumber, 0xA00C, sdata );
-		if(value!=0x00)
+        memset( sdata, 0x00, 32);
+        value = write_mempak_address(controllerNumber, 0xA00C, sdata );
+        if(value!=0x00)
             return value;
 
-		//set bit 1-8 even 0x00 if you like
-		//XXXX XXXX
-		memset( sdata, bank5, 32 );
-		value = write_mempak_address(controllerNumber, 0xE100, sdata );
-		if(value!=0x00)
+        //whole 7 bit can be used for addressing here
+        //64 (0x00 - 0x3F) banks max
+        memset( sdata, bank, 32 );
+        value = write_mempak_address(controllerNumber, 0xE100, sdata );
+        if(value!=0x00)
             return value;
 
-		memset( sdata, 0x01, 32);
-		value = write_mempak_address(controllerNumber, 0xA00C, sdata );
-		if(value!=0x00)
+        memset( sdata, 0x01, 32);
+        value = write_mempak_address(controllerNumber, 0xA00C, sdata );
+        if(value!=0x00)
             return value;
 
-		//TODO: disable high bit
+    } else if(gbcart->mapper == GB_MBC5 || gbcart->mapper == GB_MBC4) {
+        //NOTE: untested don't own mbc5 cart ;_;
 
-	}
+        int bank5=bank; //preset < 0x100
 
-	gbcart->bank=bank;
-	return 0;
+        if(bank>0xFF) {
+
+            //set to setting mode :>
+            memset( sdata, 0x01, 32);
+            value = write_mempak_address(controllerNumber, 0xA00C, sdata );
+            if(value!=0x00)
+                return value;
+
+            //0x00 rombanking mode 0x01 rambanking mode
+            //disable ram
+            memset( sdata, 0x00, 32 );
+            value = write_mempak_address(controllerNumber, 0xE016, sdata ); //0x6000
+            if(value!=0x00)
+                return value;
+
+            //set bit 9 enable
+            //9 8765 4321
+            //X 0000 0000
+            memset( sdata, 0x01, 32 );
+            value = write_mempak_address(controllerNumber, 0xC000, sdata ); //write at 0x4000
+            if(value!=0x00)
+                return value;
+
+            bank5=bank-0x100; //set for lower bits
+        }
+
+
+        //lower bits
+        memset( sdata, 0x00, 32);
+        value = write_mempak_address(controllerNumber, 0xA00C, sdata );
+        if(value!=0x00)
+            return value;
+
+        //set bit 1-8 even 0x00 if you like
+        //XXXX XXXX
+        memset( sdata, bank5, 32 );
+        value = write_mempak_address(controllerNumber, 0xE100, sdata );
+        if(value!=0x00)
+            return value;
+
+        memset( sdata, 0x01, 32);
+        value = write_mempak_address(controllerNumber, 0xA00C, sdata );
+        if(value!=0x00)
+            return value;
+
+        //TODO: disable high bit
+
+    }
+
+    gbcart->bank=bank;
+    return 0;
 }
 
 int _get_gbRamAddr(const char controllerNumber, unsigned long addr, uint8_t *rdata){
 
-	//mbc1,3,5 A000-BFFF
-	//mbc2 A000-A1FF
-	uint8_t sdata[32];
-	//addr e.g. 0xC138
-	int value=0;
+    //mbc1,3,5 A000-BFFF
+    //mbc2 A000-A1FF
+    uint8_t sdata[32];
+    //addr e.g. 0xC138
+    int value = 0;
 
-	if((addr>=0xE000) && (addr<=0xFFFF)) {
+    if((addr >= 0xE000) && (addr <= 0xFFFF)) {
 
+        //prepare for rambank read
         memset(sdata, 0x02, 32);
-        value = write_mempak_address(controllerNumber, 0xA00C, sdata );//prepare for rambank read
+        value = write_mempak_address(controllerNumber, 0xA00C, sdata);
 
         memset(rdata, 0x00, 32);
         value = read_mempak_address(controllerNumber, addr, rdata );
 
-	} else {
-		value=-1;
+    } else {
+        value =- 1;
     }
 
-	return value;
+    return value;
 }
 
 
 int _set_gbRamAddr(const char controllerNumber, unsigned long addr, uint8_t *sdata) {
 
-	//mbc1,3,5 A000-BFFF
-	//mbc2 A000-A1FF
-	uint8_t sdata_[32];
+    //mbc1,3,5 A000-BFFF
+    //mbc2 A000-A1FF
+    uint8_t preparationSegment[32];
 
-	//addr e.g. 0xC138
-	int value=0;
+    //addr e.g. 0xC138
+    int value = 0;
 
-	if((addr>=0xE000) && (addr<=0xFFFF)) {
+    if((addr>=0xE000) && (addr<=0xFFFF)) {
 
-        memset(sdata_, 0x02, 32);
-        value = write_mempak_address(controllerNumber, 0xA00C, sdata_ ); //prepare for rambank read/write
+        //prepare for rambank read/write
+        memset(preparationSegment, 0x02, 32);
+        value = write_mempak_address(controllerNumber, 0xA00C, preparationSegment);
 
-        value = write_mempak_address(controllerNumber, addr, sdata );
-
-	} else {
-        value=-1;
+        // Write data.
+        value = write_mempak_address(controllerNumber, addr, sdata);
+    } else {
+        value = -1;
     }
 
-	return value;
+    return value;
 }
 
 
 int _get_gbRomAddr(const char controllerNumber, unsigned long addr, uint8_t *rdata) {
 
-	//addr e.g. 0xC138
-	int value=0;
+    //addr e.g. 0xC138
+    int value = 0;
 
-	if((addr>=0xC000) && (addr<=0xFFFF))
-		value = read_mempak_address(controllerNumber, addr, rdata );
-	else
-		value=-1;
+    if((addr >= 0xC000) && (addr <= 0xFFFF))
+        value = read_mempak_address(controllerNumber, addr, rdata);
+    else
+        value = -1;
 
-	return value;
+    return value;
 }
 
-
-GameboyCart initialiseCart(char controllerNumber) {
+/**
+ * Determines essential data about the catridge in the given TPak - size, Memory Bank configuration, title etc and loads into memory.
+ * @param controllerNumber The controller with a transfer pak.
+ */
+GameboyCart initialiseCart(const char controllerNumber) {
     GameboyCart cart = {};
-    memset(data, 0, 32 );
+    memset(data, 0, 32);
 
     if(_set_gbPower(controllerNumber, 0) != 0) {
         cart.errorCode = -1;
@@ -514,8 +550,8 @@ GameboyCart initialiseCart(char controllerNumber) {
 
     for( int i = 20; i < 31; i++ ) {
         //20=0x14 -> 0x120+0x14 only 11 from 16 chars are safe
-        if(data[i]!=0)
-            cart.title[i-20]=data[i];
+        if(data[i] != 0)
+            cart.title[i-20] = data[i];
         else
             cart.title[i-20]=0x20;
     }
@@ -765,13 +801,13 @@ GameboyCart initialiseCart(char controllerNumber) {
     }
 
     // 00h - None
-	// 01h - 2 KBytes
-	// 02h - 8 Kbytes
-	// 03h - 32 KBytes (4 banks of 8KBytes each)
-	// 04h - 128 KBytes (16 banks of 8KBytes each) - only camera?
+    // 01h - 2 KBytes
+    // 02h - 8 Kbytes
+    // 03h - 32 KBytes (4 banks of 8KBytes each)
+    // 04h - 128 KBytes (16 banks of 8KBytes each) - only camera?
 
-	switch (cart._ramsize) {
-		case 0x00:
+    switch (cart._ramsize) {
+        case 0x00:
             if(cart.mapper == GB_MBC2) {
                 cart.rambanks=1;
                 cart.ramsize=512; //test
@@ -780,31 +816,37 @@ GameboyCart initialiseCart(char controllerNumber) {
                 cart.ramsize=0;
             }
             break;
-		case 0x01:
+        case 0x01:
             cart.rambanks=1;
-			cart.ramsize=2*1024;
-			break;
-		case 0x02:
-		 	cart.rambanks=1;
-			cart.ramsize=8*1024;
-			break;
-		case 0x03:
+            cart.ramsize=2*1024;
+            break;
+        case 0x02:
+             cart.rambanks=1;
+            cart.ramsize=8*1024;
+            break;
+        case 0x03:
             cart.rambanks=4;
-			cart.ramsize=4*8*1024;
-			break;
-		case 0x04:
+            cart.ramsize=4*8*1024;
+            break;
+        case 0x04:
             cart.rambanks=16;
-			cart.ramsize=16*8*1024;
-			break;
+            cart.ramsize=16*8*1024;
+            break;
 
-		default:
-			cart.rambanks=0;
-			cart.ramsize=0;
+        default:
+            cart.rambanks=0;
+            cart.ramsize=0;
     }
 
     return cart;
 }
 
+/**
+ * Loads the ROM of the given cartridge in to memory.
+ * @param controllerNumber controller the cartidge is plugged in to.
+ * @param gbcart Basic information about the cartridge.
+ * @out romData ROM of the cartridge is dumped in here.
+ */
 char importRom(const char controllerNumber, GameboyCart gbcart, ByteArray* romData){
     const int SEGMENT_SIZE = 0x20; // 32
 
@@ -834,13 +876,13 @@ char importRom(const char controllerNumber, GameboyCart gbcart, ByteArray* romDa
         _get_gbAccessState(controllerNumber);
 
         //int 141 0x8D
-        //10000000	0x80 OS_GBPAK_GBCART_ON
-        //10001101	0x8d return zz
-        //00001101	0xd =
+        //10000000    0x80 OS_GBPAK_GBCART_ON
+        //10001101    0x8d return zz
+        //00001101    0xd =
 
-        //00000100	0x4 OS_GBPAK_RSTB_DETECTION (reset byquery)
-        //00001000	0x8 OS_GBPAK_RSTB_STATUS (reset by query)
-        //00000001	0x1 OS_GBPAK_POWER
+        //00000100    0x4 OS_GBPAK_RSTB_DETECTION (reset byquery)
+        //00001000    0x8 OS_GBPAK_RSTB_STATUS (reset by query)
+        //00000001    0x1 OS_GBPAK_POWER
 
         if(_set_gbRomBank(controllerNumber, &gbcart, bankCount) != 0)
             return -1;
@@ -947,6 +989,12 @@ char exportSave(GameboyCart gbcart, ByteArray* saveData) {
     return 0;
 }*/
 
+/**
+ * Loads the Save RAM of the given cartridge in to memory.
+ * @param controllerNumber controller the cartidge is plugged in to.
+ * @param gbcart Basic information about the cartridge.
+ * @out ramData RAM of the cartridge is dumped in here.
+ */
 char importSave(const char controllerNumber, const GameboyCart gbcart, ByteArray* saveData) {
     const int SEGMENT_SIZE = 0x20; // 32
 

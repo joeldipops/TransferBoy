@@ -1,6 +1,10 @@
 #include "utils.h"
 #include "options.h"
 
+/**
+ * Set initial state of user-configurable options.
+ * @out The options struct to populate.
+ */
 void initialiseOptions(OptionsHash* options) {
     options->SelectedBorder = BorderNone;
     options->NumberOfPlayers = 1;

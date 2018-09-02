@@ -15,6 +15,10 @@
 static resolution_t res = RESOLUTION_320x240;
 static bitdepth_t bit = DEPTH_32_BPP;
 
+/**
+ * Sets oft-use colours since we can't assign graphics_make_color to a constant.
+ * @private
+ */
 void setColours() {
     GLOBAL_BACKGROUND_COLOUR = graphics_make_color(200, 200, 220, 255);
     GLOBAL_TEXT_COLOUR = graphics_make_color(0, 0, 0, 255);
