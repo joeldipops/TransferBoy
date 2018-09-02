@@ -6,6 +6,9 @@
 
 #include <libdragon.h>
 
+static const natural SCREEN_Y_OFFSET = 80;
+static const natural SCREEN_X_OFFSET = 80;
+
 void gameRender(const string text) {
     logInfo(text);
 }
@@ -51,6 +54,56 @@ void initialiseEmulator(struct gb_state* state, const ByteArray* romData, const 
     lcd_init(state); // Here we're initing the code that renders the pixel buffer.
 }
 
+void renderPixels(const unsigned short* pixelBuffer, const bool isColour) {
+    natural* pixels = malloc(GB_LCD_HEIGHT * GB_LCD_WIDTH);
+    memset(pixels, 0xFF, GB_LCD_HEIGHT * GB_LCD_WIDTH);
+
+    // Lifted from gbC's gui_lcd_render_frame function.
+    if (isColour) {
+        /* The colors stored in pixbuf are two byte each, 5 bits per rgb
+         * component: -bbbbbgg gggrrrrr. We need to extract these, scale these
+         * values from 0-1f to 0-ff and put them in RGBA format. For the scaling
+         * we'd have to multiply by 0xff/0x1f, which is 8.23, approx 8, which is
+         * a shift by 3. */
+        for (int y = 0; y < GB_LCD_HEIGHT; y++) {
+            for (int x = 0; x < GB_LCD_WIDTH; x++) {
+                int index = x + y * GB_LCD_WIDTH;
+                unsigned short rawColour = pixelBuffer[index];
+
+                natural r = ((rawColour >>  0) & 0x1f) << 3;
+                natural g = ((rawColour >>  5) & 0x1f) << 3;
+                natural b = ((rawColour >> 10) & 0x1f) << 3;
+                natural pixel = (r << 24) | (g << 16) | (b << 8) | 0xff;
+                pixels[index] = pixel;
+            }
+        }
+    } else {
+        /* The colors stored in pixbuf already went through the palette
+         * translation, but are still 2 bit monochrome. */
+        natural palette[] = { 0xffffffff, 0xaaaaaaaa, 0x66666666, 0x11111111 };
+        for (int y = 0; y < GB_LCD_HEIGHT; y++) {
+            for (int x = 0; x < GB_LCD_WIDTH; x++) {
+                int index = x + y * GB_LCD_WIDTH;
+                pixels[index] = palette[pixelBuffer[index]];
+            }
+        }
+    }
+
+    static display_context_t frame = null;
+    while (!(frame = display_lock()));
+    graphics_fill_screen(frame, GLOBAL_BACKGROUND_COLOUR);
+
+    for (int y = 0; y < GB_LCD_HEIGHT; y++) {
+        for (int x = 0; x <  GB_LCD_WIDTH; x++) {
+            graphics_draw_pixel(frame, x + SCREEN_X_OFFSET, y + SCREEN_Y_OFFSET, pixels[x + y * GB_LCD_WIDTH]);
+        }
+    }
+
+    display_show(frame);
+
+    free(pixels);
+}
+
 void emulatorLoop(const OptionsHash* options, const ByteArray* romData, ByteArray* saveData) {
     struct gb_state* emulatorState = malloc(sizeof(struct gb_state));
     initialiseEmulator(emulatorState, romData, saveData);
@@ -68,7 +121,7 @@ void emulatorLoop(const OptionsHash* options, const ByteArray* romData, ByteArra
 
         emu_process_inputs(emulatorState, input);
 
-        // TODO - Map from emulatorState->emu_state->lcd_pixbuf to N64 display.
+        renderPixels(emulatorState->emu_state->lcd_pixbuf, false);
 
         // TODO - Map from emulatorState->emu_state->audio_sndbuf
     }
