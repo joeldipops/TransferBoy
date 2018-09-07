@@ -1,3 +1,6 @@
+#include <stdio.h>
+#include <math.h>
+#include <stdlib.h>
 #include "core.h"
 #include "play.h"
 #include "controller.h"
@@ -37,6 +40,8 @@ void mapGbInputs(const char controllerNumber, const GbButton* buttonMap, const s
     free(pressedButtons);
 }
 
+static unsigned long frameCount = 0;
+
 /**
  * Take the array of pixels produced by the emulator and throw it up on to the screen.
  * @param frame Id of frame to render to.
@@ -44,7 +49,7 @@ void mapGbInputs(const char controllerNumber, const GbButton* buttonMap, const s
  * @param isColour True for GBC and super-game-boy enhanced, otherwise false.
  * @private
  */
-void renderPixels(const display_context_t frame, const unsigned short* pixelBuffer, const bool isColour) {
+void renderPixels(const display_context_t frame, const unsigned short* pixelBuffer, const bool isColour, const float avgPixelSize) {
     natural* pixels = malloc(GB_LCD_HEIGHT * GB_LCD_WIDTH);
     memset(pixels, 0xFF, GB_LCD_HEIGHT * GB_LCD_WIDTH);
 
@@ -79,13 +84,33 @@ void renderPixels(const display_context_t frame, const unsigned short* pixelBuff
         }
     }
 
-    for (int y = 0; y < GB_LCD_HEIGHT; y++) {
+    // TODO - Upscaling is confusing AF.
+    natural leftOver = 1 / (avgPixelSize - floor(avgPixelSize));
+    srand(123);
+
+    for (int y = 0; y < GB_LCD_HEIGHT; y ++) {
         for (int x = 0; x <  GB_LCD_WIDTH; x++) {
-            graphics_draw_pixel(frame, x + SINGLE_PLAYER_SCREEN_LEFT, y + SINGLE_PLAYER_SCREEN_TOP, pixels[x + y * GB_LCD_WIDTH]);
+            unsigned short index = x + y * GB_LCD_WIDTH;
+
+            unsigned short pixelWidth = ((x + y) % leftOver) == 0 ? ceil(avgPixelSize) : floor(avgPixelSize);
+            unsigned short pixelHeight = ((x + y + 1) % leftOver)  == 0 ? ceil(avgPixelSize) : floor(avgPixelSize);
+
+            graphics_draw_box(
+                frame,
+                (x * avgPixelSize) + SINGLE_PLAYER_SCREEN_LEFT,
+                (y * avgPixelSize) + SINGLE_PLAYER_SCREEN_TOP,
+                pixelWidth,
+                pixelHeight,
+                pixels[index]
+            );
         }
     }
 
-    graphics_draw_text(frame, HORIZONTAL_MARGIN, VERTICAL_MARGIN, "HIHI TEXT");
+    string text = "";
+    sprintf(text, "%lu", frameCount);
+    graphics_draw_text(frame, HORIZONTAL_MARGIN, VERTICAL_MARGIN, text);
+
+    frameCount++;
 
     free(pixels);
 }
@@ -127,9 +152,21 @@ void playLogic(RootState* state, const unsigned char playerNumber) {
  * @param playerNumber player in play mode.
  */
 void playDraw(const RootState* state, const unsigned char playerNumber) {
+    // Main background.
+    graphics_draw_box(state->Frame, 0, 0, 640, 480, GLOBAL_BACKGROUND_COLOUR);
+    graphics_draw_box(
+        state->Frame,
+        SINGLE_PLAYER_SCREEN_LEFT,
+        SINGLE_PLAYER_SCREEN_TOP,
+        SINGLE_PLAYER_SCREEN_WIDTH,
+        SINGLE_PLAYER_SCREEN_HEIGHT,
+        BLANK_SCREEN_COLOUR
+    );
+
     renderPixels(
         state->Frame,
         state->Players[playerNumber].EmulationState.emu_state->lcd_pixbuf,
-        state->Players[playerNumber].Cartridge.IsGbcCart || state->Players[playerNumber].Cartridge.IsSuperGbCart
+        state->Players[playerNumber].Cartridge.IsGbcCart || state->Players[playerNumber].Cartridge.IsSuperGbCart,
+        state->PixelSize
     );
 }

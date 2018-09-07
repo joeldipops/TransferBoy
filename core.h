@@ -66,6 +66,7 @@ typedef struct {
     bool RequiresRepaint;
     char PlayerCount;
     struct controller_data ControllerState;
+    float PixelSize;
     display_context_t Frame;
     PlayerState Players[8]; // Really not aiming for anything other than 2, but you never know.
 } RootState;

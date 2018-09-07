@@ -49,6 +49,7 @@ void initLogic(RootState* state, const unsigned char playerNumber) {
         strcpy(state->Players[playerNumber].Cartridge.Title, "TODO");
         state->Players[playerNumber].Cartridge.IsSuperGbCart = false;
         state->Players[playerNumber].Cartridge.IsGbcCart = false;
+        state->PixelSize = (float)SINGLE_PLAYER_SCREEN_HEIGHT / (float)GB_LCD_HEIGHT;
 
         initialiseEmulator(
             &state->Players[playerNumber].EmulationState,

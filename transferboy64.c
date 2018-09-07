@@ -22,6 +22,9 @@ void setGlobalConstants() {
     GLOBAL_TEXT_COLOUR = graphics_make_color(0, 0, 0, 255);
 }
 
+/**
+ * Inititalises all required libdragon subsystems.
+ */
 void initialiseSubsystems() {
     init_interrupts();
     controller_init();
@@ -29,6 +32,10 @@ void initialiseSubsystems() {
     rdp_init();
 }
 
+/**
+ * Sets up initial configuration for N64 - Gameboy button map.
+ * @out buttonMap map of N64 to Gameboy buttons.
+ */
 void initialiseButtonMap(GbButton* map) {
     GbButton buttons[16];
     buttons[NoButton] = GbNoButton;
@@ -56,6 +63,10 @@ void initialiseButtonMap(GbButton* map) {
     memcpy(map, &buttons, sizeof(GbButton) * 16);
 }
 
+/**
+ * Sets up initial state object that will be used throughout the program.
+ * @out state the state object.
+ */
 void generateState(RootState* state) {
     state->PlayerCount = 1;
     state->Players[0].SelectedBorder = BorderNone;
@@ -64,10 +75,16 @@ void generateState(RootState* state) {
     initialiseButtonMap(state->Players[0].ButtonMap);
 }
 
+/**
+ * The mainloop of the program.  Has three phases and executes for all players at each phase
+ * phase 1 read input
+ * phase 2 carry out program logic
+ * phase 3 paint the screen if required.
+ * todo - audio.
+ */
 void mainLoop(RootState* state) {
     bool allQuit = false;
 
-    while(!(state->Frame = display_lock()))
     state->RequiresRepaint = true;
 
     while (!allQuit) {
@@ -76,8 +93,16 @@ void mainLoop(RootState* state) {
         controller_scan();
         state->ControllerState = get_keys_pressed();
 
-        for (int i = 0; i < state->PlayerCount; i++) {
-            switch(state->Players[i].ActiveMode) {
+        Mode modes[4] = {0, 0, 0, 0};
+
+        for (unsigned char i = 0; i < state->PlayerCount; i++) {
+            if (allQuit && state->Players[i].ActiveMode != Quit) {
+                allQuit = false;
+            }
+
+            modes[i] = state->Players[i].ActiveMode;
+
+            switch(modes[i]) {
                 case Quit:
                     allQuit &= true;
                     break;
@@ -92,6 +117,7 @@ void mainLoop(RootState* state) {
                     break;
                 case Options:
                     optionsLogic(state, i);
+                    break;
                 default: break;
             }
         }
@@ -101,7 +127,7 @@ void mainLoop(RootState* state) {
         }
 
         for (int i = 0; i < state->PlayerCount; i++) {
-            switch(state->Players[i].ActiveMode) {
+            switch(modes[i]) {
                 case Init:
                     initDraw(state, i);
                     break;
@@ -113,6 +139,7 @@ void mainLoop(RootState* state) {
                     break;
                 case Options:
                     optionsDraw(state, i);
+                    break;
                 default: break;
             }
         }
@@ -139,40 +166,7 @@ int main(void) {
     //display_close();
 }
 
-/**
- * Main loop.
- */
- /*
-int main(void)
-{
-    setColours();
-    init_interrupts();
-    display_init(res, bit, 2, GAMMA_NONE, ANTIALIAS_RESAMPLE);
-    controller_init();
 
-    // initialize options hash
-    OptionsHash * options = malloc(sizeof *options);
-    initialiseOptions(options);
-
-    bool isDone = false;
-
-    while(!isDone) {
-        MenuState menuState = menuLoop();
-
-        switch(menuState) {
-            case MenuStateExit:
-                isDone = true;
-                break;
-            case MenuStateStart:
-                gameLoop(options);
-                break;
-            case MenuStateOptions:
-                optionsLoop(options);
-            default: break;
-        }
-    }
-}
-*/
 // cheating because the makefile doesn't work.
 void _exit(int status)
 {
