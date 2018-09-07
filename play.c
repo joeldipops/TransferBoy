@@ -15,8 +15,7 @@
  * @out gbInput struct of gb buttons to fill in.
  * @private
  */
-void mapGbInputs(const char controllerNumber, const GbButton* buttonMap, const struct controller_data* n64Input, struct player_input* gbInput) {
-    bool* pressedButtons = malloc(sizeof(bool) * 16);
+void mapGbInputs(const char controllerNumber, const GbButton* buttonMap, const struct controller_data* n64Input, bool* pressedButtons, struct player_input* gbInput) {
     getPressedButtons(n64Input, controllerNumber, pressedButtons);
 
     for (int i = 0; i < 16; i++) {
@@ -36,8 +35,6 @@ void mapGbInputs(const char controllerNumber, const GbButton* buttonMap, const s
             default: break;
         }
     }
-
-    free(pressedButtons);
 }
 
 static unsigned long frameCount = 0;
@@ -134,12 +131,26 @@ void playLogic(RootState* state, const unsigned char playerNumber) {
 
     emu_step_frame(emulatorState);
 
+    bool* pressedButtons = malloc(sizeof(bool) * 16);
+
     mapGbInputs(
-        0,
+        playerNumber,
         state->Players[playerNumber].ButtonMap,
         &state->ControllerState,
+        pressedButtons,
         input
     );
+
+    // TODO Reverse button map?
+    for (int i = 0; i < 16; i++) {
+        if (state->Players[playerNumber].ButtonMap[i] == GbSystemMenu && pressedButtons[i]) {
+            logAndPause("SystemMenu");
+            state->Players[playerNumber].ActiveMode = Menu;
+            break;
+        }
+    }
+
+    free(pressedButtons);
 
     emu_process_inputs(emulatorState, input);
 

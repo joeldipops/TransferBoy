@@ -55,7 +55,7 @@ void initialiseCart(const char controllerNumber, GameboyCart* outputCart);
  * @param gbcart Basic information about the cartridge.
  * @out romData ROM of the cartridge is dumped in here.
  */
-char importRom(const char controllerNumber, const GameboyCart cart, ByteArray* romData);
+char importRom(const char controllerNumber, GameboyCart* cart, ByteArray* romData);
 
 /**
  * Loads the Save RAM of the given cartridge in to memory.

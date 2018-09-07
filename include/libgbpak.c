@@ -496,39 +496,50 @@ void initialiseCart(const char controllerNumber, GameboyCart* outputCart) {
 
     if(_set_gbPower(controllerNumber, 0) != 0) {
         cart.errorCode = -1;
+        memcpy(outputCart, &cart, sizeof(GameboyCart));
+        return;
     }
     // get power status 0=off 1=on
-    else if (_get_gbPower(controllerNumber) != 0) {
+    if (_get_gbPower(controllerNumber) != 0) {
         cart.errorCode = -2;
+        memcpy(outputCart, &cart, sizeof(GameboyCart));
+        return;
     }
     //set power off 0=off 1=on
-    else if(_set_gbPower(controllerNumber, 1) != 0) {
+    if(_set_gbPower(controllerNumber, 1) != 0) {
         cart.errorCode = -3;
+        memcpy(outputCart, &cart, sizeof(GameboyCart));
+        return;
     }
     //get power status 0=off 1=on
-    else if(_get_gbPower(controllerNumber) != 1) {
+    if(_get_gbPower(controllerNumber) != 1) {
         cart.errorCode = -4;
+        memcpy(outputCart, &cart, sizeof(GameboyCart));
+        return;
     }
     //double check is inserted is on?
     //get access mode
-    else if(_get_gbAccessState(controllerNumber) == -1) {
+    if(_get_gbAccessState(controllerNumber) == -1) {
         cart.errorCode = -5;
+        memcpy(outputCart, &cart, sizeof(GameboyCart));
+        return;
     }
     //set mode 1
-    else if(_set_gbAccessState(controllerNumber, 1) != 0) {
+    if(_set_gbAccessState(controllerNumber, 1) != 0) {
         cart.errorCode = -6;
+        memcpy(outputCart, &cart, sizeof(GameboyCart));
+        return;
     }
     //set bank 0
-    else if(_set_gbRomBank(controllerNumber, &cart, 0x00) != 0) {
+    if(_set_gbRomBank(controllerNumber, &cart, 0x00) != 0) {
         cart.errorCode = -7;
+        memcpy(outputCart, &cart, sizeof(GameboyCart));
+        return;
     }
     //get rdata
-    else if(_get_gbRomAddr(controllerNumber, 0xC120, data) != 0) {
+    if(_get_gbRomAddr(controllerNumber, 0xC120, data) != 0) {
         //header offset title 0134
         cart.errorCode = -8;
-    }
-
-    if (cart.errorCode != 0) {
         memcpy(outputCart, &cart, sizeof(GameboyCart));
         return;
     }
@@ -837,7 +848,7 @@ void initialiseCart(const char controllerNumber, GameboyCart* outputCart) {
  * @param gbcart Basic information about the cartridge.
  * @out romData ROM of the cartridge is dumped in here.
  */
-char importRom(const char controllerNumber, GameboyCart gbcart, ByteArray* romData){
+char importRom(const char controllerNumber, GameboyCart* gbcart, ByteArray* romData){
     const int SEGMENT_SIZE = 0x20; // 32
 
     byte segment[SEGMENT_SIZE];
@@ -845,22 +856,25 @@ char importRom(const char controllerNumber, GameboyCart gbcart, ByteArray* romDa
     unsigned long address=0xC000;
     unsigned long offset=0x00;
 
-    romData->Data = malloc(gbcart.romsize);
-    memset(romData->Data, 0xFF, gbcart.romsize);
+    romData->Data = malloc(gbcart->romsize);
+    memset(romData->Data, 0xFF, gbcart->romsize);
+
+    _set_gbPower(controllerNumber, 1);
 
     //copy banks to sdram
-    for(int bankCount = 0; bankCount < gbcart.rombanks; bankCount++) { //bank count
+    for(int bankCount = 0; bankCount < gbcart->rombanks; bankCount++) { //bank count
         //mbc1 exceptions
-        if(gbcart.mapper == GB_MBC1 && (bankCount == 0x20 || bankCount == 0x40 || bankCount == 0x60))
+        if(gbcart->mapper == GB_MBC1 && (bankCount == 0x20 || bankCount == 0x40 || bankCount == 0x60))
             bankCount++;
 
         //huc1 exceptions
-        if(gbcart.mapper == GB_HUC1 && (bankCount == 0x20 || bankCount == 0x40 || bankCount == 0x60))
+        if(gbcart->mapper == GB_HUC1 && (bankCount == 0x20 || bankCount == 0x40 || bankCount == 0x60))
             bankCount++;
 
         //get power status 0=off 1=on
-        if(_get_gbPower(controllerNumber) != 1)
+        if(_get_gbPower(controllerNumber) != 1) {
             return -4;
+        }
 
         //get access mode
         _get_gbAccessState(controllerNumber);
@@ -874,8 +888,9 @@ char importRom(const char controllerNumber, GameboyCart gbcart, ByteArray* romDa
         //00001000    0x8 OS_GBPAK_RSTB_STATUS (reset by query)
         //00000001    0x1 OS_GBPAK_POWER
 
-        if(_set_gbRomBank(controllerNumber, &gbcart, bankCount) != 0)
+        if(_set_gbRomBank(controllerNumber, gbcart, bankCount) != 0) {
             return -1;
+        }
 
         for(unsigned long bankAddress = address; bankAddress <= 0xFFE0; bankAddress += SEGMENT_SIZE) { //bank offset
             memset(segment, 0xFF, SEGMENT_SIZE);
