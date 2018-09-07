@@ -163,6 +163,8 @@ int main(void) {
     generateState(&state);
     mainLoop(&state);
 
+
+
     //display_close();
 }
 

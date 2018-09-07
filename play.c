@@ -107,7 +107,7 @@ void renderPixels(const display_context_t frame, const unsigned short* pixelBuff
     }
 
     string text = "";
-    sprintf(text, "%lu", frameCount);
+    sprintf(text, "Frames: %lu", frameCount);
     graphics_draw_text(frame, HORIZONTAL_MARGIN, VERTICAL_MARGIN, text);
 
     frameCount++;
@@ -142,6 +142,8 @@ void playLogic(RootState* state, const unsigned char playerNumber) {
     );
 
     emu_process_inputs(emulatorState, input);
+
+    state->RequiresRepaint = true;
 
     // TODO - Map from emulatorState->emu_state->audio_sndbuf
 }

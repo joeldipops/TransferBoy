@@ -17,7 +17,7 @@ bool initPak(const unsigned char controllerNumber) {
 
         initialiseCart(controllerNumber, _pakInit[controllerNumber]);
         if (_pakInit[controllerNumber]->errorCode) {
-            logInfo("gbpak init error");
+            logAndPause("gbpak init failed with code %d", _pakInit[controllerNumber]->errorCode);
             return false;
         }
     }
@@ -41,15 +41,16 @@ bool isCartridgeInserted(const unsigned char controllerNumber) {
  */
 bool isTPakInserted(const unsigned char controllerNumber) {
     get_accessories_present();
-    if (identify_accessory(0) != ACCESSORY_MEMPAK) {
+    if (identify_accessory(controllerNumber) != ACCESSORY_MEMPAK) {
         return false;
     }
 
     // No idea how to check this, just return true for now.
-    if (controllerNumber == 0)
+    if (controllerNumber == 0) {
         return true;
-    else
+    } else {
         return false;
+    }
 }
 
 /**
@@ -59,7 +60,10 @@ bool isTPakInserted(const unsigned char controllerNumber) {
  */
 void loadRom(const unsigned char controllerNumber, ByteArray* output) {
     if (initPak(controllerNumber)) {
-        importRom(controllerNumber, *_pakInit[controllerNumber], output);
+        char error = importRom(controllerNumber, _pakInit[controllerNumber], output);
+        if (error) {
+            logAndPause("rom load failed with code %d", error);
+        }
     }
 }
 
@@ -70,7 +74,10 @@ void loadRom(const unsigned char controllerNumber, ByteArray* output) {
  */
  void loadSave(const unsigned char controllerNumber, ByteArray* output) {
     if (initPak(controllerNumber)) {
-        importSave(controllerNumber, *_pakInit[controllerNumber], output);
+        char error = importSave(controllerNumber, *_pakInit[controllerNumber], output);
+        if (error) {
+            logAndPause("save load failed with code %d", error);
+        }
     }
 }
 
