@@ -1,6 +1,7 @@
 #include "logger.h"
-#include "utils.h"
 #include <stdarg.h>
+#include <stdio.h>
+#include "core.h"
 #include <libdragon.h>
 
 /**
@@ -8,10 +9,10 @@
  * @private
  * @param text The text ready to be displayed.
  */
-void printLog(const string text) {
-    static display_context_t frame = null;
-
-    while (!(frame = display_lock()));
+void printLog(const string text, display_context_t frame) {
+    if (!frame) {
+        while(!(frame = display_lock()));
+    }
 
     graphics_fill_screen(frame, GLOBAL_BACKGROUND_COLOUR);
     graphics_set_color(GLOBAL_TEXT_COLOUR, 0x0);
@@ -33,7 +34,27 @@ void logAndPause(const string text, ...) {
 
     string output = "";
     vsprintf(output, text, args);
-    printLog(output);
+    printLog(output, null);
+
+    va_end(args);
+
+    bool isPaused = true;
+    while(isPaused) {
+        controller_scan();
+        struct controller_data input = get_keys_pressed();
+        if (input.c[0].start) {
+            isPaused = false;
+        }
+    }
+}
+
+void logAndPauseFrame(display_context_t frame, const string text, ...) {
+    va_list args;
+    va_start(args, text);
+
+    string output = "";
+    vsprintf(output, text, args);
+    printLog(output, frame);
 
     va_end(args);
 
@@ -61,6 +82,6 @@ void logInfo(const string text, ... ) {
     vsprintf(output, text, args);
     va_end(args);
 
-    printLog(output);
+    printLog(output, null);
 }
 

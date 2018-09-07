@@ -1,11 +1,29 @@
-#include "utils.h"
-#include "menu.h"
+#include "core.h"
 #include <libdragon.h>
+
+/**
+ * Handles the pause menu for given player.
+ * @param state Program state.
+ * @param playerNumber player in menu mode.
+ */
+void menuLogic(RootState* state, char playerNumber) {
+    ;
+}
+
+/**
+ * Displays the pause menu for given player.
+ * @param state Program state.
+ * @param playerNumber player in menu mode.
+ */
+void menuDraw(const RootState* state, char playerNumber) {
+    ;
+}
 
 /**
  * Draws the menu including current cursor position.
  * @param cursorPosition which menu item is currently selected.
  */
+ /*
 void menuRender(int cursorPosition)
 {
     const natural CURSOR_OFFSET = 10;
@@ -22,13 +40,14 @@ void menuRender(int cursorPosition)
 
     display_show(frame);
 }
-
+*/
 /**
  * Shows the menu and allows selection of items
  * @param controllerState The full state of the controller.
  * @param buttons Array of buttons currently pressed.
  * @return State representing selected menu item.
  */
+ /*
 MenuState menuLoop() {
     natural cursorPosition = 0;
     int cursorMax = 2;
@@ -75,4 +94,4 @@ MenuState menuLoop() {
     }
 
     return state;
-};
+};*/

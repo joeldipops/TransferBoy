@@ -1,3 +1,4 @@
+#include "controller.h"
 
 /**
  * Converts the libdragon controller_data structure in to an array indexed by button indicating which are pressed.

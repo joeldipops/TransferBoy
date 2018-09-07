@@ -1,6 +1,5 @@
 #ifndef LOGGER_INCLUDED
 #define LOGGER_INCLUDED
-#include "utils.h"
 
 /**
  * Throws a line of text up on to the screen a la printf.
@@ -16,5 +15,13 @@ void logInfo(const string text, ... );
  * @param ... Parameters for the format string.
  */
 void logAndPause(const string text, ...);
+
+/**
+ * Shows the log message if we're already in the middle of a frame.
+ * @param frame The frame.
+ * @param text Text or format string to show.
+ * @param ... Parameters for the format string.
+ */
+void logAndPauseFrame(display_context_t frame, const string text, ...);
 
 #endif

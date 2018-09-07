@@ -1,16 +1,9 @@
-#include "utils.h"
-#include "game.h"
-#include "tpakio.h"
-#include "logger.h"
+#include "core.h"
+#include "play.h"
+#include "controller.h"
 #include "include/gbc_bundle.h"
 
 #include <libdragon.h>
-
-// Since the gameboy screen is much smaller than ours, position it somewhere.
-// Eventually configuable, especially for 2+ player.
-static const natural SCREEN_Y_OFFSET = 80;
-static const natural SCREEN_X_OFFSET = 80;
-
 /**
  * Converts buttons pressed on the n64 controller into equivalents on the gameboy's.
  * @param controllerNumber The controller to process.
@@ -45,35 +38,13 @@ void mapGbInputs(const char controllerNumber, const GbButton* buttonMap, const s
 }
 
 /**
- * Passes the gameboy cartridge data in to the emulator and fires it up.
- * @param state emulator state object.
- * @param romData ROM loaded from cartridge.
- * @param saveData Save file RAM loaded from cartridge.
-  * @private
- */
-void initialiseEmulator(struct gb_state* state, const ByteArray* romData, const ByteArray* saveData) {
-    memset(state, 0, sizeof(struct gb_state));
-
-    state_new_from_rom(state, romData->Data, romData->Size);
-    cpu_reset_state(state);
-
-    // Add bios here?
-    //dfs_init(DFS_DEFAULT_LOCATION);
-    //
-
-    state_load_extram(state, saveData->Data, saveData->Size);
-    init_emu_state(state);
-    cpu_init_emu_cpu_state(state);
-    lcd_init(state); // Here we're initing the code that renders the pixel buffer.
-}
-
-/**
  * Take the array of pixels produced by the emulator and throw it up on to the screen.
- * @param pixelBuffer Array of pixels
+ * @param frame Id of frame to render to.
+ * @param pixelBuffer Array of pixels.
  * @param isColour True for GBC and super-game-boy enhanced, otherwise false.
  * @private
  */
-void renderPixels(const unsigned short* pixelBuffer, const bool isColour) {
+void renderPixels(const display_context_t frame, const unsigned short* pixelBuffer, const bool isColour) {
     natural* pixels = malloc(GB_LCD_HEIGHT * GB_LCD_WIDTH);
     memset(pixels, 0xFF, GB_LCD_HEIGHT * GB_LCD_WIDTH);
 
@@ -108,83 +79,57 @@ void renderPixels(const unsigned short* pixelBuffer, const bool isColour) {
         }
     }
 
-    static display_context_t frame = null;
-    while (!(frame = display_lock()));
-    graphics_fill_screen(frame, GLOBAL_BACKGROUND_COLOUR);
-
     for (int y = 0; y < GB_LCD_HEIGHT; y++) {
         for (int x = 0; x <  GB_LCD_WIDTH; x++) {
-            graphics_draw_pixel(frame, x + SCREEN_X_OFFSET, y + SCREEN_Y_OFFSET, pixels[x + y * GB_LCD_WIDTH]);
+            graphics_draw_pixel(frame, x + SINGLE_PLAYER_SCREEN_LEFT, y + SINGLE_PLAYER_SCREEN_TOP, pixels[x + y * GB_LCD_WIDTH]);
         }
     }
 
-    display_show(frame);
+    graphics_draw_text(frame, HORIZONTAL_MARGIN, VERTICAL_MARGIN, "HIHI TEXT");
 
     free(pixels);
 }
 
 /**
- * Main game loop for the emulator, taking input and displaying output.
- * @param options Options configured from the options screen.
- * @param romData Game ROM loaded from cartridge.
- * @param saveData Save RAM loaded from cartridge.
- * @private
+ * Handles gameboy emulation.
+ * @param state program state.
+ * @param playerNumber player in play mode.
  */
-void emulatorLoop(const OptionsHash* options, const ByteArray* romData, ByteArray* saveData) {
-    struct gb_state* emulatorState = malloc(sizeof(struct gb_state));
-    initialiseEmulator(emulatorState, romData, saveData);
+void playLogic(RootState* state, const unsigned char playerNumber) {
+    struct gb_state* emulatorState = &state->Players[playerNumber].EmulationState;
+
+    if (emulatorState->emu_state->quit) {
+        state->Players[playerNumber].ActiveMode = Quit;
+        return;
+    }
 
     struct player_input* input;
     input = malloc(sizeof(struct player_input));
     memset(input, 0, sizeof(struct player_input));
 
-    while (!emulatorState->emu_state->quit) {
-        emu_step_frame(emulatorState);
+    emu_step_frame(emulatorState);
 
-        controller_scan();
-        struct controller_data n64Input = get_keys_pressed();
-        mapGbInputs(0, options->ButtonMap, &n64Input, input);
+    mapGbInputs(
+        0,
+        state->Players[playerNumber].ButtonMap,
+        &state->ControllerState,
+        input
+    );
 
-        emu_process_inputs(emulatorState, input);
+    emu_process_inputs(emulatorState, input);
 
-        renderPixels(emulatorState->emu_state->lcd_pixbuf, false);
-
-        // TODO - Map from emulatorState->emu_state->audio_sndbuf
-    }
+    // TODO - Map from emulatorState->emu_state->audio_sndbuf
 }
 
 /**
- * Loads Cartridge in to memory.  TODO - clean-up, helpers etc
+ * Draws gameboy screen.
+ * @param state program state.
+ * @param playerNumber player in play mode.
  */
-void gameLoop(OptionsHash* options) {
-    // Find what controllers have games & tpacs plugged in
-    ByteArray* romData = malloc(sizeof(ByteArray));
-    ByteArray* saveData = malloc(sizeof(ByteArray));
-
-    bool hasQuit = false;
-    while(!hasQuit) {
-        logInfo("Loading Cartridge...");
-        get_accessories_present();
-
-        // Only interested in controller 1 while I figure things out.
-        if (identify_accessory(0) == ACCESSORY_MEMPAK) {
-            loadSave(0, saveData);
-            loadRom(0, romData);
-
-            logInfo("Cartidge Loaded.  Press Start");
-        } else {
-            logInfo("No Cartridge Inserted");
-        }
-
-        while(!hasQuit) {
-            controller_scan();
-            struct controller_data buttons = get_keys_pressed();
-            if(buttons.c[0].start) {
-                emulatorLoop(options, romData, saveData);
-            }
-            if(buttons.c[0].B) {
-                hasQuit = true;
-            }
-        }
-    }
+void playDraw(const RootState* state, const unsigned char playerNumber) {
+    renderPixels(
+        state->Frame,
+        state->Players[playerNumber].EmulationState.emu_state->lcd_pixbuf,
+        state->Players[playerNumber].Cartridge.IsGbcCart || state->Players[playerNumber].Cartridge.IsSuperGbCart
+    );
 }

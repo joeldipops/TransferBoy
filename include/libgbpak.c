@@ -22,8 +22,6 @@
 #include <pthread.h>
 
 #include "logger.h"
-#include "utils.h"
-
 #include "libgbpak.h"
 
 uint8_t data[32];
@@ -490,59 +488,49 @@ int _get_gbRomAddr(const char controllerNumber, unsigned long addr, uint8_t *rda
 /**
  * Determines essential data about the catridge in the given TPak - size, Memory Bank configuration, title etc and loads into memory.
  * @param controllerNumber The controller with a transfer pak.
+ * @out outputCart Pointer to cartridge to populate with data.
  */
-GameboyCart initialiseCart(const char controllerNumber) {
+void initialiseCart(const char controllerNumber, GameboyCart* outputCart) {
     GameboyCart cart = {};
     memset(data, 0, 32);
 
     if(_set_gbPower(controllerNumber, 0) != 0) {
         cart.errorCode = -1;
-        return cart;
     }
-
-    //get power status 0=off 1=on
-    if(_get_gbPower(controllerNumber) != 0) {
+    // get power status 0=off 1=on
+    else if (_get_gbPower(controllerNumber) != 0) {
         cart.errorCode = -2;
-        return cart;
     }
-
     //set power off 0=off 1=on
-    if(_set_gbPower(controllerNumber, 1) != 0) {
+    else if(_set_gbPower(controllerNumber, 1) != 0) {
         cart.errorCode = -3;
-        return cart;
     }
-
     //get power status 0=off 1=on
-    if(_get_gbPower(controllerNumber) != 1) {
+    else if(_get_gbPower(controllerNumber) != 1) {
         cart.errorCode = -4;
-        return cart;
     }
-
     //double check is inserted is on?
-
     //get access mode
-    if(_get_gbAccessState(controllerNumber) == -1) {
+    else if(_get_gbAccessState(controllerNumber) == -1) {
         cart.errorCode = -5;
-        return cart;
     }
-
     //set mode 1
-    if(_set_gbAccessState(controllerNumber, 1) != 0) {
+    else if(_set_gbAccessState(controllerNumber, 1) != 0) {
         cart.errorCode = -6;
-        return cart;
     }
-
     //set bank 0
-    if(_set_gbRomBank(controllerNumber, &cart, 0x00) != 0) {
+    else if(_set_gbRomBank(controllerNumber, &cart, 0x00) != 0) {
         cart.errorCode = -7;
-        return cart;
     }
-
     //get rdata
-    if(_get_gbRomAddr(controllerNumber, 0xC120, data) != 0) {
+    else if(_get_gbRomAddr(controllerNumber, 0xC120, data) != 0) {
         //header offset title 0134
         cart.errorCode = -8;
-        return cart;
+    }
+
+    if (cart.errorCode != 0) {
+        memcpy(outputCart, &cart, sizeof(GameboyCart));
+        return;
     }
 
     //current bank
@@ -560,7 +548,8 @@ GameboyCart initialiseCart(const char controllerNumber) {
     if(_get_gbRomAddr(controllerNumber, 0xC140, data) !=0 ) {
         //header offset cart type
         cart.errorCode = -9;
-        return cart;
+        memcpy(outputCart, &cart, sizeof(GameboyCart));
+        return;
     }
 
     cart.sgb = data[6]; //0x146 super gameboy functions 0x00=no 03=yes
@@ -797,7 +786,8 @@ GameboyCart initialiseCart(const char controllerNumber) {
             break;
             //experimental end
         default:
-            return cart;
+            memcpy(outputCart, &cart, sizeof(GameboyCart));
+            return;
     }
 
     // 00h - None
@@ -838,7 +828,7 @@ GameboyCart initialiseCart(const char controllerNumber) {
             cart.ramsize=0;
     }
 
-    return cart;
+    memcpy(outputCart, &cart, sizeof(GameboyCart));
 }
 
 /**

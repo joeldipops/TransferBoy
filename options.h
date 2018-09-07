@@ -1,21 +1,20 @@
 #ifndef OPTIONS_INCLUDED
 #define OPTIONS_INCLUDED
-#include "utils.h"
+#include "core.h"
 
-typedef enum { BorderNone } Border;
-
-typedef struct {
-    Border SelectedBorder;
-    char NumberOfPlayers;
-    GbButton ButtonMap[16];
-} OptionsHash;
 
 /**
- * Set initial state of user-configurable options.
- * @out The options struct to populate.
+ * Displays the options menu for given player.
+ * @param state Program state.
+ * @param playerNumber player in options mode.
  */
-void initialiseOptions(OptionsHash* options);
+void optionsDraw(const RootState*  state, char playerNumber);
 
-void optionsLoop(OptionsHash*  options);
+/**
+ * Handles the options menu for given player.
+ * @param state Program state.
+ * @param playerNumber player in options mode.
+ */
+void optionsLogic(RootState*  state, char playerNumber);
 
 #endif
