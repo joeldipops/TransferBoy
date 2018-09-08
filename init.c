@@ -1,4 +1,5 @@
 #include "init.h"
+#include "tpakio.h"
 #include <libdragon.h>
 #include "include/gbc_bundle.h"
 
@@ -33,17 +34,31 @@ void initialiseEmulator(struct gb_state* state, const ByteArray* romData, const 
     lcd_init(state); // Here we're initing the code that renders the pixel buffer.
 }
 
+typedef enum { InitNoError, InitNoTpak, InitNoCartridge, InitRequiresExpansionPak } InitError;
+
 /**
  * Waits for a Start Button pressed, then goes and loads a rom.
  * @param state program state.
  * @param playerNumber player in init mode.
  */
 void initLogic(RootState* state, const unsigned char playerNumber) {
-    if (state->ControllerState.c[playerNumber].start) {
+    if (!state->ControllerState.c[playerNumber].start) {
+        if (!isTPakInserted(playerNumber)) {
+            state->Players[playerNumber].LastErrorCode = InitNoTpak;
+        } else if (!isCartridgeInserted(playerNumber)) {
+            state->Players[playerNumber].LastErrorCode = InitNoCartridge;
+        } else if (!isCartridgeSizeOk(playerNumber)) {
+            state->Players[playerNumber].LastErrorCode =  InitRequiresExpansionPak;
+        } else {
+            state->Players[playerNumber].LastErrorCode =  InitNoError;
+        }
+    } else {
         state->RequiresRepaint = true;
 
         loadRom(playerNumber, &state->Players[playerNumber].Cartridge.RomData);
         loadSave(playerNumber, &state->Players[playerNumber].Cartridge.SaveData);
+
+        freeTPakIo();
 
         // TODO
         strcpy(state->Players[playerNumber].Cartridge.Title, "TODO");
@@ -88,12 +103,22 @@ void initDraw(const RootState* state, const unsigned char playerNumber) {
     natural textLeft = SINGLE_PLAYER_SCREEN_LEFT + TEXT_WIDTH;
 
     string text = "";
-    if (!isTPakInserted(playerNumber)) {
-        getText(TextNoTpak, text);
-    } else if (!isCartridgeInserted(playerNumber)) {
-        getText(TextNoCartridge, text);
-    } else {
-        getText(TextLoadCartridge, text);
+    switch (state->Players[playerNumber].LastErrorCode) {
+        case InitNoError:
+            getText(TextLoadCartridge, text);
+            break;
+        case InitNoTpak:
+            getText(TextNoTpak, text);
+            break;
+        case InitNoCartridge:
+            getText(TextNoCartridge, text);
+            break;
+        case InitRequiresExpansionPak:
+            getText(TextExpansionPakRequired, text);
+            break;
+        default:
+            strcpy(text, "Unknown Error!!!");
+            break;
     }
 
     graphics_draw_text(state->Frame, textLeft, textTop, text);

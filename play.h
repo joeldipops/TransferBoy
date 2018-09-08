@@ -1,7 +1,7 @@
 #ifndef PLAY_INCLUDED
 #define PLAY_INCLUDED
 
-#include "core.h"
+#include "state.h"
 
 /**
  * Handles gameboy emulation.

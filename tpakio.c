@@ -5,6 +5,17 @@
 
 static const bool isTPakWorking = true;
 static GameboyCart* _pakInit[4]  = {null, null, null, null};
+static const natural MAX_SAFE_ROM_SIZE = 1500000;
+
+/**
+ * Determines if the expansion pak is plugged in.
+ * @return true if the N64 Memory Expansion Pak is available.
+ */
+bool isExpansionPakInserted() {
+    // no idea how to get libdragon to tell me this.
+    return false;
+}
+
 
 /**
  * Prepares a cartridge to be read from the transfer pak.
@@ -23,6 +34,19 @@ bool initPak(const unsigned char controllerNumber) {
     }
 
     return true;
+}
+
+bool isCartridgeSizeOk(const unsigned char controllerNumber) {
+    bool result = initPak(controllerNumber);
+    if (!result) {
+        return result;
+    }
+
+    if (_pakInit[controllerNumber]->romsize <= MAX_SAFE_ROM_SIZE) {
+        return true;
+    } else {
+        return isExpansionPakInserted();
+    }
 }
 
 /**

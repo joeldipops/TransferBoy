@@ -1,7 +1,11 @@
 #ifndef CONTROLLER_INCLUDED
 #define CONTROLLER_INCLUDED
 
+#include "core.h"
 #include <libdragon.h>
+
+typedef enum { NoButton, A, B, L, R, Z, Start, Up, Down, Left, Right, CUp, CDown, CLeft, CRight, Stick } N64Button;
+typedef enum { GbNoButton, GbA, GbB, GbUp, GbDown, GbLeft, GbRight, GbStart, GbSelect, GbSystemMenu } GbButton;
 
 /**
  * Converts the libdragon controller_data structure in to an array indexed by button indicating which are pressed.

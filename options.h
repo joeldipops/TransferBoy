@@ -1,7 +1,7 @@
 #ifndef OPTIONS_INCLUDED
 #define OPTIONS_INCLUDED
-#include "core.h"
 
+#include "state.h"
 
 /**
  * Displays the options menu for given player.

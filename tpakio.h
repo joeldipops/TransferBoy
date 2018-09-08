@@ -3,6 +3,14 @@
 #include "core.h"
 
 /**
+ * Determines if the expansion pak is plugged in.
+ * @return true if the N64 Memory Expansion Pak is available.
+ */
+bool isExpansionPakInserted();
+
+bool isCartridgeSizeOk(const unsigned char controllerNumber);
+
+/**
  * Determines if there is a transfer pak inserted in to the given controller.
  * @param controllerNumber The controller to check.
  * @return true if there is a transfer pak inserted.

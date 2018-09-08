@@ -6,6 +6,8 @@
 #include "text.h"
 #include "tpakio.h"
 #include "init.h"
+#include "controller.h"
+#include "state.h"
 #include <string.h>
 #include <stdlib.h>
 #include <libdragon.h>
@@ -63,16 +65,28 @@ void initialiseButtonMap(GbButton* map) {
     memcpy(map, &buttons, sizeof(GbButton) * 16);
 }
 
+void generatePlayerState(PlayerState* playerState) {
+    playerState->SelectedBorder = BorderNone;
+    playerState->AudioEnabled = true;
+    playerState->ActiveMode = Init;
+    playerState->MenuCursorPosition = -1;
+    initialiseButtonMap(playerState->ButtonMap);
+
+    for (int i = 0; i < 16; i++) {
+        if (playerState->ButtonMap[i] == GbSystemMenu) {
+            playerState->SystemMenuButton = i;
+            break;
+        }
+    }
+}
+
 /**
  * Sets up initial state object that will be used throughout the program.
  * @out state the state object.
  */
 void generateState(RootState* state) {
     state->PlayerCount = 1;
-    state->Players[0].SelectedBorder = BorderNone;
-    state->Players[0].AudioEnabled = true;
-    state->Players[0].ActiveMode = Init;
-    initialiseButtonMap(state->Players[0].ButtonMap);
+    generatePlayerState(&state->Players[0]);
 }
 
 /**
@@ -162,8 +176,6 @@ int main(void) {
     RootState state;
     generateState(&state);
     mainLoop(&state);
-
-
 
     //display_close();
 }

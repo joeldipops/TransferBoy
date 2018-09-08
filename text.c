@@ -12,7 +12,13 @@ void initText() {
     strcpy(_textMap[TextLoadCartridge], "Press (Start) to load cartridge.");
     strcpy(_textMap[TextNoTpak], "Please insert a Transfer Pak.");
     strcpy(_textMap[TextNoCartridge], "Please insert a Game Boy cartridge.");
-    strcpy(_textMap[TextLoadingCartridge], "Loading Cartridge, Please Wait");
+    strcpy(_textMap[TextLoadingCartridge], "Loading Cartridge, Please Wait.");
+    strcpy(_textMap[TextExpansionPakRequired], "This Cartridge cannot be loaded without an Expansion Pak.");
+    strcpy(_textMap[TextMenuResume], "RESUME");
+    strcpy(_textMap[TextMenuReset], "RESET");
+    strcpy(_textMap[TextMenuChangeCart], "CHANGE GAME");
+    strcpy(_textMap[TextMenuOptions], "OPTIONS");
+
     initted = true;
 }
 

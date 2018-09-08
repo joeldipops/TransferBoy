@@ -10,8 +10,6 @@ typedef enum { false, true } bool;
 typedef char string[1024];
 typedef unsigned char byte;
 typedef unsigned int natural;
-typedef enum { NoButton, A, B, L, R, Z, Start, Up, Down, Left, Right, CUp, CDown, CLeft, CRight, Stick } N64Button;
-typedef enum { GbNoButton, GbA, GbB, GbUp, GbDown, GbLeft, GbRight, GbStart, GbSelect, GbSystemMenu } GbButton;
 
 const unsigned char VERTICAL_MARGIN = 30;
 const unsigned char HORIZONTAL_MARGIN = 30;
@@ -44,31 +42,5 @@ typedef struct {
 
 typedef enum { Quit, Init, Play, Menu, Options } Mode;
 typedef enum { BorderNone } Border;
-
-typedef struct {
-    ByteArray RomData;
-    ByteArray SaveData;
-    string Title;
-    bool IsGbcCart;
-    bool IsSuperGbCart;
-} CartridgeData;
-
-typedef struct {
-    Mode ActiveMode;
-    Border SelectedBorder;
-    GbButton ButtonMap[16];
-    CartridgeData Cartridge;
-    bool AudioEnabled;
-    struct gb_state EmulationState;
-} PlayerState;
-
-typedef struct {
-    bool RequiresRepaint;
-    char PlayerCount;
-    struct controller_data ControllerState;
-    float PixelSize;
-    display_context_t Frame;
-    PlayerState Players[8]; // Really not aiming for anything other than 2, but you never know.
-} RootState;
 
 #endif

@@ -8,6 +8,11 @@ typedef enum {
     TextNoCartridge,
     TextLoadCartridge,
     TextLoadingCartridge,
+    TextExpansionPakRequired,
+    TextMenuResume,
+    TextMenuReset,
+    TextMenuChangeCart,
+    TextMenuOptions,
     TextEnd
 } TextId;
 

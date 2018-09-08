@@ -131,7 +131,7 @@ void playLogic(RootState* state, const unsigned char playerNumber) {
 
     emu_step_frame(emulatorState);
 
-    bool* pressedButtons = malloc(sizeof(bool) * 16);
+    bool pressedButtons[16] = {};
 
     mapGbInputs(
         playerNumber,
@@ -141,16 +141,10 @@ void playLogic(RootState* state, const unsigned char playerNumber) {
         input
     );
 
-    // TODO Reverse button map?
-    for (int i = 0; i < 16; i++) {
-        if (state->Players[playerNumber].ButtonMap[i] == GbSystemMenu && pressedButtons[i]) {
-            logAndPause("SystemMenu");
-            state->Players[playerNumber].ActiveMode = Menu;
-            break;
-        }
+    if (pressedButtons[state->Players[playerNumber].SystemMenuButton]) {
+        state->Players[playerNumber].ActiveMode = Menu;
+        state->RequiresRepaint = true;
     }
-
-    free(pressedButtons);
 
     emu_process_inputs(emulatorState, input);
 

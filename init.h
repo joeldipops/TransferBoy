@@ -1,7 +1,7 @@
 #ifndef INIT_INCLUDED
 #define INIT_INCLUDED
 
-#include "core.h"
+#include "state.h"
 
 /**
  * Waits for a Start Button pressed, then goes and loads a rom.

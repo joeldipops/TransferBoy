@@ -2,12 +2,80 @@
 #include <libdragon.h>
 
 /**
+ * Draws a menu item.
+ * @param frame Id of frame to render to.
+ * @param label identifies the label of the menu item.
+ * @param position Ordinal position of the menu item.
+ * @private
+ */
+void drawMenuItem(const display_context_t frame, const TextId label, const unsigned char position, const bool drawCursor) {
+    const unsigned short menuItemOffset = 10;
+    const unsigned short cursorOffset = 20;
+
+    string text = "";
+    getText(label, text);
+    graphics_draw_text(
+        frame,
+        cursorOffset,
+        SINGLE_PLAYER_SCREEN_TOP + SINGLE_PLAYER_SCREEN_HEIGHT + (menuItemOffset * position),
+        text
+    );
+
+    if (drawCursor) {
+        graphics_draw_text(
+            frame,
+            0,
+            SINGLE_PLAYER_SCREEN_TOP + SINGLE_PLAYER_SCREEN_HEIGHT + (menuItemOffset * position),
+            ">"
+        );
+    }
+}
+
+/**
  * Handles the pause menu for given player.
  * @param state Program state.
  * @param playerNumber player in menu mode.
  */
-void menuLogic(RootState* state, char playerNumber) {
-    ;
+void menuLogic(RootState* state, const unsigned char playerNumber) {
+    PlayerState* playerState = &state->Players[playerNumber];
+
+    bool pressedButtons[16] = {};
+    getPressedButtons(&state->ControllerState, playerNumber, pressedButtons);
+
+    const bool menuPressed = pressedButtons[playerState->SystemMenuButton];
+
+    bool repaintRequired = true;
+
+    const char cursorMax = 3;
+
+    // First entering the loop.
+    if (playerState->MenuCursorPosition == -1) {
+        playerState->MenuCursorPosition = 0;
+    } else if (pressedButtons[B] || menuPressed) {
+        playerState->ActiveMode = Play;
+    } else if (pressedButtons[Up]) {
+        if (playerState->MenuCursorPosition > 0) {
+            playerState->MenuCursorPosition--;
+        } else {
+            playerState->MenuCursorPosition = cursorMax;
+        }
+    } else if (pressedButtons[Down]) {
+        if (playerState->MenuCursorPosition < cursorMax) {
+            playerState->MenuCursorPosition++;
+        } else {
+            playerState->MenuCursorPosition = 0;
+        }
+    } else if (pressedButtons[A]) {
+        switch(playerState->MenuCursorPosition) {
+            default: break;
+        };
+    } else {
+        repaintRequired = false;
+    }
+
+    if (repaintRequired) {
+        state->RequiresRepaint = true;
+    }
 }
 
 /**
@@ -15,83 +83,31 @@ void menuLogic(RootState* state, char playerNumber) {
  * @param state Program state.
  * @param playerNumber player in menu mode.
  */
-void menuDraw(const RootState* state, char playerNumber) {
-    ;
-}
+void menuDraw(const RootState* state, const unsigned char playerNumber) {
+    // Cover menu section.
+    graphics_draw_box(
+        state->Frame,
+        0,
+        SINGLE_PLAYER_SCREEN_TOP + SINGLE_PLAYER_SCREEN_HEIGHT,
+        640,
+        480 - (SINGLE_PLAYER_SCREEN_TOP + SINGLE_PLAYER_SCREEN_HEIGHT),
+        GLOBAL_BACKGROUND_COLOUR
+    );
 
-/**
- * Draws the menu including current cursor position.
- * @param cursorPosition which menu item is currently selected.
- */
- /*
-void menuRender(int cursorPosition)
-{
-    const natural CURSOR_OFFSET = 10;
-    static display_context_t frame = null;
-    while (!(frame = display_lock()));
+    TextId labels[4] = {
+        TextMenuResume,
+        TextMenuReset,
+        TextMenuChangeCart,
+        TextMenuOptions
+    };
 
-    graphics_fill_screen(frame, GLOBAL_BACKGROUND_COLOUR);
-    graphics_set_color(GLOBAL_TEXT_COLOUR, 0x0);
-
-    graphics_draw_text(frame, HORIZONTAL_MARGIN + CURSOR_OFFSET, VERTICAL_MARGIN + VERTICAL_MENU_SPACING * 0, "Start");
-    graphics_draw_text(frame, HORIZONTAL_MARGIN + CURSOR_OFFSET, VERTICAL_MARGIN + VERTICAL_MENU_SPACING * 1, "Options");
-    graphics_draw_text(frame, HORIZONTAL_MARGIN + CURSOR_OFFSET, VERTICAL_MARGIN + VERTICAL_MENU_SPACING * 2, "Exit");
-    graphics_draw_text(frame, HORIZONTAL_MARGIN, VERTICAL_MARGIN + VERTICAL_MENU_SPACING * cursorPosition, ">");
-
-    display_show(frame);
-}
-*/
-/**
- * Shows the menu and allows selection of items
- * @param controllerState The full state of the controller.
- * @param buttons Array of buttons currently pressed.
- * @return State representing selected menu item.
- */
- /*
-MenuState menuLoop() {
-    natural cursorPosition = 0;
-    int cursorMax = 2;
-
-    MenuState state = MenuStatePending;
-
-    menuRender(cursorPosition);
-    while (state == MenuStatePending) {
-        controller_scan();
-        struct controller_data buttons = get_keys_pressed();
-
-        bool aPressed = buttons.c[0].A;
-        bool startPressed = buttons.c[0].start;
-        bool downPressed = buttons.c[0].down;
-        bool upPressed = buttons.c[0].up;
-
-        if (aPressed || startPressed) {
-            switch(cursorPosition) {
-                case 0: state = MenuStateStart; break;
-                case 1: state = MenuStateOptions; break;
-                case 2: state = MenuStateExit; break;
-                default: break;
-            }
-        }
-
-        if (upPressed) {
-            if (cursorPosition > 0) {
-                cursorPosition--;
-            } else {
-                cursorPosition = cursorMax;
-            }
-        }
-        if (downPressed) {
-            if (cursorPosition < cursorMax) {
-                cursorPosition++;
-            } else {
-                cursorPosition = 0;
-            }
-        }
-
-        if (aPressed || startPressed || upPressed || downPressed) {
-            menuRender(cursorPosition);
-        }
+    // Draw menu items in order.
+    for (unsigned char position = 0; position < 4; position++) {
+        drawMenuItem(
+            state->Frame,
+            labels[position],
+            position,
+            state->Players[playerNumber].MenuCursorPosition == position
+        );
     }
-
-    return state;
-};*/
+}
