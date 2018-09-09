@@ -18,6 +18,8 @@ void initText() {
     strcpy(_textMap[TextMenuReset], "RESET");
     strcpy(_textMap[TextMenuChangeCart], "CHANGE GAME");
     strcpy(_textMap[TextMenuOptions], "OPTIONS");
+    strcpy(_textMap[TextMenuAddPlayer], "ADD PLAYER");
+    strcpy(_textMap[TextMenuAddGame], "ADD GAME");
 
     initted = true;
 }

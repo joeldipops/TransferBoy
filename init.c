@@ -1,5 +1,6 @@
 #include "init.h"
 #include "tpakio.h"
+#include "screen.h"
 #include <libdragon.h>
 #include "include/gbc_bundle.h"
 
@@ -64,7 +65,10 @@ void initLogic(RootState* state, const unsigned char playerNumber) {
         strcpy(state->Players[playerNumber].Cartridge.Title, "TODO");
         state->Players[playerNumber].Cartridge.IsSuperGbCart = false;
         state->Players[playerNumber].Cartridge.IsGbcCart = false;
-        state->PixelSize = (float)SINGLE_PLAYER_SCREEN_HEIGHT / (float)GB_LCD_HEIGHT;
+
+        ScreenPosition screen = {};
+        getScreenPosition(state, playerNumber, &screen);
+        state->PixelSize = (float)screen.Height / (float)GB_LCD_HEIGHT;
 
         initialiseEmulator(
             &state->Players[playerNumber].EmulationState,
@@ -82,25 +86,16 @@ void initLogic(RootState* state, const unsigned char playerNumber) {
  * @param playerNumber player in init mode.
  */
 void initDraw(const RootState* state, const unsigned char playerNumber) {
-    if (playerNumber != 0) {
-        return;
-    }
+    ScreenPosition screen = {};
+    getScreenPosition(state, playerNumber, &screen);
 
-    graphics_draw_box(state->Frame, 0, 0, 640, 480, GLOBAL_BACKGROUND_COLOUR);
-    graphics_draw_box(
-        state->Frame,
-        SINGLE_PLAYER_SCREEN_LEFT,
-        SINGLE_PLAYER_SCREEN_TOP,
-        SINGLE_PLAYER_SCREEN_WIDTH,
-        SINGLE_PLAYER_SCREEN_HEIGHT,
-        BLANK_SCREEN_COLOUR
-    );
+    graphics_draw_box(state->Frame, 0, 0, RESOLUTION_X, RESOLUTION_Y, GLOBAL_BACKGROUND_COLOUR);
+    graphics_draw_box(state->Frame, screen.Left, screen.Top, screen.Width, screen.Height, BLANK_SCREEN_COLOUR);
 
     const char TEXT_HEIGHT = 30;
     const char TEXT_WIDTH = 10;
-
-    natural textTop = SINGLE_PLAYER_SCREEN_TOP - TEXT_HEIGHT + (SINGLE_PLAYER_SCREEN_WIDTH / 2);
-    natural textLeft = SINGLE_PLAYER_SCREEN_LEFT + TEXT_WIDTH;
+    natural textTop = screen.Top - TEXT_HEIGHT + (screen.Width / 2);
+    natural textLeft = screen.Left + TEXT_WIDTH;
 
     string text = "";
     switch (state->Players[playerNumber].LastErrorCode) {

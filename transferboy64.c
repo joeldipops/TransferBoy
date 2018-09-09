@@ -69,7 +69,8 @@ void generatePlayerState(PlayerState* playerState) {
     playerState->SelectedBorder = BorderNone;
     playerState->AudioEnabled = true;
     playerState->ActiveMode = Init;
-    playerState->MenuCursorPosition = -1;
+    playerState->MenuCursorRow = -1;
+    playerState->MenuCursorColumn = 0;
     initialiseButtonMap(playerState->ButtonMap);
 
     for (int i = 0; i < 16; i++) {
@@ -196,5 +197,6 @@ void _exit(int status)
 #include "logger.c"
 #include "text.c"
 #include "controller.c"
+#include "screen.c"
 #include "include/libgbpak.c"
 #include "include/gbc_bundle.c"

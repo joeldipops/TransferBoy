@@ -21,7 +21,8 @@ typedef struct {
     bool AudioEnabled;
     struct gb_state EmulationState;
     char LastErrorCode;
-    char MenuCursorPosition;
+    char MenuCursorRow;
+    char MenuCursorColumn;
 } PlayerState;
 
 typedef struct {

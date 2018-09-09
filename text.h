@@ -13,6 +13,8 @@ typedef enum {
     TextMenuReset,
     TextMenuChangeCart,
     TextMenuOptions,
+    TextMenuAddPlayer,
+    TextMenuAddGame,
     TextEnd
 } TextId;
 

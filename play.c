@@ -4,6 +4,7 @@
 #include "core.h"
 #include "play.h"
 #include "controller.h"
+#include "screen.h"
 #include "include/gbc_bundle.h"
 
 #include <libdragon.h>
@@ -44,9 +45,19 @@ static unsigned long frameCount = 0;
  * @param frame Id of frame to render to.
  * @param pixelBuffer Array of pixels.
  * @param isColour True for GBC and super-game-boy enhanced, otherwise false.
+ * @param avgPixelSize upscaled TV size of gameboy pixels
+ * @param left left bound of the gb screen to render.
+ * @param top top bound of the gb screen to render.
  * @private
  */
-void renderPixels(const display_context_t frame, const unsigned short* pixelBuffer, const bool isColour, const float avgPixelSize) {
+void renderPixels(
+    const display_context_t frame,
+    const unsigned short* pixelBuffer,
+    const bool isColour,
+    const float avgPixelSize,
+    const unsigned short left,
+    const unsigned short top
+) {
     natural* pixels = malloc(GB_LCD_HEIGHT * GB_LCD_WIDTH);
     memset(pixels, 0xFF, GB_LCD_HEIGHT * GB_LCD_WIDTH);
 
@@ -82,8 +93,8 @@ void renderPixels(const display_context_t frame, const unsigned short* pixelBuff
     }
 
     // TODO - Upscaling is confusing AF.
+
     natural leftOver = 1 / (avgPixelSize - floor(avgPixelSize));
-    srand(123);
 
     for (int y = 0; y < GB_LCD_HEIGHT; y ++) {
         for (int x = 0; x <  GB_LCD_WIDTH; x++) {
@@ -94,8 +105,8 @@ void renderPixels(const display_context_t frame, const unsigned short* pixelBuff
 
             graphics_draw_box(
                 frame,
-                (x * avgPixelSize) + SINGLE_PLAYER_SCREEN_LEFT,
-                (y * avgPixelSize) + SINGLE_PLAYER_SCREEN_TOP,
+                (x * avgPixelSize) + left,
+                (y * avgPixelSize) + top,
                 pixelWidth,
                 pixelHeight,
                 pixels[index]
@@ -160,13 +171,16 @@ void playLogic(RootState* state, const unsigned char playerNumber) {
  */
 void playDraw(const RootState* state, const unsigned char playerNumber) {
     // Main background.
-    graphics_draw_box(state->Frame, 0, 0, 640, 480, GLOBAL_BACKGROUND_COLOUR);
+    ScreenPosition screen = {};
+    getScreenPosition(state, playerNumber, &screen);
+
+    graphics_draw_box(state->Frame, 0, 0, RESOLUTION_X, RESOLUTION_Y, GLOBAL_BACKGROUND_COLOUR);
     graphics_draw_box(
         state->Frame,
-        SINGLE_PLAYER_SCREEN_LEFT,
-        SINGLE_PLAYER_SCREEN_TOP,
-        SINGLE_PLAYER_SCREEN_WIDTH,
-        SINGLE_PLAYER_SCREEN_HEIGHT,
+        screen.Left,
+        screen.Top,
+        screen.Width,
+        screen.Height,
         BLANK_SCREEN_COLOUR
     );
 
@@ -174,6 +188,8 @@ void playDraw(const RootState* state, const unsigned char playerNumber) {
         state->Frame,
         state->Players[playerNumber].EmulationState.emu_state->lcd_pixbuf,
         state->Players[playerNumber].Cartridge.IsGbcCart || state->Players[playerNumber].Cartridge.IsSuperGbCart,
-        state->PixelSize
+        state->PixelSize,
+        screen.Left,
+        screen.Top
     );
 }
