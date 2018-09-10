@@ -42,7 +42,7 @@ typedef enum { InitNoError, InitNoTpak, InitNoCartridge, InitRequiresExpansionPa
  * @param state program state.
  * @param playerNumber player in init mode.
  */
-void initLogic(RootState* state, const unsigned char playerNumber) {
+void initLogic(RootState* state, const byte playerNumber) {
     if (!state->ControllerState.c[playerNumber].start) {
         if (!isTPakInserted(playerNumber)) {
             state->Players[playerNumber].LastErrorCode = InitNoTpak;
@@ -85,7 +85,7 @@ void initLogic(RootState* state, const unsigned char playerNumber) {
  * @param state program state.
  * @param playerNumber player in init mode.
  */
-void initDraw(const RootState* state, const unsigned char playerNumber) {
+void initDraw(const RootState* state, const byte playerNumber) {
     ScreenPosition screen = {};
     getScreenPosition(state, playerNumber, &screen);
 

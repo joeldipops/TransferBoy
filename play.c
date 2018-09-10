@@ -128,7 +128,7 @@ void renderPixels(
  * @param state program state.
  * @param playerNumber player in play mode.
  */
-void playLogic(RootState* state, const unsigned char playerNumber) {
+void playLogic(RootState* state, const byte playerNumber) {
     struct gb_state* emulatorState = &state->Players[playerNumber].EmulationState;
 
     if (emulatorState->emu_state->quit) {
@@ -169,7 +169,7 @@ void playLogic(RootState* state, const unsigned char playerNumber) {
  * @param state program state.
  * @param playerNumber player in play mode.
  */
-void playDraw(const RootState* state, const unsigned char playerNumber) {
+void playDraw(const RootState* state, const byte playerNumber) {
     // Main background.
     ScreenPosition screen = {};
     getScreenPosition(state, playerNumber, &screen);

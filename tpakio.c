@@ -3,7 +3,6 @@
 #include "logger.h"
 #include "tpakio.h"
 
-static const bool isTPakWorking = true;
 static GameboyCart* _pakInit[4]  = {null, null, null, null};
 static const natural MAX_SAFE_ROM_SIZE = 1500000;
 
@@ -22,7 +21,7 @@ bool isExpansionPakInserted() {
  * @param controllerNumber Which Transfer pak to read from.
  * @private
  */
-bool initPak(const unsigned char controllerNumber) {
+bool initPak(const byte controllerNumber) {
     if(!_pakInit[controllerNumber]) {
         _pakInit[controllerNumber] = malloc(sizeof(GameboyCart));
 
@@ -36,7 +35,7 @@ bool initPak(const unsigned char controllerNumber) {
     return true;
 }
 
-bool isCartridgeSizeOk(const unsigned char controllerNumber) {
+bool isCartridgeSizeOk(const byte controllerNumber) {
     bool result = initPak(controllerNumber);
     if (!result) {
         return result;
@@ -54,7 +53,7 @@ bool isCartridgeSizeOk(const unsigned char controllerNumber) {
  * @param controllerNumber The controller to check.
  * @return true if there is a readable cartridge inserted.
  */
-bool isCartridgeInserted(const unsigned char controllerNumber) {
+bool isCartridgeInserted(const byte controllerNumber) {
     return initPak(controllerNumber);
 }
 
@@ -63,7 +62,7 @@ bool isCartridgeInserted(const unsigned char controllerNumber) {
  * @param controllerNumber The controller to check.
  * @return true if there is a transfer pak inserted.
  */
-bool isTPakInserted(const unsigned char controllerNumber) {
+bool isTPakInserted(const byte controllerNumber) {
     get_accessories_present();
     if (identify_accessory(controllerNumber) != ACCESSORY_MEMPAK) {
         return false;
@@ -82,7 +81,7 @@ bool isTPakInserted(const unsigned char controllerNumber) {
  * @param controllerNumber identifies transfer pak to read from.
  * @out output Once loaded, ROM will be at this address.
  */
-void loadRom(const unsigned char controllerNumber, ByteArray* output) {
+void loadRom(const byte controllerNumber, ByteArray* output) {
     if (initPak(controllerNumber)) {
         char error = importRom(controllerNumber, _pakInit[controllerNumber], output);
         if (error) {
@@ -96,7 +95,7 @@ void loadRom(const unsigned char controllerNumber, ByteArray* output) {
  * @param controllerNumber identifies transfer pak to read from.
  * @out output Once loaded, save data will be at this address.
  */
- void loadSave(const unsigned char controllerNumber, ByteArray* output) {
+ void loadSave(const byte controllerNumber, ByteArray* output) {
     if (initPak(controllerNumber)) {
         char error = importSave(controllerNumber, *_pakInit[controllerNumber], output);
         if (error) {
@@ -109,9 +108,10 @@ void loadRom(const unsigned char controllerNumber, ByteArray* output) {
  * Frees memory held by tpakio subsystem.
  */
 void freeTPakIo() {
-    for(unsigned char i = 0; i < 4; i++) {
+    for(byte i = 0; i < 4; i++) {
         if (_pakInit[i] != null) {
             free(_pakInit[i]);
+            _pakInit[i] = null;
         }
     }
 }

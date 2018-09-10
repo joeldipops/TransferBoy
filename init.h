@@ -8,13 +8,13 @@
  * @param state program state.
  * @param playerNumber player in init mode.
  */
-void initLogic(RootState* state, const unsigned char playerNumber);
+void initLogic(RootState* state, const byte playerNumber);
 
 /**
  * Draws screen for init mode.
  * @param state program state.
  * @param playerNumber player in init mode.
  */
-void initDraw(const RootState* state, const unsigned char playerNumber);
+void initDraw(const RootState* state, const byte playerNumber);
 
 #endif

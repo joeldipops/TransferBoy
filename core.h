@@ -11,9 +11,9 @@ typedef char string[1024];
 typedef unsigned char byte;
 typedef unsigned int natural;
 
-const unsigned char VERTICAL_MARGIN = 30;
-const unsigned char HORIZONTAL_MARGIN = 30;
-const unsigned char VERTICAL_MENU_SPACING = 25;
+const byte VERTICAL_MARGIN = 30;
+const byte HORIZONTAL_MARGIN = 30;
+const byte VERTICAL_MENU_SPACING = 25;
 
 natural GLOBAL_BACKGROUND_COLOUR = 0;
 natural GLOBAL_TEXT_COLOUR = 0;

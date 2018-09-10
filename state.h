@@ -4,6 +4,8 @@
 #include "core.h"
 #include "controller.h"
 
+#define MAX_PLAYERS 2
+
 typedef struct {
     ByteArray RomData;
     ByteArray SaveData;
@@ -27,11 +29,17 @@ typedef struct {
 
 typedef struct {
     bool RequiresRepaint;
-    char PlayerCount;
+    byte PlayerCount;
     struct controller_data ControllerState;
     float PixelSize;
     display_context_t Frame;
-    PlayerState Players[8]; // Really not aiming for anything other than 2, but you never know.
+    PlayerState Players[MAX_PLAYERS]; // Really not aiming for anything other than 2, but you never know.
 } RootState;
+
+/**
+ * Initialise the state struct for a new player.
+ * @param playerState struct to initialise.
+ */
+void generatePlayerState(PlayerState* playerState);
 
 #endif

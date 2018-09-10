@@ -66,22 +66,6 @@ void initialiseButtonMap(GbButton* map) {
     memcpy(map, &buttons, sizeof(GbButton) * 16);
 }
 
-void generatePlayerState(PlayerState* playerState) {
-    playerState->SelectedBorder = BorderNone;
-    playerState->AudioEnabled = true;
-    playerState->ActiveMode = Init;
-    playerState->MenuCursorRow = -1;
-    playerState->MenuCursorColumn = 0;
-    initialiseButtonMap(playerState->ButtonMap);
-
-    for (int i = 0; i < 16; i++) {
-        if (playerState->ButtonMap[i] == GbSystemMenu) {
-            playerState->SystemMenuButton = i;
-            break;
-        }
-    }
-}
-
 /**
  * Sets up initial state object that will be used throughout the program.
  * @out state the state object.
@@ -109,9 +93,9 @@ void mainLoop(RootState* state) {
         controller_scan();
         state->ControllerState = get_keys_pressed();
 
-        Mode modes[4] = {0, 0, 0, 0};
+        Mode modes[MAX_PLAYERS] = {0, 0};
 
-        for (unsigned char i = 0; i < state->PlayerCount; i++) {
+        for (byte i = 0; i < state->PlayerCount; i++) {
             if (allQuit && state->Players[i].ActiveMode != Quit) {
                 allQuit = false;
             }
@@ -199,5 +183,6 @@ void _exit(int status)
 #include "text.c"
 #include "controller.c"
 #include "screen.c"
+#include "state.c"
 #include "include/libgbpak.c"
 #include "include/gbc_bundle.c"

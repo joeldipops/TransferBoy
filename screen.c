@@ -22,7 +22,7 @@ const unsigned short PLAYER_2_SCREEN_HEIGHT = 240;
  * @param playerNumber number of a given player.
  * @out output The calculated screen size & position.
  */
-void getScreenPosition(const RootState* state, const unsigned char playerNumber, ScreenPosition* output) {
+void getScreenPosition(const RootState* state, const byte playerNumber, ScreenPosition* output) {
     if (state->PlayerCount == 1) {
         output->Top = SINGLE_PLAYER_SCREEN_TOP;
         output->Left = SINGLE_PLAYER_SCREEN_LEFT;

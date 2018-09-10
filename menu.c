@@ -3,7 +3,7 @@
 #include <libdragon.h>
 
 #define COLUMN_COUNT 2
-static unsigned char columns[COLUMN_COUNT] = {4, 2 };
+static byte columns[COLUMN_COUNT] = {4, 2 };
 
 /**
  * Draws a menu item.
@@ -16,10 +16,10 @@ static unsigned char columns[COLUMN_COUNT] = {4, 2 };
  */
 void drawMenuItem(
     const display_context_t frame,
-    const unsigned char playerNumber,
+    const byte playerNumber,
     const TextId label,
-    const unsigned char x,
-    const unsigned char y,
+    const byte x,
+    const byte y,
     const bool drawCursor,
     const ScreenPosition* screen
 ) {
@@ -53,14 +53,89 @@ void drawMenuItem(
  * @return New position in the new column.
  * @private
  */
-unsigned char getNewRow(const float oldRowCount, const float newRowCount, float currentRow) {
+byte getNewRow(const float oldRowCount, const float newRowCount, const float currentRow) {
     float ratio = oldRowCount / newRowCount;
 
     if (oldRowCount > newRowCount) {
-        return ((unsigned char)ceil((currentRow + 1) / ratio) - 1);
+        return ((byte)ceil((currentRow + 1) / ratio) - 1);
     } else {
         // If we're moving from the smaller column to the larger one, we need to appear at the top of the group.
-        return (unsigned char)(ceil((currentRow + 1) / ratio) - (ratio + 1));
+        return (byte)(ceil((currentRow + 1) / ratio) - (ratio + 1));
+    }
+}
+
+/**
+ * Exits the menu by setting the player's mode back to "Play"
+ * @param playerState state of the given player.
+ */
+void resumePlay(PlayerState* playerState) {
+    playerState->MenuCursorRow = -1;
+    playerState->ActiveMode = Play;
+}
+
+/**
+ * Initialises another player, using the same ROM & Save as in controller slot 1
+ * @param state Program state.
+ * @return error code.
+ */
+char addPlayer(RootState* state) {
+    if (state->PlayerCount < 1) {
+         // Can't copy from 1 if there is no 1
+        return -1;
+    } else if (state->PlayerCount >= MAX_PLAYERS) {
+         // No more players supported.
+        return -2;
+    }
+
+    PlayerState* newPlayer = &state->Players[state->PlayerCount];
+    const PlayerState* playerOne = &state->Players[0];
+    generatePlayerState(newPlayer);
+
+    // Copy the most of the cartirdge data by reference.  It won't be changing.
+    newPlayer->Cartridge.IsGbcCart = playerOne->Cartridge.IsGbcCart;
+    newPlayer->Cartridge.IsSuperGbCart = playerOne->Cartridge.IsSuperGbCart;
+    newPlayer->Cartridge.RomData = playerOne->Cartridge.RomData;
+    strcpy(newPlayer->Cartridge.Title, playerOne->Cartridge.Title);
+
+    // But maintain a different copy of the save file. We don't want to have two instances messing with a single save file.
+    // Non-player-1 save files will never be written back to the cartridge.
+    loadSave(0, &newPlayer->Cartridge.SaveData);
+    newPlayer->ActiveMode = Play;
+    state->PlayerCount++;
+
+    return 0;
+}
+
+/**
+ * Carries out the option selected from the menu.
+ * @param state program state.
+ * @param playerNumber number of player selecting an option.
+ * @param x column of selected item.
+ * @param y row of selected item.
+ */
+void executeMenuItem(RootState* state, const byte playerNumber, const byte x, const byte y) {
+    typedef enum { Resume, Reset, Change, Options, AddPlayer, AddGame } items;
+
+    byte position = 0;
+    bool done = false;
+    for(byte col = 0; col <= x && !done; col++) {
+        for(byte row = 0; row < columns[col] && !done; row++) {
+            if (col == x && row == y) {
+                done = true;
+            } else {
+                position++;
+            }
+        }
+    }
+
+    switch((items)position) {
+        case Resume:
+            resumePlay(&state->Players[playerNumber]);
+            break;
+        case AddPlayer:
+            addPlayer(state);
+            break;
+        default: ; break;
     }
 }
 
@@ -69,7 +144,7 @@ unsigned char getNewRow(const float oldRowCount, const float newRowCount, float 
  * @param state Program state.
  * @param playerNumber player in menu mode.
  */
-void menuLogic(RootState* state, const unsigned char playerNumber) {
+void menuLogic(RootState* state, const byte playerNumber) {
     PlayerState* playerState = &state->Players[playerNumber];
 
     bool pressedButtons[16] = {};
@@ -79,7 +154,7 @@ void menuLogic(RootState* state, const unsigned char playerNumber) {
 
     bool repaintRequired = true;
 
-    unsigned char column = playerState->MenuCursorColumn;
+    byte column = playerState->MenuCursorColumn;
 
     // First entering the loop.
     if (playerState->MenuCursorRow == -1) {
@@ -105,21 +180,22 @@ void menuLogic(RootState* state, const unsigned char playerNumber) {
         } else {
             playerState->MenuCursorColumn = COLUMN_COUNT - 1;
         }
-        playerState->MenuCursorRow = getNewRow(columns[column], columns[(unsigned char)playerState->MenuCursorColumn], playerState->MenuCursorRow);
+        playerState->MenuCursorRow = getNewRow(columns[column], columns[(byte)playerState->MenuCursorColumn], playerState->MenuCursorRow);
     } else if (pressedButtons[Right]) {
         if (playerState->MenuCursorColumn < COLUMN_COUNT - 1) {
             playerState->MenuCursorColumn++;
         } else {
             playerState->MenuCursorColumn = 0;
         }
-        playerState->MenuCursorRow = getNewRow(columns[column], columns[(unsigned char)playerState->MenuCursorColumn], playerState->MenuCursorRow);
+        playerState->MenuCursorRow = getNewRow(columns[column], columns[(byte)playerState->MenuCursorColumn], playerState->MenuCursorRow);
 
     // BACK, SELECT ETC,
     } else if (pressedButtons[B] || menuPressed) {
-        playerState->MenuCursorRow = -1;
-        playerState->ActiveMode = Play;
+        resumePlay(playerState);
     } else if (pressedButtons[A]) {
-        executeMenuItem(playerState->MenuCursorRow, playerState->MenuCursorColumn);
+        executeMenuItem(state, playerNumber, playerState->MenuCursorColumn, playerState->MenuCursorRow);
+        // Don't rerender the menu again, go on to other things.
+        repaintRequired = false;
     } else {
         repaintRequired = false;
     }
@@ -134,7 +210,7 @@ void menuLogic(RootState* state, const unsigned char playerNumber) {
  * @param state Program state.
  * @param playerNumber player in menu mode.
  */
-void menuDraw(const RootState* state, const unsigned char playerNumber) {
+void menuDraw(const RootState* state, const byte playerNumber) {
     ScreenPosition screen = {};
     getScreenPosition(state, playerNumber, &screen);
 
@@ -159,9 +235,9 @@ void menuDraw(const RootState* state, const unsigned char playerNumber) {
 
     // Draw menu items in order.
 
-    unsigned char position = 0;
-    for(unsigned char x = 0; x < COLUMN_COUNT; x++) {
-        for(unsigned char y = 0; y < columns[x]; y++) {
+    byte position = 0;
+    for(byte x = 0; x < COLUMN_COUNT; x++) {
+        for(byte y = 0; y < columns[x]; y++) {
             drawMenuItem(
                 state->Frame,
                 playerNumber,

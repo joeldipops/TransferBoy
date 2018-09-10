@@ -1,5 +1,7 @@
 bin/
 obj/
+filesystem/bios.bin
+include/gbC/
 .git
 TransferBoy64.cbp
 TransferBoy64.depend

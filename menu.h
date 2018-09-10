@@ -8,13 +8,13 @@
  * @param state Program state.
  * @param playerNumber player in menu mode.
  */
-void menuLogic(RootState* state, const unsigned char playerNumber);
+void menuLogic(RootState* state, const byte playerNumber);
 
 /**
  * Displays the pause menu for given player.
  * @param state Program state.
  * @param playerNumber player in menu mode.
  */
-void menuDraw(const RootState* state, const unsigned char playerNumber);
+void menuDraw(const RootState* state, const byte playerNumber);
 
 #endif
