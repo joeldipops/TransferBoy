@@ -32,6 +32,7 @@ void initialiseSubsystems() {
     controller_init();
     display_init(RESOLUTION_640x480, DEPTH_16_BPP, 2, GAMMA_NONE, ANTIALIAS_OFF);
     rdp_init();
+    graphics_set_color(GLOBAL_TEXT_COLOUR, 0x0);
 }
 
 /**

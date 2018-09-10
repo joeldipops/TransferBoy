@@ -24,10 +24,16 @@ void drawMenuItem(
     const ScreenPosition* screen
 ) {
     const unsigned short menuItemOffset = 10;
-    const unsigned short xOffset = 100;
+    const unsigned short xOffset = 150;
     const unsigned short cursorOffset = 20;
 
-    unsigned short top = screen->Top + screen->Height + (menuItemOffset * y);
+    // space the second column with less items in it, out a little more.
+    unsigned short top = 0;
+    if (x == 1) {
+        top = screen->Top + screen->Height + (menuItemOffset * y * 2);
+    } else {
+        top = screen->Top + screen->Height + (menuItemOffset * y);
+    }
     unsigned short left = screen->Left + (xOffset *  x);
 
     string text = "";
@@ -43,21 +49,19 @@ void drawMenuItem(
  * When moving between column, calculates the new row position.
  * @param oldRowCount number of items in previous column.
  * @param newRowCount nember of items in new column.
+ * @param currentRow current position of the cursor.
  * @return New position in the new column.
  * @private
  */
-unsigned char getNewRow(const float oldRowCount, const float newRowCount) {
-    /*
+unsigned char getNewRow(const float oldRowCount, const float newRowCount, float currentRow) {
     float ratio = oldRowCount / newRowCount;
 
     if (oldRowCount > newRowCount) {
-        return floor(oldRowCount / ratio);
+        return ((unsigned char)ceil((currentRow + 1) / ratio) - 1);
     } else {
-        return floor(oldRowCount * ratio);
+        // If we're moving from the smaller column to the larger one, we need to appear at the top of the group.
+        return (unsigned char)(ceil((currentRow + 1) / ratio) - (ratio + 1));
     }
-    */
-    // TODO
-    return 0;
 }
 
 /**
@@ -96,30 +100,26 @@ void menuLogic(RootState* state, const unsigned char playerNumber) {
 
     // LEFT AND RIGHT
     } else if (pressedButtons[Left]) {
-        float oldRowCount = columns[column];
         if (playerState->MenuCursorColumn > 0) {
             playerState->MenuCursorColumn--;
         } else {
             playerState->MenuCursorColumn = COLUMN_COUNT - 1;
         }
-        playerState->MenuCursorRow = getNewRow(oldRowCount, columns[column]);
+        playerState->MenuCursorRow = getNewRow(columns[column], columns[(unsigned char)playerState->MenuCursorColumn], playerState->MenuCursorRow);
     } else if (pressedButtons[Right]) {
-        float oldRowCount = columns[column];
         if (playerState->MenuCursorColumn < COLUMN_COUNT - 1) {
             playerState->MenuCursorColumn++;
         } else {
             playerState->MenuCursorColumn = 0;
         }
-        playerState->MenuCursorRow = getNewRow(oldRowCount, columns[column]);
+        playerState->MenuCursorRow = getNewRow(columns[column], columns[(unsigned char)playerState->MenuCursorColumn], playerState->MenuCursorRow);
 
     // BACK, SELECT ETC,
     } else if (pressedButtons[B] || menuPressed) {
         playerState->MenuCursorRow = -1;
         playerState->ActiveMode = Play;
     } else if (pressedButtons[A]) {
-        switch(playerState->MenuCursorRow) {
-            default: break;
-        };
+        executeMenuItem(playerState->MenuCursorRow, playerState->MenuCursorColumn);
     } else {
         repaintRequired = false;
     }
