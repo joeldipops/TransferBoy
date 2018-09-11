@@ -13,6 +13,6 @@ typedef enum { GbNoButton, GbA, GbB, GbUp, GbDown, GbLeft, GbRight, GbStart, GbS
  * @param controllerNumber The controller we want to know the buttons from.
  * @out Array of pressed buttons.
  */
-void getPressedButtons(const struct controller_data* input, const char controllerNumber, bool* output);
+void getPressedButtons(const struct controller_data* input, const byte controllerNumber, bool* output);
 
 #endif

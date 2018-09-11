@@ -1,20 +1,31 @@
+#include "core.h"
 #include "state.h"
 #include "screen.h"
+
+#include <libdragon.h>
 
 const unsigned short SINGLE_PLAYER_SCREEN_TOP = 50;
 const unsigned short SINGLE_PLAYER_SCREEN_LEFT = 140;
 const unsigned short SINGLE_PLAYER_SCREEN_WIDTH = 360;
 const unsigned short SINGLE_PLAYER_SCREEN_HEIGHT = 324;
 
-const unsigned short PLAYER_1_SCREEN_TOP = 134;
+const unsigned short PLAYER_1_SCREEN_TOP = 50;
 const unsigned short PLAYER_1_SCREEN_LEFT = 27;
 const unsigned short PLAYER_1_SCREEN_WIDTH = 267;
 const unsigned short PLAYER_1_SCREEN_HEIGHT = 240;
 
-const unsigned short PLAYER_2_SCREEN_TOP = 134;
+const unsigned short PLAYER_2_SCREEN_TOP = 50;
 const unsigned short PLAYER_2_SCREEN_LEFT = 347;
 const unsigned short PLAYER_2_SCREEN_WIDTH = 267;
 const unsigned short PLAYER_2_SCREEN_HEIGHT = 240;
+
+/**
+ * Rerenders the background over both display buffers to cover whatever junk was there previously.
+ */
+void flushScreen() {
+    graphics_draw_box(1, 0, 0, RESOLUTION_X, RESOLUTION_Y, GLOBAL_BACKGROUND_COLOUR);
+    graphics_draw_box(2, 0, 0, RESOLUTION_X, RESOLUTION_Y, GLOBAL_BACKGROUND_COLOUR);
+}
 
 /**
  * Get the gameboy screen rectangle based on player number.

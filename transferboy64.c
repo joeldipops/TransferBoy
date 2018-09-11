@@ -8,6 +8,7 @@
 #include "init.h"
 #include "controller.h"
 #include "state.h"
+#include "screen.h"
 #include <string.h>
 #include <stdlib.h>
 #include <libdragon.h>
@@ -33,37 +34,6 @@ void initialiseSubsystems() {
     display_init(RESOLUTION_640x480, DEPTH_16_BPP, 2, GAMMA_NONE, ANTIALIAS_OFF);
     rdp_init();
     graphics_set_color(GLOBAL_TEXT_COLOUR, 0x0);
-}
-
-/**
- * Sets up initial configuration for N64 - Gameboy button map.
- * @out buttonMap map of N64 to Gameboy buttons.
- */
-void initialiseButtonMap(GbButton* map) {
-    GbButton buttons[16];
-    buttons[NoButton] = GbNoButton;
-    buttons[A] = GbA;
-    buttons[B] = GbB;
-    buttons[Up] = GbUp;
-    buttons[Down] = GbDown;
-    buttons[Left] = GbLeft;
-    buttons[Right] = GbRight;
-
-    // Start, Select and SystemMenu should be configurable
-    buttons[Start] = GbStart;
-    buttons[R] = GbSelect;
-    buttons[L] = GbSystemMenu;
-
-    // TODO: Implement stick control.
-    buttons[Stick] = GbNoButton;
-
-    buttons[Z] = GbNoButton;
-    buttons[CUp] = GbNoButton;
-    buttons[CDown] = GbNoButton;
-    buttons[CLeft] = GbNoButton;
-    buttons[CRight] = GbNoButton;
-
-    memcpy(map, &buttons, sizeof(GbButton) * 16);
 }
 
 /**
@@ -95,7 +65,10 @@ void mainLoop(RootState* state) {
 
         Mode modes[MAX_PLAYERS] = {0, 0};
 
-        for (byte i = 0; i < state->PlayerCount; i++) {
+        // Cache this as it may change in the below calls.
+        byte playerCount = state->PlayerCount;
+
+        for (byte i = 0; i < playerCount; i++) {
             if (allQuit && state->Players[i].ActiveMode != Quit) {
                 allQuit = false;
             }
@@ -158,12 +131,13 @@ void mainLoop(RootState* state) {
 int main(void) {
     initialiseSubsystems();
     setGlobalConstants();
+    flushScreen();
 
     RootState state;
     generateState(&state);
     mainLoop(&state);
 
-    //display_close();
+    display_close();
 }
 
 

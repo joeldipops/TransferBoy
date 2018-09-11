@@ -1,5 +1,7 @@
 #include <math.h>
 #include "core.h"
+#include "screen.h"
+
 #include <libdragon.h>
 
 #define COLUMN_COUNT 2
@@ -77,6 +79,7 @@ void resumePlay(PlayerState* playerState) {
  * Initialises another player, using the same ROM & Save as in controller slot 1
  * @param state Program state.
  * @return error code.
+ * @private
  */
 char addPlayer(RootState* state) {
     if (state->PlayerCount < 1) {
@@ -100,9 +103,24 @@ char addPlayer(RootState* state) {
     // But maintain a different copy of the save file. We don't want to have two instances messing with a single save file.
     // Non-player-1 save files will never be written back to the cartridge.
     loadSave(0, &newPlayer->Cartridge.SaveData);
+
+    initialiseEmulator(
+        &newPlayer->EmulationState,
+        &newPlayer->Cartridge.RomData,
+        &newPlayer->Cartridge.SaveData
+    );
+
+    flushScreen();
+
     newPlayer->ActiveMode = Play;
     state->PlayerCount++;
 
+    // Now that we've flushed, we need to put the GB screen back.
+    state->Frame = 1;
+    playDraw(state, 0);
+    state->Frame = 2;
+    playDraw(state, 0);
+    state->Frame = 0;
     return 0;
 }
 
@@ -194,8 +212,6 @@ void menuLogic(RootState* state, const byte playerNumber) {
         resumePlay(playerState);
     } else if (pressedButtons[A]) {
         executeMenuItem(state, playerNumber, playerState->MenuCursorColumn, playerState->MenuCursorRow);
-        // Don't rerender the menu again, go on to other things.
-        repaintRequired = false;
     } else {
         repaintRequired = false;
     }
@@ -213,6 +229,11 @@ void menuLogic(RootState* state, const byte playerNumber) {
 void menuDraw(const RootState* state, const byte playerNumber) {
     ScreenPosition screen = {};
     getScreenPosition(state, playerNumber, &screen);
+
+    if (state->Players[playerNumber].ActiveMode != Menu) {
+        flushScreen();
+        return;
+    }
 
     // Cover menu section.
     graphics_draw_box(

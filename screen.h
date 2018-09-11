@@ -13,6 +13,8 @@ typedef struct {
     unsigned short Height;
 } ScreenPosition;
 
+void flushScreen();
+
 /**
  * Get the gameboy screen rectangle based on player number.
  * @param state program state including number of players.
