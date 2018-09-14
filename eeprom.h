@@ -7,7 +7,7 @@
  * Gets the next available eeprom block.
  * @return open eeprom block.
  */
-unsigned long getEepromCursorPosition();
+int getEepromCursorPosition();
 
 /**
  * Writes to eeprom

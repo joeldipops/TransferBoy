@@ -97,7 +97,7 @@ void printRegisters(struct gb_state* s) {
         s->reg16.AF, s->reg16.BC, s->reg16.DE, s->reg16.HL, s->sp, s->pc,
         s->io_lcd_LY, s->flags.ZF, s->flags.NF, s->flags.HF, s->flags.CF
     );*/
-    logAndPause(
+    logInfo(
         "A=%02x F=%02x B=%02x C=%02x D=%02x E=%02x H=%02x L=%02x Z=%d N=%d HF=%d C=%d",
         s->reg8.A, s->reg8.F, s->reg8.B, s->reg8.C,
         s->reg8.D, s->reg8.E, s->reg8.H, s->reg8.L,
@@ -125,8 +125,6 @@ void logAndPauseFrame(display_context_t frame, const string text, ...) {
     }
 }
 
-static unsigned long lastWrittenBlock = 0;
-
 /**
  * Throws a line of text up on to the screen a la printf.
  * @param text The text or format string.
@@ -137,14 +135,30 @@ void logInfo(const string text, ... ) {
     va_start(args, text);
 
     string formatted = "";
+    string tmp = "";
 
     vsprintf(formatted, text, args);
     va_end(args);
 
+    int blockNumber = getEepromCursorPosition();
+
+    // Since it's a log file, whack a new line on the end.
+    // TODO - timestamp.
+    sprintf(tmp, "%s\n", formatted);
+    strcpy(formatted, tmp);
+
     ByteArray textString;
     textString.Size = strlen(formatted);
-    memcpy(&textString.Data, formatted, textString.Size);
 
-    writeToEeprom(getEepromCursorPosition(), &textString);
+    textString.Data = malloc(textString.Size + 1);
+    memset(textString.Data, 0, textString.Size + 1);
+
+    memcpy(textString.Data, formatted, textString.Size);
+
+    if(writeToEeprom(blockNumber, &textString)) {
+        logAndPause("logging failed.  Message was: %s", formatted);
+    }
+
+    free(textString.Data);
 }
 
