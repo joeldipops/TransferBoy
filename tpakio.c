@@ -4,7 +4,7 @@
 #include "tpakio.h"
 
 static GameboyCart* _pakInit[4]  = {null, null, null, null};
-static const natural MAX_SAFE_ROM_SIZE = 1500000;
+static const unsigned int MAX_SAFE_ROM_SIZE = 1500000;
 
 /**
  * Determines if the expansion pak is plugged in.

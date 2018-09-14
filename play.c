@@ -113,7 +113,7 @@ void renderPixels(
     const unsigned short left,
     const unsigned short top
 ) {
-    natural* pixels = malloc(GB_LCD_HEIGHT * GB_LCD_WIDTH);
+    unsigned int* pixels = malloc(GB_LCD_HEIGHT * GB_LCD_WIDTH);
     memset(pixels, 0xFF, GB_LCD_HEIGHT * GB_LCD_WIDTH);
 
     // Lifted from gbC's gui_lcd_render_frame function.
@@ -128,17 +128,17 @@ void renderPixels(
                 int index = x + y * GB_LCD_WIDTH;
                 unsigned short rawColour = pixelBuffer[index];
 
-                natural r = ((rawColour >>  0) & 0x1f) << 3;
-                natural g = ((rawColour >>  5) & 0x1f) << 3;
-                natural b = ((rawColour >> 10) & 0x1f) << 3;
-                natural pixel = (r << 24) | (g << 16) | (b << 8) | 0xff;
+                unsigned int r = ((rawColour >>  0) & 0x1f) << 3;
+                unsigned int g = ((rawColour >>  5) & 0x1f) << 3;
+                unsigned int b = ((rawColour >> 10) & 0x1f) << 3;
+                unsigned int pixel = (r << 24) | (g << 16) | (b << 8) | 0xff;
                 pixels[index] = pixel;
             }
         }
     } else {
         /* The colors stored in pixbuf already went through the palette
          * translation, but are still 2 bit monochrome. */
-        natural palette[] = { 0xffffffff, 0xaaaaaaaa, 0x66666666, 0x11111111 };
+        unsigned int palette[] = { 0xffffffff, 0xaaaaaaaa, 0x66666666, 0x11111111 };
         for (int y = 0; y < GB_LCD_HEIGHT; y++) {
             for (int x = 0; x < GB_LCD_WIDTH; x++) {
                 int index = x + y * GB_LCD_WIDTH;

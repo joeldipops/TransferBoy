@@ -158,5 +158,6 @@ void _exit(int status)
 #include "controller.c"
 #include "screen.c"
 #include "state.c"
+#include "eeprom.c"
 #include "include/libgbpak.c"
 #include "include/gbc_bundle.c"

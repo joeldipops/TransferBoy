@@ -7,9 +7,9 @@ typedef enum { false, true } bool;
 #include "include/gbc_bundle.h"
 #include <libdragon.h>
 
-typedef char string[1024];
 typedef unsigned char byte;
-typedef unsigned int natural;
+typedef char string[1024];
+typedef unsigned short natural;
 
 const byte VERTICAL_MARGIN = 30;
 const byte HORIZONTAL_MARGIN = 30;

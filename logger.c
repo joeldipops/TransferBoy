@@ -1,7 +1,9 @@
 #include "logger.h"
 #include <stdarg.h>
 #include <stdio.h>
+#include <string.h>
 #include "core.h"
+#include "eeprom.h"
 #include <libdragon.h>
 
 #include "include/gbc_bundle.h"
@@ -123,6 +125,8 @@ void logAndPauseFrame(display_context_t frame, const string text, ...) {
     }
 }
 
+static unsigned long lastWrittenBlock = 0;
+
 /**
  * Throws a line of text up on to the screen a la printf.
  * @param text The text or format string.
@@ -132,11 +136,15 @@ void logInfo(const string text, ... ) {
     va_list args;
     va_start(args, text);
 
-    string output = "";
+    string formatted = "";
 
-    vsprintf(output, text, args);
+    vsprintf(formatted, text, args);
     va_end(args);
 
-    printLog(output, null);
+    ByteArray textString;
+    textString.Size = strlen(formatted);
+    memcpy(&textString.Data, formatted, textString.Size);
+
+    writeToEeprom(getEepromCursorPosition(), &textString);
 }
 
