@@ -10,6 +10,39 @@
 #include <libdragon.h>
 
 /**
+ * Loads a gb bios file if one is available.
+ * @param state state to copy the bios to.
+ * @return 0 if load successful, non-zero for errors.
+ */
+char loadBios(struct gb_state* state) {
+    char result = 0;
+    byte* biosFile = null;
+
+    dfs_init(DFS_DEFAULT_LOCATION);
+    int filePointer = dfs_open("/bios.bin");
+
+    int biosSize = 0;
+    if (filePointer >= 0) {
+        biosSize = dfs_size(filePointer);
+    } else {
+        result = -1;
+    }
+
+    if (biosSize > 0) {
+        biosFile = malloc(biosSize);
+        dfs_read(biosFile, 1, biosSize, filePointer);
+        state_add_bios(state, biosFile, biosSize);
+    } else {
+        result = -2;
+    }
+
+    dfs_close(filePointer);
+    free(biosFile);
+
+    return result;
+}
+
+/**
  * Passes the gameboy cartridge data in to the emulator and fires it up.
  * @param state emulator state object.
  * @param romData ROM loaded from cartridge.
@@ -21,17 +54,7 @@ void initialiseEmulator(struct gb_state* state, const ByteArray* romData, const 
     state_new_from_rom(state, romData->Data, romData->Size);
     cpu_reset_state(state);
 
-    // Add bios here?
-    /*
-    dfs_init(DFS_DEFAULT_LOCATION);
-    int filePointer = dfs_open("/bios.bin");
-    int biosSize = dfs_size(filePointer);
-    byte* biosFile = malloc(biosSize);
-    dfs_read(biosFile, 1, biosSize, filePointer);
-    dfs_close(filePointer);
-    state_add_bios(state, biosFile, biosSize);
-    free(biosFile);
-    */
+    loadBios(state);
 
     state_load_extram(state, saveData->Data, saveData->Size);
     init_emu_state(state);

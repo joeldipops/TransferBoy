@@ -1,5 +1,12 @@
 #ifndef LOGGER_INCLUDED
 #define LOGGER_INCLUDED
+#include "include/gbc_bundle.h"
+
+/**
+ * Displays the current state of the Gameboy emulator registers.
+ * @param s The emulator state structure.
+ */
+void printRegisters(struct gb_state *s);
 
 /**
  * Throws a line of text up on to the screen a la printf.
@@ -23,5 +30,11 @@ void logAndPause(const string text, ...);
  * @param ... Parameters for the format string.
  */
 void logAndPauseFrame(display_context_t frame, const string text, ...);
+
+/**
+ * Print the next 32 bytes of memory from a given address and wait for "start".
+ * @param start the starting memory address.
+ */
+void printSegment(unsigned char* start);
 
 #endif

@@ -4,6 +4,8 @@
 #include "core.h"
 #include <libdragon.h>
 
+#include "include/gbc_bundle.h"
+
 /**
  * Prints the pre-sprintf'd text to the display.
  * @private
@@ -21,6 +23,40 @@ void printLog(const string text, display_context_t frame) {
 
     display_show(frame);
 }
+
+/**
+ * Print the next 32 bytes of memory from a given address and wait for "start".
+ * @param start the starting memory address.
+ */
+void printSegment(unsigned char* start) {
+    display_context_t frame = null;
+    while(!(frame = display_lock()));
+
+    string text = "";
+    sprintf(text, "%02x %02x %02x %02x  %02x %02x %02x %02x", *start, *(start + 1), *(start + 2), *(start + 3), *(start + 4), *(start + 5), *(start + 6), *(start + 7));
+    graphics_draw_text(frame, 10, 10, text);
+    start += 8;
+    sprintf(text, "%02x %02x %02x %02x  %02x %02x %02x %02x", *start, *(start + 1), *(start + 2), *(start + 3), *(start + 4), *(start + 5), *(start + 6), *(start + 7));
+    graphics_draw_text(frame, 10, 20, text);
+    start += 8;
+    sprintf(text, "%02x %02x %02x %02x  %02x %02x %02x %02x", *start, *(start + 1), *(start + 2), *(start + 3), *(start + 4), *(start + 5), *(start + 6), *(start + 7));
+    graphics_draw_text(frame, 10, 30, text);
+    start += 8;
+    sprintf(text, "%02x %02x %02x %02x  %02x %02x %02x %02x", *start, *(start + 1), *(start + 2), *(start + 3), *(start + 4), *(start + 5), *(start + 6), *(start + 7));
+    graphics_draw_text(frame, 10, 40, text);
+
+    display_show(frame);
+
+    bool isPaused = true;
+    while(isPaused) {
+        controller_scan();
+        struct controller_data input = get_keys_pressed();
+        if (input.c[0].start) {
+            isPaused = false;
+        }
+    }
+}
+
 
 
 /**
@@ -46,6 +82,25 @@ void logAndPause(const string text, ...) {
             isPaused = false;
         }
     }
+}
+
+/**
+ * Displays the current state of the Gameboy emulator registers.
+ * @param s The emulator state structure.
+ */
+void printRegisters(struct gb_state* s) {
+    /*
+    logAndPause(
+        "AF=%04x BC=%04x DE=%04x HL=%04x sp=%04x pc=%04x LY=%04x ZF=%d NF=%d HF=%d CF=%d\n",
+        s->reg16.AF, s->reg16.BC, s->reg16.DE, s->reg16.HL, s->sp, s->pc,
+        s->io_lcd_LY, s->flags.ZF, s->flags.NF, s->flags.HF, s->flags.CF
+    );*/
+    logAndPause(
+        "A=%02x F=%02x B=%02x C=%02x D=%02x E=%02x H=%02x L=%02x Z=%d N=%d HF=%d C=%d",
+        s->reg8.A, s->reg8.F, s->reg8.B, s->reg8.C,
+        s->reg8.D, s->reg8.E, s->reg8.H, s->reg8.L,
+        s->flags.ZF, s->flags.NF, s->flags.HF, s->flags.CF
+    );
 }
 
 void logAndPauseFrame(display_context_t frame, const string text, ...) {

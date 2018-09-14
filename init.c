@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include "init.h"
 #include "tpakio.h"
 #include "screen.h"
