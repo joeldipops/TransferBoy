@@ -63,8 +63,14 @@ char importRom(const char controllerNumber, GameboyCart* cart, ByteArray* romDat
  * @param gbcart Basic information about the cartridge.
  * @out ramData RAM of the cartridge is dumped in here.
  */
-char importSave(const char controllerNumber, const GameboyCart cart, ByteArray* saveData);
+char importSave(const char controllerNumber, const GameboyCart* cart, ByteArray* saveData);
 
-// TODO
-char exportSave(const char controllerNumber, const GameboyCart cart, ByteArray* saveData);
+/**
+ * Writes a byte array to the gameboy cartridges save file.
+ * @param controllerNumber Controller the cartridge is plugged in to.
+ * @param gbcart Cartridge information.
+ * @param saveData Save file to write to cartridge.
+ * @return 0 if succesful, non-zero error code otherwise.
+ */
+char exportSave(const char controllerNumber, const GameboyCart* cart, const ByteArray* saveData);
 #endif

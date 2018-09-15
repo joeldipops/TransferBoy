@@ -145,8 +145,8 @@ int disable_gbRam(const GameboyCart gbcart) {
 /**
  * @private
  */
-int _set_gbRamBank(const char controllerNumber, const GameboyCart gbcart, int bank) {
-    if(gbcart.ram!=TRUE) {
+int _set_gbRamBank(const char controllerNumber, const GameboyCart* gbcart, int bank) {
+    if(gbcart->ram != TRUE) {
         return -1;
     }
 
@@ -155,11 +155,11 @@ int _set_gbRamBank(const char controllerNumber, const GameboyCart gbcart, int ba
     uint8_t sdata[32];
     int value = 0;
 
-    if(gbcart.mapper == GB_NORM) {
+    if(gbcart->mapper == GB_NORM) {
         return -1; //no ram
     } else if(
-        ((gbcart.mapper == GB_MBC1 || gbcart.mapper == GB_MBC3 || gbcart.mapper == GB_HUC1) && bank <=0x03)
-        || (gbcart.mapper == GB_MBC5 && bank <= 0x0F) || (gbcart.mapper == GB_MBC4 && bank <= 0x0F)
+        ((gbcart->mapper == GB_MBC1 || gbcart->mapper == GB_MBC3 || gbcart->mapper == GB_HUC1) && bank <= 0x03)
+        || (gbcart->mapper == GB_MBC5 && bank <= 0x0F) || (gbcart->mapper == GB_MBC4 && bank <= 0x0F)
     ) {
         memset(sdata, 0x00, 32);
         //prepare for ram enable
@@ -184,7 +184,7 @@ int _set_gbRamBank(const char controllerNumber, const GameboyCart gbcart, int ba
         //set rambank
         value = write_mempak_address(controllerNumber, 0xC000, sdata);
 
-    } else if(gbcart.mapper == GB_CAMERA && bank <=0x0F) {
+    } else if(gbcart->mapper == GB_CAMERA && bank <=0x0F) {
 
         //prepare for ram enable
         memset(sdata, 0x00, 32);
@@ -208,7 +208,7 @@ int _set_gbRamBank(const char controllerNumber, const GameboyCart gbcart, int ba
         memset(sdata, bank, 32);
         //set rambank
         value = write_mempak_address(controllerNumber, 0xC000, sdata);
-    } else if(gbcart.mapper == GB_MBC2) {
+    } else if(gbcart->mapper == GB_MBC2) {
         //512x4bits RAM, built-in into the MBC2 chip
 
         //only one bank?
@@ -876,9 +876,6 @@ char importRom(const char controllerNumber, GameboyCart* gbcart, ByteArray* romD
             return -4;
         }
 
-        //get access mode
-        _get_gbAccessState(controllerNumber);
-
         //int 141 0x8D
         //10000000    0x80 OS_GBPAK_GBCART_ON
         //10001101    0x8d return zz
@@ -918,16 +915,20 @@ char importRom(const char controllerNumber, GameboyCart* gbcart, ByteArray* romD
     return 0;
 }
 
-char exportSave(const char controllerNumber, GameboyCart gbcart, ByteArray* saveData) {
-    return 0;
-}
-/*
-// Broken as shit because I thought it was the IMPORT save function.
-char exportSave(GameboyCart gbcart, ByteArray* saveData) {
-    const int SEGMENT_SIZE = 0x20; // 32
-
-    if(gbcart.ram != TRUE)
+/**
+ * Writes a byte array to the gameboy cartridges save file.
+ * @param controllerNumber Controller the cartridge is plugged in to.
+ * @param gbcart Cartridge information.
+ * @param saveData Save file to write to cartridge.
+ * @return 0 if succesful, non-zero error code otherwise.
+ */
+char exportSave(const char controllerNumber, const GameboyCart* gbcart, const ByteArray* saveData) {
+    if(!gbcart->ram) {
         return -1;
+    }
+
+    const int SEGMENT_SIZE = 0x20; //32
+
 
     //security off for camera by now
     //if(gbcart.mapper == GB_CAMERA)
@@ -942,46 +943,35 @@ char exportSave(GameboyCart gbcart, ByteArray* saveData) {
     //mbc5
     //128KByte RAM
 
+
     byte segment[SEGMENT_SIZE];
-    saveData->Data = malloc(SEGMENT_SIZE);
-    memset(saveData->Data, 0xFF, SEGMENT_SIZE);
+
     unsigned long address = 0xE000;
     unsigned long offset = 0x00;
 
     //copy rambanks to sdram
-    for(int bankCount = 0; bankCount < gbcart.rambanks; bankCount++) {
+    //bank count
+    for(int bankCount = 0; bankCount < gbcart->rambanks; bankCount++) {
 
         //get power status 0=off 1=on
-        if(_get_gbPower()!=1)
+        if(_get_gbPower(controllerNumber) != 1 ) {
             return -4;
+        }
 
-        //get access mode
-        _get_gbAccessState();
-
-        if (_set_gbRamBank(gbcart, bankCount) != 0)
+        if(_set_gbRamBank(controllerNumber, gbcart, bankCount) != 0) {
             return -1;
+        }
 
-        int bankSize = 0xFFE0;
-        if(gbcart.mapper == GB_MBC2)
-            bankSize = 0xE1E0;
+        int bankWidth = 0xFFE0;
+        if(gbcart->mapper == GB_MBC2) {
+            bankWidth = 0xE1E0;
+        }
 
-        for(unsigned long bankOffset = address; bankOffset <= bankSize; bankOffset += SEGMENT_SIZE) {
+        for(unsigned long bankAddress = address; bankAddress <= bankWidth && offset <= saveData->Size; bankAddress += SEGMENT_SIZE) {
             memset(segment, 0xFF, SEGMENT_SIZE);
-            logInfo("looping (Save) %lu", offset);
-            if(_set_gbRamAddr(bankOffset, segment) == 0) {
+            memcpy(segment, saveData->Data + offset, SEGMENT_SIZE);
 
-                byte temp[offset];
-
-                // Increase ramData's size by 32
-                memcpy(temp, saveData->Data, offset);
-                free(saveData);
-                saveData->Data = malloc(offset + SEGMENT_SIZE);
-
-                memcpy(saveData->Data, temp, offset);
-
-                // Write tpak segment to RAM
-                memcpy(saveData->Data + offset, segment, SEGMENT_SIZE);
-
+            if(_set_gbRamAddr(controllerNumber, bankAddress, segment) == 0) {
                 offset += SEGMENT_SIZE;
             } else {
                 return -1;
@@ -989,10 +979,8 @@ char exportSave(GameboyCart gbcart, ByteArray* saveData) {
         }
     }
 
-    saveData->Size = offset;
-
     return 0;
-}*/
+}
 
 /**
  * Loads the Save RAM of the given cartridge in to memory.
@@ -1000,10 +988,10 @@ char exportSave(GameboyCart gbcart, ByteArray* saveData) {
  * @param gbcart Basic information about the cartridge.
  * @out ramData RAM of the cartridge is dumped in here.
  */
-char importSave(const char controllerNumber, const GameboyCart gbcart, ByteArray* saveData) {
+char importSave(const char controllerNumber, const GameboyCart* gbcart, ByteArray* saveData) {
     const int SEGMENT_SIZE = 0x20; // 32
 
-    if(gbcart.ram != TRUE) {
+    if(gbcart->ram != TRUE) {
         return -1;
     }
 
@@ -1025,21 +1013,21 @@ char importSave(const char controllerNumber, const GameboyCart gbcart, ByteArray
     memset(saveData->Data, 0xFF, SEGMENT_SIZE);
 
     //copy rambanks to sdram
-    for(int bankCount = 0; bankCount < gbcart.rambanks; bankCount++) {
+    for(int bankCount = 0; bankCount < gbcart->rambanks; bankCount++) {
 
         //get power status 0=off 1=on
-        if(_get_gbPower(controllerNumber) != 1)
+        if(_get_gbPower(controllerNumber) != 1) {
             return -4;
+        }
 
-        //get access mode
-        _get_gbAccessState(controllerNumber);
-
-        if(_set_gbRamBank(controllerNumber, gbcart, bankCount) != 0)
+        if(_set_gbRamBank(controllerNumber, gbcart, bankCount) != 0) {
             return -1;
+        }
 
         int bankSize = 0xFFE0;
-        if(gbcart.mapper == GB_MBC2)
+        if(gbcart->mapper == GB_MBC2) {
             bankSize = 0xE1E0;
+        }
 
         for(unsigned long bankOffset = address; bankOffset <= bankSize; bankOffset += SEGMENT_SIZE) { //bank offset
 

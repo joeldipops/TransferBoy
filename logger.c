@@ -91,17 +91,12 @@ void logAndPause(const string text, ...) {
  * @param s The emulator state structure.
  */
 void printRegisters(struct gb_state* s) {
-    /*
-    logAndPause(
-        "AF=%04x BC=%04x DE=%04x HL=%04x sp=%04x pc=%04x LY=%04x ZF=%d NF=%d HF=%d CF=%d\n",
-        s->reg16.AF, s->reg16.BC, s->reg16.DE, s->reg16.HL, s->sp, s->pc,
-        s->io_lcd_LY, s->flags.ZF, s->flags.NF, s->flags.HF, s->flags.CF
-    );*/
     logInfo(
-        "A=%02x F=%02x B=%02x C=%02x D=%02x E=%02x H=%02x L=%02x Z=%d N=%d HF=%d C=%d",
+        "A=%02x F=%02x B=%02x C=%02x D=%02x E=%02x H=%02x L=%02x Z=%d N=%d HF=%d C=%d sp=%02x pc=%02x",
         s->reg8.A, s->reg8.F, s->reg8.B, s->reg8.C,
         s->reg8.D, s->reg8.E, s->reg8.H, s->reg8.L,
-        s->flags.ZF, s->flags.NF, s->flags.HF, s->flags.CF
+        s->flags.ZF, s->flags.NF, s->flags.HF, s->flags.CF,
+        s->sp, s->pc
     );
 }
 

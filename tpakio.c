@@ -97,7 +97,7 @@ void loadRom(const byte controllerNumber, ByteArray* output) {
  */
  void loadSave(const byte controllerNumber, ByteArray* output) {
     if (initPak(controllerNumber) && _pakInit[controllerNumber]->ramsize) {
-        char error = importSave(controllerNumber, *_pakInit[controllerNumber], output);
+        char error = importSave(controllerNumber, _pakInit[controllerNumber], output);
         if (error) {
             logAndPause("save load failed with code %d", error);
         }
