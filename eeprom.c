@@ -2,12 +2,17 @@
 #include <libdragon.h>
 
 static int cursorPosition = 0;
+static const char EEPROM_BLOCKS = 64;
+static const char BLOCK_SIZE = 8;
 
 /**
  * Gets the next available eeprom block.
  * @return open eeprom block.
  */
 int getEepromCursorPosition() {
+    if (cursorPosition >= EEPROM_BLOCKS) {
+        cursorPosition = 0;
+    }
     return cursorPosition;
 }
 
@@ -24,16 +29,16 @@ char writeToEeprom(const int blockNumber, const ByteArray* stream) {
 
     natural index = 0;
 
-    while(index <= stream->Size / 8) {
-        natural start = index * 8;
-        natural end = start + 8;
-        byte* block = malloc(sizeof(byte) * 8);
+    while(index <= stream->Size / BLOCK_SIZE) {
+        natural start = index * BLOCK_SIZE;
+        natural end = start + BLOCK_SIZE;
+        byte* block = calloc(BLOCK_SIZE, sizeof(byte));
         if (end <= stream->Size) {
-            memcpy(block, stream->Data + start, 8);
+            memcpy(block, stream->Data + start, BLOCK_SIZE);
         } else {
             // pad out the rest of the block with zeroes.
             byte diff = end - stream->Size;
-            memcpy(block, stream->Data + start, 8 - diff);
+            memcpy(block, stream->Data + start, BLOCK_SIZE - diff);
         }
 
         eeprom_write(blockNumber + index, block);

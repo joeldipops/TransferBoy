@@ -4,15 +4,13 @@
 #include "tpakio.h"
 
 static GameboyCart* _pakInit[4]  = {null, null, null, null};
-static const unsigned int MAX_SAFE_ROM_SIZE = 1500000;
 
 /**
  * Determines if the expansion pak is plugged in.
  * @return true if the N64 Memory Expansion Pak is available.
  */
 bool isExpansionPakInserted() {
-    // no idea how to get libdragon to tell me this.
-    return false;
+    return getMemoryLimit() > 5e6;
 }
 
 
@@ -35,13 +33,16 @@ bool initPak(const byte controllerNumber) {
     return true;
 }
 
+/**
+ *
+ */
 bool isCartridgeSizeOk(const byte controllerNumber) {
     bool result = initPak(controllerNumber);
     if (!result) {
         return result;
     }
 
-    if (_pakInit[controllerNumber]->romsize <= MAX_SAFE_ROM_SIZE) {
+    if (_pakInit[controllerNumber]->romsize * 2 <= getMemoryLimit()) {
         return true;
     } else {
         return isExpansionPakInserted();

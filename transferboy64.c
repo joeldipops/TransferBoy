@@ -29,6 +29,7 @@ void setGlobalConstants() {
  * Inititalises all required libdragon subsystems.
  */
 void initialiseSubsystems() {
+    getMemoryLimit();
     init_interrupts();
     controller_init();
     display_init(RESOLUTION_640x480, DEPTH_16_BPP, 2, GAMMA_NONE, ANTIALIAS_OFF);
@@ -132,7 +133,6 @@ int main(void) {
     initialiseSubsystems();
     setGlobalConstants();
     flushScreen();
-
     RootState state;
     generateState(&state);
     mainLoop(&state);
@@ -148,6 +148,7 @@ void _exit(int status)
   abort();
 }
 
+#include "core.c"
 #include "init.c"
 #include "play.c"
 #include "menu.c"

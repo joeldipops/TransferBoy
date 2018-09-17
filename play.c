@@ -93,8 +93,6 @@ void mapGbInputs(const char controllerNumber, const GbButton* buttonMap, const s
     }
 }
 
-static unsigned long frameCount = 0;
-
 /**
  * Take the array of pixels produced by the emulator and throw it up on to the screen.
  * @param frame Id of frame to render to.
@@ -113,8 +111,11 @@ void renderPixels(
     const unsigned short left,
     const unsigned short top
 ) {
-    unsigned int* pixels = malloc(GB_LCD_HEIGHT * GB_LCD_WIDTH);
-    memset(pixels, 0xFF, GB_LCD_HEIGHT * GB_LCD_WIDTH);
+    unsigned int* pixels = calloc(GB_LCD_HEIGHT * GB_LCD_WIDTH, sizeof(int));
+    if (!pixels) {
+        logInfo("Out of memory!!!");
+        return;
+    }
 
     // Lifted from gbC's gui_lcd_render_frame function.
     if (isColour) {
@@ -168,7 +169,6 @@ void renderPixels(
             );
         }
     }
-
     string text = "";
     sprintf(text, "Frames: %lu", frameCount);
     graphics_draw_text(frame, left, top, text);
@@ -191,10 +191,7 @@ void playLogic(RootState* state, const byte playerNumber) {
         return;
     }
 
-    struct player_input* input;
-    input = malloc(sizeof(struct player_input));
-    memset(input, 0, sizeof(struct player_input));
-
+    struct player_input* input = calloc(1, sizeof(struct player_input));
     emu_step_frame(emulatorState);
 
     bool pressedButtons[16] = {};
@@ -213,6 +210,8 @@ void playLogic(RootState* state, const byte playerNumber) {
     }
 
     emu_process_inputs(emulatorState, input);
+
+    free(input);
 
     state->RequiresRepaint = true;
 

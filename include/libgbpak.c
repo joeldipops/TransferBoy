@@ -856,8 +856,7 @@ char importRom(const char controllerNumber, GameboyCart* gbcart, ByteArray* romD
     unsigned long address=0xC000;
     unsigned long offset=0x00;
 
-    romData->Data = malloc(gbcart->romsize);
-    memset(romData->Data, 0xFF, gbcart->romsize);
+    romData->Data = calloc(1, gbcart->romsize);
 
     _set_gbPower(controllerNumber, 1);
 
@@ -893,14 +892,6 @@ char importRom(const char controllerNumber, GameboyCart* gbcart, ByteArray* romD
             memset(segment, 0xFF, SEGMENT_SIZE);
 
             if(_get_gbRomAddr(controllerNumber, bankAddress, segment) == 0) {
-                //byte temp[offset];
-
-                // Increase romData's size by 32
-                //memcpy(temp, romData->Data, offset);
-                //free(romData->Data);
-                //romData->Data = malloc(offset + SEGMENT_SIZE);
-
-                //memcpy(romData->Data, temp, offset);
 
                 // Write tpak segment to RAM
                 memcpy(romData->Data + offset, segment, SEGMENT_SIZE);
@@ -1009,8 +1000,7 @@ char importSave(const char controllerNumber, const GameboyCart* gbcart, ByteArra
     unsigned long address = 0xE000;
     unsigned long offset = 0x00;
 
-    saveData->Data = malloc(SEGMENT_SIZE);
-    memset(saveData->Data, 0xFF, SEGMENT_SIZE);
+    saveData->Data = calloc(1, SEGMENT_SIZE);
 
     //copy rambanks to sdram
     for(int bankCount = 0; bankCount < gbcart->rambanks; bankCount++) {

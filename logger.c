@@ -145,8 +145,7 @@ void logInfo(const string text, ... ) {
     ByteArray textString;
     textString.Size = strlen(formatted);
 
-    textString.Data = malloc(textString.Size + 1);
-    memset(textString.Data, 0, textString.Size + 1);
+    textString.Data = calloc(1, textString.Size + 1);
 
     memcpy(textString.Data, formatted, textString.Size);
 
