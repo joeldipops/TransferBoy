@@ -149,25 +149,20 @@ void renderPixels(
         }
     }
 
-    // TODO - Upscaling is confusing AF.
+    // TODO - Scaling for when between whole number scales.
 
-    natural leftOver = 1 / (avgPixelSize - floor(avgPixelSize));
-
+    rdp_set_default_clipping();
+    rdp_attach_display(frame);
+    rdp_enable_primitive_fill();
     for (int y = 0; y < GB_LCD_HEIGHT; y ++) {
         for (int x = 0; x <  GB_LCD_WIDTH; x++) {
             unsigned short index = x + y * GB_LCD_WIDTH;
 
-            unsigned short pixelWidth = ((x + y) % leftOver) == 0 ? ceil(avgPixelSize) : floor(avgPixelSize);
-            unsigned short pixelHeight = ((x + y + 1) % leftOver)  == 0 ? ceil(avgPixelSize) : floor(avgPixelSize);
+            rdp_set_primitive_color(pixels[index]);
+            unsigned short tx = x * avgPixelSize + left;
+            unsigned short ty = y * avgPixelSize + top;
 
-            graphics_draw_box(
-                frame,
-                (x * avgPixelSize) + left,
-                (y * avgPixelSize) + top,
-                pixelWidth,
-                pixelHeight,
-                pixels[index]
-            );
+            rdp_draw_filled_rectangle(tx, ty, tx + avgPixelSize, ty + avgPixelSize);
         }
     }
     string text = "";
@@ -177,6 +172,7 @@ void renderPixels(
     frameCount++;
 
     free(pixels);
+    rdp_detach_display();
 }
 
 /**
