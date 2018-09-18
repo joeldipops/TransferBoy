@@ -39,6 +39,13 @@ void loadRom(const byte controllerNumber, ByteArray* output);
 void loadSave(const byte controllerNumber, ByteArray* output);
 
 /**
+ * Writes save file back to the cartridge.
+ * @param controllerNumber transfer pak to write to.
+ * @param save Save data to write.
+ */
+void persistSave(const byte controllerNumber, const ByteArray* save);
+
+/**
  * Frees memory held by tpakio subsystem.
  */
 void freeTPakIo();

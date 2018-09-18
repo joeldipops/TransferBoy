@@ -97,31 +97,29 @@ void mainLoop(RootState* state) {
         }
 
         if (state->RequiresRepaint) {
+            state->RequiresRepaint = false;
             while(!(state->Frame = display_lock()));
-        }
 
-        for (int i = 0; i < state->PlayerCount; i++) {
-            switch(modes[i]) {
-                case Init:
-                    initDraw(state, i);
-                    break;
-                case Play:
-                    playDraw(state, i);
-                    break;
-                case Menu:
-                    menuDraw(state, i);
-                    break;
-                case Options:
-                    optionsDraw(state, i);
-                    break;
-                default: break;
+            for (int i = 0; i < state->PlayerCount; i++) {
+                switch(modes[i]) {
+                    case Init:
+                        initDraw(state, i);
+                        break;
+                    case Play:
+                        playDraw(state, i);
+                        break;
+                    case Menu:
+                        menuDraw(state, i);
+                        break;
+                    case Options:
+                        optionsDraw(state, i);
+                        break;
+                    default: break;
+                }
             }
-        }
 
-        if (state->RequiresRepaint) {
             display_show(state->Frame);
             state->Frame = 0;
-            state->RequiresRepaint = false;
         }
     }
 }

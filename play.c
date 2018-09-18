@@ -6,6 +6,7 @@
 #include "controller.h"
 #include "screen.h"
 #include "include/gbc_bundle.h"
+#include "tpakio.h"
 
 #include <libdragon.h>
 
@@ -213,6 +214,16 @@ void playLogic(RootState* state, const byte playerNumber) {
 
     free(input);
 
+    // Write save file back to the catridge if it has changed.
+    if (emulatorState->emu_state->extram_dirty && isCartridgeInserted(playerNumber)) {
+        memcpy(
+            state->Players[playerNumber].Cartridge.SaveData.Data,
+            emulatorState->mem_EXTRAM,
+            state->Players[playerNumber].Cartridge.SaveData.Size
+        );
+        persistSave(playerNumber, &state->Players[playerNumber].Cartridge.SaveData);
+        emulatorState->emu_state->extram_dirty = false;
+    }
     state->RequiresRepaint = true;
 
     // TODO - Map from emulatorState->emu_state->audio_sndbuf

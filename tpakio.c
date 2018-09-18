@@ -69,12 +69,8 @@ bool isTPakInserted(const byte controllerNumber) {
         return false;
     }
 
-    // No idea how to check this, just return true for now.
-    if (controllerNumber == 0) {
-        return true;
-    } else {
-        return false;
-    }
+    // No idea how to check whether it's mempak or a tpak, just return true for now.
+    return true;
 }
 
 /**
@@ -87,6 +83,20 @@ void loadRom(const byte controllerNumber, ByteArray* output) {
         char error = importRom(controllerNumber, _pakInit[controllerNumber], output);
         if (error) {
             logAndPause("rom load failed with code %d", error);
+        }
+    }
+}
+
+/**
+ * Writes save file back to the cartridge.
+ * @param controllerNumber transfer pak to write to.
+ * @param save Save data to write.
+ */
+void persistSave(const byte controllerNumber, const ByteArray* save) {
+    if (initPak(controllerNumber) && _pakInit[controllerNumber]->ramsize) {
+        char error = exportSave(controllerNumber, _pakInit[controllerNumber], save);
+        if (error) {
+            logAndPause("save failed with code %d", error);
         }
     }
 }

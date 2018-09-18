@@ -76,6 +76,62 @@ void resumePlay(PlayerState* playerState) {
 }
 
 /**
+ * Resets the emulator back to it's initial state and spins it up again.
+ * @param state Program state.
+ * @param playerNumber player that wants to reset.
+ */
+void resetGame(RootState* state, const byte playerNumber) {
+    initialiseEmulator(
+        &state->Players[playerNumber].EmulationState,
+        &state->Players[playerNumber].Cartridge.RomData,
+        &state->Players[playerNumber].Cartridge.SaveData
+    );
+
+    state->Players[playerNumber].ActiveMode = Play;
+}
+
+/**
+ * Resets the given player back to cartridge load mode so they can change to a different game.
+ * @param state Program state.
+ * @param playerNumber Player that wants to change cartridge.
+ */
+void changeGame(RootState* state, const byte playerNumber) {
+    // Dump Save RAM first, or nah?
+
+    // Reset state and send back to init.
+    free(state->Players[playerNumber].Cartridge.RomData.Data);
+    state->Players[playerNumber].Cartridge.RomData.Data = 0;
+    state->Players[playerNumber].Cartridge.RomData.Size = 0;
+
+    free(state->Players[playerNumber].Cartridge.SaveData.Data);
+    state->Players[playerNumber].Cartridge.SaveData.Data = 0;
+    state->Players[playerNumber].Cartridge.SaveData.Size = 0;
+
+    state->Players[playerNumber].MenuCursorRow = -1;
+    state->Players[playerNumber].ActiveMode = Init;
+    state->RequiresRepaint = true;
+}
+
+/**
+ * Initialises another player with the cartridge plugged into controller slot 2
+ * @param state Program state
+ * @return error code
+ * @private
+ */
+char addGame(RootState* state) {
+    if (state->PlayerCount >= MAX_PLAYERS) {
+        // No more players supported.
+        return -2;
+    }
+
+    PlayerState* newPlayer = &state->Players[state->PlayerCount];
+    generatePlayerState(newPlayer);
+
+    state->PlayerCount++;
+    return 0;
+}
+
+/**
  * Initialises another player, using the same ROM & Save as in controller slot 1
  * @param state Program state.
  * @return error code.
@@ -150,8 +206,17 @@ void executeMenuItem(RootState* state, const byte playerNumber, const byte x, co
         case Resume:
             resumePlay(&state->Players[playerNumber]);
             break;
+        case Reset:
+            resetGame(state, playerNumber);
+            break;
+        case Change:
+            changeGame(state, playerNumber);
+            break;
         case AddPlayer:
             addPlayer(state);
+            break;
+        case AddGame:
+            addGame(state);
             break;
         default: ; break;
     }
