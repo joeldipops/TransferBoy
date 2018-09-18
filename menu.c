@@ -291,12 +291,13 @@ void menuLogic(RootState* state, const byte playerNumber) {
  * @param state Program state.
  * @param playerNumber player in menu mode.
  */
-void menuDraw(const RootState* state, const byte playerNumber) {
+void menuDraw(RootState* state, const byte playerNumber) {
     ScreenPosition screen = {};
     getScreenPosition(state, playerNumber, &screen);
 
     if (state->Players[playerNumber].ActiveMode != Menu) {
         flushScreen();
+        state->RequiresRepaint = true;
         return;
     }
 

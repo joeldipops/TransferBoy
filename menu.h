@@ -15,6 +15,6 @@ void menuLogic(RootState* state, const byte playerNumber);
  * @param state Program state.
  * @param playerNumber player in menu mode.
  */
-void menuDraw(const RootState* state, const byte playerNumber);
+void menuDraw(RootState* state, const byte playerNumber);
 
 #endif

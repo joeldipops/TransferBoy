@@ -4,10 +4,19 @@
 
 #include <libdragon.h>
 
+/*
+// Idealish size, but part pixels
 const unsigned short SINGLE_PLAYER_SCREEN_TOP = 50;
 const unsigned short SINGLE_PLAYER_SCREEN_LEFT = 140;
 const unsigned short SINGLE_PLAYER_SCREEN_WIDTH = 360;
 const unsigned short SINGLE_PLAYER_SCREEN_HEIGHT = 324;
+*/
+
+// A little too small, but crisp screen.
+const unsigned short SINGLE_PLAYER_SCREEN_TOP = 50;
+const unsigned short SINGLE_PLAYER_SCREEN_LEFT = 160;
+const unsigned short SINGLE_PLAYER_SCREEN_WIDTH = 320;
+const unsigned short SINGLE_PLAYER_SCREEN_HEIGHT = 288;
 
 const unsigned short PLAYER_1_SCREEN_TOP = 50;
 const unsigned short PLAYER_1_SCREEN_LEFT = 27;
