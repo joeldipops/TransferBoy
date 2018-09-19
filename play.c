@@ -133,13 +133,13 @@ void renderPixels(
                 unsigned int r = ((rawColour >>  0) & 0x1f) << 3;
                 unsigned int g = ((rawColour >>  5) & 0x1f) << 3;
                 unsigned int b = ((rawColour >> 10) & 0x1f) << 3;
-                unsigned int pixel = (r << 24) | (g << 16) | (b << 8) | 0xff;
+                unsigned int pixel = graphics_make_color(r, g, b, 0xff);
                 pixels[index] = pixel;
             }
         }
     } else {
-        /* The colors stored in pixbuf already went through the palette
-         * translation, but are still 2 bit monochrome. */
+        // The colors stored in pixbuf already went through the palette
+        //translation, but are still 2 bit monochrome.
         unsigned int palette[] = { 0xffffffff, 0xaaaaaaaa, 0x66666666, 0x11111111 };
         for (int y = 0; y < GB_LCD_HEIGHT; y++) {
             for (int x = 0; x < GB_LCD_WIDTH; x++) {
@@ -247,7 +247,7 @@ void playDraw(const RootState* state, const byte playerNumber) {
     renderPixels(
         state->Frame,
         state->Players[playerNumber].EmulationState.emu_state->lcd_pixbuf,
-        state->Players[playerNumber].Cartridge.IsGbcCart || state->Players[playerNumber].Cartridge.IsSuperGbCart,
+        state->Players[playerNumber].Cartridge.IsGbcCart,
         (float)screen.Height / (float)GB_LCD_HEIGHT,
         screen.Left,
         screen.Top

@@ -8,6 +8,12 @@
  */
 bool isExpansionPakInserted();
 
+/**
+ * GBC roms can be as big as 2MB, without an expansion pak, we only have 4MB to play with, and we certainly couldn't
+ * emulate two 2MB roms at once without an expansion pak.
+ * @param controllerNumber number of cartridge to check.
+ * @return true if we have enough memory sitting around to load the ROM, false otherwise.
+ */
 bool isCartridgeSizeOk(const byte controllerNumber);
 
 /**
@@ -44,6 +50,13 @@ void loadSave(const byte controllerNumber, ByteArray* output);
  * @param save Save data to write.
  */
 void persistSave(const byte controllerNumber, const ByteArray* save);
+
+/**
+ * Reads a cartridge from a transfer pak and sets up a cartridge data object.
+ * @param controllerNumber The controller to read from.
+ * @param output cartridge data goes here.
+ */
+void readCartridge(const byte controllerNumber, CartridgeData* output);
 
 /**
  * Frees memory held by tpakio subsystem.

@@ -27,6 +27,12 @@ typedef enum { BorderNone } Border;
 unsigned long frameCount = 0;
 
 /**
+ * Cleans up memory held by a ByteArray and resets the values.
+ * @param arr The array.
+ */
+void freeByteArray(ByteArray* arr);
+
+/**
  * Calculates the largest block of memory that can be allocated (give or take) at start up
  * to understand how much memory is available overall
  * @return The estimated size of the memory space.

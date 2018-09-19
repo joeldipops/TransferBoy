@@ -27,15 +27,7 @@ void initLogic(RootState* state, const byte playerNumber) {
     } else {
         state->RequiresRepaint = true;
 
-        loadRom(playerNumber, &state->Players[playerNumber].Cartridge.RomData);
-        loadSave(playerNumber, &state->Players[playerNumber].Cartridge.SaveData);
-
-        freeTPakIo();
-
-        // TODO
-        strcpy(state->Players[playerNumber].Cartridge.Title, "TODO");
-        state->Players[playerNumber].Cartridge.IsSuperGbCart = false;
-        state->Players[playerNumber].Cartridge.IsGbcCart = false;
+        readCartridge(playerNumber, &state->Players[playerNumber].Cartridge);
 
         ScreenPosition screen = {};
         getScreenPosition(state, playerNumber, &screen);
@@ -85,5 +77,6 @@ void initDraw(const RootState* state, const byte playerNumber) {
             break;
     }
 
-    graphics_draw_text(state->Frame, textLeft, textTop, text);
+    //drawText(state->Frame, text, textLeft, textTop);
+    graphics_draw_text(state->Frame, textLeft, textTop + 30, text);
 }

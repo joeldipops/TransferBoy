@@ -28,3 +28,13 @@ unsigned long long getCurrentMemory() {
 
     return limit;
 }
+
+/**
+ * Cleans up memory held by a ByteArray and resets the values.
+ * @param arr The array.
+ */
+void freeByteArray(ByteArray* arr) {
+    free(arr->Data);
+    arr->Data = 0;
+    arr->Size = 0;
+}

@@ -34,7 +34,10 @@ bool initPak(const byte controllerNumber) {
 }
 
 /**
- *
+ * GBC roms can be as big as 2MB, without an expansion pak, we only have 4MB to play with, and we certainly couldn't
+ * emulate two 2MB roms at once without an expansion pak.
+ * @param controllerNumber number of cartridge to check.
+ * @return true if we have enough memory sitting around to load the ROM, false otherwise.
  */
 bool isCartridgeSizeOk(const byte controllerNumber) {
     bool result = initPak(controllerNumber);
@@ -42,11 +45,7 @@ bool isCartridgeSizeOk(const byte controllerNumber) {
         return result;
     }
 
-    if (_pakInit[controllerNumber]->romsize * 2 <= getMemoryLimit()) {
-        return true;
-    } else {
-        return isExpansionPakInserted();
-    }
+    return (_pakInit[controllerNumber]->romsize * 3 <= getMemoryLimit());
 }
 
 /**
@@ -113,6 +112,22 @@ void persistSave(const byte controllerNumber, const ByteArray* save) {
             logAndPause("save load failed with code %d", error);
         }
     }
+}
+
+/**
+ * Reads a cartridge from a transfer pak and sets up a cartridge data object.
+ * @param controllerNumber The controller to read from.
+ * @param output cartridge data goes here.
+ */
+void readCartridge(const byte controllerNumber, CartridgeData* output) {
+    initPak(controllerNumber);
+    strcpy(output->Title, _pakInit[controllerNumber]->title);
+    output->IsGbcCart = _pakInit[controllerNumber]->gbc;
+    output->IsSuperGbCart = _pakInit[controllerNumber]->sgb;
+    loadRom(controllerNumber, &output->RomData);
+    loadSave(controllerNumber, &output->SaveData);
+
+    freeTPakIo();
 }
 
 /**

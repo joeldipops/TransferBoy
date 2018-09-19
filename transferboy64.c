@@ -32,9 +32,11 @@ void initialiseSubsystems() {
     getMemoryLimit();
     init_interrupts();
     controller_init();
+    dfs_init(DFS_DEFAULT_LOCATION);
     display_init(RESOLUTION_640x480, DEPTH_16_BPP, 2, GAMMA_NONE, ANTIALIAS_OFF);
     rdp_init();
     graphics_set_color(GLOBAL_TEXT_COLOUR, 0x0);
+    initText();
 }
 
 /**
@@ -47,6 +49,14 @@ void generateState(RootState* state) {
 }
 
 /**
+ * Draws permanent screen artifacts like the logo and borders
+ * @param state program state.
+ */
+void hudDraw(RootState* state) {
+    //drawText(state->Frame, "~TRANSFER BOY~", 170, 5);
+}
+
+/**
  * The mainloop of the program.  Has three phases and executes for all players at each phase
  * phase 1 read input
  * phase 2 carry out program logic
@@ -55,7 +65,6 @@ void generateState(RootState* state) {
  */
 void mainLoop(RootState* state) {
     bool allQuit = false;
-
     state->RequiresRepaint = true;
 
     while (!allQuit) {
@@ -117,7 +126,7 @@ void mainLoop(RootState* state) {
                     default: break;
                 }
             }
-
+            hudDraw(state);
             display_show(state->Frame);
             state->Frame = 0;
         }

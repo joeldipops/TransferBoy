@@ -99,13 +99,8 @@ void changeGame(RootState* state, const byte playerNumber) {
     // Dump Save RAM first, or nah?
 
     // Reset state and send back to init.
-    free(state->Players[playerNumber].Cartridge.RomData.Data);
-    state->Players[playerNumber].Cartridge.RomData.Data = 0;
-    state->Players[playerNumber].Cartridge.RomData.Size = 0;
-
-    free(state->Players[playerNumber].Cartridge.SaveData.Data);
-    state->Players[playerNumber].Cartridge.SaveData.Data = 0;
-    state->Players[playerNumber].Cartridge.SaveData.Size = 0;
+    freeByteArray(&state->Players[playerNumber].Cartridge.RomData);
+    freeByteArray(&state->Players[playerNumber].Cartridge.SaveData);
 
     state->Players[playerNumber].MenuCursorRow = -1;
     state->Players[playerNumber].ActiveMode = Init;
