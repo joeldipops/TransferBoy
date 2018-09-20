@@ -53,10 +53,9 @@ void initDraw(const RootState* state, const byte playerNumber) {
 
     graphics_draw_box(state->Frame, screen.Left, screen.Top, screen.Width, screen.Height, BLANK_SCREEN_COLOUR);
 
-    const char TEXT_HEIGHT = 30;
+    const char TEXT_HEIGHT = 100;
     const char TEXT_WIDTH = 10;
     natural textTop = screen.Top - TEXT_HEIGHT + (screen.Width / 2);
-    natural textLeft = screen.Left + TEXT_WIDTH;
 
     string text = "";
     switch (state->Players[playerNumber].LastErrorCode) {
@@ -77,6 +76,5 @@ void initDraw(const RootState* state, const byte playerNumber) {
             break;
     }
 
-    //drawText(state->Frame, text, textLeft, textTop);
-    graphics_draw_text(state->Frame, textLeft, textTop + 30, text);
+    drawTextParagraph(state->Frame, text, screen.Left + TEXT_WIDTH, textTop, 0.8, screen.Width - TEXT_WIDTH);
 }

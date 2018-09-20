@@ -7,13 +7,23 @@ const unsigned short RESOLUTION_X = 640;
 const unsigned short RESOLUTION_Y = 480;
 
 typedef struct {
-    unsigned short Top;
-    unsigned short Left;
-    unsigned short Width;
-    unsigned short Height;
+    natural Top;
+    natural Left;
+    natural Width;
+    natural Height;
 } ScreenPosition;
 
-void flushScreen();
+/**
+ * Resets all screen buffers to a known state.
+ * @param state program state.
+ */
+void flushScreen(RootState* state);
+
+/**
+ * Gets the RDP module ready to render a new texture.
+ * @param frame identifies frame to render to.
+ */
+void prepareRdpForTexture(const display_context_t frame);
 
 /**
  * Get the gameboy screen rectangle based on player number.

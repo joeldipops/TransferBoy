@@ -8,7 +8,7 @@ typedef enum { false, true } bool;
 #include <libdragon.h>
 
 typedef unsigned char byte;
-typedef char string[1024];
+typedef char string[128];
 typedef unsigned short natural;
 
 natural GLOBAL_BACKGROUND_COLOUR = 0;

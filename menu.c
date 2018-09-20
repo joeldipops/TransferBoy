@@ -1,6 +1,7 @@
 #include <math.h>
 #include "core.h"
 #include "screen.h"
+#include "text.h"
 
 #include <libdragon.h>
 
@@ -25,25 +26,25 @@ void drawMenuItem(
     const bool drawCursor,
     const ScreenPosition* screen
 ) {
-    const unsigned short menuItemOffset = 10;
-    const unsigned short xOffset = 150;
-    const unsigned short cursorOffset = 20;
+    const natural menuItemOffset = 10;
+    const natural xOffset = 150;
+    const natural cursorOffset = 20;
 
     // space the second column with less items in it, out a little more.
-    unsigned short top = 0;
+    natural top = 0;
     if (x == 1) {
         top = screen->Top + screen->Height + (menuItemOffset * y * 2);
     } else {
         top = screen->Top + screen->Height + (menuItemOffset * y);
     }
-    unsigned short left = screen->Left + (xOffset *  x);
+    natural left = screen->Left + (xOffset *  x);
 
     string text = "";
     getText(label, text);
-    graphics_draw_text(frame, left + cursorOffset, top, text);
+    drawText(frame, text, left + cursorOffset, top, 0.7);
 
     if (drawCursor) {
-        graphics_draw_text(frame, left, top, ">");
+        drawText(frame, ">", left, top, 0.7);
     }
 }
 
@@ -161,7 +162,7 @@ char addPlayer(RootState* state) {
         &newPlayer->Cartridge.SaveData
     );
 
-    flushScreen();
+    flushScreen(state);
 
     newPlayer->ActiveMode = Play;
     state->PlayerCount++;
@@ -291,7 +292,7 @@ void menuDraw(RootState* state, const byte playerNumber) {
     getScreenPosition(state, playerNumber, &screen);
 
     if (state->Players[playerNumber].ActiveMode != Menu) {
-        flushScreen();
+        flushScreen(state);
         state->RequiresRepaint = true;
         return;
     }

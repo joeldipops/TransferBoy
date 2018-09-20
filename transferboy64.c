@@ -13,8 +13,6 @@
 #include <stdlib.h>
 #include <libdragon.h>
 
-#include <pthread.h>
-
 /**
  * Sets oft-use colours since we can't assign graphics_make_color to a constant.
  * @private
@@ -46,14 +44,6 @@ void initialiseSubsystems() {
 void generateState(RootState* state) {
     state->PlayerCount = 1;
     generatePlayerState(&state->Players[0]);
-}
-
-/**
- * Draws permanent screen artifacts like the logo and borders
- * @param state program state.
- */
-void hudDraw(RootState* state) {
-    //drawText(state->Frame, "~TRANSFER BOY~", 170, 5);
 }
 
 /**
@@ -126,7 +116,6 @@ void mainLoop(RootState* state) {
                     default: break;
                 }
             }
-            hudDraw(state);
             display_show(state->Frame);
             state->Frame = 0;
         }
@@ -139,9 +128,9 @@ void mainLoop(RootState* state) {
 int main(void) {
     initialiseSubsystems();
     setGlobalConstants();
-    flushScreen();
     RootState state;
     generateState(&state);
+    flushScreen(&state);
     mainLoop(&state);
 
     display_close();

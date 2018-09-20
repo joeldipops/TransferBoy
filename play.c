@@ -106,11 +106,11 @@ void mapGbInputs(const char controllerNumber, const GbButton* buttonMap, const s
  */
 void renderPixels(
     const display_context_t frame,
-    const unsigned short* pixelBuffer,
+    const natural* pixelBuffer,
     const bool isColour,
     const float avgPixelSize,
-    const unsigned short left,
-    const unsigned short top
+    const natural left,
+    const natural top
 ) {
     unsigned int* pixels = calloc(GB_LCD_HEIGHT * GB_LCD_WIDTH, sizeof(int));
     if (!pixels) {
@@ -128,12 +128,12 @@ void renderPixels(
         for (int y = 0; y < GB_LCD_HEIGHT; y++) {
             for (int x = 0; x < GB_LCD_WIDTH; x++) {
                 int index = x + y * GB_LCD_WIDTH;
-                unsigned short rawColour = pixelBuffer[index];
+                natural rawColour = pixelBuffer[index];
 
                 unsigned int r = ((rawColour >>  0) & 0x1f) << 3;
                 unsigned int g = ((rawColour >>  5) & 0x1f) << 3;
                 unsigned int b = ((rawColour >> 10) & 0x1f) << 3;
-                unsigned int pixel = graphics_make_color(r, g, b, 0xff);
+                unsigned int pixel = graphics_make_color(r, g, b, 0x00);
                 pixels[index] = pixel;
             }
         }
@@ -156,11 +156,11 @@ void renderPixels(
     rdp_enable_primitive_fill();
     for (int y = 0; y < GB_LCD_HEIGHT; y ++) {
         for (int x = 0; x <  GB_LCD_WIDTH; x++) {
-            unsigned short index = x + y * GB_LCD_WIDTH;
+            natural index = x + y * GB_LCD_WIDTH;
 
             rdp_set_primitive_color(pixels[index]);
-            unsigned short tx = x * avgPixelSize + left;
-            unsigned short ty = y * avgPixelSize + top;
+            natural tx = x * avgPixelSize + left;
+            natural ty = y * avgPixelSize + top;
 
             rdp_draw_filled_rectangle(tx, ty, tx + avgPixelSize, ty + avgPixelSize);
         }
