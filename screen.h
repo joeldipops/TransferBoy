@@ -11,7 +11,7 @@ typedef struct {
     natural Left;
     natural Width;
     natural Height;
-} ScreenPosition;
+} Rectangle;
 
 /**
  * Resets all screen buffers to a known state.
@@ -26,11 +26,20 @@ void flushScreen(RootState* state);
 void prepareRdpForTexture(const display_context_t frame);
 
 /**
+ * Draws an unfilled rectangle of a certain thickness.
+ * @param frame frame to draw the border on.
+ * @param position Where to draw the border on the screeen.
+ * @param thickness How thick the border is.
+ * @param colour The colour of the border.
+ */
+void drawSolidBorder(const display_context_t frame, const Rectangle* position, const natural width, const natural colour);
+
+/**
  * Get the gameboy screen rectangle based on player number.
  * @param state program state including number of players.
  * @param playerNumber number of a given player.
  * @out output The calculated screen size & position.
  */
-void getScreenPosition(const RootState* state, const byte playerNumber, ScreenPosition* output);
+void getScreenPosition(const RootState* state, const byte playerNumber, Rectangle* output);
 
 #endif

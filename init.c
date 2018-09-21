@@ -29,7 +29,7 @@ void initLogic(RootState* state, const byte playerNumber) {
 
         readCartridge(playerNumber, &state->Players[playerNumber].Cartridge);
 
-        ScreenPosition screen = {};
+        Rectangle screen = {};
         getScreenPosition(state, playerNumber, &screen);
 
         initialiseEmulator(
@@ -48,7 +48,7 @@ void initLogic(RootState* state, const byte playerNumber) {
  * @param playerNumber player in init mode.
  */
 void initDraw(const RootState* state, const byte playerNumber) {
-    ScreenPosition screen = {};
+    Rectangle screen = {};
     getScreenPosition(state, playerNumber, &screen);
 
     graphics_draw_box(state->Frame, screen.Left, screen.Top, screen.Width, screen.Height, BLANK_SCREEN_COLOUR);

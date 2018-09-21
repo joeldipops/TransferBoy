@@ -70,12 +70,33 @@ void prepareRdpForTexture(const display_context_t frame) {
 }
 
 /**
+ * Draws an unfilled rectangle of a certain thickness.
+ * @param frame frame to draw the border on.
+ * @param position Where to draw the border on the screeen.
+ * @param thickness How thick the border is.
+ * @param colour The colour of the border.
+ */
+void drawSolidBorder(const display_context_t frame, const Rectangle* position, const natural thickness, const natural colour) {
+    rdp_set_default_clipping();
+    rdp_attach_display(frame);
+    rdp_enable_primitive_fill();
+    rdp_set_primitive_color(colour);
+
+    rdp_draw_filled_rectangle(position->Left, position->Top, position->Left + thickness, position->Top + position->Height);
+    rdp_draw_filled_rectangle(position->Left, position->Top + position->Height -thickness, position->Left + position->Width, position->Top + position->Height);
+    rdp_draw_filled_rectangle(position->Left, position->Top, position->Left + position->Width, position->Top + thickness);
+    rdp_draw_filled_rectangle(position->Left + position->Width - thickness, position->Top, position->Left + position->Width, position->Top + position->Height);
+
+    rdp_detach_display();
+}
+
+/**
  * Get the gameboy screen rectangle based on player number.
  * @param state program state including number of players.
  * @param playerNumber number of a given player.
  * @out output The calculated screen size & position.
  */
-void getScreenPosition(const RootState* state, const byte playerNumber, ScreenPosition* output) {
+void getScreenPosition(const RootState* state, const byte playerNumber, Rectangle* output) {
     if (state->PlayerCount == 1) {
         output->Top = SINGLE_PLAYER_SCREEN_TOP;
         output->Left = SINGLE_PLAYER_SCREEN_LEFT;

@@ -24,11 +24,13 @@ void drawMenuItem(
     const byte x,
     const byte y,
     const bool drawCursor,
-    const ScreenPosition* screen
+    const Rectangle* screen
 ) {
-    const natural menuItemOffset = 10;
-    const natural xOffset = 150;
-    const natural cursorOffset = 20;
+    const natural xOffset = screen->Width / 2;
+    const natural cursorOffset = 0;
+    const float scaleFactor = 0.234 / 100.0;
+    const float scale = (float)screen->Width * scaleFactor;
+    const natural menuItemOffset = 34 * scale;
 
     // space the second column with less items in it, out a little more.
     natural top = 0;
@@ -41,10 +43,11 @@ void drawMenuItem(
 
     string text = "";
     getText(label, text);
-    drawText(frame, text, left + cursorOffset, top, 0.7);
+    drawText(frame, text, left + cursorOffset, top, scale);
 
     if (drawCursor) {
-        drawText(frame, ">", left, top, 0.7);
+        Rectangle border = {top, left, xOffset, menuItemOffset };
+        drawSolidBorder(frame, &border, 2, SELECTED_MENU_ITEM_COLOUR);
     }
 }
 
@@ -288,7 +291,7 @@ void menuLogic(RootState* state, const byte playerNumber) {
  * @param playerNumber player in menu mode.
  */
 void menuDraw(RootState* state, const byte playerNumber) {
-    ScreenPosition screen = {};
+    Rectangle screen = {};
     getScreenPosition(state, playerNumber, &screen);
 
     if (state->Players[playerNumber].ActiveMode != Menu) {

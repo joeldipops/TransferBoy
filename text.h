@@ -34,6 +34,11 @@ void getText(TextId textId, string output);
 void initText();
 
 /**
+ * Frees resources used by the text subsystem when done.
+ */
+void freeText();
+
+/**
  * Draws a horizontal string of text starting at the given location.
  * @param frame The id of the frame to draw on.
  * @param x The x co-ordinate to start the string at.

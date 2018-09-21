@@ -232,7 +232,7 @@ void playLogic(RootState* state, const byte playerNumber) {
  */
 void playDraw(const RootState* state, const byte playerNumber) {
     // Main background.
-    ScreenPosition screen = {};
+    Rectangle screen = {};
     getScreenPosition(state, playerNumber, &screen);
 
     graphics_draw_box(

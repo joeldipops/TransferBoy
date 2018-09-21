@@ -14,6 +14,7 @@ typedef unsigned short natural;
 natural GLOBAL_BACKGROUND_COLOUR = 0;
 natural GLOBAL_TEXT_COLOUR = 0;
 natural BLANK_SCREEN_COLOUR = 0;
+natural SELECTED_MENU_ITEM_COLOUR = 0;
 
 typedef struct {
     unsigned long Size;

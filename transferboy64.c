@@ -21,6 +21,7 @@ void setGlobalConstants() {
     GLOBAL_BACKGROUND_COLOUR = graphics_make_color(220, 220, 150, 255);
     BLANK_SCREEN_COLOUR = graphics_make_color(0xBB, 0xBB, 0xBB, 255);
     GLOBAL_TEXT_COLOUR = graphics_make_color(0, 0, 0, 255);
+    SELECTED_MENU_ITEM_COLOUR = graphics_make_color(55, 255, 55, 255);
 }
 
 /**
@@ -133,6 +134,7 @@ int main(void) {
     flushScreen(&state);
     mainLoop(&state);
 
+    freeText();
     display_close();
 }
 

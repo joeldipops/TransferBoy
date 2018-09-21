@@ -6,9 +6,9 @@
 
 #include <libdragon.h>
 
-static string _textMap[TextEnd] = {"", "", "", ""};
+static string _strings[TextEnd] = {"", "", "", ""};
+static sprite_t* _textMap = 0;
 static bool initted = false;
-static sprite_t* textMap = 0;
 
 /**
  * Initialises text subsystem by loading sprites etc.
@@ -19,19 +19,19 @@ void initText() {
     }
 
     // Set up string resources
-    strcpy(_textMap[TextEmpty], "");
-    strcpy(_textMap[TextLoadCartridge], "Press (S) to load cartridge.");
-    strcpy(_textMap[TextNoTpak], "Please insert a Transfer Pak.");
-    strcpy(_textMap[TextNoCartridge], "Please insert a Game Boy cartridge.");
-    strcpy(_textMap[TextLoadingCartridge], "Loading Cartridge, Please Wait.");
-    strcpy(_textMap[TextExpansionPakRequired], "This Cartridge cannot be loaded without an Expansion Pak.");
-    strcpy(_textMap[TextMenuResume], "Resume");
-    strcpy(_textMap[TextMenuReset], "Reset");
-    strcpy(_textMap[TextMenuChangeCart], "Change Game");
-    strcpy(_textMap[TextMenuOptions], "Options");
-    strcpy(_textMap[TextMenuAddPlayer], "Add Player");
-    strcpy(_textMap[TextMenuAddGame], "Add Game");
-    strcpy(_textMap[TextSplash], "~TRANSFER BOY~");
+    strcpy(_strings[TextEmpty], "");
+    strcpy(_strings[TextLoadCartridge], "Press (S) to load cartridge.");
+    strcpy(_strings[TextNoTpak], "Please insert a Transfer Pak.");
+    strcpy(_strings[TextNoCartridge], "Please insert a Game Boy cartridge.");
+    strcpy(_strings[TextLoadingCartridge], "Loading cartridge, please wait.");
+    strcpy(_strings[TextExpansionPakRequired], "This cartridge cannot be loaded without an Expansion Pak.");
+    strcpy(_strings[TextMenuResume], "Resume");
+    strcpy(_strings[TextMenuReset], "Reset");
+    strcpy(_strings[TextMenuChangeCart], "Switch");
+    strcpy(_strings[TextMenuOptions], "Options");
+    strcpy(_strings[TextMenuAddPlayer], "Add Player");
+    strcpy(_strings[TextMenuAddGame], "Add Game");
+    strcpy(_strings[TextSplash], "~TRANSFER BOY~");
 
     // Read in character sprite sheet.
     int textMapPointer = dfs_open("/textMap.sprite");
@@ -39,14 +39,23 @@ void initText() {
         return;
     }
 
-    textMap = malloc(dfs_size(textMapPointer));
-    dfs_read(textMap, 1, dfs_size(textMapPointer), textMapPointer);
+    _textMap = malloc(dfs_size(textMapPointer));
+    dfs_read(_textMap, 1, dfs_size(textMapPointer), textMapPointer);
     dfs_close(textMapPointer);
 
     initted = true;
 }
 
-static const natural DEFAULT_CHARACTER_SPACING = 20;
+/**
+ * Frees resources used by the text subsystem when done.
+ */
+void freeText() {
+    //free(_strings);
+    free(_textMap);
+    initted = false;
+}
+
+static const natural DEFAULT_CHARACTER_SPACING = 19;
 static const natural DEFAULT_CHARACTER_SIZE = 20;
 
 
@@ -55,11 +64,11 @@ static const natural DEFAULT_CHARACTER_SIZE = 20;
  * @param textId The text id code.
  * @out output the destination string.
  */
-void getText(TextId textId, string output) {
+void getText(const TextId textId, string output) {
     if (!initted) {
         initText();
     }
-    sprintf(output, _textMap[textId]);
+    sprintf(output, _strings[textId]);
 }
 
 /**
@@ -70,9 +79,15 @@ void getText(TextId textId, string output) {
  * @private
  */
 void drawCharacter(const char character, const natural x, const natural y, const float scale) {
+    // Avoid printing any control characters, we don't at this point know what
+    // wackiness will ensue.
+    if (character <= 0x20) {
+        return;
+    }
+
     byte offset = character - 0x21;
     rdp_sync(SYNC_PIPE);
-    rdp_load_texture_stride(0, 0, MIRROR_DISABLED, textMap, offset);
+    rdp_load_texture_stride(0, 0, MIRROR_DISABLED, _textMap, offset);
     rdp_draw_sprite_scaled(0, x, y, scale, scale);
 }
 
