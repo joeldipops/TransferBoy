@@ -7,6 +7,7 @@
 #include "screen.h"
 #include "include/gbc_bundle.h"
 #include "tpakio.h"
+#include "link.h"
 
 #include <libdragon.h>
 
@@ -15,7 +16,7 @@
  * @param state state to copy the bios to.
  * @return 0 if load successful, non-zero for errors.
  */
-char loadBios(struct gb_state* state) {
+char loadBios(GbState* state) {
     char result = 0;
     byte* biosFile = null;
 
@@ -49,8 +50,8 @@ char loadBios(struct gb_state* state) {
  * @param romData ROM loaded from cartridge.
  * @param saveData Save file RAM loaded from cartridge.
  */
-void initialiseEmulator(struct gb_state* state, const ByteArray* romData, const ByteArray* saveData) {
-    memset(state, 0, sizeof(struct gb_state));
+void initialiseEmulator(GbState* state, const ByteArray* romData, const ByteArray* saveData) {
+    memset(state, 0, sizeof(GbState));
 
     state_new_from_rom(state, romData->Data, romData->Size);
     cpu_reset_state(state);
@@ -72,7 +73,7 @@ void initialiseEmulator(struct gb_state* state, const ByteArray* romData, const 
  * @out gbInput struct of gb buttons to fill in.
  * @private
  */
-void mapGbInputs(const char controllerNumber, const GbButton* buttonMap, const struct controller_data* n64Input, bool* pressedButtons, struct player_input* gbInput) {
+void mapGbInputs(const char controllerNumber, const GbButton* buttonMap, const struct controller_data* n64Input, bool* pressedButtons, GbController* gbInput) {
     getPressedButtons(n64Input, controllerNumber, pressedButtons);
 
     for (int i = 0; i < 16; i++) {
@@ -181,14 +182,22 @@ void renderPixels(
  * @param playerNumber player in play mode.
  */
 void playLogic(RootState* state, const byte playerNumber) {
-    struct gb_state* emulatorState = &state->Players[playerNumber].EmulationState;
+    GbState* emulatorState = &state->Players[playerNumber].EmulationState;
 
     if (emulatorState->emu_state->quit) {
         state->Players[playerNumber].ActiveMode = Quit;
         return;
     }
 
-    struct player_input* input = calloc(1, sizeof(struct player_input));
+    if (state->PlayerCount == 2 && isRequestingTransfer(state)) {
+        GbState* states[2] = {
+            &state->Players[0].EmulationState,
+            &state->Players[1].EmulationState
+        };
+        exchangeLinkData(states);
+    }
+
+    GbController* input = calloc(1, sizeof(struct player_input));
     emu_step_frame(emulatorState);
 
     bool pressedButtons[16] = {};

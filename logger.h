@@ -6,7 +6,7 @@
  * Displays the current state of the Gameboy emulator registers.
  * @param s The emulator state structure.
  */
-void printRegisters(struct gb_state *s);
+void printRegisters(GbState *s);
 
 /**
  * Throws a line of text up on to the screen a la printf.

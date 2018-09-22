@@ -93,7 +93,7 @@ void logAndPause(const string text, ...) {
  * Displays the current state of the Gameboy emulator registers.
  * @param s The emulator state structure.
  */
-void printRegisters(struct gb_state* s) {
+void printRegisters(GbState* s) {
     logInfo(
         "A=%02x F=%02x B=%02x C=%02x D=%02x E=%02x H=%02x L=%02x Z=%d N=%d HF=%d C=%d sp=%02x pc=%02x",
         s->reg8.A, s->reg8.F, s->reg8.B, s->reg8.C,

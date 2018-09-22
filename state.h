@@ -21,7 +21,7 @@ typedef struct {
     N64Button SystemMenuButton;
     CartridgeData Cartridge;
     bool AudioEnabled;
-    struct gb_state EmulationState;
+    GbState EmulationState;
     char LastErrorCode;
     char MenuCursorRow;
     char MenuCursorColumn;

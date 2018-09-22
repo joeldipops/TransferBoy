@@ -9,7 +9,7 @@
  * @param romData ROM loaded from cartridge.
  * @param saveData Save file RAM loaded from cartridge.
  */
-void initialiseEmulator(struct gb_state* state, const ByteArray* romData, const ByteArray* saveData);
+void initialiseEmulator(GbState* state, const ByteArray* romData, const ByteArray* saveData);
 
 /**
  * Handles gameboy emulation.
