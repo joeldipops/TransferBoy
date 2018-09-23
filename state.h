@@ -17,7 +17,7 @@ typedef struct {
 typedef struct {
     Mode ActiveMode;
     Border SelectedBorder;
-    GbButton ButtonMap[16];
+    GbButton ButtonMap[N64_BUTTON_COUNT];
     N64Button SystemMenuButton;
     CartridgeData Cartridge;
     bool AudioEnabled;

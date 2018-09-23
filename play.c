@@ -76,7 +76,7 @@ void initialiseEmulator(GbState* state, const ByteArray* romData, const ByteArra
 void mapGbInputs(const char controllerNumber, const GbButton* buttonMap, const N64ControllerState* n64Input, bool* pressedButtons, GbController* gbInput) {
     getPressedButtons(n64Input, controllerNumber, pressedButtons);
 
-    for (byte i = 0; i < 16; i++) {
+    for (byte i = 0; i < N64_BUTTON_COUNT; i++) {
         if (!pressedButtons[i]) {
             continue;
         }
@@ -189,18 +189,18 @@ void playLogic(RootState* state, const byte playerNumber) {
         return;
     }
 
--    if (state->PlayerCount == 2 && isRequestingTransfer(state)) {
--        GbState* states[2] = {
--            &state->Players[0].EmulationState,
--            &state->Players[1].EmulationState
--        };
--        exchangeLinkData(states);
--    }
+    if (state->PlayerCount == 2 && isRequestingTransfer(state)) {
+        GbState* states[2] = {
+            &state->Players[0].EmulationState,
+            &state->Players[1].EmulationState
+        };
+        exchangeLinkData(states);
+    }
 
     GbController* input = calloc(1, sizeof(GbController));
     emu_step_frame(emulatorState);
 
-    bool pressedButtons[16] = {};
+    bool pressedButtons[N64_BUTTON_COUNT] = {};
 
     mapGbInputs(
         playerNumber,
@@ -210,7 +210,7 @@ void playLogic(RootState* state, const byte playerNumber) {
         input
     );
 
-    bool releasedButtons[16] = {};
+    bool releasedButtons[N64_BUTTON_COUNT] = {};
     getPressedButtons(&state->KeysReleased, playerNumber, releasedButtons);
 
     if (releasedButtons[state->Players[playerNumber].SystemMenuButton]) {

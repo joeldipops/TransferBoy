@@ -229,7 +229,7 @@ void executeMenuItem(RootState* state, const byte playerNumber, const byte x, co
 void menuLogic(RootState* state, const byte playerNumber) {
     PlayerState* playerState = &state->Players[playerNumber];
 
-    bool pressedButtons[16] = {};
+    bool pressedButtons[N64_BUTTON_COUNT] = {};
     getPressedButtons(&state->KeysReleased, playerNumber, pressedButtons);
 
     const bool menuPressed = pressedButtons[playerState->SystemMenuButton];

@@ -4,8 +4,20 @@
 #include "core.h"
 #include <libdragon.h>
 
-typedef enum { NoButton, A, B, L, R, Z, Start, Up, Down, Left, Right, CUp, CDown, CLeft, CRight, Stick } N64Button;
-typedef enum { GbNoButton, GbA, GbB, GbUp, GbDown, GbLeft, GbRight, GbStart, GbSelect, GbSystemMenu } GbButton;
+#define N64_BUTTON_COUNT 23
+
+typedef enum {
+    NoButton  = 0,
+    A, B, L, R, Z, Start, DUp, DDown, DLeft, DRight, CUp, CDown, CLeft, CRight, StickUp, StickDown, StickLeft, StickRight,
+    Up, Down, Left, Right // Either stick or d-pad.  StickLeft & DRight will cancel each other out.
+
+} N64Button;
+
+typedef enum {
+    GbNoButton = 0,
+    GbA, GbB, GbUp, GbDown, GbLeft, GbRight, GbStart, GbSelect, GbSystemMenu
+} GbButton;
+
 typedef struct controller_data N64ControllerState;
 
 /**

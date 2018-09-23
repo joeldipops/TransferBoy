@@ -10,7 +10,7 @@ void getPressedButtons(const N64ControllerState* input, const byte controllerNum
     // A problem with the emulator (or my shitty code?) seems to mean that controller 2 always has every button pressed.
     // Let's leave them idle for now
     if (controllerNumber > 0) {
-        memset(output, 0x00, 16);
+        memset(output, 0x00, N64_BUTTON_COUNT);
         return;
     }
 
@@ -21,13 +21,38 @@ void getPressedButtons(const N64ControllerState* input, const byte controllerNum
     output[R] = true && input->c[controllerNumber].R;
     output[Z] = true && input->c[controllerNumber].Z;
     output[Start] = true && input->c[controllerNumber].start;
-    output[Up] = true && input->c[controllerNumber].up;
-    output[Down] = true && input->c[controllerNumber].down;
-    output[Left] = true && input->c[controllerNumber].left;
-    output[Right] = true && input->c[controllerNumber].right;
+    output[DUp] = true && input->c[controllerNumber].up;
+    output[DDown] = true && input->c[controllerNumber].down;
+    output[DLeft] = true && input->c[controllerNumber].left;
+    output[DRight] = true && input->c[controllerNumber].right;
     output[CUp] = true && input->c[controllerNumber].C_up;
     output[CDown] = true && input->c[controllerNumber].C_down;
     output[CLeft] = true && input->c[controllerNumber].C_left;
     output[CRight] = true && input->c[controllerNumber].C_right;
-    output[Stick] = true && (input->c[controllerNumber].x || input->c[controllerNumber].y);
+
+    sByte x = input->c[controllerNumber].x;
+    if (x < 0) {
+        output[StickLeft] = true;
+    } else if (x > 0) {
+        output[StickRight] = true;
+    } else {
+        output[StickLeft] = false;
+        output[StickRight] = false;
+    }
+
+    sByte y = input->c[controllerNumber].y;
+    if (y < 0) {
+        output[StickDown] = true;
+    } else if (y > 0) {
+        output[StickUp] = true;
+    } else {
+        output[StickUp] = false;
+        output[StickDown] = false;
+    }
+
+    output[Up] = (output[StickUp] || output[DUp]) && !(output[StickDown] || output[DDown]);
+    output[Down] = (output[StickDown] || output[DDown]) && !(output[StickUp] || output[DUp]);
+    output[Left] = (output[StickLeft] || output[DLeft]) && !(output[StickRight] || output[DRight]);
+    output[Right] = (output[StickRight] || output[DRight]) && !(output[StickLeft] || output[DLeft]);
 }
+

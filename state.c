@@ -6,7 +6,7 @@
  * @private
  */
 void initialiseButtonMap(GbButton* map) {
-    GbButton buttons[16];
+    GbButton buttons[N64_BUTTON_COUNT];
     buttons[NoButton] = GbNoButton;
     buttons[A] = GbA;
     buttons[B] = GbB;
@@ -20,16 +20,13 @@ void initialiseButtonMap(GbButton* map) {
     buttons[R] = GbSelect;
     buttons[L] = GbSystemMenu;
 
-    // TODO: Implement stick control.
-    buttons[Stick] = GbNoButton;
-
     buttons[Z] = GbNoButton;
     buttons[CUp] = GbNoButton;
     buttons[CDown] = GbNoButton;
     buttons[CLeft] = GbNoButton;
     buttons[CRight] = GbNoButton;
 
-    memcpy(map, &buttons, sizeof(GbButton) * 16);
+    memcpy(map, &buttons, sizeof(GbButton) * N64_BUTTON_COUNT);
 }
 
 /**
@@ -44,7 +41,7 @@ void generatePlayerState(PlayerState* playerState) {
     playerState->MenuCursorColumn = 0;
     initialiseButtonMap(playerState->ButtonMap);
 
-    for (byte i = 0; i < 16; i++) {
+    for (byte i = 0; i < N64_BUTTON_COUNT; i++) {
         if (playerState->ButtonMap[i] == GbSystemMenu) {
             playerState->SystemMenuButton = i;
             break;
