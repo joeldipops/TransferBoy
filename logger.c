@@ -55,7 +55,7 @@ void printSegment(byte* start) {
     bool isPaused = true;
     while(isPaused) {
         controller_scan();
-        struct controller_data input = get_keys_pressed();
+        N64ControllerState input = get_keys_pressed();
         if (input.c[0].start) {
             isPaused = false;
         }
@@ -82,7 +82,7 @@ void logAndPause(const string text, ...) {
     bool isPaused = true;
     while(isPaused) {
         controller_scan();
-        struct controller_data input = get_keys_pressed();
+        N64ControllerState input = get_keys_pressed();
         if (input.c[0].start) {
             isPaused = false;
         }
@@ -116,7 +116,7 @@ void logAndPauseFrame(display_context_t frame, const string text, ...) {
     bool isPaused = true;
     while(isPaused) {
         controller_scan();
-        struct controller_data input = get_keys_pressed();
+        N64ControllerState input = get_keys_pressed();
         if (input.c[0].start) {
             isPaused = false;
         }

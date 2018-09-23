@@ -62,7 +62,8 @@ void mainLoop(RootState* state) {
         allQuit = true;
 
         controller_scan();
-        state->ControllerState = get_keys_pressed();
+        state->KeysPressed = get_keys_pressed();
+        state->KeysReleased = get_keys_up();
 
         Mode modes[MAX_PLAYERS] = {0, 0};
 

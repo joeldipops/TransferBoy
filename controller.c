@@ -6,7 +6,7 @@
  * @param controllerNumber The controller we want to know the buttons from.
  * @out Array of pressed buttons.
  */
-void getPressedButtons(const struct controller_data* input, const byte controllerNumber, bool* output) {
+void getPressedButtons(const N64ControllerState* input, const byte controllerNumber, bool* output) {
     // A problem with the emulator (or my shitty code?) seems to mean that controller 2 always has every button pressed.
     // Let's leave them idle for now
     if (controllerNumber > 0) {

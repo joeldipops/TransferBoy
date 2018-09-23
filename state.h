@@ -30,7 +30,8 @@ typedef struct {
 typedef struct {
     bool RequiresRepaint;
     byte PlayerCount;
-    struct controller_data ControllerState;
+    N64ControllerState KeysPressed;
+    N64ControllerState KeysReleased;
     float PixelSize;
     display_context_t Frame;
     PlayerState Players[MAX_PLAYERS]; // Really not aiming for anything other than 2, but you never know.

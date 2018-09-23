@@ -73,7 +73,7 @@ void initialiseEmulator(GbState* state, const ByteArray* romData, const ByteArra
  * @out gbInput struct of gb buttons to fill in.
  * @private
  */
-void mapGbInputs(const char controllerNumber, const GbButton* buttonMap, const struct controller_data* n64Input, bool* pressedButtons, GbController* gbInput) {
+void mapGbInputs(const char controllerNumber, const GbButton* buttonMap, const N64ControllerState* n64Input, bool* pressedButtons, GbController* gbInput) {
     getPressedButtons(n64Input, controllerNumber, pressedButtons);
 
     for (byte i = 0; i < 16; i++) {
@@ -168,7 +168,7 @@ void renderPixels(
     }
     string text = "";
     sprintf(text, "Frames: %lld", frameCount);
-    graphics_draw_text(frame, left, top - 50, text);
+    graphics_draw_text(frame, left, top, text);
 
     frameCount++;
 
@@ -189,15 +189,15 @@ void playLogic(RootState* state, const byte playerNumber) {
         return;
     }
 
-    if (state->PlayerCount == 2 && isRequestingTransfer(state)) {
-        GbState* states[2] = {
-            &state->Players[0].EmulationState,
-            &state->Players[1].EmulationState
-        };
-        exchangeLinkData(states);
-    }
+-    if (state->PlayerCount == 2 && isRequestingTransfer(state)) {
+-        GbState* states[2] = {
+-            &state->Players[0].EmulationState,
+-            &state->Players[1].EmulationState
+-        };
+-        exchangeLinkData(states);
+-    }
 
-    GbController* input = calloc(1, sizeof(struct player_input));
+    GbController* input = calloc(1, sizeof(GbController));
     emu_step_frame(emulatorState);
 
     bool pressedButtons[16] = {};
@@ -205,12 +205,15 @@ void playLogic(RootState* state, const byte playerNumber) {
     mapGbInputs(
         playerNumber,
         state->Players[playerNumber].ButtonMap,
-        &state->ControllerState,
+        &state->KeysPressed,
         pressedButtons,
         input
     );
 
-    if (pressedButtons[state->Players[playerNumber].SystemMenuButton]) {
+    bool releasedButtons[16] = {};
+    getPressedButtons(&state->KeysReleased, playerNumber, releasedButtons);
+
+    if (releasedButtons[state->Players[playerNumber].SystemMenuButton]) {
         state->Players[playerNumber].ActiveMode = Menu;
         state->RequiresRepaint = true;
     }

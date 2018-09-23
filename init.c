@@ -14,7 +14,7 @@ typedef enum { InitNoError, InitNoTpak, InitNoCartridge, InitRequiresExpansionPa
  * @param playerNumber player in init mode.
  */
 void initLogic(RootState* state, const byte playerNumber) {
-    if (!state->ControllerState.c[playerNumber].start) {
+    if (!state->KeysPressed.c[playerNumber].start) {
         if (!isTPakInserted(playerNumber)) {
             state->Players[playerNumber].LastErrorCode = InitNoTpak;
         } else if (!isCartridgeInserted(playerNumber)) {

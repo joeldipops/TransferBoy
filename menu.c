@@ -230,7 +230,7 @@ void menuLogic(RootState* state, const byte playerNumber) {
     PlayerState* playerState = &state->Players[playerNumber];
 
     bool pressedButtons[16] = {};
-    getPressedButtons(&state->ControllerState, playerNumber, pressedButtons);
+    getPressedButtons(&state->KeysReleased, playerNumber, pressedButtons);
 
     const bool menuPressed = pressedButtons[playerState->SystemMenuButton];
 
