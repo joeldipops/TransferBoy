@@ -44,7 +44,7 @@ void generatePlayerState(PlayerState* playerState) {
     playerState->MenuCursorColumn = 0;
     initialiseButtonMap(playerState->ButtonMap);
 
-    for (int i = 0; i < 16; i++) {
+    for (byte i = 0; i < 16; i++) {
         if (playerState->ButtonMap[i] == GbSystemMenu) {
             playerState->SystemMenuButton = i;
             break;

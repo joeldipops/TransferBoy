@@ -1,15 +1,15 @@
 #include "eeprom.h"
 #include <libdragon.h>
 
-static int cursorPosition = 0;
-static const char EEPROM_BLOCKS = 64;
-static const char BLOCK_SIZE = 8;
+static byte cursorPosition = 0;
+static const byte EEPROM_BLOCKS = 64;
+static const byte BLOCK_SIZE = 8;
 
 /**
  * Gets the next available eeprom block.
  * @return open eeprom block.
  */
-int getEepromCursorPosition() {
+byte getEepromCursorPosition() {
     if (cursorPosition >= EEPROM_BLOCKS) {
         cursorPosition = 0;
     }
@@ -22,7 +22,7 @@ int getEepromCursorPosition() {
  * @param data The data to write.
  * @return 0 if successful, otherwise an sub-zero error code.
 */
-char writeToEeprom(const int blockNumber, const ByteArray* stream) {
+sByte writeToEeprom(const byte blockNumber, const ByteArray* stream) {
     if (!eeprom_present()) {
         return -1;
     }

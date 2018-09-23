@@ -34,7 +34,7 @@ void initText() {
     strcpy(_strings[TextSplash], "~TRANSFER BOY~");
 
     // Read in character sprite sheet.
-    int textMapPointer = dfs_open("/textMap.sprite");
+    sInt textMapPointer = dfs_open("/textMap.sprite");
     if (!textMapPointer) {
         return;
     }

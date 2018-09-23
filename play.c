@@ -16,14 +16,14 @@
  * @param state state to copy the bios to.
  * @return 0 if load successful, non-zero for errors.
  */
-char loadBios(GbState* state) {
-    char result = 0;
+sByte loadBios(GbState* state) {
+    sByte result = 0;
     byte* biosFile = null;
 
     dfs_init(DFS_DEFAULT_LOCATION);
-    int filePointer = dfs_open("/bios.bin");
+    sInt filePointer = dfs_open("/bios.bin");
 
-    int biosSize = 0;
+    sInt biosSize = 0;
     if (filePointer >= 0) {
         biosSize = dfs_size(filePointer);
     } else {
@@ -76,7 +76,7 @@ void initialiseEmulator(GbState* state, const ByteArray* romData, const ByteArra
 void mapGbInputs(const char controllerNumber, const GbButton* buttonMap, const struct controller_data* n64Input, bool* pressedButtons, GbController* gbInput) {
     getPressedButtons(n64Input, controllerNumber, pressedButtons);
 
-    for (int i = 0; i < 16; i++) {
+    for (byte i = 0; i < 16; i++) {
         if (!pressedButtons[i]) {
             continue;
         }
@@ -113,7 +113,7 @@ void renderPixels(
     const natural left,
     const natural top
 ) {
-    unsigned int* pixels = calloc(GB_LCD_HEIGHT * GB_LCD_WIDTH, sizeof(int));
+    uInt* pixels = calloc(GB_LCD_HEIGHT * GB_LCD_WIDTH, sizeof(uInt));
     if (!pixels) {
         logInfo("Out of memory!!!");
         return;
@@ -126,25 +126,25 @@ void renderPixels(
          * values from 0-1f to 0-ff and put them in RGBA format. For the scaling
          * we'd have to multiply by 0xff/0x1f, which is 8.23, approx 8, which is
          * a shift by 3. */
-        for (int y = 0; y < GB_LCD_HEIGHT; y++) {
-            for (int x = 0; x < GB_LCD_WIDTH; x++) {
-                int index = x + y * GB_LCD_WIDTH;
+        for (natural y = 0; y < GB_LCD_HEIGHT; y++) {
+            for (natural x = 0; x < GB_LCD_WIDTH; x++) {
+                natural index = x + y * GB_LCD_WIDTH;
                 natural rawColour = pixelBuffer[index];
 
-                unsigned int r = ((rawColour >>  0) & 0x1f) << 3;
-                unsigned int g = ((rawColour >>  5) & 0x1f) << 3;
-                unsigned int b = ((rawColour >> 10) & 0x1f) << 3;
-                unsigned int pixel = graphics_make_color(r, g, b, 0x00);
+                uInt r = ((rawColour >>  0) & 0x1f) << 3;
+                uInt g = ((rawColour >>  5) & 0x1f) << 3;
+                uInt b = ((rawColour >> 10) & 0x1f) << 3;
+                uInt pixel = graphics_make_color(r, g, b, 0x00);
                 pixels[index] = pixel;
             }
         }
     } else {
         // The colors stored in pixbuf already went through the palette
         //translation, but are still 2 bit monochrome.
-        unsigned int palette[] = { 0xffffffff, 0xaaaaaaaa, 0x66666666, 0x11111111 };
-        for (int y = 0; y < GB_LCD_HEIGHT; y++) {
-            for (int x = 0; x < GB_LCD_WIDTH; x++) {
-                int index = x + y * GB_LCD_WIDTH;
+        uInt palette[] = { 0xffffffff, 0xaaaaaaaa, 0x66666666, 0x11111111 };
+        for (natural y = 0; y < GB_LCD_HEIGHT; y++) {
+            for (natural x = 0; x < GB_LCD_WIDTH; x++) {
+                natural index = x + y * GB_LCD_WIDTH;
                 pixels[index] = palette[pixelBuffer[index]];
             }
         }
@@ -155,8 +155,8 @@ void renderPixels(
     rdp_set_default_clipping();
     rdp_attach_display(frame);
     rdp_enable_primitive_fill();
-    for (int y = 0; y < GB_LCD_HEIGHT; y ++) {
-        for (int x = 0; x <  GB_LCD_WIDTH; x++) {
+    for (natural y = 0; y < GB_LCD_HEIGHT; y ++) {
+        for (natural x = 0; x <  GB_LCD_WIDTH; x++) {
             natural index = x + y * GB_LCD_WIDTH;
 
             rdp_set_primitive_color(pixels[index]);
@@ -167,8 +167,8 @@ void renderPixels(
         }
     }
     string text = "";
-    sprintf(text, "Frames: %lu", frameCount);
-    graphics_draw_text(frame, left, top, text);
+    sprintf(text, "Frames: %lld", frameCount);
+    graphics_draw_text(frame, left, top - 50, text);
 
     frameCount++;
 

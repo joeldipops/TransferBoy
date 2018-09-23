@@ -100,7 +100,7 @@ void mainLoop(RootState* state) {
             state->RequiresRepaint = false;
             while(!(state->Frame = display_lock()));
 
-            for (int i = 0; i < state->PlayerCount; i++) {
+            for (byte i = 0; i < state->PlayerCount; i++) {
                 switch(modes[i]) {
                     case Init:
                         initDraw(state, i);
@@ -136,6 +136,7 @@ int main(void) {
 
     freeText();
     display_close();
+    return 0;
 }
 
 

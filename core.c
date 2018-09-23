@@ -1,12 +1,12 @@
 #include "core.h"
 
-static unsigned long long totalEstimatedMemory = 0;
+static uLong totalEstimatedMemory = 0;
 /**
  * Calculates the largest block of memory that can be allocated (give or take) at start up
  * to understand how much memory is available overall
  * @return The estimated size of the memory space.
  */
-unsigned long long getMemoryLimit() {
+uLong getMemoryLimit() {
     if (!totalEstimatedMemory) {
         totalEstimatedMemory = getCurrentMemory();
     }
@@ -17,8 +17,8 @@ unsigned long long getMemoryLimit() {
  * Calculates the largest block of memory that can currently be allocated (give or take)
  * @return The estimates amount of remaining memory.
  */
-unsigned long long getCurrentMemory() {
-    unsigned long long limit = 16000000;
+uLong getCurrentMemory() {
+    uLong limit = 16000000;
 
     void* freeMe = 0;
     while (!(freeMe = malloc(limit))) {

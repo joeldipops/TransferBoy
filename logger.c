@@ -33,7 +33,7 @@ void printLog(const string text, display_context_t frame) {
  * Print the next 32 bytes of memory from a given address and wait for "start".
  * @param start the starting memory address.
  */
-void printSegment(unsigned char* start) {
+void printSegment(byte* start) {
     display_context_t frame = null;
     while(!(frame = display_lock()));
 
@@ -138,7 +138,7 @@ void logInfo(const string text, ... ) {
     vsprintf(formatted, text, args);
     va_end(args);
 
-    int blockNumber = getEepromCursorPosition();
+    byte blockNumber = getEepromCursorPosition();
 
     // Since it's a log file, whack a new line on the end.
     // TODO - timestamp.

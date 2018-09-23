@@ -7,7 +7,7 @@
  * Gets the next available eeprom block.
  * @return open eeprom block.
  */
-int getEepromCursorPosition();
+byte getEepromCursorPosition();
 
 /**
  * Writes to eeprom
@@ -15,6 +15,6 @@ int getEepromCursorPosition();
  * @param data The data to write.
  * @return 0 if successful, otherwise an sub-zero error code.
 */
-char writeToEeprom(const int blockNumber, const ByteArray* data);
+sByte writeToEeprom(const byte blockNumber, const ByteArray* data);
 
 #endif

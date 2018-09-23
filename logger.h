@@ -35,6 +35,6 @@ void logAndPauseFrame(display_context_t frame, const string text, ...);
  * Print the next 32 bytes of memory from a given address and wait for "start".
  * @param start the starting memory address.
  */
-void printSegment(unsigned char* start);
+void printSegment(byte* start);
 
 #endif
