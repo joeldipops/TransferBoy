@@ -61,7 +61,7 @@ void initialiseEmulator(GbState* state, const ByteArray* romData, const ByteArra
     state_load_extram(state, saveData->Data, saveData->Size);
     init_emu_state(state);
     cpu_init_emu_cpu_state(state);
-    lcd_init(state); // Here we're initing the code that renders the pixel buffer.
+    lcd_init(state);
 }
 
 
@@ -197,44 +197,47 @@ void playLogic(RootState* state, const byte playerNumber) {
         exchangeLinkData(states);
     }
 
-    GbController* input = calloc(1, sizeof(GbController));
-    emu_step_frame(emulatorState);
+    emu_step(emulatorState);
 
-    bool pressedButtons[N64_BUTTON_COUNT] = {};
+    if (emulatorState->emu_state->lcd_entered_vblank) {
+        GbController* input = calloc(1, sizeof(GbController));
 
-    mapGbInputs(
-        playerNumber,
-        state->Players[playerNumber].ButtonMap,
-        &state->KeysPressed,
-        pressedButtons,
-        input
-    );
+        bool pressedButtons[N64_BUTTON_COUNT] = {};
 
-    bool releasedButtons[N64_BUTTON_COUNT] = {};
-    getPressedButtons(&state->KeysReleased, playerNumber, releasedButtons);
+        mapGbInputs(
+            playerNumber,
+            state->Players[playerNumber].ButtonMap,
+            &state->KeysPressed,
+            pressedButtons,
+            input
+        );
 
-    if (releasedButtons[state->Players[playerNumber].SystemMenuButton]) {
-        state->Players[playerNumber].ActiveMode = Menu;
+        bool releasedButtons[N64_BUTTON_COUNT] = {};
+        getPressedButtons(&state->KeysReleased, playerNumber, releasedButtons);
+
+        if (releasedButtons[state->Players[playerNumber].SystemMenuButton]) {
+            state->Players[playerNumber].ActiveMode = Menu;
+            state->RequiresRepaint = true;
+        }
+
+        emu_process_inputs(emulatorState, input);
+
+        free(input);
+
+        // Write save file back to the catridge if it has changed.
+        if (emulatorState->emu_state->extram_dirty && isCartridgeInserted(playerNumber)) {
+            memcpy(
+                state->Players[playerNumber].Cartridge.SaveData.Data,
+                emulatorState->mem_EXTRAM,
+                state->Players[playerNumber].Cartridge.SaveData.Size
+            );
+            persistSave(playerNumber, &state->Players[playerNumber].Cartridge.SaveData);
+            emulatorState->emu_state->extram_dirty = false;
+        }
+
+        // TODO - Map from emulatorState->emu_state->audio_sndbuf
         state->RequiresRepaint = true;
     }
-
-    emu_process_inputs(emulatorState, input);
-
-    free(input);
-
-    // Write save file back to the catridge if it has changed.
-    if (emulatorState->emu_state->extram_dirty && isCartridgeInserted(playerNumber)) {
-        memcpy(
-            state->Players[playerNumber].Cartridge.SaveData.Data,
-            emulatorState->mem_EXTRAM,
-            state->Players[playerNumber].Cartridge.SaveData.Size
-        );
-        persistSave(playerNumber, &state->Players[playerNumber].Cartridge.SaveData);
-        emulatorState->emu_state->extram_dirty = false;
-    }
-    state->RequiresRepaint = true;
-
-    // TODO - Map from emulatorState->emu_state->audio_sndbuf
 }
 
 /**

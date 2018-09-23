@@ -7,6 +7,7 @@
  */
 void initialiseButtonMap(GbButton* map) {
     GbButton buttons[N64_BUTTON_COUNT];
+    memset(buttons, 0x00, sizeof(GbButton) * N64_BUTTON_COUNT);
     buttons[NoButton] = GbNoButton;
     buttons[A] = GbA;
     buttons[B] = GbB;
@@ -19,12 +20,6 @@ void initialiseButtonMap(GbButton* map) {
     buttons[Start] = GbStart;
     buttons[R] = GbSelect;
     buttons[L] = GbSystemMenu;
-
-    buttons[Z] = GbNoButton;
-    buttons[CUp] = GbNoButton;
-    buttons[CDown] = GbNoButton;
-    buttons[CLeft] = GbNoButton;
-    buttons[CRight] = GbNoButton;
 
     memcpy(map, &buttons, sizeof(GbButton) * N64_BUTTON_COUNT);
 }

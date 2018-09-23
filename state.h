@@ -29,6 +29,7 @@ typedef struct {
 
 typedef struct {
     bool RequiresRepaint;
+    bool RequiresControllerRead;
     byte PlayerCount;
     N64ControllerState KeysPressed;
     N64ControllerState KeysReleased;

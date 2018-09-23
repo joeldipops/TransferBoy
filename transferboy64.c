@@ -57,13 +57,22 @@ void generateState(RootState* state) {
 void mainLoop(RootState* state) {
     bool allQuit = false;
     state->RequiresRepaint = true;
+    state->RequiresControllerRead = true;
+    uLong iterations = 0;
 
     while (!allQuit) {
         allQuit = true;
 
-        controller_scan();
-        state->KeysPressed = get_keys_pressed();
-        state->KeysReleased = get_keys_up();
+        // Read controller about once per frame.
+        if (state->RequiresControllerRead || iterations >= 10000) {
+            controller_scan();
+            state->KeysPressed = get_keys_pressed();
+            state->KeysReleased = get_keys_up();
+            state->RequiresControllerRead = false;
+            iterations = 0;
+        } else {
+            iterations++;
+        }
 
         Mode modes[MAX_PLAYERS] = {0, 0};
 

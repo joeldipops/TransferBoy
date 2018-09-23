@@ -31,7 +31,6 @@ typedef struct {
 typedef enum { Quit, Init, Play, Menu, Options } Mode;
 typedef enum { BorderNone } Border;
 
-
 uLong frameCount = 0;
 
 /**

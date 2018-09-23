@@ -235,6 +235,7 @@ void menuLogic(RootState* state, const byte playerNumber) {
     const bool menuPressed = pressedButtons[playerState->SystemMenuButton];
 
     bool repaintRequired = true;
+    bool ctrlReadRequired = true;
 
     byte column = playerState->MenuCursorColumn;
 
@@ -278,11 +279,11 @@ void menuLogic(RootState* state, const byte playerNumber) {
         executeMenuItem(state, playerNumber, playerState->MenuCursorColumn, playerState->MenuCursorRow);
     } else {
         repaintRequired = false;
+        ctrlReadRequired = false;
     }
 
-    if (repaintRequired) {
-        state->RequiresRepaint = true;
-    }
+    state->RequiresRepaint |= repaintRequired;
+    state->RequiresControllerRead |= ctrlReadRequired;
 }
 
 /**
