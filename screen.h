@@ -17,7 +17,7 @@ typedef struct {
  * Resets all screen buffers to a known state.
  * @param state program state.
  */
-void flushScreen(RootState* state);
+void flushScreen(const RootState* state);
 
 /**
  * Gets the RDP module ready to render a new texture.

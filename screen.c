@@ -35,7 +35,7 @@ const natural PLAYER_2_SCREEN_HEIGHT = 240;
  * @param frame identifies the frame to draw on.
  * @private
  */
-void hudDraw(RootState* state, display_context_t frame) {
+void hudDraw(const RootState* state, const display_context_t frame) {
     string text = "";
     getText(TextSplash, text);
     drawText(frame, text, 170, 10, 1);
@@ -45,7 +45,7 @@ void hudDraw(RootState* state, display_context_t frame) {
  * Rerenders the background over both display buffers to cover whatever junk was there previously.
  * @param state program state
  */
-void flushScreen(RootState* state) {
+void flushScreen(const RootState* state) {
     display_show(2);
     graphics_draw_box(1, 0, 0, RESOLUTION_X, RESOLUTION_Y, GLOBAL_BACKGROUND_COLOUR);
     hudDraw(state, 1);

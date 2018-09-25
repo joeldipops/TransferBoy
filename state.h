@@ -22,9 +22,10 @@ typedef struct {
     CartridgeData Cartridge;
     bool AudioEnabled;
     GbState EmulationState;
-    char LastErrorCode;
-    char MenuCursorRow;
-    char MenuCursorColumn;
+    sByte LastErrorCode;
+    sByte OptionsCursorRow;
+    sByte MenuCursorRow;
+    sByte MenuCursorColumn;
 } PlayerState;
 
 typedef struct {

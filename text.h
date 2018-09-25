@@ -18,6 +18,8 @@ typedef enum {
     TextMenuAddPlayer,
     TextMenuAddGame,
     TextSplash,
+    TextAudioOn,
+    TextAudioOff,
     TextEnd
 } TextId;
 
@@ -31,7 +33,7 @@ void getText(TextId textId, string output);
 /**
  * Initialises text subsystem by loading sprites etc.
  */
-void initText();
+sByte initText();
 
 /**
  * Frees resources used by the text subsystem when done.

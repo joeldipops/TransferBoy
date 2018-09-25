@@ -8,19 +8,24 @@
 
 static string _strings[TextEnd] = {"", "", "", ""};
 static sprite_t* _textMap = 0;
+static sprite_t* _spriteSheet = 0;
 static bool initted = false;
 
 /**
  * Initialises text subsystem by loading sprites etc.
+ * @return 0 result code
+ ** 0   success
+ ** -1  expected file not present
  */
-void initText() {
+sByte initText() {
     if (initted) {
-        return;
+        return 0;
     }
 
     // Set up string resources
     strcpy(_strings[TextEmpty], "");
-    strcpy(_strings[TextLoadCartridge], "Press (S) to load cartridge.");
+    //strcpy(_strings[TextLoadCartridge], "Press $02 to load cartridge.");
+    strcpy(_strings[TextLoadCartridge], "$00 $01 $02 $03");
     strcpy(_strings[TextNoTpak], "Please insert a Transfer Pak.");
     strcpy(_strings[TextNoCartridge], "Please insert a Game Boy cartridge.");
     strcpy(_strings[TextLoadingCartridge], "Loading cartridge, please wait.");
@@ -36,14 +41,23 @@ void initText() {
     // Read in character sprite sheet.
     sInt textMapPointer = dfs_open("/textMap.sprite");
     if (!textMapPointer) {
-        return;
+        return -1;
     }
-
     _textMap = malloc(dfs_size(textMapPointer));
     dfs_read(_textMap, 1, dfs_size(textMapPointer), textMapPointer);
     dfs_close(textMapPointer);
 
+    // Read in other sprites.
+    sInt spriteSheetPointer = dfs_open("/spriteSheet.sprite");
+    if (!spriteSheetPointer) {
+        return -1;
+    }
+    _spriteSheet = malloc(dfs_size(spriteSheetPointer));
+    dfs_read(_spriteSheet, 1, dfs_size(spriteSheetPointer), spriteSheetPointer);
+    dfs_close(spriteSheetPointer);
+
     initted = true;
+    return 0;
 }
 
 /**
@@ -55,9 +69,8 @@ void freeText() {
     initted = false;
 }
 
-static const natural DEFAULT_CHARACTER_SPACING = 19;
-static const natural DEFAULT_CHARACTER_SIZE = 20;
-
+static const byte CHARACTER_SIZE = 24;
+static const byte SPRITE_SIZE = 32;
 
 /**
  * Gets the text string with the given id code, and loads it into output.
@@ -97,13 +110,37 @@ void drawCharacter(const char character, const natural x, const natural y, const
  * @param x The x co-ordinate to start the string at.
  * @param y The y co-ordinate to start the string at.
  * @param scale size of the text sprites.
+ * @return result code
+ ** 0   success
+ ** -1  badly formatted token.
  * @private
  */
-void drawTextLine(const display_context_t frame, const string text, const natural x, const natural y, const float scale) {
+sByte drawTextLine(const display_context_t frame, const string text, const natural x, const natural y, const float scale) {
     byte length = strlen(text);
+    natural left = x;
     for (byte i = 0; i < length; i++) {
-        drawCharacter(text[i], x + i * DEFAULT_CHARACTER_SPACING * scale, y, scale);
+        // $ token means draw a sprite instead of a text character.
+        if (text[i] == '$') {
+            if (length <= i + 2) {
+                return -1;
+            }
+            // sprite is 2 digit hex
+            byte spriteCode = 16 * (text[i + 1] - '0') + (text[i + 2] - '0');
+            rdp_sync(SYNC_PIPE);
+            rdp_load_texture_stride(0, 0, MIRROR_DISABLED, _spriteSheet, spriteCode);
+            rdp_draw_sprite_scaled(0, left, y, ceil(scale), ceil(scale));
+            i += 2;
+            left += SPRITE_SIZE * scale;
+            continue;
+        }
+        // Do literal draw of whatever follows slash.
+        if (text[i] == '\\') {
+            i++;
+        }
+        drawCharacter(text[i], left, y, scale);
+        left += CHARACTER_SIZE * scale;
     }
+    return 0;
 }
 
 
@@ -125,6 +162,25 @@ void drawText(const display_context_t frame, const string text, const natural x,
 }
 
 /**
+ * Gets string length, accounting for tokens.
+ */
+byte getTextLength(const string text) {
+    byte length = strlen(text);
+    byte result = 0;
+    for (byte i = 0; i < length; i++) {
+        if (text[i] == '$') {
+            i += 2; // skip next two characters after insert-sprite token.
+        }
+        if (text[i] == '\\') {
+            i += 1; // don't count escape token
+        }
+        result++;
+    }
+
+    return result;
+}
+
+/**
  * Draws a horizontal string of text starting at the given location.
  * @param frame The id of the frame to draw on.
  * @param x The x co-ordinate to start the string at.
@@ -143,30 +199,55 @@ void drawTextParagraph(
     prepareRdpForTexture(frame);
 
     natural top = y;
-    byte length = strlen(text);
-    byte maxLength = width / (DEFAULT_CHARACTER_SIZE * scale);
+
+    byte stringLength = strlen(text);
+    byte maxLength = width / (CHARACTER_SIZE * scale);
 
     byte i = 0;
-    while(i < length) {
-        byte lineLength = 0;
-        lineLength = (length - i < maxLength) ? length - i : maxLength;
+    while(i < stringLength) {
+        byte lineAvailable = 0;
+        lineAvailable = (stringLength - i < maxLength) ? stringLength - i : maxLength;
 
         // Split on spaces.
-        byte spacePos = lineLength;
-        for(byte j = i; j < lineLength; j++) {
-            if (0x20 == *(text + j)) {
-                spacePos = j;
+        byte lineBreak = lineAvailable;
+        for(byte j = 0; j < lineAvailable; j++) {
+            if (text[i + j] == '$') {
+                // 3 characters, but only takes up 1 space.
+                j += 2;
+                lineAvailable += 2;
+            } else if (text[i + j] == '\\') {
+                // 2 characters, 1 space.
+                j += 1;
+                lineAvailable += 1;
+            }
+            if (0x20 == *(text + i + j)) {
+                lineBreak = j;
             }
         }
 
+        // make sure if we end on one of these, we keep the whole token.
+        if (text[lineBreak] == '$') {
+            lineBreak += 2;
+        } else if (text[lineBreak-1] == '$') {
+            lineBreak += 1;
+        } else if (text[lineBreak] == '\\') {
+            lineBreak += 1;
+        }
+
+        // absorb spaces into the newline
+        while(lineBreak < stringLength && *(text + i + lineBreak) == 0x20) {
+            lineBreak++;
+        }
+
+        logAndPauseFrame(frame, "%d %d %d", stringLength, lineAvailable, lineBreak);
+
         string line = "";
-        memcpy(line, text + i, spacePos);
+        memcpy(line, text + i, lineBreak);
 
         drawTextLine(frame, line, x, top, scale);
 
-        i += spacePos;
-        top += DEFAULT_CHARACTER_SIZE;
+        i += lineBreak;
+        top += CHARACTER_SIZE;
     }
-
     rdp_detach_display();
 }
