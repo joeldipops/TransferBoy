@@ -239,8 +239,6 @@ void drawTextParagraph(
             lineBreak++;
         }
 
-        logAndPauseFrame(frame, "%d %d %d", stringLength, lineAvailable, lineBreak);
-
         string line = "";
         memcpy(line, text + i, lineBreak);
 
