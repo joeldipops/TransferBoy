@@ -24,8 +24,7 @@ sByte initText() {
 
     // Set up string resources
     strcpy(_strings[TextEmpty], "");
-    //strcpy(_strings[TextLoadCartridge], "Press $02 to load cartridge.");
-    strcpy(_strings[TextLoadCartridge], "$00 $01 $02 $03");
+    strcpy(_strings[TextLoadCartridge], "Press $02 to load cartridge.");
     strcpy(_strings[TextNoTpak], "Please insert a Transfer Pak.");
     strcpy(_strings[TextNoCartridge], "Please insert a Game Boy cartridge.");
     strcpy(_strings[TextLoadingCartridge], "Loading cartridge, please wait.");
@@ -66,6 +65,8 @@ sByte initText() {
 void freeText() {
     //free(_strings);
     free(_textMap);
+    free(_spriteSheet);
+
     initted = false;
 }
 
@@ -85,6 +86,21 @@ void getText(const TextId textId, string output) {
 }
 
 /**
+ * Draws a sprite from a sheet at the given location & scale.
+ * @param spriteCode id of the sprite on the sheet.
+ * @param spriteSheet the sheet of sprites.
+ * @param x The x screen position.
+ * @param y The y screen position.
+ * @param scale Scale the sprite.
+ * @private
+ */
+void drawSprite(const byte spriteCode, sprite_t* spriteSheet, const natural x, const natural y, const float scale) {
+    rdp_sync(SYNC_PIPE);
+    rdp_load_texture_stride(0, 0, MIRROR_DISABLED, spriteSheet, spriteCode);
+    rdp_draw_sprite_scaled(0, x, y, scale, scale);
+}
+
+/**
  * Draws a text character from the sprite sheet at a given location.
  * @param character the ASCII character to draw
  * @param x The x co-ordinate to draw at.
@@ -98,10 +114,8 @@ void drawCharacter(const char character, const natural x, const natural y, const
         return;
     }
 
-    byte offset = character - 0x21;
-    rdp_sync(SYNC_PIPE);
-    rdp_load_texture_stride(0, 0, MIRROR_DISABLED, _textMap, offset);
-    rdp_draw_sprite_scaled(0, x, y, scale, scale);
+    byte offset = character - 0x20;
+    drawSprite(offset, _textMap, x, y, scale);
 }
 
 /**
@@ -124,13 +138,13 @@ sByte drawTextLine(const display_context_t frame, const string text, const natur
             if (length <= i + 2) {
                 return -1;
             }
+
             // sprite is 2 digit hex
             byte spriteCode = 16 * (text[i + 1] - '0') + (text[i + 2] - '0');
-            rdp_sync(SYNC_PIPE);
-            rdp_load_texture_stride(0, 0, MIRROR_DISABLED, _spriteSheet, spriteCode);
-            rdp_draw_sprite_scaled(0, left, y, ceil(scale), ceil(scale));
+
+            drawSprite(spriteCode, _spriteSheet, left, y, ceil(scale));
             i += 2;
-            left += SPRITE_SIZE * scale;
+            left += SPRITE_SIZE * ceil(scale);
             continue;
         }
         // Do literal draw of whatever follows slash.
@@ -159,25 +173,6 @@ void drawText(const display_context_t frame, const string text, const natural x,
     drawTextLine(frame, text, x, y, scale);
 
     rdp_detach_display();
-}
-
-/**
- * Gets string length, accounting for tokens.
- */
-byte getTextLength(const string text) {
-    byte length = strlen(text);
-    byte result = 0;
-    for (byte i = 0; i < length; i++) {
-        if (text[i] == '$') {
-            i += 2; // skip next two characters after insert-sprite token.
-        }
-        if (text[i] == '\\') {
-            i += 1; // don't count escape token
-        }
-        result++;
-    }
-
-    return result;
 }
 
 /**
@@ -225,18 +220,23 @@ void drawTextParagraph(
             }
         }
 
-        // make sure if we end on one of these, we keep the whole token.
-        if (text[lineBreak] == '$') {
-            lineBreak += 2;
-        } else if (text[lineBreak-1] == '$') {
-            lineBreak += 1;
-        } else if (text[lineBreak] == '\\') {
-            lineBreak += 1;
-        }
+        // if we're don't need any more lines, just run to the end.
+        if (i + lineAvailable >= stringLength) {
+            lineBreak = lineAvailable;
+        } else {
+            // make sure if we end on one of these, we keep the whole token.
+            if (text[lineBreak] == '$') {
+                lineBreak += 2;
+            } else if (text[lineBreak-1] == '$') {
+                lineBreak += 1;
+            } else if (text[lineBreak] == '\\') {
+                lineBreak += 1;
+            }
 
-        // absorb spaces into the newline
-        while(lineBreak < stringLength && *(text + i + lineBreak) == 0x20) {
-            lineBreak++;
+            // absorb spaces into the newline
+            while(lineBreak < stringLength && *(text + i + lineBreak) == 0x20) {
+                lineBreak++;
+            }
         }
 
         string line = "";
