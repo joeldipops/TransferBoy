@@ -20,8 +20,8 @@ typedef char string[128];
 
 natural GLOBAL_BACKGROUND_COLOUR = 0;
 natural GLOBAL_TEXT_COLOUR = 0;
-natural BLANK_SCREEN_COLOUR = 0;
 natural SELECTED_MENU_ITEM_COLOUR = 0;
+natural SELECTED_OPTIONS_ITEM_COLOUR = 0;
 
 typedef struct {
     uLong Size;
@@ -30,6 +30,7 @@ typedef struct {
 
 typedef enum { Quit, Init, Play, Menu, Options } Mode;
 typedef enum { BorderNone } Border;
+
 
 uLong frameCount = 0;
 

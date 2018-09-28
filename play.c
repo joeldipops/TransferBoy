@@ -167,7 +167,7 @@ void renderPixels(
         }
     }
     string text = "";
-    sprintf(text, "Frames: %lld", frameCount);
+    sprintf(text, "Frames: %lld Memory: %lld", frameCount, getCurrentMemory());
     graphics_draw_text(frame, left, top, text);
 
     frameCount++;
@@ -250,13 +250,14 @@ void playDraw(const RootState* state, const byte playerNumber) {
     Rectangle screen = {};
     getScreenPosition(state, playerNumber, &screen);
 
-    graphics_draw_box(
-        state->Frame,
+    prepareRdpForSprite(state->Frame);
+    loadSprite(getSpriteSheet(), GB_BG_TEXTURE, MIRROR_ENABLED);
+    rdp_draw_textured_rectangle(
+        0,
         screen.Left,
         screen.Top,
-        screen.Width,
-        screen.Height,
-        BLANK_SCREEN_COLOUR
+        screen.Left + screen.Width,
+        screen.Top + screen.Height
     );
 
     renderPixels(

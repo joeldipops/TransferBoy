@@ -7,9 +7,7 @@
 #include <libdragon.h>
 
 static string _strings[TextEnd] = {"", "", "", ""};
-static sprite_t* _textMap = 0;
-static sprite_t* _spriteSheet = 0;
-static bool initted = false;
+static bool textInitted = false;
 
 /**
  * Initialises text subsystem by loading sprites etc.
@@ -18,7 +16,7 @@ static bool initted = false;
  ** -1  expected file not present
  */
 sByte initText() {
-    if (initted) {
+    if (textInitted) {
         return 0;
     }
 
@@ -36,27 +34,16 @@ sByte initText() {
     strcpy(_strings[TextMenuAddPlayer], "Add Player");
     strcpy(_strings[TextMenuAddGame], "Add Game");
     strcpy(_strings[TextSplash], "~TRANSFER BOY~");
+    strcpy(_strings[TextAudioOff], "Audio : Off");
+    strcpy(_strings[TextAudioOn], "Audio : On");
 
-    // Read in character sprite sheet.
-    sInt textMapPointer = dfs_open("/textMap.sprite");
-    if (!textMapPointer) {
-        return -1;
+    sByte result = initResources();
+    if (result) {
+        return result;
+    } else {
+        textInitted = true;
+        return result;
     }
-    _textMap = malloc(dfs_size(textMapPointer));
-    dfs_read(_textMap, 1, dfs_size(textMapPointer), textMapPointer);
-    dfs_close(textMapPointer);
-
-    // Read in other sprites.
-    sInt spriteSheetPointer = dfs_open("/spriteSheet.sprite");
-    if (!spriteSheetPointer) {
-        return -1;
-    }
-    _spriteSheet = malloc(dfs_size(spriteSheetPointer));
-    dfs_read(_spriteSheet, 1, dfs_size(spriteSheetPointer), spriteSheetPointer);
-    dfs_close(spriteSheetPointer);
-
-    initted = true;
-    return 0;
 }
 
 /**
@@ -64,10 +51,7 @@ sByte initText() {
  */
 void freeText() {
     //free(_strings);
-    free(_textMap);
-    free(_spriteSheet);
-
-    initted = false;
+    textInitted = false;
 }
 
 static const byte CHARACTER_SIZE = 24;
@@ -79,7 +63,7 @@ static const byte SPRITE_SIZE = 32;
  * @out output the destination string.
  */
 void getText(const TextId textId, string output) {
-    if (!initted) {
+    if (!textInitted) {
         initText();
     }
     sprintf(output, _strings[textId]);
@@ -96,7 +80,7 @@ void getText(const TextId textId, string output) {
  */
 void drawSprite(const byte spriteCode, sprite_t* spriteSheet, const natural x, const natural y, const float scale) {
     rdp_sync(SYNC_PIPE);
-    rdp_load_texture_stride(0, 0, MIRROR_DISABLED, spriteSheet, spriteCode);
+    rdp_load_texture_stride(0, 1, MIRROR_DISABLED, spriteSheet, spriteCode);
     rdp_draw_sprite_scaled(0, x, y, scale, scale);
 }
 
@@ -115,7 +99,7 @@ void drawCharacter(const char character, const natural x, const natural y, const
     }
 
     byte offset = character - 0x20;
-    drawSprite(offset, _textMap, x, y, scale);
+    drawSprite(offset, getCharacterSheet(), x, y, scale);
 }
 
 /**
@@ -142,7 +126,7 @@ sByte drawTextLine(const display_context_t frame, const string text, const natur
             // sprite is 2 digit hex
             byte spriteCode = 16 * (text[i + 1] - '0') + (text[i + 2] - '0');
 
-            drawSprite(spriteCode, _spriteSheet, left, y, ceil(scale));
+            drawSprite(spriteCode, getSpriteSheet(), left, y, ceil(scale));
             i += 2;
             left += SPRITE_SIZE * ceil(scale);
             continue;
@@ -166,10 +150,10 @@ sByte drawTextLine(const display_context_t frame, const string text, const natur
  * @param scale size of the text sprites.
  */
 void drawText(const display_context_t frame, const string text, const natural x, const natural y, const float scale) {
-    if (!initted) {
+    if (!textInitted) {
         initText();
     }
-    prepareRdpForTexture(frame);
+    prepareRdpForSprite(frame);
     drawTextLine(frame, text, x, y, scale);
 
     rdp_detach_display();
@@ -191,7 +175,7 @@ void drawTextParagraph(
     const float scale,
     const natural width
 ) {
-    prepareRdpForTexture(frame);
+    prepareRdpForSprite(frame);
 
     natural top = y;
 

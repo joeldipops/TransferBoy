@@ -1,6 +1,7 @@
 #include "core.h"
 #include "state.h"
 #include "text.h"
+#include "resources.h"
 #include "screen.h"
 
 #include <libdragon.h>
@@ -42,23 +43,10 @@ void hudDraw(const RootState* state, const display_context_t frame) {
 }
 
 /**
- * Rerenders the background over both display buffers to cover whatever junk was there previously.
- * @param state program state
- */
-void flushScreen(const RootState* state) {
-    display_show(2);
-    graphics_draw_box(1, 0, 0, RESOLUTION_X, RESOLUTION_Y, GLOBAL_BACKGROUND_COLOUR);
-    hudDraw(state, 1);
-    display_show(1);
-    graphics_draw_box(2, 0, 0, RESOLUTION_X, RESOLUTION_Y, GLOBAL_BACKGROUND_COLOUR);
-    hudDraw(state, 2);
-}
-
-/**
  * Gets the RDP module ready to render a new texture.
  * @param frame identifies frame to render to.
  */
-void prepareRdpForTexture(const display_context_t frame) {
+void prepareRdpForSprite(const display_context_t frame) {
     // Assure RDP is ready for new commands
     rdp_sync(SYNC_PIPE);
     // Remove any clipping windows
@@ -67,6 +55,40 @@ void prepareRdpForTexture(const display_context_t frame) {
     rdp_enable_texture_copy();
     // Attach RDP to display
     rdp_attach_display(frame);
+}
+
+/**
+ * Loads a single sprite sheet in to the primary texture slot
+ * @param spriteSheet sheet the sprite is on.
+ * @param spriteCode position of the sprite in the sheet.
+ * @param mirrorSetting how the sprite should behave when mirroring.
+ */
+void loadSprite(sprite_t* spriteSheet, const byte spriteCode, const mirror_t mirrorSetting) {
+    // The other text slots don't seem to work for whatever reason, so let's abstract them away.
+    rdp_load_texture_stride(0, 0, mirrorSetting, spriteSheet, spriteCode);
+}
+
+/**
+ * Rerenders the background over both display buffers to cover whatever junk was there previously.
+ * @param state program state
+ */
+void flushScreen(const RootState* state) {
+    // Background
+    display_show(2);
+    prepareRdpForSprite(1);
+    loadSprite(getSpriteSheet(), BLUE_BG_TEXTURE, MIRROR_ENABLED);
+    rdp_draw_textured_rectangle(0, 0, 0, RESOLUTION_X, RESOLUTION_Y);
+    rdp_detach_display();
+    display_show(1);
+    rdp_attach_display(2);
+    rdp_draw_textured_rectangle(0, 0, 0, RESOLUTION_X, RESOLUTION_Y);
+    rdp_detach_display();
+
+    display_show(2);
+    hudDraw(state, 1);
+    display_show(1);
+    hudDraw(state, 2);
+    rdp_detach_display();
 }
 
 /**

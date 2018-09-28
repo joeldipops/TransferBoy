@@ -14,17 +14,17 @@ typedef enum { InitNoError, InitNoTpak, InitNoCartridge, InitRequiresExpansionPa
  * @param playerNumber player in init mode.
  */
 void initLogic(RootState* state, const byte playerNumber) {
-    if (!state->KeysPressed.c[playerNumber].start) {
-        if (!isTPakInserted(playerNumber)) {
-            state->Players[playerNumber].LastErrorCode = InitNoTpak;
-        } else if (!isCartridgeInserted(playerNumber)) {
-            state->Players[playerNumber].LastErrorCode = InitNoCartridge;
-        } else if (!isCartridgeSizeOk(playerNumber)) {
-            state->Players[playerNumber].LastErrorCode =  InitRequiresExpansionPak;
-        } else {
-            state->Players[playerNumber].LastErrorCode =  InitNoError;
-        }
+    if (!isTPakInserted(playerNumber)) {
+        state->Players[playerNumber].LastErrorCode = InitNoTpak;
+    } else if (!isCartridgeInserted(playerNumber)) {
+        state->Players[playerNumber].LastErrorCode = InitNoCartridge;
+    } else if (!isCartridgeSizeOk(playerNumber)) {
+        state->Players[playerNumber].LastErrorCode =  InitRequiresExpansionPak;
     } else {
+        state->Players[playerNumber].LastErrorCode = InitNoError;
+    }
+
+    if (state->Players[playerNumber].LastErrorCode == InitNoError) {
         state->RequiresRepaint = true;
 
         readCartridge(playerNumber, &state->Players[playerNumber].Cartridge);
@@ -51,7 +51,9 @@ void initDraw(const RootState* state, const byte playerNumber) {
     Rectangle screen = {};
     getScreenPosition(state, playerNumber, &screen);
 
-    graphics_draw_box(state->Frame, screen.Left, screen.Top, screen.Width, screen.Height, BLANK_SCREEN_COLOUR);
+    prepareRdpForSprite(state->Frame);
+    loadSprite(getSpriteSheet(), GB_BG_TEXTURE, MIRROR_ENABLED);
+    rdp_draw_textured_rectangle(0,  screen.Left, screen.Top, screen.Left +  screen.Width, screen.Top + screen.Height);
 
     const char TEXT_HEIGHT = 100;
     const char TEXT_WIDTH = 10;
@@ -60,7 +62,7 @@ void initDraw(const RootState* state, const byte playerNumber) {
     string text = "";
     switch (state->Players[playerNumber].LastErrorCode) {
         case InitNoError:
-            getText(TextLoadCartridge, text);
+            getText(TextLoadingCartridge, text);
             break;
         case InitNoTpak:
             getText(TextNoTpak, text);

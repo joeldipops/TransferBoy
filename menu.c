@@ -27,8 +27,7 @@ void drawMenuItem(
     const Rectangle* screen
 ) {
     const natural xOffset = screen->Width / 2;
-    const natural cursorOffset = 0;
-    const float scaleFactor = 0.234 / 100.0;
+    const float scaleFactor = 0.210 / 100.0;
     const float scale = (float)screen->Width * scaleFactor;
     const natural menuItemOffset = 34 * scale;
 
@@ -43,7 +42,7 @@ void drawMenuItem(
 
     string text = "";
     getText(label, text);
-    drawText(frame, text, left + cursorOffset, top, scale);
+    drawText(frame, text, left, top, scale);
 
     if (drawCursor) {
         Rectangle border = {top, left, xOffset, menuItemOffset };
@@ -73,10 +72,21 @@ byte getNewRow(const float oldRowCount, const float newRowCount, const float cur
 /**
  * Exits the menu by setting the player's mode back to "Play"
  * @param playerState state of the given player.
+ * @private
  */
 void resumePlay(PlayerState* playerState) {
     playerState->MenuCursorRow = -1;
     playerState->ActiveMode = Play;
+}
+
+/**
+ * Exits the main menu and brings up the options menu.
+ * @param playerState state of the player going to the options menu.
+ * @private
+ */
+void showOptionsMenu(PlayerState* playerState) {
+    playerState->MenuCursorRow = -1;
+    playerState->ActiveMode = Options;
 }
 
 /**
@@ -217,6 +227,9 @@ void executeMenuItem(RootState* state, const byte playerNumber, const byte x, co
         case AddGame:
             addGame(state);
             break;
+        case Options:
+            showOptionsMenu(&state->Players[playerNumber]);
+            break;
         default: ; break;
     }
 }
@@ -295,21 +308,22 @@ void menuDraw(RootState* state, const byte playerNumber) {
     Rectangle screen = {};
     getScreenPosition(state, playerNumber, &screen);
 
-    if (state->Players[playerNumber].ActiveMode != Menu) {
-        flushScreen(state);
-        state->RequiresRepaint = true;
-        return;
-    }
+    prepareRdpForSprite(state->Frame);
+    loadSprite(getSpriteSheet(), BLUE_BG_TEXTURE, MIRROR_ENABLED);
 
     // Cover menu section.
-    graphics_draw_box(
-        state->Frame,
+    rdp_draw_textured_rectangle(
+        0,
         0,
         screen.Top + screen.Height,
         RESOLUTION_X,
-        RESOLUTION_Y - (screen.Top + screen.Height),
-        GLOBAL_BACKGROUND_COLOUR
+        RESOLUTION_Y - screen.Top + screen.Height
     );
+
+    if (state->Players[playerNumber].ActiveMode != Menu) {
+        state->RequiresRepaint = true;
+        return;
+    }
 
     TextId labels[6] = {
         TextMenuResume,
@@ -321,7 +335,6 @@ void menuDraw(RootState* state, const byte playerNumber) {
     };
 
     // Draw menu items in order.
-
     byte position = 0;
     for(byte x = 0; x < COLUMN_COUNT; x++) {
         for(byte y = 0; y < columns[x]; y++) {
@@ -337,4 +350,6 @@ void menuDraw(RootState* state, const byte playerNumber) {
             position++;
         }
     }
+
+    rdp_detach_display();
 }

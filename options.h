@@ -3,18 +3,20 @@
 
 #include "state.h"
 
+typedef enum { OptionsAudio, OptionsStart, OptionsSelect, OptionsMenu, OptionsEnd } OptionType;
+
 /**
  * Displays the options menu for given player.
  * @param state Program state.
  * @param playerNumber player in options mode.
  */
-void optionsDraw(const RootState*  state, char playerNumber);
+void optionsDraw(RootState* state, const byte playerNumber);
 
 /**
  * Handles the options menu for given player.
  * @param state Program state.
  * @param playerNumber player in options mode.
  */
-void optionsLogic(RootState*  state, char playerNumber);
+void optionsLogic(RootState* state, byte playerNumber);
 
 #endif

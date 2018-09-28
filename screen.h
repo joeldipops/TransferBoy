@@ -23,7 +23,15 @@ void flushScreen(const RootState* state);
  * Gets the RDP module ready to render a new texture.
  * @param frame identifies frame to render to.
  */
-void prepareRdpForTexture(const display_context_t frame);
+void prepareRdpForSprite(const display_context_t frame);
+
+/**
+ * Loads a single sprite sheet in to the primary texture slot
+ * @param spriteSheet sheet the sprite is on.
+ * @param spriteCode position of the sprite in the sheet.
+ * @param mirrorSetting how the sprite should behave when mirroring.
+ */
+void loadSprite(sprite_t* spriteSheet, const byte spriteCode, const mirror_t mirrorSetting);
 
 /**
  * Draws an unfilled rectangle of a certain thickness.

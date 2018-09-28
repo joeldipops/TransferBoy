@@ -9,6 +9,7 @@
 #include "controller.h"
 #include "state.h"
 #include "screen.h"
+#include "resources.h"
 #include <string.h>
 #include <stdlib.h>
 #include <libdragon.h>
@@ -19,9 +20,9 @@
  */
 void setGlobalConstants() {
     GLOBAL_BACKGROUND_COLOUR = graphics_make_color(220, 220, 150, 255);
-    BLANK_SCREEN_COLOUR = graphics_make_color(0xBB, 0xBB, 0xBB, 255);
     GLOBAL_TEXT_COLOUR = graphics_make_color(0, 0, 0, 255);
-    SELECTED_MENU_ITEM_COLOUR = graphics_make_color(55, 255, 55, 255);
+    SELECTED_MENU_ITEM_COLOUR = graphics_make_color(0x28, 0x6E, 0x31, 255);
+    SELECTED_OPTIONS_ITEM_COLOUR = graphics_make_color(0xCF, 0x48, 0x2C, 255);
 }
 
 /**
@@ -35,6 +36,7 @@ void initialiseSubsystems() {
     display_init(RESOLUTION_640x480, DEPTH_16_BPP, 2, GAMMA_NONE, ANTIALIAS_OFF);
     rdp_init();
     graphics_set_color(GLOBAL_TEXT_COLOUR, 0x0);
+    initResources();
     initText();
 }
 
@@ -64,7 +66,7 @@ void mainLoop(RootState* state) {
         allQuit = true;
 
         // Read controller about once per frame.
-        if (state->RequiresControllerRead || iterations >= 10000) {
+        if (state->RequiresControllerRead || iterations >= 5000) {
             controller_scan();
             state->KeysPressed = get_keys_pressed();
             state->KeysReleased = get_keys_up();
@@ -145,7 +147,9 @@ int main(void) {
     mainLoop(&state);
 
     freeText();
+    freeResources();
     display_close();
+    rdp_close();
     return 0;
 }
 
@@ -158,6 +162,7 @@ void _exit(int status)
 }
 
 #include "core.c"
+#include "resources.c"
 #include "init.c"
 #include "play.c"
 #include "menu.c"
