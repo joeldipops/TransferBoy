@@ -1,0 +1,4 @@
+rm -f *.v64 *.z64 *.elf *.o *.bin *.dfs
+/home/joel/Projects/GamePlayer64/N64_INST/bin/mips64-elf-gcc -std=gnu99 -march=vr4300 -mtune=vr4300 -O2 -Wall -Werror -I/home/joel/Projects/GamePlayer64/TransferBoy64 -I/home/joel/Projects/GamePlayer64/N64_INST/mips64-elf/include    -c -o transferboy64.o transferboy64.c
+Using NTSC-U PIFROM
+/home/joel/Projects/GamePlayer64/TransferBoy64/transferboy64.z64Failed opening the file...Failed to load cart: /home/joel/Projects/GamePlayer64/TransferBoy64/transferboy64.z64.

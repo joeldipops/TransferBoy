@@ -3,13 +3,148 @@
 #include "text.h"
 #include "options.h"
 
+#define RESERVED_BUTTONS_SIZE 15
+static const N64Button RESERVED_BUTTONS[RESERVED_BUTTONS_SIZE] = {
+    NoButton, A, B, DUp, DDown, DLeft, DRight, StickUp, StickDown, StickLeft, StickRight, Up, Down, Left, Right
+};
+
+/**
+ * Exits the menu by setting the player's mode back to "Play"
+ * @param playerState state of the given player.
+ * @private
+ */
+void resumePlayFromOptions(PlayerState* playerState) {
+    playerState->MenuCursorRow = -1;
+    playerState->OptionsCursorRow = -1;
+    playerState->ActiveMode = Play;
+}
+
+/**
+ * Returns to the main menu by setting the player's mode to "Menu"
+ * @param playerState state of the player.
+ * @private
+ */
+void showMainMenu(PlayerState* playerState) {
+    playerState->MenuCursorRow = 0;
+    playerState->OptionsCursorRow = -1;
+    playerState->ActiveMode = Menu;
+}
+
+N64Button selectNextButton(const GbButton button, const GbButton* buttonMap, const bool isMovingLeft) {
+    bool buttonList[N64_BUTTON_COUNT] = {0};
+    for (byte i = 0; i < RESERVED_BUTTONS_SIZE; i++) {
+        buttonList[RESERVED_BUTTONS[i]] = true;
+    }
+
+    byte result = (byte) NoButton;
+    for (byte i = 0; i < N64_BUTTON_COUNT; i++) {
+        if (buttonMap[i] == button) {
+            result = i;
+            break;
+        }
+    }
+
+    while (true) {
+        if (isMovingLeft) {
+            if (result <= 0) {
+                result = N64_BUTTON_COUNT;
+            } else {
+                result--;
+            }
+        } else {
+            if (result >= N64_BUTTON_COUNT) {
+                result = 0;
+            } else {
+                result++;
+            }
+        }
+        // If this button is not reserved for some other purpose, return it.
+        if (!buttonList[result]) {
+            return result;
+        }
+    }
+    return NoButton;
+}
+
+/**
+ * @param playerState updating an option for this player.
+ * @param option the option to update.
+ * @param isMovingLeft if true, picks the option one space to the left of the current one, otherwise one space right.
+ * @return success/error code
+ ** 0   success
+ ** -1  unknown option requested.
+ * @private
+ */
+sByte selectOption(PlayerState* playerState, const OptionType option, const bool isMovingLeft) {
+    N64Button selected = NoButton;
+    switch(option) {
+        case OptionsAudio:
+            playerState->AudioEnabled = !playerState->AudioEnabled;
+            break;
+        case OptionsMenu:
+            selected = selectNextButton(GbSystemMenu, playerState->ButtonMap, isMovingLeft);
+            setButtonToMap(playerState, GbSystemMenu, selected);
+            break;
+        case OptionsStart:
+            selected = selectNextButton(GbStart, playerState->ButtonMap, isMovingLeft);
+            setButtonToMap(playerState, GbStart, selected);
+            break;
+        case OptionsSelect:
+            selected = selectNextButton(GbSelect, playerState->ButtonMap, isMovingLeft);
+            setButtonToMap(playerState, GbSelect, selected);
+            break;
+        default:
+            return -1;
+    }
+
+    return 0;
+}
+
 /**
  * Handles the options menu for given player.
  * @param state Program state.
  * @param playerNumber player in options mode.
  */
 void optionsLogic(RootState* state, byte playerNumber) {
-    ;
+    PlayerState* playerState = &state->Players[playerNumber];
+
+    bool pressedButtons[N64_BUTTON_COUNT] = {0};
+    getPressedButtons(&state->KeysReleased, playerNumber, pressedButtons);
+
+    bool repaintRequired = true;
+    bool ctrlReadRequired = true;
+
+    if (playerState->OptionsCursorRow == -1) {
+        playerState->OptionsCursorRow = 0;
+    // UP AND DOWN change to a different option.
+    } else if (pressedButtons[Up]) {
+        if (playerState->OptionsCursorRow > 0) {
+            playerState->OptionsCursorRow--;
+        } else {
+            playerState->OptionsCursorRow = OptionsEnd - 1;
+        }
+    } else if (pressedButtons[Down]) {
+        if (playerState->OptionsCursorRow < OptionsEnd - 1) {
+            playerState->OptionsCursorRow++;
+        } else {
+            playerState->OptionsCursorRow = OptionsEnd - 1;
+        }
+    // LEFT AND RIGHT make changes of the currently selected option.
+    } else if (pressedButtons[Left] || pressedButtons[Right]) {
+        selectOption(playerState, (OptionType) playerState->OptionsCursorRow, pressedButtons[Left]);
+    // B goes back to the menu.
+    } else if (pressedButtons[B]) {
+        showMainMenu(playerState);
+    // START or MENU button closes the menu and goes back to the action.
+    } else if (pressedButtons[Start] || pressedButtons[playerState->SystemMenuButton]) {
+        resumePlayFromOptions(playerState);
+    } else {
+        repaintRequired = false;
+        ctrlReadRequired = false;
+    }
+
+    state->RequiresRepaint |= repaintRequired;
+    state->RequiresControllerRead |= ctrlReadRequired;
 }
 
 /**
@@ -22,8 +157,7 @@ void optionsLogic(RootState* state, byte playerNumber) {
  * @private
  */
 void drawOptionRow(const RootState* state, const byte playerNumber, const string text, const Rectangle* screen, const byte row) {
-    const float scaleFactor = 0.234 / 100.0;
-    const float scale = (float) screen->Width * scaleFactor;
+    const float scale = (float) screen->Width * TEXT_SCALE_FACTOR;
     const natural menuItemOffset = 34 * scale;
 
     natural top = screen->Top + screen->Height + (menuItemOffset * row);
@@ -54,7 +188,7 @@ void drawAudioOption(const RootState* state, const byte playerNumber, const Rect
         getText(TextAudioOff, text);
     }
 
-    drawTextOption(state, playerNumber, text, screen, row);
+    drawOptionRow(state, playerNumber, text, screen, row);
 }
 
 /**
@@ -125,14 +259,12 @@ void drawButtonMapOption(const RootState* state, const byte playerNumber, const 
             break;
         default:
             n64ButtonSprite = 8;
+            break;
     }
 
     string text = "";
     sprintf(text, "$%02x : $%02x", gbButtonSprite, n64ButtonSprite);
-    drawTextOption(state, playerNumber, text, screen, row);
-
-    return;
-
+    drawOptionRow(state, playerNumber, text, screen, row);
 }
 
 /**

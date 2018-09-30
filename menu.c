@@ -27,8 +27,7 @@ void drawMenuItem(
     const Rectangle* screen
 ) {
     const natural xOffset = screen->Width / 2;
-    const float scaleFactor = 0.210 / 100.0;
-    const float scale = (float)screen->Width * scaleFactor;
+    const float scale = (float)screen->Width * TEXT_SCALE_FACTOR;
     const natural menuItemOffset = 34 * scale;
 
     // space the second column with less items in it, out a little more.

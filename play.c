@@ -215,7 +215,8 @@ void playLogic(RootState* state, const byte playerNumber) {
         bool releasedButtons[N64_BUTTON_COUNT] = {};
         getPressedButtons(&state->KeysReleased, playerNumber, releasedButtons);
 
-        if (releasedButtons[state->Players[playerNumber].SystemMenuButton]) {
+        if (true) {
+        //if (releasedButtons[state->Players[playerNumber].SystemMenuButton]) {
             state->Players[playerNumber].ActiveMode = Menu;
             state->RequiresRepaint = true;
         }

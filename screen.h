@@ -4,7 +4,9 @@
 #include "state.h"
 
 const unsigned short RESOLUTION_X = 640;
-const unsigned short RESOLUTION_Y = 480;
+const unsigned short RESOLUTION_Y = 480;\
+
+const float TEXT_SCALE_FACTOR = 0.210 / 100.0;
 
 typedef struct {
     natural Top;

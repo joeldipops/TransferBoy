@@ -40,6 +40,14 @@ typedef struct {
 } RootState;
 
 /**
+ * Sets a Gameboy button to a particular N64 button, unsetting it from the previous mapping.
+ * @param playerState state containing controller mapping to update.
+ * @param gbButton gameboy button to set.
+ * @param n64Button n64 button to set gb button to.
+ */
+void setButtonToMap(PlayerState* playerState, const GbButton gbButton, const N64Button n64Button);
+
+/**
  * Initialise the state struct for a new player.
  * @param playerState struct to initialise.
  */

@@ -10,7 +10,6 @@ typedef enum {
     NoButton  = 0,
     A, B, L, R, Z, Start, DUp, DDown, DLeft, DRight, CUp, CDown, CLeft, CRight, StickUp, StickDown, StickLeft, StickRight,
     Up, Down, Left, Right // Either stick or d-pad.  StickLeft & DRight will cancel each other out.
-
 } N64Button;
 
 typedef enum {

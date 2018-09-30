@@ -25,6 +25,27 @@ void initialiseButtonMap(GbButton* map) {
 }
 
 /**
+ * Sets a Gameboy button to a particular N64 button, unsetting it from the previous mapping.
+ * @param playerState state containing controller mapping to update.
+ * @param gbButton gameboy button to set.
+ * @param n64Button n64 button to set gb button to.
+ */
+void setButtonToMap(PlayerState* playerState, const GbButton gbButton, const N64Button n64Button) {
+    // Unset old mapping
+    for (byte i = 0; i < N64_BUTTON_COUNT; i++) {
+        if (playerState->ButtonMap[i] == gbButton) {
+            playerState->ButtonMap[i] = GbNoButton;
+        }
+    }
+
+    // Set new mapping.
+    playerState->ButtonMap[n64Button] = gbButton;
+    if (gbButton == GbSystemMenu) {
+        playerState->SystemMenuButton = n64Button;
+    }
+}
+
+/**
  * Initialises a new player state struct with default values.
  * @out playerState PlayerState struct to initialise.
  */
