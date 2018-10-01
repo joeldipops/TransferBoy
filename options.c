@@ -3,9 +3,30 @@
 #include "text.h"
 #include "options.h"
 
-#define RESERVED_BUTTONS_SIZE 15
-static const N64Button RESERVED_BUTTONS[RESERVED_BUTTONS_SIZE] = {
-    NoButton, A, B, DUp, DDown, DLeft, DRight, StickUp, StickDown, StickLeft, StickRight, Up, Down, Left, Right
+static const N64Button RESERVED_BUTTONS[N64_BUTTON_COUNT] = {
+    1,// NoButton
+    1,// A
+    1,// B,
+    0,// L,
+    0,// R,
+    0,// Z,
+    0,// Start,
+    1,// DUp,
+    1,// DDown,
+    1,// DLeft,
+    1,// DRight,
+    0,// CUp,
+    0,// CDown,
+    0,// CLeft,
+    0,// CRight,
+    1,// StickUp,
+    1,// StickDown,
+    1,// StickLeft,
+    1,// StickRight,
+    1,// Up,
+    1,// Down,
+    1,// Left,
+    1,// Right
 };
 
 /**
@@ -30,39 +51,37 @@ void showMainMenu(PlayerState* playerState) {
     playerState->ActiveMode = Menu;
 }
 
-N64Button selectNextButton(const GbButton button, const GbButton* buttonMap, const bool isMovingLeft) {
-    bool buttonList[N64_BUTTON_COUNT] = {0};
-    for (byte i = 0; i < RESERVED_BUTTONS_SIZE; i++) {
-        buttonList[RESERVED_BUTTONS[i]] = true;
-    }
-
-    byte result = (byte) NoButton;
-    for (byte i = 0; i < N64_BUTTON_COUNT; i++) {
-        if (buttonMap[i] == button) {
-            result = i;
-            break;
-        }
-    }
+/**
+ * Selects the next n64 button that's available to be assigned.
+ * @param currentButton button previously assigned button.
+ * @param true to select a button with a lower id, false otherwise.
+ * @return The next available button.
+ */
+N64Button selectNextButton(const N64Button currentButton, const bool isMovingLeft) {
+    byte result = (byte) currentButton;
+    byte max = N64_BUTTON_COUNT - 1;
 
     while (true) {
         if (isMovingLeft) {
             if (result <= 0) {
-                result = N64_BUTTON_COUNT;
+                result = max;
             } else {
                 result--;
             }
         } else {
-            if (result >= N64_BUTTON_COUNT) {
+            if (result >= max) {
                 result = 0;
             } else {
                 result++;
             }
         }
+
         // If this button is not reserved for some other purpose, return it.
-        if (!buttonList[result]) {
+        if (!RESERVED_BUTTONS[result]) {
             return result;
         }
     }
+
     return NoButton;
 }
 
@@ -76,28 +95,35 @@ N64Button selectNextButton(const GbButton button, const GbButton* buttonMap, con
  * @private
  */
 sByte selectOption(PlayerState* playerState, const OptionType option, const bool isMovingLeft) {
-    N64Button selected = NoButton;
     switch(option) {
         case OptionsAudio:
             playerState->AudioEnabled = !playerState->AudioEnabled;
             break;
         case OptionsMenu:
-            selected = selectNextButton(GbSystemMenu, playerState->ButtonMap, isMovingLeft);
-            setButtonToMap(playerState, GbSystemMenu, selected);
+            playerState->SystemMenuButton = selectNextButton(playerState->SystemMenuButton, isMovingLeft);
             break;
         case OptionsStart:
-            selected = selectNextButton(GbStart, playerState->ButtonMap, isMovingLeft);
-            setButtonToMap(playerState, GbStart, selected);
+            playerState->GbStartButton = selectNextButton(playerState->GbStartButton, isMovingLeft);
             break;
         case OptionsSelect:
-            selected = selectNextButton(GbSelect, playerState->ButtonMap, isMovingLeft);
-            setButtonToMap(playerState, GbSelect, selected);
+            playerState->GbSelectButton = selectNextButton(playerState->GbSelectButton, isMovingLeft);
             break;
         default:
             return -1;
     }
 
     return 0;
+}
+
+/**
+ * Ensures update options will be used going forward.
+ * @param playerState state of player to update.
+ * @private
+ */
+void confirmOptions(PlayerState* playerState) {
+    setButtonToMap(playerState, GbSystemMenu, playerState->SystemMenuButton);
+    setButtonToMap(playerState, GbStart, playerState->GbStartButton);
+    setButtonToMap(playerState, GbSelect, playerState->GbSelectButton);
 }
 
 /**
@@ -134,9 +160,11 @@ void optionsLogic(RootState* state, byte playerNumber) {
         selectOption(playerState, (OptionType) playerState->OptionsCursorRow, pressedButtons[Left]);
     // B goes back to the menu.
     } else if (pressedButtons[B]) {
+        confirmOptions(playerState);
         showMainMenu(playerState);
     // START or MENU button closes the menu and goes back to the action.
     } else if (pressedButtons[Start] || pressedButtons[playerState->SystemMenuButton]) {
+        confirmOptions(playerState);
         resumePlayFromOptions(playerState);
     } else {
         repaintRequired = false;
@@ -202,33 +230,28 @@ void drawAudioOption(const RootState* state, const byte playerNumber, const Rect
  */
 void drawButtonMapOption(const RootState* state, const byte playerNumber, const GbButton button, const Rectangle* screen, const byte row) {
     byte gbButtonSprite = 0;
-
+    N64Button n64Button = 0;
     switch(button) {
         case GbStart:
             gbButtonSprite = GB_START_SPRITE;
+            n64Button = state->Players[playerNumber].GbStartButton;
             break;
         case GbSelect:
             gbButtonSprite = GB_SELECT_SPRITE;
+            n64Button = state->Players[playerNumber].GbSelectButton;
             break;
         case GbSystemMenu:
             gbButtonSprite = MENU_SPRITE;
+            n64Button = state->Players[playerNumber].SystemMenuButton;
             break;
         default:
             gbButtonSprite = ERROR_SPRITE;
             break;
     }
 
-    // Look up the N64 button currently assigned to the gb button.
-    N64Button n64button = 0;
-    for (byte i = 0; i < N64_BUTTON_COUNT; i++) {
-        if (state->Players[playerNumber].ButtonMap[i] == button) {
-            n64button = i;
-        }
-    }
-
     byte n64ButtonSprite = 0;
-    //byte rotation = Up; // Default is up.
-    switch(n64button) {
+    char rotation = 0; // Default is up.
+    switch(n64Button) {
         case Start:
             n64ButtonSprite = N64_START_SPRITE;
             break;
@@ -243,27 +266,32 @@ void drawButtonMapOption(const RootState* state, const byte playerNumber, const 
             break;
         case CUp:
             n64ButtonSprite = N64_C_SPRITE;
-            //rotation = Up;
             break;
         case CDown:
             n64ButtonSprite = N64_C_SPRITE;
-            //rotation = Down;
+            rotation = ROTATE_180;
             break;
         case CLeft:
             n64ButtonSprite = N64_C_SPRITE;
-            //rotation = Left;
+            rotation = ROTATE_270;
             break;
         case CRight:
             n64ButtonSprite = N64_C_SPRITE;
-            //rotation = Right;
+            rotation = ROTATE_90;
             break;
         default:
-            n64ButtonSprite = 8;
+            n64ButtonSprite = ERROR_SPRITE;
             break;
     }
 
     string text = "";
-    sprintf(text, "$%02x : $%02x", gbButtonSprite, n64ButtonSprite);
+    if (rotation) {
+        // TODO
+        sprintf(text, "$%02x : $%c%02x", gbButtonSprite, rotation, n64ButtonSprite);
+    } else {
+        sprintf(text, "$%02x : $%02x", gbButtonSprite, n64ButtonSprite);
+    }
+
     drawOptionRow(state, playerNumber, text, screen, row);
 }
 

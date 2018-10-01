@@ -38,3 +38,18 @@ void freeByteArray(ByteArray* arr) {
     arr->Data = 0;
     arr->Size = 0;
 }
+
+/**
+ * Reads a number from a substring, stopping after a certain number of characters.
+ * @param start pointer to the start of the number in the string.
+ * @param maxLength max length of the number as characters.
+ * @param base base of the number eg. 10, 16
+ * @return The parsed byte.
+ */
+byte parseByte(const char* start, const byte maxLength, const byte base) {
+    // sprite is 2 digit hex, we need to parse it from the string.
+    string code = {};
+    memcpy(code, start, maxLength);
+    char* end = 0;
+    return strtol(code, &end, base);
+}

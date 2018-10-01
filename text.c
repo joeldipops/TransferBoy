@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "core.h"
 #include "text.h"
@@ -84,6 +85,8 @@ void drawSprite(const byte spriteCode, sprite_t* spriteSheet, const natural x, c
     rdp_draw_sprite_scaled(0, x, y, scale, scale);
 }
 
+
+
 /**
  * Draws a text character from the sprite sheet at a given location.
  * @param character the ASCII character to draw
@@ -123,9 +126,10 @@ sByte drawTextLine(const display_context_t frame, const string text, const natur
                 return -1;
             }
 
-            // sprite is 2 digit hex
-            byte spriteCode = 16 * (text[i + 1] - '0') + (text[i + 2] - '0');
+            // TODO - rotation
 
+            // sprite is 2 digit hex, we need to parse it from the string.
+            byte spriteCode = parseByte(&text[i+1], 2, 16);
             drawSprite(spriteCode, getSpriteSheet(), left, y, ceil(scale));
             i += 2;
             left += SPRITE_SIZE * ceil(scale);

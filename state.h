@@ -19,6 +19,8 @@ typedef struct {
     Border SelectedBorder;
     GbButton ButtonMap[N64_BUTTON_COUNT];
     N64Button SystemMenuButton;
+    N64Button GbStartButton;
+    N64Button GbSelectButton;
     CartridgeData Cartridge;
     bool AudioEnabled;
     GbState EmulationState;

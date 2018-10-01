@@ -60,7 +60,10 @@ void generatePlayerState(PlayerState* playerState) {
     for (byte i = 0; i < N64_BUTTON_COUNT; i++) {
         if (playerState->ButtonMap[i] == GbSystemMenu) {
             playerState->SystemMenuButton = i;
-            break;
+        } else if (playerState->ButtonMap[i] == GbStart) {
+            playerState->GbStartButton = i;
+        } else if (playerState->ButtonMap[i] == GbSelect) {
+            playerState->GbSelectButton = i;
         }
     }
 }

@@ -35,6 +35,15 @@ typedef enum { BorderNone } Border;
 uLong frameCount = 0;
 
 /**
+ * Reads a number from a substring, stopping after a certain number of characters.
+ * @param start pointer to the start of the number in the string.
+ * @param maxLength max length of the number as characters.
+ * @param base base of the number eg. 10, 16
+ * @return The parsed byte.
+ */
+byte parseByte(const char* start, const byte maxLength, const byte base);
+
+/**
  * Cleans up memory held by a ByteArray and resets the values.
  * @param arr The array.
  */
