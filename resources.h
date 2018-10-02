@@ -17,6 +17,17 @@ const byte CREAM_BG_TEXTURE = 9;
 const byte GB_BG_TEXTURE = 10;
 const byte ERROR_SPRITE = 11;
 
+// TODO typedef this
+enum {
+    ROTATE_90 = '>',
+    ROTATE_180 = 'v',
+    ROTATE_270 = '<',
+    FLIP_HORIZONTAL = 'W',
+    FLIP_VERTICAL = 'V',
+    FLIP_BOTH = 'X'
+};
+
+
 /**
  * Loads oft-used resources in to memory.
  * @return success/error code
@@ -41,4 +52,14 @@ sprite_t* getCharacterSheet();
  * @return pointer to sprite sheet.
  */
 sprite_t* getSpriteSpreet();
+
+/**
+ * Takes an existing sprite, transforms it, and stashes it in a cache for next time it's needed.
+ * @param sheet Source sprite sheet.
+ * @param spriteCode Identifies source sprite on the sheet.
+ * @param rotation How the sprite should be transformed.
+ * @return Pointer to the new transformed sprite.
+ */
+sprite_t* rotateSprite(const sprite_t* sheet, const byte spriteCode, const sByte rotation);
+
 #endif

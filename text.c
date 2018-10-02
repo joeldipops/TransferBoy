@@ -27,6 +27,7 @@ sByte initText() {
     strcpy(_strings[TextNoTpak], "Please insert a Transfer Pak.");
     strcpy(_strings[TextNoCartridge], "Please insert a Game Boy cartridge.");
     strcpy(_strings[TextLoadingCartridge], "Loading cartridge, please wait.");
+    //strcpy(_strings[TextLoadingCartridge], "$02 $v02 $>02");
     strcpy(_strings[TextExpansionPakRequired], "This cartridge cannot be loaded without an Expansion Pak.");
     strcpy(_strings[TextMenuResume], "Resume");
     strcpy(_strings[TextMenuReset], "Reset");
@@ -92,6 +93,7 @@ void drawSprite(const byte spriteCode, sprite_t* spriteSheet, const natural x, c
  * @param character the ASCII character to draw
  * @param x The x co-ordinate to draw at.
  * @param y The y co-ordinate to draw at.
+ * @param scale size of the image
  * @private
  */
 void drawCharacter(const char character, const natural x, const natural y, const float scale) {
@@ -106,32 +108,79 @@ void drawCharacter(const char character, const natural x, const natural y, const
 }
 
 /**
+ * Draws an image from a sprite sheet, as specified by a token in the string, rotating if requested.
+ * @param text the string containing the image to draw.
+ * @param textIndex the position in text that of the token.
+ * @param length Length of the string to avoid recalculating each iteration.
+ * @param x The x co-ordinate to draw at.
+ * @param y The y co-ordinate to draw at.
+ * @param scale size of the image
+ * @return
+ ** next index of the string after the token if positive.
+ ** error code if negative
+ *** -1 token is not complete.
+ *** -2 badly formatted token.
+ * @private
+ */
+sShort drawImage(const string text, const byte textIndex, const byte length, const natural x, const natural y, const float scale) {
+    byte i = textIndex;
+    char rotation = text[i+1];
+    if (length <= i + 2) {
+        return -1;
+    } else if (
+        rotation == ROTATE_90
+        || rotation == ROTATE_180
+        || rotation == ROTATE_270
+        || rotation == FLIP_HORIZONTAL
+        || rotation == FLIP_VERTICAL
+        || rotation == FLIP_BOTH
+    ) {
+        // Flip/Rotation specifier optionally follows the $ sign.
+        if (length <= i + 3) {
+            return -1;
+        }
+        i++;
+    } else {
+        rotation = 0;
+    }
+
+    // sprite is 2 digit hex, we need to parse it from the string
+    byte spriteCode = parseByte(&text[i+1], 2, 16);
+
+    sprite_t* sheet = getSpriteSheet();
+    if (rotation) {
+        sheet = rotateSprite(sheet, spriteCode, rotation);
+        spriteCode = 0;
+    }
+
+    drawSprite(spriteCode, sheet, x, y, ceil(scale));
+
+    i += 2;
+    return i;
+}
+
+/**
  * Draws characters in a line.
- * @param frame The id of the frame to draw on.
  * @param x The x co-ordinate to start the string at.
  * @param y The y co-ordinate to start the string at.
  * @param scale size of the text sprites.
  * @return result code
  ** 0   success
- ** -1  badly formatted token.
+ ** -1  token is not complete.
  * @private
  */
-sByte drawTextLine(const display_context_t frame, const string text, const natural x, const natural y, const float scale) {
+sByte drawTextLine(const string text, const natural x, const natural y, const float scale) {
     byte length = strlen(text);
     natural left = x;
     for (byte i = 0; i < length; i++) {
         // $ token means draw a sprite instead of a text character.
         if (text[i] == '$') {
-            if (length <= i + 2) {
-                return -1;
+            sByte result = drawImage(text, i, length, left, y, scale);
+            if (result < 0) {
+                return result;
+            } else {
+                i = result;
             }
-
-            // TODO - rotation
-
-            // sprite is 2 digit hex, we need to parse it from the string.
-            byte spriteCode = parseByte(&text[i+1], 2, 16);
-            drawSprite(spriteCode, getSpriteSheet(), left, y, ceil(scale));
-            i += 2;
             left += SPRITE_SIZE * ceil(scale);
             continue;
         }
@@ -158,7 +207,7 @@ void drawText(const display_context_t frame, const string text, const natural x,
         initText();
     }
     prepareRdpForSprite(frame);
-    drawTextLine(frame, text, x, y, scale);
+    drawTextLine(text, x, y, scale);
 
     rdp_detach_display();
 }
@@ -230,7 +279,7 @@ void drawTextParagraph(
         string line = "";
         memcpy(line, text + i, lineBreak);
 
-        drawTextLine(frame, line, x, top, scale);
+        drawTextLine(line, x, top, scale);
 
         i += lineBreak;
         top += CHARACTER_SIZE;
