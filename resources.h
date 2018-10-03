@@ -2,8 +2,6 @@
 #define RESOURCES_INCLUDED
 #include <libdragon.h>
 
-
-
 const byte GB_START_SPRITE = 0;
 const byte GB_SELECT_SPRITE = 1;
 const byte N64_START_SPRITE = 2;
@@ -17,15 +15,15 @@ const byte CREAM_BG_TEXTURE = 9;
 const byte GB_BG_TEXTURE = 10;
 const byte ERROR_SPRITE = 11;
 
-// TODO typedef this
-enum {
+// TODO use this type instead of just the constants.
+typedef enum {
     ROTATE_90 = '>',
     ROTATE_180 = 'v',
     ROTATE_270 = '<',
     FLIP_HORIZONTAL = 'W',
     FLIP_VERTICAL = 'V',
     FLIP_BOTH = 'X'
-};
+} Transformation;
 
 
 /**
