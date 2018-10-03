@@ -124,16 +124,16 @@ void drawCharacter(const char character, const natural x, const natural y, const
  */
 sShort drawImage(const string text, const byte textIndex, const byte length, const natural x, const natural y, const float scale) {
     byte i = textIndex;
-    char rotation = text[i+1];
+    char transformation = text[i+1];
     if (length <= i + 2) {
         return -1;
     } else if (
-        rotation == ROTATE_90
-        || rotation == ROTATE_180
-        || rotation == ROTATE_270
-        || rotation == FLIP_HORIZONTAL
-        || rotation == FLIP_VERTICAL
-        || rotation == FLIP_BOTH
+        transformation == ROTATE_90
+        || transformation == ROTATE_180
+        || transformation == ROTATE_270
+        || transformation == FLIP_HORIZONTAL
+        || transformation == FLIP_VERTICAL
+        || transformation == FLIP_BOTH
     ) {
         // Flip/Rotation specifier optionally follows the $ sign.
         if (length <= i + 3) {
@@ -141,15 +141,15 @@ sShort drawImage(const string text, const byte textIndex, const byte length, con
         }
         i++;
     } else {
-        rotation = 0;
+        transformation = 0;
     }
 
     // sprite is 2 digit hex, we need to parse it from the string
     byte spriteCode = parseByte(&text[i+1], 2, 16);
 
     sprite_t* sheet = getSpriteSheet();
-    if (rotation) {
-        sheet = rotateSprite(sheet, spriteCode, rotation);
+    if (transformation) {
+        sheet = transformSprite(sheet, spriteCode, transformation);
         spriteCode = 0;
     }
 

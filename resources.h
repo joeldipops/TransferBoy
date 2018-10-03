@@ -18,14 +18,14 @@ const byte GB_BG_TEXTURE = 10;
 const byte ERROR_SPRITE = 11;
 
 // TODO typedef this
-enum {
+typedef enum {
     ROTATE_90 = '>',
     ROTATE_180 = 'v',
     ROTATE_270 = '<',
     FLIP_HORIZONTAL = 'W',
     FLIP_VERTICAL = 'V',
     FLIP_BOTH = 'X'
-};
+} Transformation;
 
 
 /**
@@ -60,6 +60,6 @@ sprite_t* getSpriteSpreet();
  * @param rotation How the sprite should be transformed.
  * @return Pointer to the new transformed sprite.
  */
-sprite_t* rotateSprite(const sprite_t* sheet, const byte spriteCode, const sByte rotation);
+sprite_t* transformSprite(const sprite_t* sheet, const byte spriteCode, const sByte transformation);
 
 #endif

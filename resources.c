@@ -4,12 +4,88 @@
 
 static sprite_t* _textMap = 0;
 static sprite_t* _spriteSheet = 0;
-
-static sprite_t* _transformCache[8] = {0};
-static byte cacheTop = 0;
-static byte _index[2][128][6] = {0}; // Two sprite sheets, Max 16*8 sprites per sheet, 6 possible rotations.
-
 static bool resourcesInitted = false;
+
+typedef struct {
+    byte SheetIndex;
+    byte SpriteCode;
+    sByte Transformation;
+    sprite_t* Sprite;
+    byte Position;
+} SpriteLookup;
+
+#define TRANSFORM_CACHE_SIZE 8
+static SpriteLookup _transformCache[TRANSFORM_CACHE_SIZE] = {0};
+
+/**
+ * Gets the sprite from the cache if it exists.
+ * @param sheetIndex Identifies the sprite sheet the sprite is in.
+ * @param spriteCode Identifies the source sprite on the sheet.
+ * @param transformation How the source sprite was tranformed.
+ * @return pointer to sprite in the cache, or null if not in the cache.
+ * @private
+ */
+sprite_t* getFromCache(const byte sheetIndex, const byte spriteCode, const Transformation transformation) {
+    sprite_t* result = null;
+    sByte oldPosition = -1;
+    for (byte i = 0; i < TRANSFORM_CACHE_SIZE; i++) {
+        if (
+            sheetIndex == _transformCache[i].SheetIndex
+            && spriteCode == _transformCache[i].SpriteCode
+            && transformation == _transformCache[i].Transformation
+        ) {
+            oldPosition = _transformCache[i].Position;
+            _transformCache[i].Position = TRANSFORM_CACHE_SIZE;
+            result = _transformCache[i].Sprite;
+        }
+    }
+
+    // If the sprite was in the cache, put it back on the end of the queue, and push everything that was behind it down one.
+    if (result) {
+        for (byte i = 0; i < TRANSFORM_CACHE_SIZE; i++) {
+            if (_transformCache[i].Position > oldPosition) {
+                _transformCache[i].Position--;
+            }
+        }
+    }
+
+    return result;
+}
+
+/**
+ * Adds a sprite to the cache.
+ * @param lookup The sprite along with information used to index/identify it.
+ * @private
+ */
+void cacheSprite(SpriteLookup* lookup) {
+    byte cacheTop = 0;
+
+    // Find any slot with position 0
+    while(_transformCache[cacheTop].Position) {
+        cacheTop++;
+    }
+
+    // If the cache is full, free up some memory
+    if (_transformCache[cacheTop].Sprite) {
+        free(_transformCache[cacheTop].Sprite->data);
+        free(_transformCache[cacheTop].Sprite);
+    }
+
+    // Add to the cache.
+    _transformCache[cacheTop].Sprite = lookup->Sprite;
+    _transformCache[cacheTop].SheetIndex = lookup->SheetIndex;
+    _transformCache[cacheTop].SpriteCode = lookup->SpriteCode;
+    _transformCache[cacheTop].Transformation = lookup->Transformation;
+    _transformCache[cacheTop].Position = TRANSFORM_CACHE_SIZE;
+
+    // Shift everything down by 1 so as things are added they get closer to 0.
+    for (byte i = 0; i < TRANSFORM_CACHE_SIZE; i++) {
+        if (_transformCache[i].Position > 0) {
+            _transformCache[i].Position--;
+        }
+    }
+}
+
 
 /**
  * Loads oft-used resources in to memory.
@@ -64,32 +140,16 @@ sprite_t* getSpriteSheet() {
  * Takes an existing sprite, transforms it, and stashes it in a cache for next time it's needed.
  * @param sheet Source sprite sheet.
  * @param spriteCode Identifies source sprite on the sheet.
- * @param rotation How the sprite should be transformed.
+ * @param transformation How the sprite should be transformed.
  * @return Pointer to the new transformed sprite.
  */
-sprite_t* rotateSprite(const sprite_t* sheet, const byte spriteCode, const sByte rotation) {
-    byte sheetIndex, rotationIndex = 0;
-    sheetIndex = (sheet == _textMap) ? 0 : 1;
-    switch (rotation) {
-        case ROTATE_90:
-            rotationIndex = 0; break;
-        case ROTATE_180:
-            rotationIndex = 1; break;
-        case ROTATE_270:
-            rotationIndex = 2; break;
-        case FLIP_HORIZONTAL:
-            rotationIndex = 3; break;
-        case FLIP_VERTICAL:
-            rotationIndex = 4; break;
-        case FLIP_BOTH:
-            rotationIndex = 5; break;
-        default:
-            return null;
-    }
+sprite_t* transformSprite(const sprite_t* sheet, const byte spriteCode, const sByte transformation) {
+    byte sheetIndex = (sheet == _textMap) ? 0 : 1;
 
     // Get from cache if we already have it.
-    if (_transformCache[_index[sheetIndex][spriteCode][rotationIndex]]) {
-        return _transformCache[_index[sheetIndex][spriteCode][rotationIndex]];
+    sprite_t* result = getFromCache(sheetIndex, spriteCode, transformation);
+    if (result) {
+        return result;
     }
 
     natural spriteWidth = sheet->width / sheet->hslices;
@@ -111,7 +171,7 @@ sprite_t* rotateSprite(const sprite_t* sheet, const byte spriteCode, const sByte
         }
     }
 
-    sprite_t* result = calloc(1, sizeof(sprite_t*));
+    result = calloc(1, sizeof(sprite_t*));
     result->width = spriteWidth;
     result->height = spriteHeight;
     result->vslices = 1;
@@ -121,21 +181,12 @@ sprite_t* rotateSprite(const sprite_t* sheet, const byte spriteCode, const sByte
     memcpy(result->data, data, index);
 
     // Put the newly generated sprite in to the cache.
-
-    // If the cache is full, free up some memory
-    if (_transformCache[cacheTop]) {
-        free(_transformCache[cacheTop]->data);
-        free(_transformCache[cacheTop]);
-    }
-    _transformCache[cacheTop] = result;
-    _index[sheetIndex][spriteCode][rotationIndex] = cacheTop;
-
-    // TODO Make sure we free the least recently used sprite instead of just going from 0 -7
-    if (cacheTop < 7) {
-        cacheTop++;
-    } else {
-        cacheTop = 0;
-    }
+    SpriteLookup cacheable;
+    cacheable.Sprite = result;
+    cacheable.SheetIndex = sheetIndex;
+    cacheable.SpriteCode = spriteCode;
+    cacheable.Transformation = transformation;
+    cacheSprite(&cacheable);
 
     return result;
 }
@@ -147,7 +198,7 @@ void freeResources() {
     free(_textMap);
     free(_spriteSheet);
     for (byte i = 0; i < 8; i++) {
-        free(_transformCache[i]->data);
-        free(_transformCache[i]);
+        free(_transformCache[i].Sprite->data);
+        free(_transformCache[i].Sprite);
     }
 }
