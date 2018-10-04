@@ -286,7 +286,6 @@ void drawButtonMapOption(const RootState* state, const byte playerNumber, const 
 
     string text = "";
     if (rotation) {
-        // TODO
         sprintf(text, "$%02x : $%c%02x", gbButtonSprite, rotation, n64ButtonSprite);
     } else {
         sprintf(text, "$%02x : $%02x", gbButtonSprite, n64ButtonSprite);

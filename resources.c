@@ -158,20 +158,22 @@ sprite_t* transformSprite(const sprite_t* sheet, const byte spriteCode, const sB
     byte* data = calloc(spriteHeight * spriteWidth, sheet->bitdepth);
 
     byte x = spriteCode % sheet->hslices;
-    byte y = floor(spriteCode / sheet->vslices);
+    byte y = floor(spriteCode / sheet->hslices);
 
     natural index = 0;
-
-    // This loop doesn't work at all, but I think I am close.
-    for (natural row = y; row < y + spriteHeight; row++) {
-        for (natural column = x; column < x + spriteWidth; column++) {
-            // 360 degrees
-            memcpy(data + index, sheet->data + (row * sheet->width + column) * sheet->bitdepth, sheet->bitdepth);
-            index += sheet->bitdepth;
+    // Still broken arghhh
+    for (natural row = y * spriteHeight; row < y * spriteHeight + spriteHeight; row++) {
+        for (natural column = x * spriteWidth; column < x * spriteWidth + spriteWidth; column++) {
+            memcpy(
+                data + index,
+                sheet->data + (row * sheet->width + column),
+                sheet->bitdepth * 2
+            );
+            index += sheet->bitdepth * 2;
         }
     }
 
-    result = calloc(1, sizeof(sprite_t*));
+    result = calloc(1, sizeof(sprite_t));
     result->width = spriteWidth;
     result->height = spriteHeight;
     result->vslices = 1;
@@ -179,6 +181,8 @@ sprite_t* transformSprite(const sprite_t* sheet, const byte spriteCode, const sB
     result->bitdepth = sheet->bitdepth;
     result->format = sheet->format;
     memcpy(result->data, data, index);
+
+    free(data);
 
     // Put the newly generated sprite in to the cache.
     SpriteLookup cacheable;

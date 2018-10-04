@@ -29,26 +29,50 @@ void printLog(const string text, display_context_t frame) {
     display_show(frame);
 }
 
+void printSegmentToFrame(const byte* start, const display_context_t frame) {
+    string text = "";
+    sprintf(
+        text,
+        "%02x %02x %02x %02x %02x %02x %02x %02x  %02x %02x %02x %02x %02x %02x %02x %02x",
+        *start, *(start + 1), *(start + 2), *(start + 3), *(start + 4), *(start + 5), *(start + 6), *(start + 7),
+        *(start + 8), *(start + 9), *(start + 10), *(start + 11), *(start + 12), *(start + 13), *(start + 14), *(start + 15)
+    );
+    graphics_draw_text(frame, 10, 10, text);
+    start += 16;
+    sprintf(
+        text,
+        "%02x %02x %02x %02x %02x %02x %02x %02x  %02x %02x %02x %02x %02x %02x %02x %02x",
+        *start, *(start + 1), *(start + 2), *(start + 3), *(start + 4), *(start + 5), *(start + 6), *(start + 7),
+        *(start + 8), *(start + 9), *(start + 10), *(start + 11), *(start + 12), *(start + 13), *(start + 14), *(start + 15)
+    );
+    graphics_draw_text(frame, 10, 20, text);
+    start += 16;
+    sprintf(
+        text,
+        "%02x %02x %02x %02x %02x %02x %02x %02x  %02x %02x %02x %02x %02x %02x %02x %02x",
+        *start, *(start + 1), *(start + 2), *(start + 3), *(start + 4), *(start + 5), *(start + 6), *(start + 7),
+        *(start + 8), *(start + 9), *(start + 10), *(start + 11), *(start + 12), *(start + 13), *(start + 14), *(start + 15)
+    );
+    graphics_draw_text(frame, 10, 30, text);
+    start += 16;
+    sprintf(
+        text,
+        "%02x %02x %02x %02x %02x %02x %02x %02x  %02x %02x %02x %02x %02x %02x %02x %02x",
+        *start, *(start + 1), *(start + 2), *(start + 3), *(start + 4), *(start + 5), *(start + 6), *(start + 7),
+        *(start + 8), *(start + 9), *(start + 10), *(start + 11), *(start + 12), *(start + 13), *(start + 14), *(start + 15)
+    );
+    graphics_draw_text(frame, 10, 40, text);
+}
+
 /**
  * Print the next 32 bytes of memory from a given address and wait for "start".
  * @param start the starting memory address.
  */
-void printSegment(byte* start) {
+void printSegment(const byte* start) {
     display_context_t frame = null;
     while(!(frame = display_lock()));
 
-    string text = "";
-    sprintf(text, "%02x %02x %02x %02x  %02x %02x %02x %02x", *start, *(start + 1), *(start + 2), *(start + 3), *(start + 4), *(start + 5), *(start + 6), *(start + 7));
-    graphics_draw_text(frame, 10, 10, text);
-    start += 8;
-    sprintf(text, "%02x %02x %02x %02x  %02x %02x %02x %02x", *start, *(start + 1), *(start + 2), *(start + 3), *(start + 4), *(start + 5), *(start + 6), *(start + 7));
-    graphics_draw_text(frame, 10, 20, text);
-    start += 8;
-    sprintf(text, "%02x %02x %02x %02x  %02x %02x %02x %02x", *start, *(start + 1), *(start + 2), *(start + 3), *(start + 4), *(start + 5), *(start + 6), *(start + 7));
-    graphics_draw_text(frame, 10, 30, text);
-    start += 8;
-    sprintf(text, "%02x %02x %02x %02x  %02x %02x %02x %02x", *start, *(start + 1), *(start + 2), *(start + 3), *(start + 4), *(start + 5), *(start + 6), *(start + 7));
-    graphics_draw_text(frame, 10, 40, text);
+    printSegmentToFrame(start, frame);
 
     display_show(frame);
 

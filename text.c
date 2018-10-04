@@ -26,8 +26,8 @@ sByte initText() {
     strcpy(_strings[TextLoadCartridge], "Press $02 to load cartridge.");
     strcpy(_strings[TextNoTpak], "Please insert a Transfer Pak.");
     strcpy(_strings[TextNoCartridge], "Please insert a Game Boy cartridge.");
-    strcpy(_strings[TextLoadingCartridge], "Loading cartridge, please wait.");
-    //strcpy(_strings[TextLoadingCartridge], "$02 $v02 $>02");
+    //strcpy(_strings[TextLoadingCartridge], "Loading cartridge, please wait.");
+    strcpy(_strings[TextLoadingCartridge], "$<07 $07");
     strcpy(_strings[TextExpansionPakRequired], "This cartridge cannot be loaded without an Expansion Pak.");
     strcpy(_strings[TextMenuResume], "Resume");
     strcpy(_strings[TextMenuReset], "Reset");
@@ -154,7 +154,6 @@ sShort drawImage(const string text, const byte textIndex, const byte length, con
     }
 
     drawSprite(spriteCode, sheet, x, y, ceil(scale));
-
     i += 2;
     return i;
 }
