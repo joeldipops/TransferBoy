@@ -15,7 +15,7 @@ typedef struct {
 } SpriteLookup;
 
 #define TRANSFORM_CACHE_SIZE 8
-static SpriteLookup _transformCache[TRANSFORM_CACHE_SIZE] = {0};
+static SpriteLookup _transformCache[TRANSFORM_CACHE_SIZE] = {};
 
 /**
  * Gets the sprite from the cache if it exists.
@@ -69,6 +69,7 @@ void cacheSprite(SpriteLookup* lookup) {
     if (_transformCache[cacheTop].Sprite) {
         free(_transformCache[cacheTop].Sprite->data);
         free(_transformCache[cacheTop].Sprite);
+        _transformCache[cacheTop].Sprite = null;
     }
 
     // Add to the cache.
@@ -85,7 +86,6 @@ void cacheSprite(SpriteLookup* lookup) {
         }
     }
 }
-
 
 /**
  * Loads oft-used resources in to memory.
@@ -116,6 +116,10 @@ sByte initResources() {
     dfs_read(_spriteSheet, 1, dfs_size(spriteSheetPointer), spriteSheetPointer);
     dfs_close(spriteSheetPointer);
 
+    for (byte i = 0; i < TRANSFORM_CACHE_SIZE; i++) {
+        _transformCache[i].Sprite = 0;
+    }
+
     resourcesInitted = true;
     return 0;
 }
@@ -143,7 +147,7 @@ sprite_t* getSpriteSheet() {
  * @param transformation How the sprite should be transformed.
  * @return Pointer to the new transformed sprite.
  */
-sprite_t* transformSprite(const sprite_t* sheet, const byte spriteCode, const sByte transformation) {
+sprite_t* transformSprite(const sprite_t* sheet, const byte spriteCode, const Transformation transformation) {
     byte sheetIndex = (sheet == _textMap) ? 0 : 1;
 
     // Get from cache if we already have it.
@@ -160,29 +164,115 @@ sprite_t* transformSprite(const sprite_t* sheet, const byte spriteCode, const sB
     byte x = spriteCode % sheet->hslices;
     byte y = floor(spriteCode / sheet->hslices);
 
+    byte* source = calloc(sheet->height * sheet->width, sheet->bitdepth);
+    memcpy(source, sheet->data, sheet->height * sheet->width * sheet->bitdepth);
+
     natural index = 0;
-    // Still broken arghhh
-    for (natural row = y * spriteHeight; row < y * spriteHeight + spriteHeight; row++) {
-        for (natural column = x * spriteWidth; column < x * spriteWidth + spriteWidth; column++) {
-            memcpy(
-                data + index,
-                sheet->data + (row * sheet->width + column),
-                sheet->bitdepth * 2
-            );
-            index += sheet->bitdepth * 2;
-        }
+    natural destRow = 0;
+    natural destColumn = 0;
+
+    switch(transformation) {
+        case ROTATE_90:
+            destRow = spriteHeight * sheet->bitdepth - sheet->bitdepth;
+            for (natural sourceRow = y * spriteHeight; sourceRow < y * spriteHeight + spriteHeight; sourceRow++) {
+                destColumn = 0;
+                for (natural sourceColumn = x * spriteWidth; sourceColumn < x * spriteWidth + spriteWidth; sourceColumn++) {
+                    memcpy(
+                        data + destColumn * spriteWidth + destRow,
+                        source + (sourceRow * sheet->width + sourceColumn) * sheet->bitdepth,
+                        sheet->bitdepth
+                    );
+
+                    destColumn += sheet->bitdepth;
+                }
+                destRow -= sheet->bitdepth;
+            }
+        break;
+        case ROTATE_180:
+            destRow = spriteHeight * sheet->bitdepth - sheet->bitdepth;
+            for (natural sourceRow = y * spriteHeight; sourceRow < y * spriteHeight + spriteHeight; sourceRow++) {
+                destColumn = spriteWidth * sheet->bitdepth - sheet->bitdepth;
+                for (natural sourceColumn = x * spriteWidth; sourceColumn < x * spriteWidth + spriteWidth; sourceColumn++) {
+                    memcpy(
+                        data + destRow * spriteWidth + destColumn,
+                        source + (sourceRow * sheet->width + sourceColumn) * sheet->bitdepth,
+                        sheet->bitdepth
+                    );
+                    destColumn -= sheet->bitdepth;
+                }
+                destRow -= sheet->bitdepth;
+            }
+        break;
+        case ROTATE_270:
+            destRow = 0;
+            for (natural sourceRow = y * spriteHeight; sourceRow < y * spriteHeight + spriteHeight; sourceRow++) {
+                destColumn = spriteWidth * sheet->bitdepth - sheet->bitdepth;
+                for (natural sourceColumn = x * spriteWidth; sourceColumn < x * spriteWidth + spriteWidth; sourceColumn++) {
+                    memcpy(
+                        data + destColumn * spriteWidth + destRow,
+                        source + (sourceRow * sheet->width + sourceColumn) * sheet->bitdepth,
+                        sheet->bitdepth
+                    );
+                    destColumn -= sheet->bitdepth;
+                }
+                destRow += sheet->bitdepth;
+            }
+        break;
+        case FLIP_HORIZONTAL:
+            destRow = 0;
+            for (natural sourceRow = y * spriteHeight; sourceRow < y * spriteHeight + spriteHeight; sourceRow++) {
+                destColumn = spriteWidth * sheet->bitdepth - sheet->bitdepth;
+                for (natural sourceColumn = x * spriteWidth; sourceColumn < x * spriteWidth + spriteWidth; sourceColumn++) {
+                    memcpy(
+                        data + destRow * spriteWidth + destColumn,
+                        source + (sourceRow * sheet->width + sourceColumn) * sheet->bitdepth,
+                        sheet->bitdepth
+                    );
+
+                    destColumn -= sheet->bitdepth;
+                }
+                destRow += sheet->bitdepth;
+            }
+        break;
+        case FLIP_VERTICAL:
+            destRow = spriteHeight * sheet->bitdepth - sheet->bitdepth;
+            for (natural sourceRow = y * spriteHeight; sourceRow < y * spriteHeight + spriteHeight; sourceRow++) {
+                destColumn = 0;
+                for (natural sourceColumn = x * spriteWidth; sourceColumn < x * spriteWidth + spriteWidth; sourceColumn++) {
+                    memcpy(
+                        data + destRow * spriteWidth + destColumn,
+                        source + (sourceRow * sheet->width + sourceColumn) * sheet->bitdepth,
+                        sheet->bitdepth
+                    );
+
+                    destColumn += sheet->bitdepth;
+                }
+                destRow -= sheet->bitdepth;
+            }
+        break;
+        default:
+            // Straight copy
+            for (natural row = y * spriteHeight; row < y * spriteHeight + spriteHeight; row++) {
+                for (natural column = x * spriteWidth; column < x * spriteWidth + spriteWidth; column++) {
+                    memcpy(
+                        data + index,
+                        source + (row * sheet->width + column) * sheet->bitdepth,
+                        sheet->bitdepth
+                    );
+
+                    index += sheet->bitdepth;
+                }
+            }
     }
 
-    result = calloc(1, sizeof(sprite_t));
+    result = calloc(1, sizeof(sprite_t) + spriteHeight * spriteWidth * sheet->bitdepth);
     result->width = spriteWidth;
     result->height = spriteHeight;
     result->vslices = 1;
     result->hslices = 1;
     result->bitdepth = sheet->bitdepth;
     result->format = sheet->format;
-    memcpy(result->data, data, index);
-
-    free(data);
+    memcpy(result->data, data, result->width * result->height * result->bitdepth);
 
     // Put the newly generated sprite in to the cache.
     SpriteLookup cacheable;
@@ -192,6 +282,11 @@ sprite_t* transformSprite(const sprite_t* sheet, const byte spriteCode, const sB
     cacheable.Transformation = transformation;
     cacheSprite(&cacheable);
 
+    free(source);
+    source = null;
+    free(data);
+    data = null;
+
     return result;
 }
 
@@ -200,9 +295,23 @@ sprite_t* transformSprite(const sprite_t* sheet, const byte spriteCode, const sB
  */
 void freeResources() {
     free(_textMap);
+    _textMap = null;
     free(_spriteSheet);
-    for (byte i = 0; i < 8; i++) {
-        free(_transformCache[i].Sprite->data);
-        free(_transformCache[i].Sprite);
+    _spriteSheet = null;
+
+    emptyResourceCache();
+    resourcesInitted = false;
+}
+
+/**
+ * Frees up the cache but leaves the resources subsystem initialised.
+ */
+void emptyResourceCache() {
+    for (byte i = 0; i < TRANSFORM_CACHE_SIZE; i++) {
+        if (_transformCache[i].Sprite) {
+            free(_transformCache[i].Sprite->data);
+            free(_transformCache[i].Sprite);
+            _transformCache[i].Sprite = null;
+        }
     }
 }

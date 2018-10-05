@@ -20,8 +20,7 @@ typedef enum {
     ROTATE_180 = 'v',
     ROTATE_270 = '<',
     FLIP_HORIZONTAL = 'W',
-    FLIP_VERTICAL = 'V',
-    FLIP_BOTH = 'X'
+    FLIP_VERTICAL = 'V'
 } Transformation;
 
 
@@ -37,6 +36,11 @@ sByte initResources();
  * Releases memory held by all resources.
  */
 void freeResources();
+
+/**
+ * Frees up the cache but leaves the resources subsystem initialised.
+ */
+void emptyResourceCache();
 
 /**
  * Gets sprite sheet of textual characters.
@@ -57,6 +61,6 @@ sprite_t* getSpriteSpreet();
  * @param rotation How the sprite should be transformed.
  * @return Pointer to the new transformed sprite.
  */
-sprite_t* transformSprite(const sprite_t* sheet, const byte spriteCode, const sByte transformation);
+sprite_t* transformSprite(const sprite_t* sheet, const byte spriteCode, const Transformation transformation);
 
 #endif
