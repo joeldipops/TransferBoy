@@ -181,5 +181,6 @@ void logInfo(const string text, ... ) {
     }
 
     free(textString.Data);
+    textString.Data = null;
 }
 

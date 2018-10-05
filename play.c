@@ -40,6 +40,7 @@ sByte loadBios(GbState* state) {
 
     dfs_close(filePointer);
     free(biosFile);
+    biosFile = null;
 
     return result;
 }
@@ -173,6 +174,7 @@ void renderPixels(
     frameCount++;
 
     free(pixels);
+    pixels = 0;
     rdp_detach_display();
 }
 
@@ -200,6 +202,7 @@ void playLogic(RootState* state, const byte playerNumber) {
     emu_step(emulatorState);
 
     if (emulatorState->emu_state->lcd_entered_vblank) {
+
         GbController* input = calloc(1, sizeof(GbController));
 
         bool pressedButtons[N64_BUTTON_COUNT] = {};
@@ -224,6 +227,7 @@ void playLogic(RootState* state, const byte playerNumber) {
         emu_process_inputs(emulatorState, input);
 
         free(input);
+        input = 0;
 
         // Write save file back to the catridge if it has changed.
         if (emulatorState->emu_state->extram_dirty && isCartridgeInserted(playerNumber)) {

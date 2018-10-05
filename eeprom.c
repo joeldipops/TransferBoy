@@ -43,6 +43,7 @@ sByte writeToEeprom(const byte blockNumber, const ByteArray* stream) {
 
         eeprom_write(blockNumber + index, block);
         free(block);
+        block = null;
 
         index++;
     }

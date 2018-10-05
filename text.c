@@ -10,6 +10,9 @@
 static string _strings[TextEnd] = {"", "", "", ""};
 static bool textInitted = false;
 
+static const byte CHARACTER_SIZE = 24;
+static const byte SPRITE_SIZE = 32;
+
 /**
  * Initialises text subsystem by loading sprites etc.
  * @return 0 result code
@@ -26,8 +29,7 @@ sByte initText() {
     strcpy(_strings[TextLoadCartridge], "Press $02 to load cartridge.");
     strcpy(_strings[TextNoTpak], "Please insert a Transfer Pak.");
     strcpy(_strings[TextNoCartridge], "Please insert a Game Boy cartridge.");
-    //strcpy(_strings[TextLoadingCartridge], "Loading cartridge, please wait.");
-    strcpy(_strings[TextLoadingCartridge], "$<07 $07");
+    strcpy(_strings[TextLoadingCartridge], "Loading cartridge, please wait.");
     strcpy(_strings[TextExpansionPakRequired], "This cartridge cannot be loaded without an Expansion Pak.");
     strcpy(_strings[TextMenuResume], "Resume");
     strcpy(_strings[TextMenuReset], "Reset");
@@ -55,9 +57,6 @@ void freeText() {
     //free(_strings);
     textInitted = false;
 }
-
-static const byte CHARACTER_SIZE = 24;
-static const byte SPRITE_SIZE = 32;
 
 /**
  * Gets the text string with the given id code, and loads it into output.
@@ -133,7 +132,6 @@ sShort drawImage(const string text, const byte textIndex, const byte length, con
         || transformation == ROTATE_270
         || transformation == FLIP_HORIZONTAL
         || transformation == FLIP_VERTICAL
-        || transformation == FLIP_BOTH
     ) {
         // Flip/Rotation specifier optionally follows the $ sign.
         if (length <= i + 3) {
@@ -284,4 +282,14 @@ void drawTextParagraph(
         top += CHARACTER_SIZE;
     }
     rdp_detach_display();
+}
+
+/**
+ * Calculates the length in pixels of a given string, including any sprites.
+ * @param text the string.
+ * @return the length in pixels.
+ */
+natural getStringWidth(const string text) {
+    // TODO Sprites.
+    return strlen(text) * CHARACTER_SIZE;
 }

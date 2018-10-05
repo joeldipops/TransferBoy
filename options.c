@@ -186,11 +186,15 @@ void optionsLogic(RootState* state, byte playerNumber) {
  */
 void drawOptionRow(const RootState* state, const byte playerNumber, const string text, const Rectangle* screen, const byte row) {
     const float scale = (float) screen->Width * TEXT_SCALE_FACTOR;
-    const natural menuItemOffset = 34 * scale;
+    const natural menuItemOffset = 32;
 
     natural top = screen->Top + screen->Height + (menuItemOffset * row);
 
-    drawText(state->Frame, text, screen->Left, top, scale);
+    byte length = getStringWidth(text) * scale;
+    natural left = screen->Left + (screen->Width - length) / 2;
+
+
+    drawText(state->Frame, text, left, top, scale);
 
     // draw border if selected.
     if (state->Players[playerNumber].OptionsCursorRow == row) {

@@ -66,4 +66,11 @@ void drawTextParagraph(
     const natural width
 );
 
+/**
+ * Calculates the length in pixels of a given string, including any sprites.
+ * @param text the string.
+ * @return the length in pixels.
+ */
+natural getStringWidth(const string text);
+
 #endif
