@@ -11,6 +11,12 @@
 
 #include <libdragon.h>
 
+// 16 bit colours are are 5 bits per colour and a transparency flag
+// 32 bit equivalent: { 0xffffffff, 0x4A534A53, 0x318D318D, 0x00010001 };
+static const uInt MONOCHROME_PALLET[] = {
+    0xffffffff, 0x4A534A53, 0x318D318D, 0x00010001
+};
+
 /**
  * Loads a gb bios file if one is available.
  * @param state state to copy the bios to.
@@ -64,7 +70,6 @@ void initialiseEmulator(GbState* state, const ByteArray* romData, const ByteArra
     cpu_init_emu_cpu_state(state);
     lcd_init(state);
 }
-
 
 /**
  * Converts buttons pressed on the n64 controller into equivalents on the gameboy's.
@@ -122,38 +127,32 @@ void renderPixels(
 
     // Lifted from gbC's gui_lcd_render_frame function.
     if (isColour) {
-        /* The colors stored in pixbuf are two byte each, 5 bits per rgb
-         * component: -bbbbbgg gggrrrrr. We need to extract these, scale these
-         * values from 0-1f to 0-ff and put them in RGBA format. For the scaling
-         * we'd have to multiply by 0xff/0x1f, which is 8.23, approx 8, which is
-         * a shift by 3. */
         for (natural y = 0; y < GB_LCD_HEIGHT; y++) {
             for (natural x = 0; x < GB_LCD_WIDTH; x++) {
                 natural index = x + y * GB_LCD_WIDTH;
-                natural rawColour = pixelBuffer[index];
 
-                uInt r = ((rawColour >>  0) & 0x1f) << 3;
-                uInt g = ((rawColour >>  5) & 0x1f) << 3;
-                uInt b = ((rawColour >> 10) & 0x1f) << 3;
-                uInt pixel = graphics_make_color(r, g, b, 0x00);
-                pixels[index] = pixel;
+                // Colours are in tBbbbbGggggRrrrr order, but we need to flip them to RrrrrGggggBbbbbt
+                natural b = pixelBuffer[index] & 0x7C00;
+                natural g = pixelBuffer[index] & 0x03E0;
+                natural r = pixelBuffer[index] & 0x001F;
+                natural t = pixelBuffer[index] & 0x8000;
+                natural reversed = (r << 11 | (g << 1) | (b >> 9) | t >> 15);
+
+                pixels[index] = (reversed << 16) | reversed;
             }
         }
     } else {
         // The colors stored in pixbuf already went through the palette
-        //translation, but are still 2 bit monochrome.
-        // 16 bit colours are are 5 bits per colour and a transparency flag
-        uInt palette[] = { 0xffffffff, 0x4A534A53, 0x318D318D, 0x00010001 };
+        // translation, but are still 2 bit monochrome.
         for (natural y = 0; y < GB_LCD_HEIGHT; y++) {
             for (natural x = 0; x < GB_LCD_WIDTH; x++) {
                 natural index = x + y * GB_LCD_WIDTH;
-                pixels[index] = palette[pixelBuffer[index]];
+                pixels[index] = MONOCHROME_PALLET[pixelBuffer[index]];
             }
         }
     }
 
     // TODO - Scaling for when between whole number scales.
-
     rdp_set_default_clipping();
     rdp_attach_display(frame);
     rdp_enable_primitive_fill();
@@ -183,8 +182,8 @@ void playAudio(const GbState* state) {
     if (!audio_can_write()) {
         return;
     }
-    sShort* audioBuffer = calloc(sizeof(sShort), audio_get_buffer_length());
-    audio_write(audioBuffer);
+    //sShort* audioBuffer = calloc(sizeof(sShort), audio_get_buffer_length());
+    //audio_write(audioBuffer);
 }
 
 /**
