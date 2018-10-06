@@ -142,7 +142,8 @@ void renderPixels(
     } else {
         // The colors stored in pixbuf already went through the palette
         //translation, but are still 2 bit monochrome.
-        uInt palette[] = { 0xffffffff, 0xaaaaaaaa, 0x66666666, 0x11111111 };
+        // 16 bit colours are are 5 bits per colour and a transparency flag
+        uInt palette[] = { 0xffffffff, 0x4A534A53, 0x318D318D, 0x00010001 };
         for (natural y = 0; y < GB_LCD_HEIGHT; y++) {
             for (natural x = 0; x < GB_LCD_WIDTH; x++) {
                 natural index = x + y * GB_LCD_WIDTH;
@@ -176,6 +177,14 @@ void renderPixels(
     free(pixels);
     pixels = 0;
     rdp_detach_display();
+}
+
+void playAudio(const GbState* state) {
+    if (!audio_can_write()) {
+        return;
+    }
+    sShort* audioBuffer = calloc(sizeof(sShort), audio_get_buffer_length());
+    audio_write(audioBuffer);
 }
 
 /**
@@ -218,8 +227,8 @@ void playLogic(RootState* state, const byte playerNumber) {
         bool releasedButtons[N64_BUTTON_COUNT] = {};
         getPressedButtons(&state->KeysReleased, playerNumber, releasedButtons);
 
-        if (true) {
-        //if (releasedButtons[state->Players[playerNumber].SystemMenuButton]) {
+        //if (true) {
+        if (releasedButtons[state->Players[playerNumber].SystemMenuButton]) {
             state->Players[playerNumber].ActiveMode = Menu;
             state->RequiresRepaint = true;
         }
@@ -240,7 +249,10 @@ void playLogic(RootState* state, const byte playerNumber) {
             emulatorState->emu_state->extram_dirty = false;
         }
 
-        // TODO - Map from emulatorState->emu_state->audio_sndbuf
+        if (state->Players[playerNumber].AudioEnabled) {
+            playAudio(emulatorState);
+        }
+
         state->RequiresRepaint = true;
     }
 }

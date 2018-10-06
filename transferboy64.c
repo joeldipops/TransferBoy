@@ -36,6 +36,7 @@ void initialiseSubsystems() {
     display_init(RESOLUTION_640x480, DEPTH_16_BPP, 2, GAMMA_NONE, ANTIALIAS_OFF);
     rdp_init();
     graphics_set_color(GLOBAL_TEXT_COLOUR, 0x0);
+    audio_init(AUDIO_SAMPLE_RATE, 4);
     initResources();
     initText();
 }
@@ -150,6 +151,7 @@ int main(void) {
     freeResources();
     display_close();
     rdp_close();
+    audio_close();
     return 0;
 }
 
