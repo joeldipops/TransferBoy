@@ -169,6 +169,7 @@ void renderPixels(
     }
     string text = "";
     sprintf(text, "Frames: %lld Memory: %lld", frameCount, getCurrentMemory());
+    graphics_set_color(GLOBAL_TEXT_COLOUR, 0x0);
     graphics_draw_text(frame, left, top, text);
 
     frameCount++;
