@@ -179,6 +179,7 @@ void renderPixels(
             rdp_draw_filled_rectangle(tx, ty, tx + avgPixelSize, ty + avgPixelSize);
         }
     }
+
     string text = "";
     sprintf(text, "Frames: %lld Memory: %lld", frameCount, getCurrentMemory());
     graphics_set_color(GLOBAL_TEXT_COLOUR, 0x0);
@@ -238,9 +239,7 @@ void playLogic(RootState* state, const byte playerNumber) {
     }
 
     emu_step(emulatorState);
-
     if (emulatorState->emu_state->lcd_entered_vblank) {
-
         GbController* input = calloc(1, sizeof(GbController));
 
         bool pressedButtons[N64_BUTTON_COUNT] = {};
@@ -256,7 +255,6 @@ void playLogic(RootState* state, const byte playerNumber) {
         bool releasedButtons[N64_BUTTON_COUNT] = {};
         getPressedButtons(&state->KeysReleased, playerNumber, releasedButtons);
 
-        //if (true) {
         if (releasedButtons[state->Players[playerNumber].SystemMenuButton]) {
             state->Players[playerNumber].ActiveMode = Menu;
             state->RequiresRepaint = true;
