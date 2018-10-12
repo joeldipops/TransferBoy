@@ -8,14 +8,17 @@
 #include "include/gbc_bundle.h"
 #include "tpakio.h"
 #include "link.h"
+#include "sound.h"
 
 #include <libdragon.h>
 
 // 16 bit colours are are 5 bits per colour and a transparency flag
 // 32 bit equivalent: { 0xffffffff, 0x4A534A53, 0x318D318D, 0x00010001 };
-static const uInt MONOCHROME_PALLET[] = {
+static const uInt MONOCHROME_PALETTE[] = {
     0xffffffff, 0x4A534A53, 0x318D318D, 0x00010001
 };
+
+typedef enum {GameboyPalette, SuperGameboyPalette, GameboyColorPalette } PaletteType;
 
 /**
  * Loads a gb bios file if one is available.
@@ -114,7 +117,7 @@ void mapGbInputs(const char controllerNumber, const GbButton* buttonMap, const N
 void renderPixels(
     const display_context_t frame,
     const natural* pixelBuffer,
-    const bool isColour,
+    const PaletteType paletteType,
     const float avgPixelSize,
     const natural left,
     const natural top
@@ -125,31 +128,40 @@ void renderPixels(
         return;
     }
 
-    // Lifted from gbC's gui_lcd_render_frame function.
-    if (isColour) {
-        for (natural y = 0; y < GB_LCD_HEIGHT; y++) {
-            for (natural x = 0; x < GB_LCD_WIDTH; x++) {
-                natural index = x + y * GB_LCD_WIDTH;
-
-                // Colours are in tBbbbbGggggRrrrr order, but we need to flip them to RrrrrGggggBbbbbt
-                natural b = pixelBuffer[index] & 0x7C00;
-                natural g = pixelBuffer[index] & 0x03E0;
-                natural r = pixelBuffer[index] & 0x001F;
-                natural t = pixelBuffer[index] & 0x8000;
-                natural reversed = (r << 11 | (g << 1) | (b >> 9) | t >> 15);
-
-                pixels[index] = (reversed << 16) | reversed;
+    switch(paletteType) {
+        case SuperGameboyPalette:
+        // TODO - Code here may help:
+        // https://github.com/visualboyadvance-m/visualboyadvance-m/blob/master/src/gb/gbSGB.cpp
+        case GameboyPalette:
+            // The colors stored in pixbuf already went through the palette
+            // translation, but are still 2 bit monochrome.
+            for (natural y = 0; y < GB_LCD_HEIGHT; y++) {
+                for (natural x = 0; x < GB_LCD_WIDTH; x++) {
+                    natural index = x + y * GB_LCD_WIDTH;
+                    pixels[index] = MONOCHROME_PALETTE[pixelBuffer[index]];
+                }
             }
-        }
-    } else {
-        // The colors stored in pixbuf already went through the palette
-        // translation, but are still 2 bit monochrome.
-        for (natural y = 0; y < GB_LCD_HEIGHT; y++) {
-            for (natural x = 0; x < GB_LCD_WIDTH; x++) {
-                natural index = x + y * GB_LCD_WIDTH;
-                pixels[index] = MONOCHROME_PALLET[pixelBuffer[index]];
+            break;
+        case GameboyColorPalette:
+            for (natural y = 0; y < GB_LCD_HEIGHT; y++) {
+                for (natural x = 0; x < GB_LCD_WIDTH; x++) {
+                    natural index = x + y * GB_LCD_WIDTH;
+
+                    // Colours are in tBbbbbGggggRrrrr order, but we need to flip them to RrrrrGggggBbbbbt
+                    natural b = pixelBuffer[index] & 0x7C00;
+                    natural g = pixelBuffer[index] & 0x03E0;
+                    natural r = pixelBuffer[index] & 0x001F;
+                    natural t = pixelBuffer[index] & 0x8000;
+                    natural reversed = (r << 11 | (g << 1) | (b >> 9) | t >> 15);
+
+                    pixels[index] = (reversed << 16) | reversed;
+                }
             }
-        }
+            break;
+        default:
+            // black screen, oh well
+            memset(pixels, 0x00010001, GB_LCD_HEIGHT * GB_LCD_WIDTH * sizeof(uInt));
+            break;
     }
 
     // TODO - Scaling for when between whole number scales.
@@ -183,8 +195,25 @@ void playAudio(const GbState* state) {
     if (!audio_can_write()) {
         return;
     }
-    //sShort* audioBuffer = calloc(sizeof(sShort), audio_get_buffer_length());
-    //audio_write(audioBuffer);
+
+    GbSoundChannel channels[4];
+    GbSoundControl soundControl;
+    getSoundControl(state, &soundControl);
+
+    if (!soundControl.Bits.IsSoundEnabled) {
+        return;
+    }
+
+    sShort* buffer = calloc(sizeof(sShort), soundControl.BufferLength);
+
+    for (byte i = 0; i < 4; i++) {
+        getSoundChannel(state, i + 1, &channels[i]);
+        prepareSoundBuffer(&soundControl, &channels[i], buffer);
+    }
+
+    audio_write(buffer);
+    free(buffer);
+    buffer = null;
 }
 
 /**
@@ -277,10 +306,18 @@ void playDraw(const RootState* state, const byte playerNumber) {
         screen.Top + screen.Height
     );
 
+
+    PaletteType palette = GameboyPalette;
+    if (state->Players[playerNumber].Cartridge.IsGbcCart) {
+        palette = GameboyColorPalette;
+    } else if (state->Players[playerNumber].Cartridge.IsSuperGbCart) {
+        palette = SuperGameboyPalette;
+    }
+
     renderPixels(
         state->Frame,
         state->Players[playerNumber].EmulationState.emu_state->lcd_pixbuf,
-        state->Players[playerNumber].Cartridge.IsGbcCart,
+        palette,
         (float)screen.Height / (float)GB_LCD_HEIGHT,
         screen.Left,
         screen.Top

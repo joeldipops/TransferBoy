@@ -177,5 +177,6 @@ void _exit(int status)
 #include "state.c"
 #include "eeprom.c"
 #include "link.c"
+#include "sound.c"
 #include "include/libgbpak.c"
 #include "include/gbc_bundle.c"
