@@ -10,6 +10,7 @@
 #include "state.h"
 #include "screen.h"
 #include "resources.h"
+#include <time.h>
 #include <string.h>
 #include <stdlib.h>
 #include <libdragon.h>
@@ -29,6 +30,8 @@ void setGlobalConstants() {
  * Inititalises all required libdragon subsystems.
  */
 void initialiseSubsystems() {
+    srand(time(0));
+
     getMemoryLimit();
     init_interrupts();
     controller_init();
@@ -178,5 +181,6 @@ void _exit(int status)
 #include "eeprom.c"
 #include "link.c"
 #include "sound.c"
+#include "superGameboy.c"
 #include "include/libgbpak.c"
 #include "include/gbc_bundle.c"

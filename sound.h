@@ -87,12 +87,19 @@ typedef struct {
             byte InitialVolume:4;
             bool IsVolumeIncreasing:1;
             byte EnvelopeSteps:3;
+            byte pad3:8;
+            byte pad4:8;
+        } Envelope;
+
+        struct {
+            byte pad1:8;
+            byte pad2:8;
+            byte pad3:8;
             byte Frequency1:8;
             bool IsSoundReset:1;
-            byte pad3:1;
-            byte pad4:3;
+            byte pad4:4;
             byte Frequency2:3;
-        } Channel123;
+        } Frequency;
 
         struct {
             byte pad1:8;

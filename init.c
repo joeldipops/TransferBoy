@@ -32,11 +32,7 @@ void initLogic(RootState* state, const byte playerNumber) {
         Rectangle screen = {};
         getScreenPosition(state, playerNumber, &screen);
 
-        initialiseEmulator(
-            &state->Players[playerNumber].EmulationState,
-            &state->Players[playerNumber].Cartridge.RomData,
-            &state->Players[playerNumber].Cartridge.SaveData
-        );
+        resetPlayState(&state->Players[playerNumber]);
 
         state->Players[playerNumber].ActiveMode = Play;
     }

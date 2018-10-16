@@ -9,6 +9,7 @@
 #include "tpakio.h"
 #include "link.h"
 #include "sound.h"
+#include "superGameboy.h"
 
 #include <libdragon.h>
 
@@ -72,6 +73,15 @@ void initialiseEmulator(GbState* state, const ByteArray* romData, const ByteArra
     init_emu_state(state);
     cpu_init_emu_cpu_state(state);
     lcd_init(state);
+}
+
+/**
+ * Sets all emulation functions for this player back to a clean slate.
+ * @param state The player to reset.
+ */
+void resetPlayState(PlayerState* state) {
+    initialiseEmulator(&state->EmulationState, &state->Cartridge.RomData, &state->Cartridge.SaveData);
+    resetSGBState(&state->SGBState);
 }
 
 /**
@@ -239,6 +249,11 @@ void playLogic(RootState* state, const byte playerNumber) {
     }
 
     emu_step(emulatorState);
+
+    if (state->Players[playerNumber].Cartridge.IsSuperGbCart) {
+        processSGBData(&state->Players[playerNumber]);
+    }
+
     if (emulatorState->emu_state->lcd_entered_vblank) {
         GbController* input = calloc(1, sizeof(GbController));
 
@@ -276,7 +291,8 @@ void playLogic(RootState* state, const byte playerNumber) {
             emulatorState->emu_state->extram_dirty = false;
         }
 
-        if (state->Players[playerNumber].AudioEnabled) {
+        // Audio off until I can test it properly.
+        if (false && state->Players[playerNumber].AudioEnabled) {
             playAudio(emulatorState);
         }
 

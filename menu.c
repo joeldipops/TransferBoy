@@ -94,11 +94,7 @@ void showOptionsMenu(PlayerState* playerState) {
  * @param playerNumber player that wants to reset.
  */
 void resetGame(RootState* state, const byte playerNumber) {
-    initialiseEmulator(
-        &state->Players[playerNumber].EmulationState,
-        &state->Players[playerNumber].Cartridge.RomData,
-        &state->Players[playerNumber].Cartridge.SaveData
-    );
+    resetPlayState(&state->Players[playerNumber]);
 
     state->Players[playerNumber].ActiveMode = Play;
 }
@@ -168,11 +164,7 @@ char addPlayer(RootState* state) {
     // Non-player-1 save files will never be written back to the cartridge.
     loadSave(0, &newPlayer->Cartridge.SaveData);
 
-    initialiseEmulator(
-        &newPlayer->EmulationState,
-        &newPlayer->Cartridge.RomData,
-        &newPlayer->Cartridge.SaveData
-    );
+    resetPlayState(newPlayer);
 
     flushScreen(state);
 

@@ -4,6 +4,12 @@
 #include "state.h"
 
 /**
+ * Sets all emulation functions for this player back to a clean slate.
+ * @param state The player to reset.
+ */
+void resetPlayState(PlayerState* state);
+
+/**
  * Passes the gameboy cartridge data in to the emulator and fires it up.
  * @param state emulator state object.
  * @param romData ROM loaded from cartridge.

@@ -21,8 +21,8 @@ Frequency getFrequencyData(const GbSoundChannel* channel) {
     }
     natural result =
         0x0000 |
-        ((natural)channel->Channel123.Frequency2 & 0x0007) << 8 | // Only the lowest 3 bits
-        (channel->Channel123.Frequency1);
+        ((natural)channel->Frequency.Frequency2 & 0x0007) << 8 | // Only the lowest 3 bits
+        (channel->Frequency.Frequency1);
     return result;
 }
 
@@ -58,10 +58,10 @@ void prepareChannel1(const GbSoundControl* control, const GbSoundChannel* channe
     }
 
     for(natural i = 0; i < control->BufferLength; i += 2) {
-        sShort sample = 1;
+        sShort sample = 0;
 
-        sByte sign = channel->Channel123.IsVolumeIncreasing ? 1 : -1;
-        sample = channel->Channel123.InitialVolume + (sign * channel->Channel123.EnvelopeSteps);
+        sByte sign = channel->Envelope.IsVolumeIncreasing ? 1 : -1;
+        sample = channel->Envelope.InitialVolume + (sign * channel->Envelope.EnvelopeSteps);
 
         // Follows the square wave pattern.
         if (!WaveDuty[channel->Channel1And2.WavePatternDuty][i % 8]) {
@@ -91,10 +91,10 @@ void prepareChannel2(const GbSoundControl* control, const GbSoundChannel* channe
     }
 
     for(natural i = 0; i < control->BufferLength; i += 2) {
-        sShort sample = 1;
+        sShort sample = 0;
 
-        sByte sign = channel->Channel123.IsVolumeIncreasing ? 1 : -1;
-        sample = channel->Channel123.InitialVolume + (sign * channel->Channel123.EnvelopeSteps);
+        sByte sign = channel->Envelope.IsVolumeIncreasing ? 1 : -1;
+        sample = channel->Envelope.InitialVolume + (sign * channel->Envelope.EnvelopeSteps);
 
         // Follows the square wave pattern.
         if (!WaveDuty[channel->Channel1And2.WavePatternDuty][i % 8]) {
@@ -161,7 +161,31 @@ void prepareChannel3(const GbSoundControl* control, const GbSoundChannel* channe
  * @out buffer The transformed audui buffer.
  */
 void prepareChannel4(const GbSoundControl* control, const GbSoundChannel* channel, sShort* buffer) {
+    if (channel->ChannelNumber != 4) {
+        return;
+    }
 
+    for(natural i = 0; i < control->BufferLength; i += 2) {
+
+        // TODO - It seems there's a really complicated way of calculating this, but rand will do for now.
+        byte sample = rand() % 2;
+        if (sample == 0) {
+            sample = -1;
+        }
+
+        sByte sign = channel->Envelope.IsVolumeIncreasing ? 1 : -1;
+        sample = sample * channel->Envelope.InitialVolume + (sample * sign * channel->Envelope.EnvelopeSteps);
+
+        // Don't know why we do this, but gnuboy does it and it makes sense.
+        sample += sample << 1;
+
+        if (control->Bits.IsLeftTerminalEnabled && control->Bits.IsChannel4OnLeftTerminal) {
+            buffer[i] += sample;
+        }
+        if (control->Bits.IsRightTerminalEnabled && control->Bits.IsChannel4OnRightTerminal) {
+            buffer[i+1] += sample;
+        }
+    }
 }
 
 /**
@@ -175,7 +199,7 @@ void prepareSoundBuffer(const GbSoundControl* control, const GbSoundChannel* cha
         case 1: prepareChannel1(control, channel, buffer);
         case 2: prepareChannel2(control, channel, buffer);
         case 3: prepareChannel3(control, channel, buffer);
-        case 4: break;
+        case 4: prepareChannel4(control, channel, buffer);
         default: return;
     }
 }
