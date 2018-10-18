@@ -252,6 +252,7 @@ void playLogic(RootState* state, const byte playerNumber) {
 
     if (state->Players[playerNumber].Cartridge.IsSuperGbCart) {
         processSGBData(&state->Players[playerNumber]);
+        performSGBFunctions(&state->Players[playerNumber]);
     }
 
     if (emulatorState->emu_state->lcd_entered_vblank) {

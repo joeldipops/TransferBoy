@@ -8,13 +8,41 @@ static const byte SGB_PACKET_LENGTH = 16;
  * We of course want to signal that it is.
  */
 void mlt_req(PlayerState* state) {
-    // Last four bits of the joypad register indicate joypad id. 1110 is joypad 2.
-    //state->EmulationState.io_buttons = 0x0E;
-    state->EmulationState.io_buttons = 0x3E;
+    state->SGBState.PlayersMode = state->SGBState.Buffer[1];
+    state->SGBState.CurrentController = 0;
+    // Set bits 4 & 5 to 0.
+    state->EmulationState.io_buttons = state->EmulationState.io_buttons & 0xCF;
+}
+
+sByte palpq(PlayerState* state, const byte p, const byte q) {
+    if (state->SGBState.NumberOfPackets != 1) {
+        return -1;
+    }
+
+    // Start at 1 because the first byte is the command.
+    for (byte i = 1; i < SGB_PACKET_LENGTH; i+=2) {
+        natural colour = state->SGBState.Buffer[i] + (state->SGBState.Buffer[i+1] << 8);
+
+        if (i <=  8) {
+            // Next 8 bytes are the first palette.
+            state->SGBState.Palettes[p][(i-1)/2] = colour;
+        } else if (i <= 14) {
+            // Next 6 bytes are the second palette.
+            state->SGBState.Palettes[q][(i-7)/2] = colour;
+        }
+        // Final byte is padding
+    }
+
+    // The first colour should be shared across all palettes (for some reason)
+    for (byte i = 0; i < 4; i++) {
+        state->SGBState.Palettes[i][0] = state->SGBState.Palettes[p][0];
+    }
+
+    return 0;
 }
 
 void pal01(PlayerState* state) {
-
+    palpq(state, 0, 1);
 }
 
 void sound(PlayerState* state) {
@@ -22,6 +50,10 @@ void sound(PlayerState* state) {
 }
 
 void chr_trn(PlayerState* state) {
+
+}
+
+void data_snd(PlayerState* state) {
 
 }
 
@@ -44,6 +76,8 @@ void executeSgbCommand(PlayerState* state) {
         case SGBTransferCharacter:
             chr_trn(state);
             break;
+        case SGBTransferDataToSGB:
+            data_snd(state);
         default: break;
     }
 }
@@ -54,12 +88,20 @@ void executeSgbCommand(PlayerState* state) {
  * @private
  */
 void pushBit(SuperGameboyState* state) {
+
+    if (state->AwaitingStopBit) {
+        if (state->PendingBit == 0) {
+            state->AwaitingStopBit = false;
+        }
+
+        return;
+    }
+
     state->BitBuffer |= (state->PendingBit << (state->BitPointer));
     state->HasPendingBit = 0;
     state->BitPointer++;
 
     if (state->BitPointer == 8) {
-
         // If it's the first packet, set us up.
         if (state->BytePointer == 0 && state->PacketPointer == 0) {
             state->CurrentCommand = (state->BitBuffer & 0xF8) >> 3;
@@ -74,6 +116,7 @@ void pushBit(SuperGameboyState* state) {
         state->BitPointer = 0;
 
         if (state->BytePointer >= SGB_PACKET_LENGTH) {
+            state->AwaitingStopBit = true;
             state->PacketPointer++;
             state->BytePointer = 0;
         }
@@ -81,12 +124,13 @@ void pushBit(SuperGameboyState* state) {
 }
 
 /**
- * Puts SuperGameboy data back to their initial state.
+ * Gets SuperGameboy system ready to accept data again.
  * @param state The state to reset.
  */
-void resetSGBState(SuperGameboyState* state) {
+void resetSGBTransfer(SuperGameboyState* state) {
     state->BitBuffer = 0;
     state->BitPointer = 0;
+    state->AwaitingStopBit = false;
     state->Buffer = 0;
     state->BytePointer = 0;
     state->PacketPointer = 0;
@@ -95,11 +139,54 @@ void resetSGBState(SuperGameboyState* state) {
     state->NumberOfPackets = 0;
     state->PendingBit = 0;
     state->HasPendingBit = 0;
+    state->JoypadRequestResolved = false;
     if (state->HasData) {
         free(state->Buffer);
         state->HasData = false;
     }
+}
 
+/**
+ * Resets SGB back to initial state
+ * @param state state to reset.
+ */
+void resetSGBState(SuperGameboyState* state) {
+    resetSGBTransfer(state);
+    for (byte i = 0; i < 4; i++) {
+        for (byte j = 0; j < 4; j++) {
+            state->Palettes[i][j] = 0;
+        }
+    }
+
+    state->PlayersMode = 0;
+    state->CurrentController = 0;
+}
+
+
+static const byte JOYPAD_IDS[4] = {0x0F, 0x0E, 0x0D, 0x0C};
+
+/**
+ * Adjusts emulation to perform addition super gameboy functions.
+ * @param state The state of the player we're processing.
+ */
+void performSGBFunctions(PlayerState* state) {
+    // Increment the joypad register for multiplayer
+    if (state->SGBState.PlayersMode > 0) {
+        // Check if controller ID is being requested
+        if ((state->EmulationState.io_buttons & 0x30) == 0x30) {
+            if (!state->SGBState.JoypadRequestResolved) {
+                if (state->SGBState.CurrentController < 3) {
+                    state->SGBState.CurrentController++;
+                } else {
+                    state->SGBState.CurrentController = 0;
+                }
+                state->EmulationState.io_buttons = state->EmulationState.io_buttons | JOYPAD_IDS[state->SGBState.CurrentController];
+                state->SGBState.JoypadRequestResolved = true;
+            }
+        } else {
+            state->SGBState.JoypadRequestResolved = false;
+        }
+    }
 }
 
 /**
@@ -123,9 +210,9 @@ void processSGBData(PlayerState* state) {
     } else {
         if (bits == 0x03 && sgb->HasPendingBit) {
             pushBit(sgb);
-            if (sgb->NumberOfPackets >= 1 && sgb->PacketPointer >= sgb->NumberOfPackets) {
+            if (sgb->NumberOfPackets >= 1 && sgb->PacketPointer >= sgb->NumberOfPackets && !sgb->AwaitingStopBit) {
                 executeSgbCommand(state);
-                resetSGBState(sgb);
+                resetSGBTransfer(sgb);
             }
         } else if (sgb->IsTransferring && bits == 0x01) {
             sgb->HasPendingBit = 1;
@@ -134,7 +221,7 @@ void processSGBData(PlayerState* state) {
             sgb->HasPendingBit = 1;
             sgb->PendingBit = 0;
         } else if (bits == 0x00) {
-            resetSGBState(sgb);
+            resetSGBTransfer(sgb);
         }
     }
 }

@@ -42,12 +42,15 @@ typedef enum {
     SGBNoop = 0x1A // TransferBoy noop
 } SuperGameboyCommand;
 
+typedef natural Palette[4];
+
 typedef struct {
-    bool HasData:1; // Used
+    bool HasData:1;
     bool HasPendingBit:1;
     bool PendingBit:1;
+    bool AwaitingStopBit:1; // After 16 bytes per packet are transferred, one more 0 bit is sent to singal the end of the packet.
+    bool JoypadRequestResolved:1;
     byte NumberOfPackets:3;
-    byte pad1:2;
     byte BitBuffer;
     byte BitPointer;
     byte PacketPointer;
@@ -55,6 +58,10 @@ typedef struct {
     bool IsTransferring;
     SuperGameboyCommand CurrentCommand;
     byte* Buffer;
+    Palette Palettes[4];
+    byte PlayersMode:2; //0-3
+    byte CurrentController:2;
+    byte pad2:4;
 } SuperGameboyState;
 
 typedef struct {

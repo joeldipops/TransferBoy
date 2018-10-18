@@ -9,6 +9,16 @@
  */
 void resetSGBState(SuperGameboyState* state);
 
+/**
+ * Checks whether there is new Supergameboy data to process, and carries out any sgb commands.
+ * @param state The state of the player we're processing.
+ */
 void processSGBData(PlayerState* state);
+
+/**
+ * Adjusts emulation to perform addition super gameboy functions.
+ * @param state The state of the player we're processing.
+ */
+void performSGBFunctions(PlayerState* state);
 
 #endif
