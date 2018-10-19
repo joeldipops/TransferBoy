@@ -143,4 +143,20 @@ void getScreenPosition(const RootState* state, const byte playerNumber, Rectangl
     }
 }
 
+/**
+ * Takes a 16bit gameboy colour and returns a 32 bit libdragon colour
+ * @param colour The colour from the gameboy
+ * @return The colour that libdragon can render.
+ */
+uInt massageColour(const natural colour) {
+    // Colours are in tBbbbbGggggRrrrr order, but we need to flip them to RrrrrGggggBbbbbt
+    natural b = colour & 0x7C00;
+    natural g = colour & 0x03E0;
+    natural r = colour & 0x001F;
+    natural t = colour & 0x8000;
+    natural reversed = (r << 11 | (g << 1) | (b >> 9) | t >> 15);
+
+    return (reversed << 16) | reversed;
+}
+
 

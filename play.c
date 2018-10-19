@@ -13,12 +13,6 @@
 
 #include <libdragon.h>
 
-// 16 bit colours are are 5 bits per colour and a transparency flag
-// 32 bit equivalent: { 0xffffffff, 0x4A534A53, 0x318D318D, 0x00010001 };
-static const uInt MONOCHROME_PALETTE[] = {
-    0xffffffff, 0x4A534A53, 0x318D318D, 0x00010001
-};
-
 typedef enum {GameboyPalette, SuperGameboyPalette, GameboyColorPalette } PaletteType;
 
 /**
@@ -115,6 +109,30 @@ void mapGbInputs(const char controllerNumber, const GbButton* buttonMap, const N
 }
 
 /**
+ * Renders a gameboy pixel as an RDP rectangle.
+ * @param offsetX How far from the left x=0 should be.
+ * @param offsetY How far from the top y=0 should be.
+ * @param x The horizontal position of the pixel.
+ * @param y The vertical position of the pixel.
+ * @param size The size in actual pixels of the gamebou pixel.
+ * @param colour The 16 bit colour of the pixel.
+ */
+void renderPixel(
+    const natural offsetX,
+    const natural offsetY,
+    const natural x,
+    const natural y,
+    const float size,
+    const uInt colour
+) {
+    rdp_set_primitive_color(colour);
+    natural tx = x * size + offsetX;
+    natural ty = y * size + offsetY;
+
+    rdp_draw_filled_rectangle(tx, ty, tx + size, ty + size);
+}
+
+/**
  * Take the array of pixels produced by the emulator and throw it up on to the screen.
  * @param frame Id of frame to render to.
  * @param pixelBuffer Array of pixels.
@@ -130,25 +148,44 @@ void renderPixels(
     const PaletteType paletteType,
     const float avgPixelSize,
     const natural left,
-    const natural top
+    const natural top,
+    const SuperGameboyState* sgbState
 ) {
-    uInt* pixels = calloc(GB_LCD_HEIGHT * GB_LCD_WIDTH, sizeof(uInt));
-    if (!pixels) {
-        logInfo("Out of memory!!!");
-        return;
-    }
+    // TODO - Scaling for when between whole number scales.
+    rdp_set_default_clipping();
+    rdp_attach_display(frame);
+    rdp_enable_primitive_fill();
 
     switch(paletteType) {
-        case SuperGameboyPalette:
         // TODO - Code here may help:
         // https://github.com/visualboyadvance-m/visualboyadvance-m/blob/master/src/gb/gbSGB.cpp
+        case SuperGameboyPalette:
+            ;
+            uInt* pixels = calloc(GB_LCD_HEIGHT * GB_LCD_WIDTH, sizeof(uInt));
+            if (sgbState->IsWindowFrozen) {
+                ; // Leave display as is / frozen
+            } else {
+                generateSGBPixels(sgbState, pixelBuffer, pixels);
+
+                for (natural y = 0; y < GB_LCD_HEIGHT; y++) {
+                    for (natural x = 0; x < GB_LCD_WIDTH; x++) {
+                        natural index = x + y * GB_LCD_WIDTH;
+
+                        renderPixel(left, top, x, y, avgPixelSize, pixels[index]);
+                    }
+                }
+            }
+            free(pixels);
+            pixels = null;
+            break;
         case GameboyPalette:
             // The colors stored in pixbuf already went through the palette
             // translation, but are still 2 bit monochrome.
             for (natural y = 0; y < GB_LCD_HEIGHT; y++) {
                 for (natural x = 0; x < GB_LCD_WIDTH; x++) {
                     natural index = x + y * GB_LCD_WIDTH;
-                    pixels[index] = MONOCHROME_PALETTE[pixelBuffer[index]];
+
+                    renderPixel(left, top, x, y, avgPixelSize, MONOCHROME_PALETTE[pixelBuffer[index]]);
                 }
             }
             break;
@@ -157,37 +194,24 @@ void renderPixels(
                 for (natural x = 0; x < GB_LCD_WIDTH; x++) {
                     natural index = x + y * GB_LCD_WIDTH;
 
-                    // Colours are in tBbbbbGggggRrrrr order, but we need to flip them to RrrrrGggggBbbbbt
-                    natural b = pixelBuffer[index] & 0x7C00;
-                    natural g = pixelBuffer[index] & 0x03E0;
-                    natural r = pixelBuffer[index] & 0x001F;
-                    natural t = pixelBuffer[index] & 0x8000;
-                    natural reversed = (r << 11 | (g << 1) | (b >> 9) | t >> 15);
-
-                    pixels[index] = (reversed << 16) | reversed;
+                    renderPixel(left, top, x, y, avgPixelSize, massageColour(pixelBuffer[index]));
                 }
             }
             break;
         default:
             // black screen, oh well
-            memset(pixels, 0x00010001, GB_LCD_HEIGHT * GB_LCD_WIDTH * sizeof(uInt));
+            for (natural y = 0; y < GB_LCD_HEIGHT; y++) {
+                for (natural x = 0; x < GB_LCD_WIDTH; x++) {
+
+                    rdp_set_primitive_color(0x00010001);
+                    natural tx = x * avgPixelSize + left;
+                    natural ty = y * avgPixelSize + top;
+
+                    rdp_draw_filled_rectangle(tx, ty, tx + avgPixelSize, ty + avgPixelSize);
+                }
+            }
+
             break;
-    }
-
-    // TODO - Scaling for when between whole number scales.
-    rdp_set_default_clipping();
-    rdp_attach_display(frame);
-    rdp_enable_primitive_fill();
-    for (natural y = 0; y < GB_LCD_HEIGHT; y ++) {
-        for (natural x = 0; x <  GB_LCD_WIDTH; x++) {
-            natural index = x + y * GB_LCD_WIDTH;
-
-            rdp_set_primitive_color(pixels[index]);
-            natural tx = x * avgPixelSize + left;
-            natural ty = y * avgPixelSize + top;
-
-            rdp_draw_filled_rectangle(tx, ty, tx + avgPixelSize, ty + avgPixelSize);
-        }
     }
 
     string text = "";
@@ -197,8 +221,6 @@ void renderPixels(
 
     frameCount++;
 
-    free(pixels);
-    pixels = 0;
     rdp_detach_display();
 }
 
@@ -335,6 +357,7 @@ void playDraw(const RootState* state, const byte playerNumber) {
         palette,
         (float)screen.Height / (float)GB_LCD_HEIGHT,
         screen.Left,
-        screen.Top
+        screen.Top,
+        &state->Players[playerNumber].SGBState
     );
 }

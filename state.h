@@ -30,7 +30,7 @@ typedef enum {
     SGBEnableAttraction = 0x0C, //ATRN_EN
     SGBEnableIcon = 0x0E, // ICON_ENT
     SGBTransferDataToSGB = 0x0F, // DATA_SND
-    SGBTransferSGBToSNES = 0x10, //DATA_TRN
+    SGBTransferOverlayToSGB = 0x10, //DATA_TRN
     SGBRequestMultiplayer = 0x11, //MLT_REQ
     SGBSNESJump = 0x12, //JUMP
     SGBTransferCharacter = 0x13, //CHR_TRN
@@ -43,6 +43,25 @@ typedef enum {
 } SuperGameboyCommand;
 
 typedef natural Palette[4];
+typedef natural SgbPalette[16];
+
+typedef struct {
+    natural Address;
+    byte Bank;
+    byte ByteCount;
+    byte Data[11];
+} SnesRamBlock;
+
+typedef byte GbSprite[32];
+
+typedef struct {
+    byte SpriteId;
+    bool IsYFlipped:1;
+    bool IsXFlipped:1;
+    byte pad0:1;
+    byte PaletteId:3;
+    byte pad1:2;
+} SgbTile;
 
 typedef struct {
     bool HasData:1;
@@ -51,17 +70,26 @@ typedef struct {
     bool AwaitingStopBit:1; // After 16 bytes per packet are transferred, one more 0 bit is sent to singal the end of the packet.
     bool JoypadRequestResolved:1;
     byte NumberOfPackets:3;
+
+    byte PlayersMode:2; //0-3
+    byte CurrentController:2;
+    bool IsWindowFrozen:1;
+    bool HasPriority:1;
+    byte pad0:3;
+
     byte BitBuffer;
     byte BitPointer;
     byte PacketPointer;
     byte BytePointer;
     bool IsTransferring;
     SuperGameboyCommand CurrentCommand;
-    byte* Buffer;
     Palette Palettes[4];
-    byte PlayersMode:2; //0-3
-    byte CurrentController:2;
-    byte pad2:4;
+    byte* Buffer;
+    byte SnesRamBlockCount;
+    SnesRamBlock* RamBlocks;
+    GbSprite SpriteData[256];
+    SgbTile OverlayData[1024];
+    SgbPalette OverlayPalettes[3];
 } SuperGameboyState;
 
 typedef struct {
@@ -82,9 +110,10 @@ typedef struct {
 } PlayerState;
 
 typedef struct {
-    bool RequiresRepaint;
-    bool RequiresControllerRead;
-    byte PlayerCount;
+    byte pad0:2;
+    bool RequiresRepaint:1;
+    bool RequiresControllerRead:1;
+    byte PlayerCount:4;
     N64ControllerState KeysPressed;
     N64ControllerState KeysReleased;
     float PixelSize;

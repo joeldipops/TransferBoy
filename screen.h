@@ -15,6 +15,11 @@ typedef struct {
     natural Height;
 } Rectangle;
 
+// 16 bit colours are are 5 bits per colour and a transparency flag
+const uInt MONOCHROME_PALETTE[] = {
+    0xffffffff, 0x4A534A53, 0x318D318D, 0x00010001
+};
+
 /**
  * Resets all screen buffers to a known state.
  * @param state program state.
@@ -51,5 +56,12 @@ void drawSolidBorder(const display_context_t frame, const Rectangle* position, c
  * @out output The calculated screen size & position.
  */
 void getScreenPosition(const RootState* state, const byte playerNumber, Rectangle* output);
+
+/**
+ * Takes a 16bit gameboy colour and returns a 32 bit libdragon colour
+ * @param colour The colour from the gameboy
+ * @return The colour that libdragon can render.
+ */
+uInt massageColour(const natural colour);
 
 #endif

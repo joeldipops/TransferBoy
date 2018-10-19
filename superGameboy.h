@@ -21,4 +21,6 @@ void processSGBData(PlayerState* state);
  */
 void performSGBFunctions(PlayerState* state);
 
+
+void generateSGBPixels(const SuperGameboyState* state, const natural* pixelBuffer, uInt* pixels);
 #endif
