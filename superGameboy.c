@@ -1,13 +1,17 @@
 #include "superGameboy.h"
+#include "sgbDefs.h"
 #include "state.h"
 
 static const byte SGB_PACKET_LENGTH = 16;
+static const byte HORIZONTAL_TILES = 20;
+static const byte VERTICAL_TILES = 18;
+
 
 /**
  * Put the emulator in a state where each time the joypad register
  * receives a certain signal, it updates with the status of a different controller.
  * This command is used to signal that the SBG is connect, we of course want to signal that it is.
- * @param state Progam state including supergameboy request data.
+ * @param state Program state including supergameboy request data.
  */
 void mlt_req(PlayerState* state) {
     state->SGBState.PlayersMode = state->SGBState.Buffer[1];
@@ -16,7 +20,7 @@ void mlt_req(PlayerState* state) {
 
 /**
  * Sets colours of two of the four palettes.
- * @param state Progam state including supergameboy request data.
+ * @param state Program state including supergameboy request data.
  * @param p Id of the first palette.
  * @param q Id of the other palette.
  * @return Error code
@@ -52,18 +56,43 @@ sByte palpq(PlayerState* state, const byte p, const byte q) {
 
 /**
  * Set the colours of palettes 0 and 1
- * @param state Progam state including supergameboy request data.
+ * @param state Program state including supergameboy request data.
  */
 void pal01(PlayerState* state) {
     palpq(state, 0, 1);
 }
 
 /**
+ * Set the colours of palettes 2 and 3
+ * @param state Program state including supergameboy request data.
+ */
+void pal23(PlayerState* state) {
+    palpq(state, 2, 3);
+}
+
+/**
+ * Set the colours of palettes 0 and 3
+ * @param state Program state including supergameboy request data.
+ */
+void pal03(PlayerState* state) {
+    palpq(state, 0, 3);
+}
+
+/**
+ * Set the colours of palettes 1 and 2
+ * @param state Program state including supergameboy request data.
+ */
+void pal12(PlayerState* state) {
+    palpq(state, 1, 2);
+}
+
+/**
  * Covers the screen so no-one sees anything ugly while we're getting SGB stuff ready.
- * @param state Progam state including supergameboy request data.
- * @return Error code or 0 if successful
- ** -1: Incorrect number of packets
- ** -2: Invalid value.
+ * @param state Program state including supergameboy request data.
+ * @return Error code
+ ** 0  - Success
+ ** -1 - Incorrect number of packets
+ ** -2 - Invalid value.
  */
 sByte mask_en(PlayerState* state) {
     if (state->SGBState.NumberOfPackets != 1) {
@@ -107,7 +136,7 @@ sByte mask_en(PlayerState* state) {
 /**
  * Transfer 128 sprites from the cartridge to memory.
  * These are mainly used to draw borders, but can be used to overlay and colourise the screen as well.
- * @param state Progam state including supergameboy request data.
+ * @param state Program state including supergameboy request data.
  */
 void chr_trn(PlayerState* state) {
     natural index = 0;
@@ -130,11 +159,14 @@ void chr_trn(PlayerState* state) {
 /**
  * Transfer 1024 tiles and 3 palettes from cartridge to memory.
  * The data is read from the gameboy screen buffer.
- * @param state Progam state including supergameboy request data.
+ * @param state Program state including supergameboy request data.
+ * @return Error code
+ ** 0  Success
+ ** -1 Not Implemented
  */
 sByte pct_trn(PlayerState* state) {
     // TODO, need to read the data from the gameboy MMU, not the lcd_pixbuf
-    return 0;
+    return -1;
 }
 
 /**
@@ -187,13 +219,138 @@ sByte data_snd(PlayerState* state) {
 
 /**
  * Sets the palette priority.
- * @param state Progam state including supergameboy request data.
+ * @param state Program state including supergameboy request data.
  */
 void pal_pri(PlayerState* state) {
     // On actual hardware 0 means use custom palette,
     // 1 the palette set in code.
     // We'll just use the grey-scale palette when priority is off.
     state->SGBState.HasPriority = state->SGBState.Buffer[1] & 0x01;
+}
+
+/**
+ * Specifies a palette for a number of tiles in sequence.
+ * @return Error code
+ * 0  - Success
+ * -1 - Too many tiles in sequence.
+ */
+sByte attr_chr(PlayerState* state) {
+    byte startX = state->SGBState.Buffer[1] & 0x1F;
+    byte startY = state->SGBState.Buffer[2] & 0x1F;
+
+    natural itemCount = ((state->SGBState.Buffer[4] & 0x01) << 8) + state->SGBState.Buffer[3];
+
+    if (itemCount > 360) {
+        return -1;
+    }
+
+    enum { Horizontal = 0, Vertical = 1 } axis = state->SGBState.Buffer[5] & 0x01;
+
+    // TODO won't work if we start in a position that means we have to wrap around half way through a byte.
+
+    natural byteIndex = 6;
+    byte byteCount = itemCount / 4;
+    if (axis == Horizontal) {
+        for (byte y = startY; y < VERTICAL_TILES && byteIndex < byteCount; y++) {
+            for (
+                byte x = startX;
+                x < HORIZONTAL_TILES && byteIndex < byteCount;
+                x += 4
+            ) {
+                byte palettes = state->SGBState.Buffer[byteIndex];
+
+                state->SGBState.TilePalettes[y * HORIZONTAL_TILES + x] = (palettes & 0xC0) >> 6;
+                state->SGBState.TilePalettes[y * HORIZONTAL_TILES + x + 1] = (palettes & 0x30) >> 4;
+                state->SGBState.TilePalettes[y * HORIZONTAL_TILES + x + 2] = (palettes & 0x0C) >> 2;
+                state->SGBState.TilePalettes[y * HORIZONTAL_TILES + x + 3] = (palettes & 0x03);
+
+                byteIndex++;
+            }
+
+            // After the first iteration, start at the beginning of the next line
+            startX = 0;
+        }
+    } else {
+        // Vertical lines
+        for (byte x = startX; x < HORIZONTAL_TILES && byteIndex < byteCount; x++) {
+            for (
+                byte y = startY;
+                y < VERTICAL_TILES && byteIndex < byteCount;
+                y += 4
+            ) {
+                byte palettes = state->SGBState.Buffer[byteIndex];
+
+                state->SGBState.TilePalettes[y * HORIZONTAL_TILES + x] = (palettes & 0xC0) >> 6;
+                state->SGBState.TilePalettes[(y + 1) * HORIZONTAL_TILES + x] = (palettes & 0x30) >> 4;
+                state->SGBState.TilePalettes[(y + 2) * HORIZONTAL_TILES + x] = (palettes & 0x0C) >> 2;
+                state->SGBState.TilePalettes[(y + 3) * HORIZONTAL_TILES + x] = (palettes & 0x03);
+
+                byteIndex++;
+            }
+            startY = 0;
+        }
+    }
+
+    return 0;
+}
+
+/**
+ * Divides the gameboy screen in to three sections with different palettes.
+ * One of the sections is a line one sprite wide/high.
+ * @param state Program state including supergameboy request data.
+ */
+void attr_div(PlayerState* state) {
+    // Gonna assume if you have an attr_div, it overwrites whatever else you had.
+    enum { Vertical, Horizontal } axis = (state->SGBState.Buffer[1] & 0x40) >> 6;
+    byte linePaletteId = (state->SGBState.Buffer[1] & 0x30) >> 4;
+    byte beforePaletteId = (state->SGBState.Buffer[1] & 0x0C) >> 2;
+    byte afterPaletteId = state->SGBState.Buffer[1] & 0x03;
+    byte lineNumber = state->SGBState.Buffer[2] & 0x1F;
+
+   for (byte y = 0; y < VERTICAL_TILES; y++) {
+        for (byte x = 0; x < HORIZONTAL_TILES; x++) {
+            byte div = (axis == Vertical) ? x : y;
+
+            if (axis == Vertical) {
+                if (div < lineNumber) {
+                    state->SGBState.TilePalettes[y * HORIZONTAL_TILES + x] = beforePaletteId;
+                } else if (div == lineNumber) {
+                    state->SGBState.TilePalettes[y * HORIZONTAL_TILES + x] = linePaletteId;
+                } else {
+                    state->SGBState.TilePalettes[y * HORIZONTAL_TILES + x] = afterPaletteId;
+                }
+            }
+        }
+    }
+}
+
+
+/**
+ * Sets palettes to vertical or horizontal lines of tiles.
+ */
+void attr_lin(PlayerState* state) {
+    byte lineCount = state->SGBState.Buffer[1];
+
+    enum { Vertical, Horizontal } axis = 0;
+
+    for (byte i = 0; i < lineCount; i++) {
+        byte datum = state->SGBState.Buffer[i + 2];
+        axis = (datum & 0x80) >> 7;
+        byte paletteId = (datum & 0x60) >> 5;
+        byte lineNumber = datum & 0x1F;
+
+        if (axis == Horizontal) {
+            byte y = lineNumber;
+            for (byte x = 0; x < HORIZONTAL_TILES; x++) {
+                state->SGBState.TilePalettes[y * HORIZONTAL_TILES + x] = paletteId;
+            }
+        } else {
+            byte x = lineNumber;
+            for (byte y = 0; y < VERTICAL_TILES; y++) {
+                state->SGBState.TilePalettes[y * HORIZONTAL_TILES + x] = paletteId;
+            }
+        }
+    }
 }
 
 /**
@@ -205,6 +362,15 @@ void executeSgbCommand(PlayerState* state) {
     switch(state->SGBState.CurrentCommand) {
         case SGBSetPalette01:
             pal01(state);
+            break;
+        case SGBSetPalette23:
+            pal23(state);
+            break;
+        case SGBSetPalette03:
+            pal03(state);
+            break;
+        case SGBSetPalette12:
+            pal12(state);
             break;
         case SGBRequestMultiplayer:
             mlt_req(state);
@@ -218,10 +384,22 @@ void executeSgbCommand(PlayerState* state) {
         case SGBSetPalettePriority:
             pal_pri(state);
             break;
-        case SGBTransferOverlay:
-            pct_trn(state);
+        //case SGBTransferOverlay:
+        //  pct_trn(state);
+        //    break;
+        case SGBDividePalettes:
+            attr_div(state);
             break;
-        default: logAndPause("SGB Command: %02x", state->SGBState.CurrentCommand); break;
+        case SGBTransferPacketToSgb:
+            data_snd(state);
+            break;
+        case SGBApplyPaletteToTiles:
+            attr_chr(state);
+            break;
+        case SGBApplyPaletteToLines:
+            attr_lin(state);
+            break;
+        default: ;logAndPause("SGB Command: %02x", state->SGBState.CurrentCommand); break;
     }
 }
 
@@ -231,7 +409,13 @@ void executeSgbCommand(PlayerState* state) {
  * @private
  */
 void pushBit(SuperGameboyState* state) {
+    // Super Gameboy transfers 1 bit at a time, controlled by the  two 'out' bits in the
+    // Joypad In/Out register.
+    // Packetes are 16 bytes long + 1 final "stop" bit.
 
+    // The first byte contains the command and the number of packets to expect.
+
+    // If we have received a packets, don't accept a new command or packet until we've received the stop bit.
     if (state->AwaitingStopBit) {
         if (state->PendingBit == 0) {
             state->AwaitingStopBit = false;
@@ -240,17 +424,19 @@ void pushBit(SuperGameboyState* state) {
         return;
     }
 
+    // Add the bit to a single byte buffer.
     state->BitBuffer |= (state->PendingBit << (state->BitPointer));
     state->HasPendingBit = 0;
     state->BitPointer++;
 
+    // If the single byte buffer is full, add it to the buffer and increment.
     if (state->BitPointer == 8) {
         // If it's the first packet, set us up.
         if (state->BytePointer == 0 && state->PacketPointer == 0) {
             state->CurrentCommand = (state->BitBuffer & 0xF8) >> 3;
             state->NumberOfPackets = state->BitBuffer & 0x07;
             state->Buffer = calloc(state->NumberOfPackets, sizeof(byte) * SGB_PACKET_LENGTH);
-            state->HasData = true;
+            state->HasBuffer = true;
         }
 
         state->Buffer[SGB_PACKET_LENGTH * state->PacketPointer + state->BytePointer] = state->BitBuffer;
@@ -258,6 +444,8 @@ void pushBit(SuperGameboyState* state) {
         state->BitBuffer = 0;
         state->BitPointer = 0;
 
+        // The ByteBuffer also fill up to a full packet.  Increment to the next Packet,
+        // But we don't accept the next data until we've received the stop bit.
         if (state->BytePointer >= SGB_PACKET_LENGTH) {
             state->AwaitingStopBit = true;
             state->PacketPointer++;
@@ -283,9 +471,9 @@ void resetSGBTransfer(SuperGameboyState* state) {
     state->PendingBit = 0;
     state->HasPendingBit = 0;
     state->JoypadRequestResolved = false;
-    if (state->HasData) {
+    if (state->HasBuffer) {
         free(state->Buffer);
-        state->HasData = false;
+        state->HasBuffer = false;
     }
 }
 
@@ -294,6 +482,7 @@ void resetSGBTransfer(SuperGameboyState* state) {
  * @param state state to reset.
  */
 void resetSGBState(SuperGameboyState* state) {
+    // TODO Get rid of HasBuffer & HasRamData, we can just set to 0 and check that.
     resetSGBTransfer(state);
     for (byte i = 0; i < 4; i++) {
         for (byte j = 0; j < 4; j++) {
@@ -305,7 +494,12 @@ void resetSGBState(SuperGameboyState* state) {
     state->PlayersMode = 0;
     state->CurrentController = 0;
     state->SnesRamBlockCount = 0;
-    state->RamBlocks = 0;
+    if (state->HasRamData) {
+        free(state->RamBlocks);
+        state->RamBlocks = 0;
+        state->HasRamData = false;
+    }
+
 }
 
 
@@ -374,22 +568,25 @@ void processSGBData(PlayerState* state) {
 }
 
 /**
- *
+ * Applies Supergameboy colourisation to the pixels in the buffer.
  * @param stateCurrent Super Gameboy data state.
  * @param pixelBuffer Greyscale Gameboy pixel buffer
  * @out pixels Pixels having gone through sgb transformations.
  */
 void generateSGBPixels(const SuperGameboyState* state, const natural* pixelBuffer, uInt* pixels) {
-    // TODO
     if (state->HasPriority) {
         for (natural y = 0; y < GB_LCD_HEIGHT; y++) {
             for (natural x = 0; x < GB_LCD_WIDTH; x++) {
                 natural index = x + y * GB_LCD_WIDTH;
-                // TODO
-                pixels[index] = massageColour(state->Palettes[0][pixelBuffer[index]]);
+
+                natural tile = (x / 8) + (y / 8 * HORIZONTAL_TILES);
+                natural colour = state->Palettes[state->TilePalettes[tile]][pixelBuffer[index]];
+
+                pixels[index] = massageColour(colour);
             }
         }
     } else {
+        // If priority not set, use greyscale.
         for (natural y = 0; y < GB_LCD_HEIGHT; y++) {
             for (natural x = 0; x < GB_LCD_WIDTH; x++) {
                 natural index = x + y * GB_LCD_WIDTH;

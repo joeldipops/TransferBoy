@@ -2,6 +2,7 @@
 #define SUPER_GAMEBOY_INCLUDED
 
 #include "state.h"
+#include "sgbDefs.h"
 
 /**
  * Puts SuperGameboy data back to their initial state.
