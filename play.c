@@ -156,12 +156,12 @@ void renderPixels(
     rdp_attach_display(frame);
     rdp_enable_primitive_fill();
 
+
     switch(paletteType) {
-        // TODO - Code here may help:
-        // https://github.com/visualboyadvance-m/visualboyadvance-m/blob/master/src/gb/gbSGB.cpp
         case SuperGameboyPalette:
             ;
             uInt* pixels = calloc(GB_LCD_HEIGHT * GB_LCD_WIDTH, sizeof(uInt));
+
             if (sgbState->IsWindowFrozen) {
                 ; // Leave display as is / frozen
             } else {

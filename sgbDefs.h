@@ -72,14 +72,13 @@ typedef struct {
     bool IsTransferring;
     SuperGameboyCommand CurrentCommand;
     Palette Palettes[4];
-    byte* Buffer;
     byte SnesRamBlockCount;
-    SnesRamBlock* RamBlocks;
     GbSprite SpriteData[256];
     SgbTile OverlayData[1024];
     SgbPalette OverlayPalettes[3];
-
     byte TilePalettes[360]; // 20 x 18 tiles.
+    SnesRamBlock* RamBlocks;
+    byte* Buffer;
 } SuperGameboyState;
 
 #endif

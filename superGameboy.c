@@ -327,6 +327,7 @@ void attr_div(PlayerState* state) {
 
 /**
  * Sets palettes to vertical or horizontal lines of tiles.
+ * @param state Program state including supergameboy request data.
  */
 void attr_lin(PlayerState* state) {
     byte lineCount = state->SGBState.Buffer[1];
@@ -354,13 +355,13 @@ void attr_lin(PlayerState* state) {
 }
 
 /**
- *
+ * Sets palettes for retangular areas of the screen.  Can set for tiles inside, outside and on the border of the specified rectangle.
+ * @param state Program state including supergameboy request data.
  * @return Error code
  ** 0  - Success
  ** -1 - Invalid number of blocks.
  */
 sByte attr_blk(PlayerState* state) {
-    logAndPause("Attr the block");
     byte blockCount = state->SGBState.Buffer[1] & 0x1F;
 
     if (blockCount > 0x12) {
@@ -369,6 +370,7 @@ sByte attr_blk(PlayerState* state) {
 
     byte max = blockCount * 6 + 2;
     for (byte i = 2; i < max; i += 6) {
+        // bits 0,1,2 of byte 1 are flags for what to replace.
         bool replaceInside = (state->SGBState.Buffer[i] & 0x01);
         bool replaceLine = (state->SGBState.Buffer[i] & 0x02) >> 1;
         bool replaceOutside = (state->SGBState.Buffer[i] & 0x04) >> 2;
@@ -377,10 +379,12 @@ sByte attr_blk(PlayerState* state) {
             continue;
         }
 
+        // Pull the palette ids from byte 2
         byte outsidePalette = (state->SGBState.Buffer[i+1] & 0x30) >> 4;
         byte linePalette = (state->SGBState.Buffer[i+1] & 0x0C) >> 2;
         byte insidePalette = state->SGBState.Buffer[i+1] & 0x03;
 
+        // And the corners of the rectangle from these 4 bytes.
         byte x1 = state->SGBState.Buffer[i+2] & 0x1F;
         byte y1 = state->SGBState.Buffer[i+3] & 0x1F;
         byte x2 = state->SGBState.Buffer[i+4] & 0x1F;
@@ -554,6 +558,11 @@ void resetSGBState(SuperGameboyState* state) {
             state->Palettes[i][j] = 0;
         }
     }
+
+    for (natural i = 0; i < 360; i++) {
+       state->TilePalettes[i] = 0;
+    }
+
     state->IsWindowFrozen = false;
     state->HasPriority = false;
     state->PlayersMode = 0;
