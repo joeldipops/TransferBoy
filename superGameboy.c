@@ -354,6 +354,68 @@ void attr_lin(PlayerState* state) {
 }
 
 /**
+ *
+ * @return Error code
+ ** 0  - Success
+ ** -1 - Invalid number of blocks.
+ */
+sByte attr_blk(PlayerState* state) {
+    logAndPause("Attr the block");
+    byte blockCount = state->SGBState.Buffer[1] & 0x1F;
+
+    if (blockCount > 0x12) {
+        return -1;
+    }
+
+    byte max = blockCount * 6 + 2;
+    for (byte i = 2; i < max; i += 6) {
+        bool replaceInside = (state->SGBState.Buffer[i] & 0x01);
+        bool replaceLine = (state->SGBState.Buffer[i] & 0x02) >> 1;
+        bool replaceOutside = (state->SGBState.Buffer[i] & 0x04) >> 2;
+
+        if (!(replaceOutside || replaceLine || replaceInside)) {
+            continue;
+        }
+
+        byte outsidePalette = (state->SGBState.Buffer[i+1] & 0x30) >> 4;
+        byte linePalette = (state->SGBState.Buffer[i+1] & 0x0C) >> 2;
+        byte insidePalette = state->SGBState.Buffer[i+1] & 0x03;
+
+        byte x1 = state->SGBState.Buffer[i+2] & 0x1F;
+        byte y1 = state->SGBState.Buffer[i+3] & 0x1F;
+        byte x2 = state->SGBState.Buffer[i+4] & 0x1F;
+        byte y2 = state->SGBState.Buffer[i+5] & 0x1F;
+
+        for (byte y = 0; y < VERTICAL_TILES; y++) {
+            for (byte x = 0; x < HORIZONTAL_TILES; x++) {
+                if (
+                    replaceLine && (
+                        x == x1 ||
+                        x == x2 ||
+                        y == y1 ||
+                        y == y2
+                    )
+                ) {
+                    state->SGBState.TilePalettes[y * HORIZONTAL_TILES + x] = linePalette;
+                } else if (
+                    replaceInside && (
+                        x > x1 &&
+                        x < x2 &&
+                        y > y1 &&
+                        y > y2
+                    )
+                ) {
+                    state->SGBState.TilePalettes[y * HORIZONTAL_TILES + x] = insidePalette;
+                } else if (replaceOutside) {
+                    state->SGBState.TilePalettes[y * HORIZONTAL_TILES + x] = outsidePalette;
+                }
+            }
+        }
+    }
+    return 0;
+}
+
+/**
  * Executes one of sgb commands, if implemented.
  * @param state The state of the player to execute the command against.
  * @private
@@ -399,7 +461,10 @@ void executeSgbCommand(PlayerState* state) {
         case SGBApplyPaletteToLines:
             attr_lin(state);
             break;
-        default: ;logAndPause("SGB Command: %02x", state->SGBState.CurrentCommand); break;
+        case SGBApplyPaletteToBlocks:
+            attr_blk(state);
+            break;
+        default: break;//logAndPause("SGB Command: %02x", state->SGBState.CurrentCommand); break;
     }
 }
 

@@ -6,7 +6,7 @@ typedef enum {
     SGBSetPalette23 = 0x01, // PAL23
     SGBSetPalette03 = 0x02, // PAL03
     SGBSetPalette12 = 0x03, // PAL12
-    SGBApplyPaletteBlock = 0x04, // ATTR_BLK
+    SGBApplyPaletteToBlocks = 0x04, // ATTR_BLK
     SGBApplyPaletteToLines = 0x05, //ATTR_LIN
     SGBDividePalettes = 0x06, // ATTR_DIV
     SGBApplyPaletteToTiles = 0x07, //ATTR_CHR,
