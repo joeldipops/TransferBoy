@@ -45,6 +45,8 @@ int disable_gbRam(const GameboyCart gbcart);
  * Determines essential data about the catridge in the given TPak - size, Memory Bank configuration, title etc and loads into memory.
  * @param controllerNumber The controller with a transfer pak.
  * @out outputCart Pointer to cartridge to populate with data.
+ * @return Error code
+ ** 0  - Success
  */
 sByte initialiseCart(const char controllerNumber, GameboyCart* outputCart);
 
