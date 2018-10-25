@@ -21,7 +21,6 @@
 #define BANKSIZE 16*1024
 
 typedef struct {
-    char errorCode;
     char mapper;
     char ram;
     char battery;
@@ -47,7 +46,7 @@ int disable_gbRam(const GameboyCart gbcart);
  * @param controllerNumber The controller with a transfer pak.
  * @out outputCart Pointer to cartridge to populate with data.
  */
-void initialiseCart(const char controllerNumber, GameboyCart* outputCart);
+sByte initialiseCart(const char controllerNumber, GameboyCart* outputCart);
 
 /**
  * Loads the ROM of the given cartridge in to memory.

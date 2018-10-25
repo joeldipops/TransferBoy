@@ -23,9 +23,10 @@ bool initPak(const byte controllerNumber) {
     if(!_pakInit[controllerNumber]) {
         _pakInit[controllerNumber] = malloc(sizeof(GameboyCart));
 
-        initialiseCart(controllerNumber, _pakInit[controllerNumber]);
-        if (_pakInit[controllerNumber]->errorCode) {
-            logAndPause("gbpak init failed with code %d", _pakInit[controllerNumber]->errorCode);
+        sByte result = initialiseCart(controllerNumber, _pakInit[controllerNumber]);
+
+        if (result) {
+            logAndPause("gbpak init failed with code %d", result);
             return false;
         }
     }
@@ -115,19 +116,47 @@ void persistSave(const byte controllerNumber, const ByteArray* save) {
 }
 
 /**
+ * Reads the meta data of a cartridge from the transfer pak
+ * @param controllerNumber The controller to read from.
+ * @out result The meta data goes here.
+ * @return Error code
+ * 0  - Success
+ * -1 - Problem initialising the cartridge.
+ */
+sByte getCartridgeMetaData(const byte controllerNumber, CartridgeData* result) {
+    if (!initPak(controllerNumber)) {
+        return -1;
+    }
+
+    strcpy(result->Title, _pakInit[controllerNumber]->title);
+    result->IsGbcCart = _pakInit[controllerNumber]->gbc;
+    result->IsSuperGbCart = _pakInit[controllerNumber]->sgb;
+
+    return 0;
+}
+
+/**
  * Reads a cartridge from a transfer pak and sets up a cartridge data object.
  * @param controllerNumber The controller to read from.
- * @param output cartridge data goes here.
+ * @out result cartridge data goes here.
+ * @return Error code
+ * 0  - Success
+ * -1 - Problem initialising the cartridge.
+ * -2 - Problem loading the ROM.
+ * -3 - Problem loading the save file.
  */
-void readCartridge(const byte controllerNumber, CartridgeData* output) {
-    initPak(controllerNumber);
-    strcpy(output->Title, _pakInit[controllerNumber]->title);
-    output->IsGbcCart = _pakInit[controllerNumber]->gbc;
-    output->IsSuperGbCart = _pakInit[controllerNumber]->sgb;
-    loadRom(controllerNumber, &output->RomData);
-    loadSave(controllerNumber, &output->SaveData);
+sByte readCartridge(const byte controllerNumber, CartridgeData* result) {
+    sByte resultCode = getCartridgeMetaData(controllerNumber, result);
+    if (resultCode) {
+        return resultCode;
+    }
+
+    loadRom(controllerNumber, &result->RomData);
+    loadSave(controllerNumber, &result->SaveData);
 
     freeTPakIo();
+
+    return 0;
 }
 
 /**

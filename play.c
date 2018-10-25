@@ -156,7 +156,6 @@ void renderPixels(
     rdp_attach_display(frame);
     rdp_enable_primitive_fill();
 
-
     switch(paletteType) {
         case SuperGameboyPalette:
             ;
@@ -215,7 +214,8 @@ void renderPixels(
     }
 
     string text = "";
-    sprintf(text, "Frames: %lld Memory: %lld", frameCount, getCurrentMemory());
+    sprintf(text, "Frames: %lld Memory: N/A", frameCount);
+    //sprintf(text, "Frames: %lld Memory: %lld", frameCount, getCurrentMemory());
     graphics_set_color(GLOBAL_TEXT_COLOUR, 0x0);
     graphics_draw_text(frame, left, top, text);
 
@@ -272,7 +272,7 @@ void playLogic(RootState* state, const byte playerNumber) {
 
     emu_step(emulatorState);
 
-    if (state->Players[playerNumber].Cartridge.IsSuperGbCart) {
+    if (IsSGBEnabled && state->Players[playerNumber].Cartridge.IsSuperGbCart) {
         processSGBData(&state->Players[playerNumber]);
         performSGBFunctions(&state->Players[playerNumber]);
     }
@@ -347,7 +347,7 @@ void playDraw(const RootState* state, const byte playerNumber) {
     PaletteType palette = GameboyPalette;
     if (state->Players[playerNumber].Cartridge.IsGbcCart) {
         palette = GameboyColorPalette;
-    } else if (state->Players[playerNumber].Cartridge.IsSuperGbCart) {
+    } else if (IsSGBEnabled && state->Players[playerNumber].Cartridge.IsSuperGbCart) {
         palette = SuperGameboyPalette;
     }
 

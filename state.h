@@ -26,7 +26,7 @@ typedef struct {
     bool AudioEnabled;
     GbState EmulationState;
     SuperGameboyState SGBState;
-    sByte LastErrorCode;
+    sByte InitState;
     sByte OptionsCursorRow;
     sByte MenuCursorRow;
     sByte MenuCursorColumn;

@@ -490,58 +490,42 @@ int _get_gbRomAddr(const char controllerNumber, unsigned long addr, uint8_t *rda
  * @param controllerNumber The controller with a transfer pak.
  * @out outputCart Pointer to cartridge to populate with data.
  */
-void initialiseCart(const char controllerNumber, GameboyCart* outputCart) {
+sByte initialiseCart(const char controllerNumber, GameboyCart* outputCart) {
     GameboyCart cart = {};
     memset(data, 0, 32);
 
     if(_set_gbPower(controllerNumber, 0) != 0) {
-        cart.errorCode = -1;
-        memcpy(outputCart, &cart, sizeof(GameboyCart));
-        return;
+        return -1;
     }
     // get power status 0=off 1=on
     if (_get_gbPower(controllerNumber) != 0) {
-        cart.errorCode = -2;
-        memcpy(outputCart, &cart, sizeof(GameboyCart));
-        return;
+        return -2;
     }
     //set power off 0=off 1=on
     if(_set_gbPower(controllerNumber, 1) != 0) {
-        cart.errorCode = -3;
-        memcpy(outputCart, &cart, sizeof(GameboyCart));
-        return;
+        return -3;
     }
     //get power status 0=off 1=on
     if(_get_gbPower(controllerNumber) != 1) {
-        cart.errorCode = -4;
-        memcpy(outputCart, &cart, sizeof(GameboyCart));
-        return;
+        return -4;
     }
     //double check is inserted is on?
     //get access mode
     if(_get_gbAccessState(controllerNumber) == -1) {
-        cart.errorCode = -5;
-        memcpy(outputCart, &cart, sizeof(GameboyCart));
-        return;
+        return -5;
     }
     //set mode 1
     if(_set_gbAccessState(controllerNumber, 1) != 0) {
-        cart.errorCode = -6;
-        memcpy(outputCart, &cart, sizeof(GameboyCart));
-        return;
+        return -6;
     }
     //set bank 0
     if(_set_gbRomBank(controllerNumber, &cart, 0x00) != 0) {
-        cart.errorCode = -7;
-        memcpy(outputCart, &cart, sizeof(GameboyCart));
-        return;
+        return -7;
     }
     //get rdata
     if(_get_gbRomAddr(controllerNumber, 0xC120, data) != 0) {
         //header offset title 0134
-        cart.errorCode = -8;
-        memcpy(outputCart, &cart, sizeof(GameboyCart));
-        return;
+        return -8;
     }
 
     //current bank
@@ -556,11 +540,9 @@ void initialiseCart(const char controllerNumber, GameboyCart* outputCart) {
     }
 
     //get rdata
-    if(_get_gbRomAddr(controllerNumber, 0xC140, data) !=0 ) {
+    if(_get_gbRomAddr(controllerNumber, 0xC140, data) != 0 ) {
         //header offset cart type
-        cart.errorCode = -9;
-        memcpy(outputCart, &cart, sizeof(GameboyCart));
-        return;
+        return -9;
     }
 
     // 0x80 Cartridge works on both GBCs and older gameboys
@@ -602,7 +584,6 @@ void initialiseCart(const char controllerNumber, GameboyCart* outputCart) {
 
     //set romsize;
     cart.romsize = cart.rombanks * BANKSIZE;
-
 
     //0x147 cartridge type
     switch (data[7]) {
@@ -802,7 +783,7 @@ void initialiseCart(const char controllerNumber, GameboyCart* outputCart) {
             //experimental end
         default:
             memcpy(outputCart, &cart, sizeof(GameboyCart));
-            return;
+            return -10;
     }
 
     // 00h - None
@@ -844,6 +825,7 @@ void initialiseCart(const char controllerNumber, GameboyCart* outputCart) {
     }
 
     memcpy(outputCart, &cart, sizeof(GameboyCart));
+    return 0;
 }
 
 /**

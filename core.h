@@ -31,6 +31,7 @@ typedef struct {
 typedef enum { Quit, Init, Play, Menu, Options } Mode;
 typedef enum { BorderNone } Border;
 
+const bool IsSGBEnabled = false;
 uLong frameCount = 0;
 
 /**
