@@ -10,7 +10,7 @@
 typedef enum {
     InitStart = 0,
     InitNoTpak, InitNoCartridge, InitRequiresExpansionPak,
-    InitPending, InitReady, InitLoading, InitLoaded
+    InitPending, InitReady, InitLoading, InitLoaded, InitError
 } InitState;
 
 static natural retries = 0;
@@ -35,7 +35,12 @@ void initLogic(RootState* state, const byte playerNumber) {
     }
 
     if (state->Players[playerNumber].InitState == InitPending) {
-        getCartridgeMetaData(playerNumber, &state->Players[playerNumber].Cartridge);
+        sByte result = getCartridgeMetaData(playerNumber, &state->Players[playerNumber].Cartridge);
+
+        if (result) {
+            state->ErrorCode = result;
+            state->Players[playerNumber].InitState = InitError;
+        }
 
         bool releasedButtons[N64_BUTTON_COUNT] = {};
         getPressedButtons(&state->KeysReleased, playerNumber, releasedButtons);
@@ -47,6 +52,7 @@ void initLogic(RootState* state, const byte playerNumber) {
         } else if (releasedButtons[B]) {
             state->RequiresControllerRead = true;
             state->Players[playerNumber].InitState = InitStart;
+            freeTPakIo();
             retries++;
         }
     } else if (state->Players[playerNumber].InitState == InitReady) {
@@ -114,6 +120,9 @@ void initDraw(const RootState* state, const byte playerNumber) {
                 strcpy(text, tmp);
             }
 
+            break;
+        case InitError:
+            sprintf(text, "Loading Cartridge failed with error: %d", state->ErrorCode);
             break;
         default:
             strcpy(text, "Unknown Error!!!");

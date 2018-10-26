@@ -109,7 +109,28 @@ void mapGbInputs(const char controllerNumber, const GbButton* buttonMap, const N
 }
 
 /**
- * Renders a gameboy pixel as an RDP rectangle.
+ * Renders a gameboy pixel with a preset colour as an RDP rectangle.
+ * @param offsetX How far from the left x=0 should be.
+ * @param offsetY How far from the top y=0 should be.
+ * @param x The horizontal position of the pixel.
+ * @param y The vertical position of the pixel.
+ * @param size The size in actual pixels of the gamebou pixel.
+ */
+void renderPixel(
+    const natural offsetX,
+    const natural offsetY,
+    const natural x,
+    const natural y,
+    const float size
+) {
+    natural tx = x * size + offsetX;
+    natural ty = y * size + offsetY;
+
+    rdp_draw_filled_rectangle(tx, ty, tx + size, ty + size);
+}
+
+/**
+ * Renders a gameboy pixel with a unique colour as an RDP rectangle.
  * @param offsetX How far from the left x=0 should be.
  * @param offsetY How far from the top y=0 should be.
  * @param x The horizontal position of the pixel.
@@ -117,7 +138,7 @@ void mapGbInputs(const char controllerNumber, const GbButton* buttonMap, const N
  * @param size The size in actual pixels of the gamebou pixel.
  * @param colour The 16 bit colour of the pixel.
  */
-void renderPixel(
+void renderColouredPixel(
     const natural offsetX,
     const natural offsetY,
     const natural x,
@@ -126,10 +147,7 @@ void renderPixel(
     const uInt colour
 ) {
     rdp_set_primitive_color(colour);
-    natural tx = x * size + offsetX;
-    natural ty = y * size + offsetY;
-
-    rdp_draw_filled_rectangle(tx, ty, tx + size, ty + size);
+    renderPixel(offsetX, offsetY, x, y, size);
 }
 
 /**
@@ -170,7 +188,7 @@ void renderPixels(
                     for (natural x = 0; x < GB_LCD_WIDTH; x++) {
                         natural index = x + y * GB_LCD_WIDTH;
 
-                        renderPixel(left, top, x, y, avgPixelSize, pixels[index]);
+                        renderColouredPixel(left, top, x, y, avgPixelSize, pixels[index]);
                     }
                 }
             }
@@ -178,13 +196,19 @@ void renderPixels(
             pixels = null;
             break;
         case GameboyPalette:
-            // The colors stored in pixbuf already went through the palette
-            // translation, but are still 2 bit monochrome.
-            for (natural y = 0; y < GB_LCD_HEIGHT; y++) {
-                for (natural x = 0; x < GB_LCD_WIDTH; x++) {
-                    natural index = x + y * GB_LCD_WIDTH;
+            for (byte i = 0; i < 4; i++) {
+                rdp_set_primitive_color(MONOCHROME_PALETTE[i]);
 
-                    renderPixel(left, top, x, y, avgPixelSize, MONOCHROME_PALETTE[pixelBuffer[index]]);
+                // The colors stored in pixbuf already went through the palette
+                // translation, but are still 2 bit monochrome.
+                for (natural y = 0; y < GB_LCD_HEIGHT; y++) {
+                    for (natural x = 0; x < GB_LCD_WIDTH; x++) {
+                        natural index = x + y * GB_LCD_WIDTH;
+                        if (pixelBuffer[index] == i) {
+
+                            renderPixel(left, top, x, y, avgPixelSize);
+                        }
+                    }
                 }
             }
             break;
@@ -193,16 +217,16 @@ void renderPixels(
                 for (natural x = 0; x < GB_LCD_WIDTH; x++) {
                     natural index = x + y * GB_LCD_WIDTH;
 
-                    renderPixel(left, top, x, y, avgPixelSize, massageColour(pixelBuffer[index]));
+                    renderColouredPixel(left, top, x, y, avgPixelSize, massageColour(pixelBuffer[index]));
                 }
             }
             break;
         default:
             // black screen, oh well
+            rdp_set_primitive_color(0x00010001);
             for (natural y = 0; y < GB_LCD_HEIGHT; y++) {
                 for (natural x = 0; x < GB_LCD_WIDTH; x++) {
 
-                    rdp_set_primitive_color(0x00010001);
                     natural tx = x * avgPixelSize + left;
                     natural ty = y * avgPixelSize + top;
 

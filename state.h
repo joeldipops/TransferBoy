@@ -34,6 +34,7 @@ typedef struct {
 } PlayerState;
 
 typedef struct {
+    sByte ErrorCode;
     byte pad0:2;
     bool RequiresRepaint:1;
     bool RequiresControllerRead:1;

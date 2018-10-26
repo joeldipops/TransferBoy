@@ -18,20 +18,17 @@ bool isExpansionPakInserted() {
  * Prepares a cartridge to be read from the transfer pak.
  * @param controllerNumber Which Transfer pak to read from.
  * @private
- */
-bool initPak(const byte controllerNumber) {
+ * @return error code
+ ** 0  - Success
+  */
+sByte initPak(const byte controllerNumber) {
+    sByte result = 0;
     if(!_pakInit[controllerNumber]) {
         _pakInit[controllerNumber] = malloc(sizeof(GameboyCart));
 
-        sByte result = initialiseCart(controllerNumber, _pakInit[controllerNumber]);
-
-        if (result) {
-            logAndPause("gbpak init failed with code %d", result);
-            return false;
-        }
+        result = initialiseCart(controllerNumber, _pakInit[controllerNumber]);
     }
-
-    return true;
+    return result;
 }
 
 /**
@@ -41,7 +38,7 @@ bool initPak(const byte controllerNumber) {
  * @return true if we have enough memory sitting around to load the ROM, false otherwise.
  */
 bool isCartridgeSizeOk(const byte controllerNumber) {
-    bool result = initPak(controllerNumber);
+    bool result = (initPak(controllerNumber) == 0);
     if (!result) {
         return result;
     }
@@ -55,7 +52,7 @@ bool isCartridgeSizeOk(const byte controllerNumber) {
  * @return true if there is a readable cartridge inserted.
  */
 bool isCartridgeInserted(const byte controllerNumber) {
-    return initPak(controllerNumber);
+    return initPak(controllerNumber) == 0;
 }
 
 /**
@@ -79,7 +76,7 @@ bool isTPakInserted(const byte controllerNumber) {
  * @out output Once loaded, ROM will be at this address.
  */
 void loadRom(const byte controllerNumber, ByteArray* output) {
-    if (initPak(controllerNumber)) {
+    if (initPak(controllerNumber) == 0) {
         char error = importRom(controllerNumber, _pakInit[controllerNumber], output);
         if (error) {
             logAndPause("rom load failed with code %d", error);
@@ -93,7 +90,7 @@ void loadRom(const byte controllerNumber, ByteArray* output) {
  * @param save Save data to write.
  */
 void persistSave(const byte controllerNumber, const ByteArray* save) {
-    if (initPak(controllerNumber) && _pakInit[controllerNumber]->ramsize) {
+    if (initPak(controllerNumber) == 0 && _pakInit[controllerNumber]->ramsize) {
         char error = exportSave(controllerNumber, _pakInit[controllerNumber], save);
         if (error) {
             logAndPause("save failed with code %d", error);
@@ -107,7 +104,7 @@ void persistSave(const byte controllerNumber, const ByteArray* save) {
  * @out output Once loaded, save data will be at this address.
  */
  void loadSave(const byte controllerNumber, ByteArray* output) {
-    if (initPak(controllerNumber) && _pakInit[controllerNumber]->ramsize) {
+    if (initPak(controllerNumber) == 0 && _pakInit[controllerNumber]->ramsize) {
         char error = importSave(controllerNumber, _pakInit[controllerNumber], output);
         if (error) {
             logAndPause("save load failed with code %d", error);
@@ -118,19 +115,19 @@ void persistSave(const byte controllerNumber, const ByteArray* save) {
 /**
  * Reads the meta data of a cartridge from the transfer pak
  * @param controllerNumber The controller to read from.
- * @out result The meta data goes here.
+ * @out output The meta data goes here.
  * @return Error code
  * 0  - Success
- * -1 - Problem initialising the cartridge.
- */
-sByte getCartridgeMetaData(const byte controllerNumber, CartridgeData* result) {
-    if (!initPak(controllerNumber)) {
-        return -1;
+  */
+sByte getCartridgeMetaData(const byte controllerNumber, CartridgeData* output) {
+    sByte result = initPak(controllerNumber);
+    if (result) {
+        return result;
     }
 
-    strcpy(result->Title, _pakInit[controllerNumber]->title);
-    result->IsGbcCart = _pakInit[controllerNumber]->gbc;
-    result->IsSuperGbCart = _pakInit[controllerNumber]->sgb;
+    strcpy(output->Title, _pakInit[controllerNumber]->title);
+    output->IsGbcCart = _pakInit[controllerNumber]->gbc;
+    output->IsSuperGbCart = _pakInit[controllerNumber]->sgb;
 
     return 0;
 }
