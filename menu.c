@@ -210,6 +210,7 @@ void executeMenuItem(RootState* state, const byte playerNumber, const byte x, co
             break;
         case Reset:
             resetGame(state, playerNumber);
+            flushScreen(state);
             break;
         case Change:
             changeGame(state, playerNumber);

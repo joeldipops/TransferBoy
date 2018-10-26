@@ -368,17 +368,6 @@ void playDraw(const RootState* state, const byte playerNumber) {
     Rectangle screen = {};
     getScreenPosition(state, playerNumber, &screen);
 
-    prepareRdpForSprite(state->Frame);
-    loadSprite(getSpriteSheet(), GB_BG_TEXTURE, MIRROR_ENABLED);
-    rdp_draw_textured_rectangle(
-        0,
-        screen.Left,
-        screen.Top,
-        screen.Left + screen.Width,
-        screen.Top + screen.Height
-    );
-
-
     PaletteType palette = GameboyPalette;
     if (state->Players[playerNumber].Cartridge.IsGbcCart) {
         palette = GameboyColorPalette;

@@ -166,6 +166,7 @@ void optionsLogic(RootState* state, byte playerNumber) {
     } else if (pressedButtons[Start] || pressedButtons[playerState->SystemMenuButton]) {
         confirmOptions(playerState);
         resumePlayFromOptions(playerState);
+        flushScreen(state);
     } else {
         repaintRequired = false;
         ctrlReadRequired = false;

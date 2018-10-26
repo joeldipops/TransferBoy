@@ -114,6 +114,7 @@ void mainLoop(RootState* state) {
 
         if (state->RequiresRepaint) {
             state->RequiresRepaint = false;
+
             while(!(state->Frame = display_lock()));
 
             for (byte i = 0; i < state->PlayerCount; i++) {
@@ -134,7 +135,6 @@ void mainLoop(RootState* state) {
                 }
             }
             display_show(state->Frame);
-            state->Frame = 0;
         }
     }
 }
