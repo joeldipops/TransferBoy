@@ -13,6 +13,8 @@ typedef enum {
     InitPending, InitReady, InitLoading, InitLoaded
 } InitState;
 
+static natural retries = 0;
+
 /**
  * Waits for a Start Button pressed, then goes and loads a rom.
  * @param state program state.
@@ -45,6 +47,7 @@ void initLogic(RootState* state, const byte playerNumber) {
         } else if (releasedButtons[B]) {
             state->RequiresControllerRead = true;
             state->Players[playerNumber].InitState = InitStart;
+            retries++;
         }
     } else if (state->Players[playerNumber].InitState == InitReady) {
         // Show the loading message.
@@ -105,6 +108,12 @@ void initDraw(const RootState* state, const byte playerNumber) {
             string tmp = "";
             getText(TextLoadCartridgePrompt, tmp);
             sprintf(text, tmp, &state->Players[playerNumber].Cartridge.Title);
+
+            if (retries) {
+                sprintf(tmp, "%s Retries: %d", text, retries);
+                strcpy(text, tmp);
+            }
+
             break;
         default:
             strcpy(text, "Unknown Error!!!");

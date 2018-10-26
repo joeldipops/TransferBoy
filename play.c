@@ -214,8 +214,7 @@ void renderPixels(
     }
 
     string text = "";
-    sprintf(text, "Frames: %lld Memory: N/A", frameCount);
-    //sprintf(text, "Frames: %lld Memory: %lld", frameCount, getCurrentMemory());
+    sprintf(text, "Frames: %lld Memory: %lld", frameCount, getCurrentMemory());
     graphics_set_color(GLOBAL_TEXT_COLOUR, 0x0);
     graphics_draw_text(frame, left, top, text);
 
@@ -302,6 +301,7 @@ void playLogic(RootState* state, const byte playerNumber) {
         if (releasedButtons[state->Players[playerNumber].SystemMenuButton]) {
             state->Players[playerNumber].ActiveMode = Menu;
             state->RequiresRepaint = true;
+            return;
         }
 
         emu_process_inputs(emulatorState, input);
@@ -326,6 +326,7 @@ void playLogic(RootState* state, const byte playerNumber) {
         }
 
         state->RequiresRepaint = true;
+        state->RequiresControllerRead = true;
     }
 }
 

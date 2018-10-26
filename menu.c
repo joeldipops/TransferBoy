@@ -206,6 +206,7 @@ void executeMenuItem(RootState* state, const byte playerNumber, const byte x, co
     switch((items)position) {
         case Resume:
             resumePlay(&state->Players[playerNumber]);
+            flushScreen(state);
             break;
         case Reset:
             resetGame(state, playerNumber);
