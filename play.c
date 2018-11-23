@@ -239,12 +239,8 @@ void renderPixels(
     }
 
     string text = "";
-    //sprintf(text, "Frames: %lld Memory: %lld", iterations, getCurrentMemory());
     sprintf(text, "Frames: %lld Memory: %lld", frameCount, getCurrentMemory());
 
-    if (frameCount == 19) {
-        LOGGING_ON = true;
-    }
     graphics_set_color(GLOBAL_TEXT_COLOUR, 0x0);
     graphics_draw_text(frame, left, top, text);
 
