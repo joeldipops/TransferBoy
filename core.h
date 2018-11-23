@@ -15,7 +15,6 @@ typedef int32_t sInt;
 typedef uint32_t uInt;
 typedef uint64_t uLong;
 
-
 typedef char string[128];
 
 natural GLOBAL_BACKGROUND_COLOUR = 0;

@@ -2,6 +2,8 @@
 #define LOGGER_INCLUDED
 #include "include/gbc_bundle.h"
 
+bool LOGGING_ON = false;
+
 /**
  * Displays the current state of the Gameboy emulator registers.
  * @param s The emulator state structure.
