@@ -94,9 +94,10 @@ void printSegment(const byte* start) {
  * @param ... Parameters for the format string.
  */
 void logAndPause(const string text, ...) {
-    if (!LOGGING_ON) {
+    if (!IsLoggingEnabled) {
         return;
     }
+
     va_list args;
     va_start(args, text);
 
