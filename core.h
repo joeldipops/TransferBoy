@@ -32,6 +32,7 @@ typedef enum { Quit, Init, Play, Menu, Options } Mode;
 typedef enum { BorderNone } Border;
 
 const bool IsSGBEnabled = false;
+const bool IsLoggingEnabled = false;
 uLong frameCount = 0;
 
 /**
