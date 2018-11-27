@@ -234,4 +234,9 @@ begin:
 
     ; SIXTEEN BIT LOADS
     
-    
+    ld BC, $1234
+    ld DE, $5678
+    ld HL, $9abc
+    ld SP, $def0
+    ; A=3 B=$12 C=$34 D=$56 E=$78 H=$9a L=$bc SP=$f0 
+      
