@@ -237,6 +237,40 @@ begin:
     ld BC, $1234
     ld DE, $5678
     ld HL, $9abc
+
+    ; SP might be restricted to certain addresses?    
     ld SP, $def0
-    ; A=3 B=$12 C=$34 D=$56 E=$78 H=$9a L=$bc SP=$f0 
+    ; A=3 B=$12 C=$34 D=$56 E=$78 H=$9a L=$bc SP=$def0 
+    
+    ld SP, HL
+    ; A=3 B=$12 C=$34 D=$56 E=$78 H=$9a L=$bc SP=$9abc 
+    
+    ; First time we have to worry about flags.
+    ; H is set when 4 lowest bits of SP + 4 lowest bits of n are greater than 15
+    ; C is set when when 8 lowest bits of SP + all of n are greater than 255
+
+    ld HL, 0
+    ld HL, SP + 5
+    ; A=3 B=$12 C=$34 D=$56 E=$78 H=$9a L=$c1 SP=$9abc Z=0 N=0 H=1 C=0
+    
+    ld SP, $0000
+    ld HL, SP + 15
+    ; A=3 B=$12 C=$34 D=$56 E=$78 H=$00 L=$0F SP=$0000 Z=0 N=0 H=0 C=0    
+    
+    ld HL, SP + 16
+    ; A=3 B=$12 C=$34 D=$56 E=$78 H=$00 L=$10 SP=$0000 Z=0 N=0 H=1 C=0        
+    ld HL, SP + 240
+    ; A=3 B=$12 C=$34 D=$56 E=$78 H=$00 L=$F0 SP=$0000 Z=0 N=0 H=0 C=0
+    ld HL, SP + 255
+    ; A=3 B=$12 C=$34 D=$56 E=$78 H=$00 L=$FF SP=$0000 Z=0 N=0 H=1 C=0
+    ld SP, 1
+    ld HL, SP + 255
+    ; A=3 B=$12 C=$34 D=$56 E=$78 H=$01 L=$00 SP=$0000 Z=0 N=0 H=1 C=1
+    
+    ld SP, 240
+    ld HL, SP + 247
+    ; A=3 B=$12 C=$34 D=$56 E=$78 H=$01 L=$E7 SP=$0000 Z=0 N=0 H=0 C=1
+    
+    
+    
       
