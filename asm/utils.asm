@@ -1,4 +1,27 @@
+IF !DEF(UTILS_INCLUDED)
+UTILS_INCLUDED SET 1
+
 jp utilsEnd
+
+;;;
+; Pushes all registers on the stack so interrupts won't mess with them
+;;;
+pushAll:
+    push AF
+    push BC
+    push DE
+    push HL
+    ret
+
+;;;
+; Pops all registers back off the stack when an interrupt is finished.
+;;;
+popAll:
+    pop HL
+    pop DE
+    pop BC
+    pop AF
+    ret
 
 ;;;
 ; Resets all four flags to 0
@@ -17,6 +40,31 @@ resetFlags:
     scf
     ccf
 
+    ret
+
+;;;
+; Multiplies two numbers
+; @param A the first number
+; @param B the second number
+; @return A the multiplied result.
+;;;
+multiply:
+    push BC
+    push DE
+    ld C, A
+
+.do                         ; do
+    add A, C                ;     result += A
+    dec B                   ;     b--
+    ld D, A
+    ld A, B
+    cp 0                    ; until (b == 0)
+    ; really hope these are guaranteed not to mess with Z
+    ld B, A
+    ld A, D   
+    jp NZ, .do              
+    pop DE
+    pop BC
     ret
 
 ;;;
@@ -42,3 +90,4 @@ terminate:
     halt
 
 utilsEnd:
+ENDC

@@ -24,7 +24,4 @@ INCLUDE "loads.asm"
 ; MATHS
 INCLUDE "adds.asm"
 INCLUDE "adcs.asm"
-
-
-
-    ;
+INCLUDE "subs.asm"
