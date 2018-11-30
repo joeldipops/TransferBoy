@@ -41,6 +41,46 @@ resetFlags:
     ccf
 
     ret
+    
+;;;
+; Divides two numbers (integer division)
+; @param A the numerator
+; @param B the denominator
+; @return A the whole number ratio
+;;;
+divide:
+    push BC
+    push DE
+    
+    ld C, A                   ; if (B == 0)
+    ld A, B
+    or A
+    jp Z, .divideByZero       ;     return 0
+    
+    ld A, C                   ; result = -1
+    ld C, -1
+.do                           ; do
+    sub B                     ;     A -= B
+    inc C                     ;     result++    
+    cp B                      ; until (
+    jp NZ, .do                ;     A == 0
+    ld D, A
+    ld A, B
+    sub D                     ;     || A < 0
+    ld A, D
+    jp C, .do                 ; )
+    
+    ld A, C                   ; return result
+    pop DE
+    pop BC
+    ret
+
+.divideByZero
+    ld A, 0
+    pop DE
+    pop BC
+    ret
+
 
 ;;;
 ; Multiplies two numbers
