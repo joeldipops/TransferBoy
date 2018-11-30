@@ -50,7 +50,6 @@ resetFlags:
 ;;;
 divide:
     push BC
-    push DE
     
     ld C, A                   ; if (B == 0)
     ld A, B
@@ -62,22 +61,18 @@ divide:
 .do                           ; do
     sub B                     ;     A -= B
     inc C                     ;     result++    
-    cp B                      ; until (
-    jp NZ, .do                ;     A == 0
-    ld D, A
-    ld A, B
-    sub D                     ;     || A < 0
-    ld A, D
-    jp C, .do                 ; )
-    
+    cp 0                      ; until (
+    jp Z, .until              ;     A == 0
+    jp C, .until              ;     || A < 0
+    jp .do                    ; )
+.until
+                
     ld A, C                   ; return result
-    pop DE
     pop BC
     ret
 
 .divideByZero
     ld A, 0
-    pop DE
     pop BC
     ret
 
