@@ -12,4 +12,5 @@ transferboy64.bin
 test.sh
 *.o
 *~
+*.gb
 
