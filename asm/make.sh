@@ -1,8 +1,9 @@
-make
-cp opTest.gb ../filesystem/
-rm opTest.o opTest.gb opTest.sym
+rgbasm -o opTest.o opTest.asm
+rgblink -o opTest.gb -n opTest.sym opTest.o
+rgbfix -v -p 0 opTest.gb
+mv opTest.gb ../filesystem/
+
 rgbasm -o routineTest.o routineTest.asm
 rgblink -o routineTest.gb -n routineTest.sym routineTest.o
-rgbfix -v -p 0 ./routineTest.gb
-cp routineTest.gb ../filesystem/
-rm routineTest.o routineTest.gb routineTest.sym
+rgbfix -v -p 0 routineTest.gb
+mv routineTest.gb ../filesystem/
