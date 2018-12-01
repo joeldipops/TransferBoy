@@ -13,4 +13,4 @@ test.sh
 *.o
 *~
 *.gb
-
+*.sym

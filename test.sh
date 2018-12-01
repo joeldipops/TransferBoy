@@ -1,26 +1,20 @@
+# make gb roms
+cd ./asm
+./make.sh
+cd ../
+
 ./mksprite.sh
+
+# make transfer boy rom
 make clean
 make all
 
-# Test ROM
-~/Projects/GamePlayer64/cen64-master/cen64 -multithread -controller num=1,tpak_rom=/home/joel/Projects/GamePlayer64/TransferBoy64/asm/test.gb -eep4k /home/joel/Projects/GamePlayer64/ROMs/log.eeprom ~/Projects/GamePlayer64/ROMs/pifdata.bin  ~/Projects/GamePlayer64/TransferBoy64/transferboy64.z64
 
-# Tetris
-#~/Projects/GamePlayer64/cen64-master/cen64 -multithread -controller num=1,tpak_rom=/home/joel/Projects/GamePlayer64/ROMs/Tetris.gb,tpak_save=/home/joel/Projects/GamePlayer64/ROMs/dkrom.gbsav -eep4k /home/joel/Projects/GamePlayer64/ROMs/log.eeprom ~/Projects/GamePlayer64/ROMs/pifdata.bin  ~/Projects/GamePlayer64/TransferBoy64/transferboy64.z64
+# Op codes test ROM
+cen64 -multithread -controller num=1,tpak_rom=~/TransferBoy/filesystem/opTest.gb -eep4k ~/TransferBoy/log.eeprom ~/n64devutils/cen64/data/pifdata.bin  ~/TransferBoy/transferboy64.z64
 
-# DK Land
-#~/Projects/GamePlayer64/cen64-master/cen64 -multithread -controller num=1,tpak_rom=/home/joel/Projects/GamePlayer64/ROMs/dkrom.gb,tpak_save=/home/joel/Projects/GamePlayer64/ROMs/dkrom.gbsav -eep4k /home/joel/Projects/GamePlayer64/ROMs/log.eeprom ~/Projects/GamePlayer64/ROMs/pifdata.bin  ~/Projects/GamePlayer64/TransferBoy64/transferboy64.z64
+# utils routines test rom
+#cen64 -multithread -controller num=1,tpak_rom=~/TransferBoy/filesystem/routineTest.gb -eep4k ~/TransferBoy/log.eeprom ~/n64devutils/cen64/data/pifdata.bin  ~/TransferBoy/transferboy64.z64
 
-#SGB Dev
-#~/Projects/GamePlayer64/cen64-master/cen64 -multithread -controller num=1,tpak_rom=/home/joel/Projects/GamePlayer64/ROMs/sgbdev.gb -eep4k /home/joel/Projects/GamePlayer64/ROMs/log.eeprom ~/Projects/GamePlayer64/ROMs/pifdata.bin  ~/Projects/GamePlayer64/TransferBoy64/transferboy64.z64
-
-#Pokemon Gold
-#~/Projects/GamePlayer64/cen64-master/cen64 -multithread -controller num=1,tpak_rom=/home/joel/Projects/GamePlayer64/ROMs/pkmnrom.gbc,tpak_save=/home/joel/Projects/GamePlayer64/ROMs/pkmnrom.gbcsav -eep4k /home/joel/Projects/GamePlayer64/ROMs/log.eeprom ~/Projects/GamePlayer64/ROMs/pifdata.bin  ~/Projects/GamePlayer64/TransferBoy64/transferboy64.z64
-
-#~/Projects/GamePlayer64/cen64-master/cen64 -multithread -controller num=1,tpak_rom=/home/joel/Projects/GamePlayer64/ROMs/yellow.gbc,tpak_save=/home/joel/Projects/GamePlayer64/ROMs/yellow.gbcsav -eep4k /home/joel/Projects/GamePlayer64/ROMs/log.eeprom ~/Projects/GamePlayer64/ROMs/pifdata.bin  ~/Projects/GamePlayer64/TransferBoy64/transferboy64.z64
-
-#Zelda
-#~/Projects/GamePlayer64/cen64-master/cen64 -multithread -controller num=1,tpak_rom=/home/joel/Projects/GamePlayer64/ROMs/Zelda.gbc -eep4k /home/joel/Projects/GamePlayer64/ROMs/log.eeprom ~/Projects/GamePlayer64/ROMs/pifdata.bin  ~/Projects/GamePlayer64/TransferBoy64/transferboy64.z64
-
-# DK Arcade
-#~/Projects/GamePlayer64/cen64-master/cen64 -multithread -controller num=1,tpak_rom=/home/joel/Projects/GamePlayer64/ROMs/dkarcade.gb -eep4k /home/joel/Projects/GamePlayer64/ROMs/log.eeprom ~/Projects/GamePlayer64/ROMs/pifdata.bin  ~/Projects/GamePlayer64/TransferBoy64/transferboy64.z64
+# 2-Player Test ROM
+#cen64 -multithread -controller num=1,tpak_rom=~/TransferBoy/filesystem/2player.gb -eep4k ~/TransferBoy/log.eeprom ~/n64devutils/cen64/data/pifdata.bin  ~/TransferBoy/transferboy64.z64

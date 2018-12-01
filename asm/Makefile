@@ -4,7 +4,7 @@ FIX = rgbfix
 
 #Change the following lines
 ROM_NAME = test
-SOURCES = ./test.asm
+SOURCES = ./opTest.asm
 FIX_FLAGS = -v -p 0
 
 
