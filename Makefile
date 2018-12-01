@@ -1,4 +1,4 @@
-N64_INST = /home/joel/Projects/GamePlayer64/N64_INST
+N64_INST = /usr/local
 #SOURCES = $(wildcard /home/joel/Projects/GamePlayer64/TransferBoy64/*.c)
 ROOTDIR = $(N64_INST)
 GCCN64PREFIX = $(ROOTDIR)/bin/mips64-elf-

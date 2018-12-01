@@ -22,6 +22,7 @@ natural GLOBAL_BACKGROUND_COLOUR = 0;
 natural GLOBAL_TEXT_COLOUR = 0;
 natural SELECTED_MENU_ITEM_COLOUR = 0;
 natural SELECTED_OPTIONS_ITEM_COLOUR = 0;
+byte AUDIO_SAMPLE_RATE = 0;
 
 typedef struct {
     uLong Size;
