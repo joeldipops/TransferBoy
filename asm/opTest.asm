@@ -18,6 +18,8 @@ SECTION "start", ROM0[$0100]
     ROM_HEADER ROM_NOMBC, ROM_SIZE_32KBYTE, RAM_SIZE_0KBYTE
 
 main:
+    INCLUDE "utils.asm" 
+    call initialise
 ; LOADS
 INCLUDE "loads.asm"
 
@@ -25,3 +27,5 @@ INCLUDE "loads.asm"
 INCLUDE "adds.asm"
 INCLUDE "adcs.asm"
 INCLUDE "subs.asm"
+    
+    halt

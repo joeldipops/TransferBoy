@@ -1,4 +1,6 @@
 ; 8 BIT LOADS
+    ; AF=0000 BC=0000 DE=0000 HL=0000 ZNHC=0000 
+    
     ld A, 1
     ld B, 2
     ld C, 3
@@ -7,7 +9,7 @@
     ld H, 6
     ld L, 7
     ; Obvious, but for completeness sake
-    ; A=1 B=2 C=3 D=4 E=5 H=6 L=7
+    ; AF=0100 BC=0203 DE=0405 HL=0607 ZNHC=0000 
 
     ld A, A ; it's in the spec soo...
     ld A, B
@@ -16,18 +18,17 @@
     ld A, E
     ld A, H
     ld A, L
-    ; Obvious, but for completeness sake
-    ; A=7 B=2 C=3 D=4 E=5 H=6 L=7
+    ; AF=0700 BC=0203 DE=0405 HL=0607 ZNHC=0000
 
     ; put some value into HL = 7
-    ld H, $C1
+    ld H, $c1
     ld L, $23
 
     ld A, 8
     ld [HL], A
     ld A, 0
     ld A, [HL]
-    ; A=8 B=2 C=3 D=4 E=5 H=c1 L=23
+    ; AF=0800 BC=0203 DE=0405 HL=c123 ZNHC=0000
 
     ld B, A
     ld B, B
@@ -36,10 +37,10 @@
     ld B, E
     ld B, H
     ld B, L
-    ; A=8 B=23 C=3 D=4 E=5 H=c1 L=23
+    ; AF=0800 BC=2303 DE=0405 HL=c123 ZNHC=0000
 
     ld B, [HL]
-    ; A=8 B=8 C=3 D=4 E=5 H=c1 L=23
+    ; AF=0800 BC=0803 DE=0405 HL=c123 ZNHC=0000
 
     ld C, A
     ld C, B
@@ -48,10 +49,10 @@
     ld C, E
     ld C, H
     ld C, L
-    ; A=8 B=8 C=23 D=4 E=5 H=c1 L=23
+    ; AF=0800 BC=0823 DE=0405 HL=c123 ZNHC=0000
 
     ld C, [HL]
-    ; A=8 B=8 C=8 D=4 E=5 H=c1 L=23
+    ; AF=0800 BC=0808 DE=0405 HL=c123 ZNHC=0000
 
     ld D, A
     ld D, B
@@ -60,10 +61,10 @@
     ld D, E
     ld D, H
     ld D, L
-    ; A=8 B=8 C=8 D=23 E=5 H=c1 L=23
+    ; AF=0800 BC=0808 DE=2305 HL=c123 ZNHC=0000    
 
     ld D, [HL]
-    ; A=8 B=8 C=8 D=8 E=5 H=c1 L=23
+    ; AF=0800 BC=0808 DE=0805 HL=c123 ZNHC=0000    
 
     ld E, A
     ld E, B
@@ -72,10 +73,10 @@
     ld E, E
     ld E, H
     ld E, L
-    ; A=8 B=8 C=8 D=8 E=23 H=c1 L=23
+    ; AF=0800 BC=0808 DE=0823 HL=c123 ZNHC=0000    
 
     ld E, [HL]
-    ; A=8 B=8 C=8 D=8 E=8 H=c1 L=23
+    ; AF=0800 BC=0808 DE=0808 HL=c123 ZNHC=0000    
 
     ld H, A
     ld H, B
@@ -84,7 +85,7 @@
     ld H, E
     ld H, H
     ld H, L
-    ; A=8 B=8 C=8 D=8 E=8 H=23 L=23
+    ; AF=0800 BC=0808 DE=0808 HL=2323 ZNHC=0000
 
     ld L, 0
     ld L, A
@@ -94,21 +95,21 @@
     ld L, E
     ld L, H
     ld L, L
-    ; A=8 B=8 C=8 D=8 E=8 H=23 L=23
+    ; AF=0800 BC=0808 DE=0808 HL=2323 ZNHC=0000
 
     ld H, $c1
     ld L, $24
     ld A, 4
     ld [HL], A
     ld H, [HL]
-    ; A=4 B=8 C=8 D=8 E=8 H=c1 L=24
+    ; AF=0400 BC=0808 DE=0808 HL=0424 ZNHC=0000
 
     ld H, $c1
     ld L, $25
     ld A, 5
     ld [HL], A
     ld L, [HL]
-    ; A=5  B=8 C=8 D=8 E=8 H=c1 L=25
+    ; AF=0500 BC=0808 DE=0808 HL=c105 ZNHC=0000
 
     ld A, 1
     ld B, 2
@@ -131,11 +132,11 @@
     ld A, [HL]
     ld [HL], L
     ld A, [HL]
-    ; A=$10  B=2 C=3 D=4 E=5 H=c0 L=$10
+    ; AF=1000 BC=0203 DE=0405 HL=c010 ZNHC=0000
 
     ld [HL], 3
     ld A, [HL]
-    ; A=3  B=2 C=3 D=4 E=5 H=c0 L=$10
+    ; AF=0300 BC=0203 DE=0405 HL=c010 ZNHC=0000
 
     ld B, $c0
     ld C, $00
@@ -143,7 +144,7 @@
     ld [BC], A
     ld A, 0
     ld A, [BC]
-    ; A=6  B=c0 C=0 D=4 E=5 H=c0 L=$10
+    ; AF=0600 BC=c000 DE=0405 HL=c010 ZNHC=0000
 
     ld D, $c2
     ld E, $b2
@@ -151,27 +152,26 @@
     ld [DE], A
     ld A, 0
     ld A, [DE]
-    ; A=5 B=$c0 C=0 D=$c2 E=$b2 H=$c0 L=$10
+    ; AF=0500 BC=c000 DE=c2b2 HL=c010 ZNHC=0000
 
     ld A, 9
     ; GameBoy CPU Manual says this is a "Two Byte immediate value, LS byte first", but I'm pretty sure it's LS byte second...
     ld [$c33c], A
     ld A, 0
     ld A, [$c33c]
-    ; A=9 B=2 C=3 D=4 E=5 H=6 L=7
+    ; AF=0900 BC=c000 DE=c2b2 HL=c010 ZNHC=0000
 
     ; ld A, [C] is an alias to ld A, [$FF00+C].  Use both to check the right memory location is being written to.
     ld C, $12
-    ld A, 13
+    ld A, $d
     ld [C], A
-
+    ld A, 0
     ld A, [$ff00+C]
     ld B, A
 
     ld A, 0
     ld A, [C]
-    ; A=13 B=$0d C=$12 D=4 E=5 H=6 L=7
-
+    ; AF=0d00 BC=0d12 DE=c2b2 HL=c010 ZNHC=0000
     ld H, $c2
     ld L, $b2
 
@@ -186,12 +186,13 @@
     ; LOAD and DECREMENT/INCREMENT
 
     ldd A, [HL]
-    ; A=1 B=$0d C=$12 D=4 E=5 H=$c2 L=$b1
+    ; AF=0100 BC=0d12 DE=c2b2 HL=c2b1 ZNHC=0000  
 
     ldd [HL], A
     ld A, 0
     ld A, [$c2b1]
-    ; A=1 B=$0d C=$12 D=4 E=5 H=$c2 L=$b0
+    ; AF=0000 BC=0d12 DE=c2b2 HL=c2b0 ZNHC=0000  
+  
 
     ldi A, [HL]
     ; A=0 B=$0d C=$12 D=4 E=5 H=$c2 L=$b1
@@ -203,13 +204,13 @@
     ; A=3 B=$0d C=$12 D=4 E=5 H=$c2 L=$b2
 
     ; LOAD $ff00 + n
-    ldh [3], A
+    ldh [$26], A
     ld A, 0
-    ldh A, [3]
+    ldh A, [$26]
     ; A=3 B=$0d C=$12 D=4 E=5 H=$c2 L=$b2
 
     ld A, 0
-    ld A, [$ff03]
+    ld A, [$cc03]
     ; A=3 B=$0d C=$12 D=4 E=5 H=$c2 L=$b2
 
     ; SIXTEEN BIT LOADS
@@ -252,10 +253,10 @@
     ; A=3 B=$12 C=$34 D=$56 E=$78 H=$01 L=$E7 SP=$0000 Z=0 N=0 H=0 C=1
 
     ld SP, $fedc
-    ld [$ff0a], SP
-    ld A, [$ff0a]
+    ld [$cc0a], SP
+    ld A, [$cc0a]
     ld C, A
-    ld A, [$ff0b]
+    ld A, [$cc0b]
     ld B, A
     ; B and C /may/ be swapped, but I'm pretty sure this is right.
     ; A=$fe B=$fe C=$dc D=$56 E=$78 H=$01 L=$E7 SP=$fedc Z=0 N=0 H=0 C=1

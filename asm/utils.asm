@@ -4,6 +4,21 @@ UTILS_INCLUDED SET 1
 jp utilsEnd
 
 ;;;
+; Sets all CPU registers, including flags, to 0
+;;;
+initialise:
+    ld A, 0
+    ld B, 0
+    ld C, 0
+    ld D, 0
+    ld E, 0
+    ld H, 0
+    ld L, 0
+    call resetFlags
+    ret
+
+
+;;;
 ; Pushes all registers on the stack so interrupts won't mess with them
 ;;;
 pushAll:
