@@ -572,8 +572,6 @@ INCLUDE "utils.asm"
     adc 255
     ; A=$fe L=$ff Z=0 N=0 H=1 C=1
 
-
-
     scf
     ld A, 0
     adc 0
@@ -600,4 +598,4 @@ INCLUDE "utils.asm"
     scf
     ld A, 255
     adc 255
-    ; A=$ff L=$ff Z=0 N=0 H=1 C=1
+    ; AF=$ff03 BC=$ffff DE=$ffff HL=$c010 ZNHC=0011

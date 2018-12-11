@@ -21,11 +21,12 @@ main:
     INCLUDE "utils.asm" 
     call initialise
 ; LOADS
-INCLUDE "loads.asm"
+    INCLUDE "loads.asm"
 
 ; MATHS
-INCLUDE "adds.asm"
-INCLUDE "adcs.asm"
-INCLUDE "subs.asm"
-    
+    INCLUDE "adds.asm"
+    INCLUDE "adcs.asm"
+    INCLUDE "subs.asm"
+    INCLUDE "sbcs.asm"
+    INCLUDE "booleans.asm"
     halt
