@@ -29,4 +29,5 @@ main:
     INCLUDE "subs.asm"
     INCLUDE "sbcs.asm"
     INCLUDE "booleans.asm"
+    INCLUDE "incdec.asm"
     halt

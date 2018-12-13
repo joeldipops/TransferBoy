@@ -69,7 +69,7 @@ divide:
     ld C, A                   ; if (B == 0)
     ld A, B
     or A
-    jp Z, .divideByZero       ;     return 0
+    jr Z, .divideByZero       ;     return 0
     
     ld A, C                   ; result = -1
     ld C, -1
@@ -77,9 +77,9 @@ divide:
     sub B                     ;     A -= B
     inc C                     ;     result++    
     cp 0                      ; until (
-    jp Z, .until              ;     A == 0
-    jp C, .until              ;     || A < 0
-    jp .do                    ; )
+    jr Z, .until              ;     A == 0
+    jr C, .until              ;     || A < 0
+    jr .do                    ; )
 .until
                 
     ld A, C                   ; return result
@@ -112,7 +112,7 @@ multiply:
     ; really hope these are guaranteed not to mess with Z
     ld B, A
     ld A, D   
-    jp NZ, .do              
+    jr NZ, .do              
     pop DE
     pop BC
     ret
@@ -134,10 +134,7 @@ testForError:
 ; locks up the program (permanently I think)
 ;;;
 terminate:
-    ; halt waits for an interrupt, but interrupts are disabled muahahaaa
-    di
-    nop
-    halt
+    jp $fffe
 
 utilsEnd:
 ENDC
