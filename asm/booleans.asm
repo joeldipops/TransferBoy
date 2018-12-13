@@ -265,3 +265,147 @@
     ; AF=0001 BC=0f01 DE=0100 HL=cbde ZNHC=0000
 
 ; XORs
+
+    ld A, 1
+    sub B
+    ; ^ set some flags
+    ld A, 0
+    xor A
+    ; AF=0001 BC=0f01 DE=0100 HL=cbde ZNHC=1000
+
+    ld A, %11101001
+    xor A
+    ; AF=0001 BC=0f01 DE=0100 HL=cbde ZNHC=1000
+
+    ld A, $ff
+    xor A
+    ; AF=0001 BC=0f01 DE=0100 HL=cbde ZNHC=1000
+
+; xor n
+    sub B
+    ld A, 0
+    xor $9e
+    ; AF=9e00 BC=0f01 DE=0100 HL=cbde ZNHC=0000
+
+    ld A, $fe
+    xor $9e ; %10011110
+    ; AF=6000 BC=0f01 DE=0100 HL=cbde ZNHC=0000
+
+    ld A, $fe
+    xor $fe
+    ; AF=0001 BC=0f01 DE=0100 HL=cbde ZNHC=1000
+
+; xor B
+    sub B
+    ld A, 0
+    ld B, $9e
+    xor B
+    ; AF=9e00 BC=9e01 DE=0100 HL=cbde ZNHC=0000
+
+    ld A, $fe
+    xor B ; %10011110
+    ; AF=6000 BC=0f01 DE=0100 HL=cbde ZNHC=0000
+
+    ld A, $fe
+    ld B, $fe
+    xor B
+    ; AF=0001 BC=fe01 DE=0100 HL=cbde ZNHC=1000
+
+; xor C
+    sub B
+    ld A, 0
+    ld C, $9e
+    xor C
+    ; AF=9e00 BC=fe9e DE=0100 HL=cbde ZNHC=0000
+
+    ld A, $fe
+    xor C ; %10011110
+    ; AF=6000 BC=fe9e DE=0100 HL=cbde ZNHC=0000
+
+    ld A, $fe
+    ld C, $fe
+    xor C
+    ; AF=0001 BC=fefe DE=0100 HL=cbde ZNHC=1000    
+
+; xor D
+    sub B
+    ld A, 0
+    ld D, $9e
+    xor D
+    ; AF=9e00 BC=fefe DE=9e00 HL=cbde ZNHC=0000
+
+    ld A, $fe
+    xor D ; %10011110
+    ; AF=6000 BC=fefe DE=9e00 HL=cbde ZNHC=0000
+
+    ld A, $fe
+    ld D, $fe
+    xor D
+    ; AF=0001 BC=fefe DE=fe00 HL=cbde ZNHC=1000    
+
+; xor E
+    sub B
+    ld A, 0
+    ld E, $9e
+    xor E
+    ; AF=9e00 BC=fefe DE=fe9e HL=cbde ZNHC=0000
+
+    ld A, $fe
+    xor E ; %10011110
+    ; AF=6000 BC=fefe DE=fe9e HL=cbde ZNHC=0000
+
+    ld A, $fe
+    ld E, $fe
+    xor E
+    ; AF=0001 BC=fefe DE=fefe HL=cbde ZNHC=1000
+
+; xor H
+    sub B
+    ld A, 0
+    ld H, $9e
+    xor H
+    ; AF=9e00 BC=fefe DE=fe9e HL=9ede ZNHC=0000
+
+    ld A, $fe
+    xor H ; %10011110
+    ; AF=6000 BC=fefe DE=fe9e HL=9ede ZNHC=0000
+
+    ld A, $fe
+    ld H, $fe
+    xor H
+    ; AF=0001 BC=fefe DE=fefe HL=fede ZNHC=1000
+
+; xor L
+    sub B
+    ld A, 0
+    ld L, $9e
+    xor L
+    ; AF=9e00 BC=fefe DE=fe9e HL=9e9e ZNHC=0000
+
+    ld A, $fe
+    xor L ; %10011110
+    ; AF=6000 BC=fefe DE=fe9e HL=9e9e ZNHC=0000
+
+    ld A, $fe
+    ld L, $fe
+    xor L
+    ; AF=0001 BC=fefe DE=fefe HL=fefe ZNHC=1000  
+
+; xor [HL]
+    ld H, $ce
+    ld L, $eb
+
+    sub B
+    ld A, 0
+    ld [HL], $9e
+    xor [HL]
+    ; AF=9e00 BC=fefe DE=fe9e HL=ceeb ZNHC=0000
+
+    ld A, $fe
+    xor [HL] ; %10011110
+    ; AF=6000 BC=fefe DE=fe9e HL=ceeb ZNHC=0000
+
+    ld A, $fe
+    ld [HL], $fe
+    xor [HL]
+    ; AF=0001 BC=fefe DE=fefe HL=ceeb ZNHC=1000   
