@@ -3,6 +3,10 @@ UTILS_INCLUDED SET 1
 
 jp utilsEnd
 
+clearCarry: MACRO
+    or A
+ENDM
+
 ;;;
 ; Sets all CPU registers, including flags, to 0
 ;;;
