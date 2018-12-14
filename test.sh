@@ -1,8 +1,3 @@
-# make gb roms
-cd ./asm
-./make.sh
-cd ../
-
 ./mksprite.sh
 
 # make transfer boy rom
