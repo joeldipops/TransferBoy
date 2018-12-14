@@ -17,13 +17,13 @@ INCLUDE "utils.asm"
     adc A
     ; A=$E0 Z=0, N=0, H=0, C=1
     
-    call resetFlags
+    resetFlags
     
     ld A, 255
     adc A
     ; A=$FE Z=0, N=0, H=1, C=1
     
-    call resetFlags
+    resetFlags
 
 ; adc A, A (C=1)
     scf 
@@ -52,7 +52,7 @@ INCLUDE "utils.asm"
     ; A=$FF Z=0, N=0, H=1, C=1
     
 ; adc A, B (C=0)
-    call resetFlags
+    resetFlags
 
     ; Let's test each adc op code for all flags.
     ld A, 0
@@ -72,21 +72,21 @@ INCLUDE "utils.asm"
     adc B
     ; A=$70 B=$80 Z=0 N=0 H=0 C=1
 
-    call resetFlags
+    resetFlags
 
     ld A, 1
     ld B, 255
     adc B
     ; A=0 B=$ff Z=1 N=0 H=1 C=1
 
-    call resetFlags
+    resetFlags
     
     ld A, 255
     adc B
     ; A=$fe B=$ff Z=0 N=0 H=1 C=1
 
 ;adc A, B (C=1)
-    call resetFlags
+    resetFlags
 
     scf 
     ld A, 0
@@ -123,7 +123,7 @@ INCLUDE "utils.asm"
 
 ; adc A, C 
 ; adc A, C (C=0)
-    call resetFlags
+    resetFlags
 
     ; Let's test each adc op code for all flags.
     ld A, 0
@@ -143,21 +143,21 @@ INCLUDE "utils.asm"
     adc C
     ; A=$70 C=$80 Z=0 N=0 H=0 C=1
 
-    call resetFlags
+    resetFlags
 
     ld A, 1
     ld C, 255
     adc C
     ; A=0 C=$ff Z=1 N=0 H=1 C=1
 
-    call resetFlags
+    resetFlags
     
     ld A, 255
     adc C
     ; A=$fe C=$ff Z=0 N=0 H=1 C=1
 
 ;adc A, C (C=1)
-    call resetFlags
+    resetFlags
 
     scf 
     ld A, 0
@@ -194,7 +194,7 @@ INCLUDE "utils.asm"
 
 ; adc A, D
 ; adc A, D (C=0)
-    call resetFlags
+    resetFlags
 
     ; Let's test each adc op code for all flags.
     ld A, 0
@@ -214,21 +214,21 @@ INCLUDE "utils.asm"
     adc D
     ; A=$70 D=$80 Z=0 N=0 H=0 C=1
 
-    call resetFlags
+    resetFlags
 
     ld A, 1
     ld D, 255
     adc D
     ; A=0 D=$ff Z=1 N=0 H=1 C=1
 
-    call resetFlags
+    resetFlags
     
     ld A, 255
     adc D
     ; A=$fe D=$ff Z=0 N=0 H=1 C=1
 
 ;adc A, D (C=1)
-    call resetFlags
+    resetFlags
 
     scf 
     ld A, 0
@@ -265,7 +265,7 @@ INCLUDE "utils.asm"
 
 ; adc A, E
 ; adc A, E (C=0)
-    call resetFlags
+    resetFlags
 
     ; Let's test each adc op code for all flags.
     ld A, 0
@@ -285,21 +285,21 @@ INCLUDE "utils.asm"
     adc E
     ; A=$70 E=$80 Z=0 N=0 H=0 C=1
 
-    call resetFlags
+    resetFlags
 
     ld A, 1
     ld E, 255
     adc E
     ; A=0 E=$ff Z=1 N=0 H=1 C=1
 
-    call resetFlags
+    resetFlags
     
     ld A, 255
     adc E
     ; A=$fe E=$ff Z=0 N=0 H=1 C=1
 
 ;adc A, E (C=1)
-    call resetFlags
+    resetFlags
 
     scf 
     ld A, 0
@@ -336,7 +336,7 @@ INCLUDE "utils.asm"
 
 ; adc A, H
 ; adc A, H (C=0)
-    call resetFlags
+    resetFlags
 
     ; Let's test each adc op code for all flags.
     ld A, 0
@@ -356,21 +356,21 @@ INCLUDE "utils.asm"
     adc H
     ; A=$70 H=$80 Z=0 N=0 H=0 C=1
 
-    call resetFlags
+    resetFlags
 
     ld A, 1
     ld H, 255
     adc H
     ; A=0 H=$ff Z=1 N=0 H=1 C=1
 
-    call resetFlags
+    resetFlags
     
     ld A, 255
     adc H
     ; A=$fe H=$ff Z=0 N=0 H=1 C=1
 
 ;adc A, H (C=1)
-    call resetFlags
+    resetFlags
 
     scf 
     ld A, 0
@@ -406,7 +406,7 @@ INCLUDE "utils.asm"
     ; A=$ff H=$ff Z=0 N=0 H=1 C=1
 
 ; adc A, L (C=0)
-    call resetFlags
+    resetFlags
 
     ; Let's test each adc op code for all flags.
     ld A, 0
@@ -426,21 +426,21 @@ INCLUDE "utils.asm"
     adc L
     ; A=$70 L=$80 Z=0 N=0 H=0 C=1
 
-    call resetFlags
+    resetFlags
 
     ld A, 1
     ld L, 255
     adc L
     ; A=0 L=$ff Z=1 N=0 H=1 C=1
 
-    call resetFlags
+    resetFlags
     
     ld A, 255
     adc L
     ; A=$fe L=$ff Z=0 N=0 H=1 C=1
 
 ;adc A, L (C=1)
-    call resetFlags
+    resetFlags
 
     scf 
     ld A, 0
@@ -496,20 +496,20 @@ INCLUDE "utils.asm"
     adc [HL]
     ; A=$70 Z=0 N=0 H=0 C=1
 
-    call resetFlags
+    resetFlags
 
     ld A, 1
     ld [HL], 255
     adc [HL]
     ; A=0 Z=1 N=0 H=1 C=1
 
-    call resetFlags
+    resetFlags
 
     ld A, 255
     adc [HL]
     ; A=$fe [HL]=$ff Z=0 N=0 H=1 C=1
 
-    call resetFlags
+    resetFlags
     
     ld H, $c0
     ld L, $10
@@ -548,7 +548,7 @@ INCLUDE "utils.asm"
     ; A=$ff [HL]=$ff Z=0 N=0 H=1 C=1
 
     ; adc literals
-    call resetFlags
+    resetFlags
 
     ld A, 0
     adc 0

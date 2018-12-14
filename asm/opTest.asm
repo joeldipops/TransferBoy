@@ -30,4 +30,5 @@ main:
     INCLUDE "sbcs.asm"
     INCLUDE "booleans.asm"
     INCLUDE "incdec.asm"
+    INCLUDE "16bit.asm"
     halt

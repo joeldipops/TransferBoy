@@ -3,6 +3,21 @@ UTILS_INCLUDED SET 1
 
 jp utilsEnd
 
+;;;
+; Resets all flags to 0
+;;;
+resetFlags: macro
+    push BC
+    ld B, A
+    ld A, 1
+    or A
+    ld A, B
+    pop BC    
+endm
+
+;;;
+; Sets carry flag to 0
+;;;
 clearCarry: MACRO
     or A
 ENDM
@@ -18,7 +33,7 @@ initialise:
     ld E, 0
     ld H, 0
     ld L, 0
-    call resetFlags
+    resetFlags
     ret
 
 
@@ -42,25 +57,6 @@ popAll:
     pop AF
     ret
 
-;;;
-; Resets all four flags to 0
-;;;
-resetFlags:
-    ; Compare 1 and 2 to reset the Z flag.
-    push BC
-    ld B, A
-    ld A, 1
-    cp 2
-    ld A, B
-    pop BC
-
-    ; In order to ensure the carry flag is reset, we need to set it and the complement it.
-    ; This operation also reset N and H
-    scf
-    ccf
-
-    ret
-    
 ;;;
 ; Divides two numbers (integer division)
 ; @param A the numerator
