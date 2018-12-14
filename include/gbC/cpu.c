@@ -14,11 +14,9 @@
 #include "cpu.h"
 #include "mmu.h"
 #include "hwdefs.h"
-#include "../../logger.h"
 
 #define cpu_error(fmt, ...) \
     do { \
-        logInfo("CPU Error: " fmt "\n", ##__VA_ARGS__); \
     } while (0)
 
 static const u8 flagmasks[] = { FLAG_Z, FLAG_Z, FLAG_C, FLAG_C };
@@ -265,11 +263,9 @@ void cpu_timers_step(struct gb_state *s) {
 #define FLAG(bitpos) ((op >> bitpos) & 3)
 
 static void cpu_do_cb_instruction(struct gb_state *s) {
-
-   u8 op = mmu_read(s, s->pc++);
+    u8 op = mmu_read(s, s->pc++);
 
     if (M(op, 0x00, 0xf8)) { /* RLC reg8 */
-
         u8 *reg = REG8(0);
         u8 val = reg ? *reg : mem(HL);
         u8 res = (val << 1) | (val >> 7);
@@ -279,8 +275,6 @@ static void cpu_do_cb_instruction(struct gb_state *s) {
         CF = val >> 7;
         if (reg) *reg = res; else mmu_write(s, HL, res);
     } else if (M(op, 0x08, 0xf8)) { /* RRC reg8 */
-
-
         u8 *reg = REG8(0);
         u8 val = reg ? *reg : mem(HL);
         u8 res = (val >> 1) | ((val & 1) << 7);
@@ -290,7 +284,6 @@ static void cpu_do_cb_instruction(struct gb_state *s) {
         CF = val & 1;
         if (reg) *reg = res; else mmu_write(s, HL, res);
     } else if (M(op, 0x10, 0xf8)) { /* RL reg8 */
-
         u8 *reg = REG8(0);
         u8 val = reg ? *reg : mem(HL);
         u8 res = (val << 1) | (CF ? 1 : 0);
@@ -300,7 +293,6 @@ static void cpu_do_cb_instruction(struct gb_state *s) {
         CF = val >> 7;
         if (reg) *reg = res; else mmu_write(s, HL, res);
     } else if (M(op, 0x18, 0xf8)) { /* RR reg8 */
-
         u8 *reg = REG8(0);
         u8 val = reg ? *reg : mem(HL);
         u8 res = (val >> 1) | (CF << 7);
@@ -310,7 +302,6 @@ static void cpu_do_cb_instruction(struct gb_state *s) {
         CF = val & 0x1;
         if (reg) *reg = res; else mmu_write(s, HL, res);
     } else if (M(op, 0x20, 0xf8)) { /* SLA reg8 */
-
         u8 *reg = REG8(0);
         u8 val = reg ? *reg : mem(HL);
         CF = val >> 7;
@@ -320,7 +311,6 @@ static void cpu_do_cb_instruction(struct gb_state *s) {
         HF = 0;
         if (reg) *reg = val; else mmu_write(s, HL, val);
     } else if (M(op, 0x28, 0xf8)) { /* SRA reg8 */
-
         u8 *reg = REG8(0);
         u8 val = reg ? *reg : mem(HL);
         CF = val & 0x1;
@@ -330,14 +320,12 @@ static void cpu_do_cb_instruction(struct gb_state *s) {
         HF = 0;
         if (reg) *reg = val; else mmu_write(s, HL, val);
     } else if (M(op, 0x30, 0xf8)) { /* SWAP reg8 */
-
         u8 *reg = REG8(0);
         u8 val = reg ? *reg : mem(HL);
         u8 res = ((val << 4) & 0xf0) | ((val >> 4) & 0xf);
         F = res == 0 ? FLAG_Z : 0;
         if (reg) *reg = res; else mmu_write(s, HL, res);
     } else if (M(op, 0x38, 0xf8)) { /* SRL reg8 */
-
         u8 *reg = REG8(0);
         u8 val = reg ? *reg : mem(HL);
         CF = val & 0x1;
@@ -347,7 +335,6 @@ static void cpu_do_cb_instruction(struct gb_state *s) {
         HF = 0;
         if (reg) *reg = val; else mmu_write(s, HL, val);
     } else if (M(op, 0x40, 0xc0)) { /* BIT bit, reg8 */
-
         u8 bit = (op >> 3) & 7;
         u8 *reg = REG8(0);
         u8 val = reg ? *reg : mem(HL);
@@ -355,14 +342,12 @@ static void cpu_do_cb_instruction(struct gb_state *s) {
         NF = 0;
         HF = 1;
     } else if (M(op, 0x80, 0xc0)) { /* RES bit, reg8 */
-
         u8 bit = (op >> 3) & 7;
         u8 *reg = REG8(0);
         u8 val = reg ? *reg : mem(HL);
         val = val & ~(1<<bit);
         if (reg) *reg = val; else mmu_write(s, HL, val);
     } else if (M(op, 0xc0, 0xc0)) { /* SET bit, reg8 */
-
         u8 bit = (op >> 3) & 7;
         u8 *reg = REG8(0);
         u8 val = reg ? *reg : mem(HL);
@@ -375,6 +360,368 @@ static void cpu_do_cb_instruction(struct gb_state *s) {
 }
 
 static void cpu_do_instruction(struct gb_state *s) {
+    u8 op = mmu_read(s, s->pc++);
+    if (M(op, 0x00, 0xff)) { /* NOP */
+    } else if (M(op, 0x01, 0xcf)) { /* LD reg16, u16 */
+        u16 *dst = REG16(4);
+        *dst = IMM16;
+        s->pc += 2;
+    } else if (M(op, 0x02, 0xff)) { /* LD (BC), A */
+        mmu_write(s, BC, A);
+    } else if (M(op, 0x03, 0xcf)) { /* INC reg16 */
+        u16 *reg = REG16(4);
+        *reg += 1;
+    } else if (M(op, 0x04, 0xc7)) { /* INC reg8 */
+        u8* reg = REG8(3);
+        u8 val = reg ? *reg : mem(HL);
+        u8 res = val + 1;
+        ZF = res == 0;
+        NF = 0;
+        HF = (val & 0xf) == 0xf;
+        if (reg)
+            *reg = res;
+        else
+            mmu_write(s, HL, res);
+    } else if (M(op, 0x05, 0xc7)) { /* DEC reg8 */
+        u8* reg = REG8(3);
+        u8 val = reg ? *reg : mem(HL);
+        val--;
+        NF = 1;
+        ZF = val == 0;
+        HF = (val & 0x0F) == 0x0F;
+        if (reg)
+            *reg = val;
+        else
+            mmu_write(s, HL, val);
+    } else if (M(op, 0x06, 0xc7)) { /* LD reg8, imm8 */
+        u8* dst = REG8(3);
+        u8 src = IMM8;
+        s->pc++;
+        if (dst)
+            *dst = src;
+        else
+            mmu_write(s, HL, src);
+    } else if (M(op, 0x07, 0xff)) { /* RLCA */
+        u8 res = (A << 1) | (A >> 7);
+        F = (A >> 7) ? FLAG_C : 0;
+        A = res;
+
+    } else if (M(op, 0x08, 0xff)) { /* LD (imm16), SP */
+        mmu_write16(s, IMM16, s->sp);
+        s->pc += 2;
+
+    } else if (M(op, 0x09, 0xcf)) { /* ADD HL, reg16 */
+        u16 *src = REG16(4);
+        u32 tmp = HL + *src;
+        NF = 0;
+        HF = (((HL & 0xfff) + (*src & 0xfff)) & 0x1000) ? 1 : 0;
+        CF = tmp > 0xffff;
+        HL = tmp;
+    } else if (M(op, 0x0a, 0xff)) { /* LD A, (BC) */
+        A = mem(BC);
+    } else if (M(op, 0x0b, 0xcf)) { /* DEC reg16 */
+        u16 *reg = REG16(4);
+        *reg -= 1;
+    } else if (M(op, 0x0f, 0xff)) { /* RRCA */
+        F = (A & 1) ? FLAG_C : 0;
+        A = (A >> 1) | ((A & 1) << 7);
+    } else if (M(op, 0x10, 0xff)) { /* STOP */
+        //s->halt_for_interrupts = 1;
+    } else if (M(op, 0x12, 0xff)) { /* LD (DE), A */
+        mmu_write(s, DE, A);
+    } else if (M(op, 0x17, 0xff)) { /* RLA */
+        u8 res = A << 1 | (CF ? 1 : 0);
+        F = (A & (1 << 7)) ? FLAG_C : 0;
+        A = res;
+    } else if (M(op, 0x18, 0xff)) { /* JR off8 */
+        s->pc += (s8)IMM8 + 1;
+    } else if (M(op, 0x1a, 0xff)) { /* LD A, (DE) */
+        A = mem(DE);
+    } else if (M(op, 0x1f, 0xff)) { /* RRA */
+        u8 res = (A >> 1) | (CF << 7);
+        ZF = 0;
+        NF = 0;
+        HF = 0;
+        CF = A & 0x1;
+        A = res;
+    } else if (M(op, 0x20, 0xe7)) { /* JR cond, off8 */
+        u8 flag = (op >> 3) & 3;
+        if (((F & flagmasks[flag]) ? 1 : 0) == (flag & 1))
+            s->pc += (s8)IMM8;
+        s->pc++;
+    } else if (M(op, 0x22, 0xff)) { /* LDI (HL), A */
+        mmu_write(s, HL, A);
+        HL++;
+    } else if (M(op, 0x27, 0xff)) { /* DAA */
+        /* When adding/subtracting two numbers in BCD form, this instructions
+         * brings the results back to BCD form too. In BCD form the decimals 0-9
+         * are encoded in a fixed number of bits (4). E.g., 0x93 actually means
+         * 93 decimal. Adding/subtracting such numbers takes them out of this
+         * form since they can results in values where each digit is >9.
+         * E.g., 0x9 + 0x1 = 0xA, but should be 0x10. The important thing to
+         * note here is that per 4 bits we 'skip' 6 values (0xA-0xF), and thus
+         * by adding 0x6 we get: 0xA + 0x6 = 0x10, the correct answer. The same
+         * works for the upper byte (add 0x60).
+         * So: If the lower byte is >9, we need to add 0x6.
+         * If the upper byte is >9, we need to add 0x60.
+         * Furthermore, if we carried the lower part (HF, 0x9+0x9=0x12) we
+         * should also add 0x6 (0x12+0x6=0x18).
+         * Similarly for the upper byte (CF, 0x90+0x90=0x120, +0x60=0x180).
+         *
+         * For subtractions (we know it was a subtraction by looking at the NF
+         * flag) we simiarly need to *subtract* 0x06/0x60/0x66 to again skip the
+         * unused 6 values in each byte. The GB does this by only looking at the
+         * NF and CF flags then.
+         */
+        s8 add = 0;
+        if ((!NF && (A & 0xf) > 0x9) || HF)
+            add |= 0x6;
+        if ((!NF && A > 0x99) || CF) {
+            add |= 0x60;
+            CF = 1;
+        }
+        A += NF ? -add : add;
+        ZF = A == 0;
+        HF = 0;
+    } else if (M(op, 0x2a, 0xff)) { /* LDI A, (HL) */
+        A = mmu_read(s, HL);
+        HL++;
+    } else if (M(op, 0x2f, 0xff)) { /* CPL */
+        A = ~A;
+        NF = 1;
+        HF = 1;
+    } else if (M(op, 0x32, 0xff)) { /* LDD (HL), A */
+        mmu_write(s, HL, A);
+        HL--;
+    } else if (M(op, 0x37, 0xff)) { /* SCF */
+        NF = 0;
+        HF = 0;
+        CF = 1;
+    } else if (M(op, 0x3a, 0xff)) { /* LDD A, (HL) */
+        A = mmu_read(s, HL);
+        HL--;
+    } else if (M(op, 0x3f, 0xff)) { /* CCF */
+        CF = CF ? 0 : 1;
+        NF = 0;
+        HF = 0;
+    } else if (M(op, 0x76, 0xff)) { /* HALT */
+        s->halt_for_interrupts = 1;
+    } else if (M(op, 0x40, 0xc0)) { /* LD reg8, reg8 */
+        u8* src = REG8(0);
+        u8* dst = REG8(3);
+        u8 srcval = src ? *src : mem(HL);
+        if (dst)
+            *dst = srcval;
+        else
+            mmu_write(s, HL, srcval);
+    } else if (M(op, 0x80, 0xf8)) { /* ADD A, reg8 */
+        u8* src = REG8(0);
+        u8 srcval = src ? *src : mem(HL);
+        u16 res = A + srcval;
+        ZF = (u8)res == 0;
+        NF = 0;
+        HF = (A ^ srcval ^ res) & 0x10 ? 1 : 0;
+        CF = res & 0x100 ? 1 : 0;
+        A = (u8)res;
+    } else if (M(op, 0x88, 0xf8)) { /* ADC A, reg8 */
+        u8* src = REG8(0);
+        u8 srcval = src ? *src : mem(HL);
+        u16 res = A + srcval + CF;
+        ZF = (u8)res == 0;
+        NF = 0;
+        HF = (A ^ srcval ^ res) & 0x10 ? 1 : 0;
+        CF = res & 0x100 ? 1 : 0;
+        A = (u8)res;
+
+    } else if (M(op, 0x90, 0xf8)) { /* SUB reg8 */
+        u8 *reg = REG8(0);
+        u8 val = reg ? *reg : mem(HL);
+        u8 res = A - val;
+        ZF = res == 0;
+        NF = 1;
+        HF = ((s32)A & 0xf) - (val & 0xf) < 0;
+        CF = A < val;
+        A = res;
+    } else if (M(op, 0x98, 0xf8)) { /* SBC A, reg8 */
+        u8 *reg = REG8(0);
+        u8 regval = reg ? *reg : mem(HL);
+        u8 res = A - regval - CF;
+        ZF = res == 0;
+        NF = 1;
+        HF = ((s32)A & 0xf) - (regval & 0xf) - CF < 0;
+        CF = A < regval + CF;
+        A = res;
+    } else if (M(op, 0xa0, 0xf8)) { /* AND reg8 */
+        u8 *reg = REG8(0);
+        u8 val = reg ? *reg : mem(HL);
+        A = A & val;
+        ZF = A == 0;
+        NF = 0;
+        HF = 1;
+        CF = 0;
+    } else if (M(op, 0xa8, 0xf8)) { /* XOR reg8 */
+        u8* src = REG8(0);
+        u8 srcval = src ? *src : mem(HL);
+        A ^= srcval;
+        F = A ? 0 : FLAG_Z;
+    } else if (M(op, 0xb0, 0xf8)) { /* OR reg8 */
+        u8* src = REG8(0);
+        u8 srcval = src ? *src : mem(HL);
+        A |= srcval;
+        F = A ? 0 : FLAG_Z;
+    } else if (M(op, 0xb8, 0xf8)) { /* CP reg8 */
+        u8 *reg = REG8(0);
+        u8 regval = reg ? *reg : mem(HL);
+        ZF = A == regval;
+        NF = 1;
+        HF = (A & 0xf) < (regval & 0xf);
+        CF = A < regval;
+    } else if (M(op, 0xc0, 0xe7)) { /* RET cond */
+        /* TODO cyclecount depends on taken or not */
+
+        u8 flag = (op >> 3) & 3;
+        if (((F & flagmasks[flag]) ? 1 : 0) == (flag & 1))
+            s->pc = mmu_pop16(s);
+
+    } else if (M(op, 0xc1, 0xcf)) { /* POP reg16 */
+        u16 *dst = REG16S(4);
+        *dst = mmu_pop16(s);
+        F = F & 0xf0;
+    } else if (M(op, 0xc2, 0xe7)) { /* JP cond, imm16 */
+        u8 flag = (op >> 3) & 3;
+        if (((F & flagmasks[flag]) ? 1 : 0) == (flag & 1))
+            s->pc = IMM16;
+        else
+            s->pc += 2;
+    } else if (M(op, 0xc3, 0xff)) { /* JP imm16 */
+        s->pc = IMM16;
+    } else if (M(op, 0xc4, 0xe7)) { /* CALL cond, imm16 */
+        u16 dst = IMM16;
+        s->pc += 2;
+        u8 flag = (op >> 3) & 3;
+        if (((F & flagmasks[flag]) ? 1 : 0) == (flag & 1)) {
+            mmu_push16(s, s->pc);
+            s->pc = dst;
+        }
+    } else if (M(op, 0xc5, 0xcf)) { /* PUSH reg16 */
+        u16 *src = REG16S(4);
+        mmu_push16(s,*src);
+    } else if (M(op, 0xc6, 0xff)) { /* ADD A, imm8 */
+        u16 res = A + IMM8;
+        ZF = (u8)res == 0;
+        NF = 0;
+        HF = (A ^ IMM8 ^ res) & 0x10 ? 1 : 0;
+        CF = res & 0x100 ? 1 : 0;
+        A = (u8)res;
+        s->pc++;
+    } else if (M(op, 0xc7, 0xc7)) { /* RST imm8 */
+        mmu_push16(s, s->pc);
+        s->pc = ((op >> 3) & 7) * 8;
+    } else if (M(op, 0xc9, 0xff)) { /* RET */
+        s->pc = mmu_pop16(s);
+    } else if (M(op, 0xcd, 0xff)) { /* CALL imm16 */
+        u16 dst = IMM16;
+        mmu_push16(s, s->pc + 2);
+        s->pc = dst;
+    } else if (M(op, 0xce, 0xff)) { /* ADC imm8 */
+        u16 res = A + IMM8 + CF;
+        ZF = (u8)res == 0;
+        NF = 0;
+        HF = (A ^ IMM8 ^ res) & 0x10 ? 1 : 0;
+        CF = res & 0x100 ? 1 : 0;
+        A = (u8)res;
+        s->pc++;
+    } else if (M(op, 0xd6, 0xff)) { /* SUB imm8 */
+        u8 res = A - IMM8;
+        ZF = res == 0;
+        NF = 1;
+        HF = ((s32)A & 0xf) - (IMM8 & 0xf) < 0;
+        CF = A < IMM8;
+        A = res;
+        s->pc++;
+    } else if (M(op, 0xd9, 0xff)) { /* RETI */
+        s->pc = mmu_pop16(s);
+        s->interrupts_master_enabled = 1;
+    } else if (M(op, 0xde, 0xff)) { /* SBC imm8 */
+        u8 res = A - IMM8 - CF;
+        ZF = res == 0;
+        NF = 1;
+        HF = ((s32)A & 0xf) - (IMM8 & 0xf) - CF < 0;
+        CF = A < IMM8 + CF;
+        A = res;
+        s->pc++;
+    } else if (M(op, 0xe0, 0xff)) { /* LD (0xff00 + imm8), A */
+        mmu_write(s, 0xff00 + IMM8, A);
+        s->pc++;
+    } else if (M(op, 0xe2, 0xff)) { /* LD (0xff00 + C), A */
+        mmu_write(s, 0xff00 + C, A);
+    } else if (M(op, 0xe6, 0xff)) { /* AND imm8 */
+        A = A & IMM8;
+        s->pc++;
+        ZF = A == 0;
+        NF = 0;
+        HF = 1;
+        CF = 0;
+    } else if (M(op, 0xe8, 0xff)) { /* ADD SP, imm8s */
+        s8 off = (s8)IMM8;
+        u32 res = s->sp + off;
+        ZF = 0;
+        NF = 0;
+        HF = (s->sp & 0xf) + (IMM8 & 0xf) > 0xf;
+        CF = (s->sp & 0xff) + (IMM8 & 0xff) > 0xff;
+        s->sp = res;
+        s->pc++;
+    } else if (M(op, 0xe9, 0xff)) { /* LD PC, HL (or JP (HL) ) */
+        s->pc = HL;
+    } else if (M(op, 0xea, 0xff)) { /* LD (imm16), A */
+        mmu_write(s, IMM16, A);
+        s->pc += 2;
+    } else if (M(op, 0xcb, 0xff)) { /* CB-prefixed extended instructions */
+        return cpu_do_cb_instruction(s);
+    } else if (M(op, 0xee, 0xff)) { /* XOR imm8 */
+        A ^= IMM8;
+        s->pc++;
+        F = A ? 0 : FLAG_Z;
+    } else if (M(op, 0xf0, 0xff)) { /* LD A, (0xff00 + imm8) */
+        A = mmu_read(s, 0xff00 + IMM8);
+        s->pc++;
+    } else if (M(op, 0xf2, 0xff)) { /* LD A, (0xff00 + C) */
+        A = mmu_read(s, 0xff00 + C);
+    } else if (M(op, 0xf3, 0xff)) { /* DI */
+        s->interrupts_master_enabled = 0;
+    } else if (M(op, 0xf6, 0xff)) { /* OR imm8 */
+        A |= IMM8;
+        F = A ? 0 : FLAG_Z;
+        s->pc++;
+    } else if (M(op, 0xf8, 0xff)) { /* LD HL, SP + imm8 */
+        u32 res = (u32)s->sp + (s8)IMM8;
+        ZF = 0;
+        NF = 0;
+        HF = (s->sp & 0xf) + (IMM8 & 0xf) > 0xf;
+        CF = (s->sp & 0xff) + (IMM8 & 0xff) > 0xff;
+        HL = (u16)res;
+        s->pc++;
+    } else if (M(op, 0xf9, 0xff)) { /* LD SP, HL */
+        s->sp = HL;
+    } else if (M(op, 0xfa, 0xff)) { /* LD A, (imm16) */
+        A = mmu_read(s, IMM16);
+        s->pc += 2;
+    } else if (M(op, 0xfb, 0xff)) { /* EI */
+        s->interrupts_master_enabled = 1;
+    } else if (M(op, 0xfe, 0xff)) { /* CP imm8 */
+        u8 n = IMM8;
+        ZF = A == n;
+        NF = 1;
+        HF = (A & 0xf) < (n & 0xf);
+        CF = A < n;
+        s->pc++;
+    } else {
+        s->pc--;
+        cpu_error("Unknown instruction");
+    }
+}
+
+static void cpu_do_instruction_tree(struct gb_state *s) {
     u8 op = mmu_read(s, s->pc++);
 
     if (op <= 0x7F) {
@@ -1410,7 +1757,7 @@ static void cpu_do_instruction(struct gb_state *s) {
 
     return;
         OxCB:
-            logAndPause("cb extended");
+            //logAndPause("cb extended");
             cpu_do_cb_instruction(s);
             return;
 
@@ -1424,7 +1771,7 @@ static void cpu_do_instruction(struct gb_state *s) {
         Ox2E: // ld L, n
         Ox36: // ld (HL), n
         Ox3E: { // ld A, n
-            logAndPause("ld reg8, n");
+            //logAndPause("ld reg8, n");
             u8* dst = REG8(3);
             u8 src = IMM8;
             s->pc++;
@@ -1500,7 +1847,7 @@ static void cpu_do_instruction(struct gb_state *s) {
         Ox7E: // ld A, (HL)
         Ox7F: // ld A, A
         {
-            logAndPause("ld reg8, reg8");
+            //logAndPause("ld reg8, reg8");
             u8* src = REG8(0);
             u8* dst = REG8(3);
             u8 srcval = src ? *src : mem(HL);
@@ -1513,19 +1860,19 @@ static void cpu_do_instruction(struct gb_state *s) {
 
         // LD A, n
         Ox0A: { // ld A, (BC)
-            logAndPause("ld A, (BC)");
+            //logAndPause("ld A, (BC)");
             A = mem(BC);
             return;
         }
 
         Ox1A: { // ld A, (DE)
-            logAndPause("ld A, (DE)");
+            //logAndPause("ld A, (DE)");
             A = mem(DE);
             return;
         }
 
         OxFA: { // ld A, (nn)
-            logAndPause("ld A, nn");
+            //logAndPause("ld A, nn");
             A = mmu_read(s, IMM16);
             s->pc += 2;
             return;
@@ -1533,46 +1880,46 @@ static void cpu_do_instruction(struct gb_state *s) {
 
         // LD n, A
         Ox02: { // ld (BC), A
-            logAndPause("ld (BC), A");
+            //logAndPause("ld (BC), A");
             mmu_write(s, BC, A);
             return;
         }
 
         Ox12: { // ld (DE), A
-            logAndPause("ld (DE), A");
+            //logAndPause("ld (DE), A");
             mmu_write(s, DE, A);
             return;
         }
 
         OxEA: { // ld (nn), A
-            logAndPause("ld nn, A");
+            //logAndPause("ld nn, A");
             mmu_write(s, IMM16, A);
             s->pc += 2;
             return;
         }
 
         OxF2: { // ld A, (C)
-           logAndPause("ld A, (C)");
+           //logAndPause("ld A, (C)");
            A = mmu_read(s, 0xff00 + C);
            return;
         }
 
         OxE2: { // ld (C), A
-            logAndPause("ld (C), A");
+            //logAndPause("ld (C), A");
             mmu_write(s, 0xff00 + C, A);
             return;
         }
 
         // LDD  - decrements HL after load
         Ox3A: { // ldd A, (HL)
-            logAndPause("ldd A, (HL)");
+            //logAndPause("ldd A, (HL)");
             A = mmu_read(s, HL);
             HL--;
             return;
         }
 
         Ox32: { // ldd (HL), A
-            logAndPause("ldd (HL), A");
+            //logAndPause("ldd (HL), A");
             mmu_write(s, HL, A);
             HL--;
             return;
@@ -1580,14 +1927,14 @@ static void cpu_do_instruction(struct gb_state *s) {
 
         // LDI - Increments after load
         Ox2A: { // ldi A, (HL)
-            logAndPause("ldi A, (HL)");
+            //logAndPause("ldi A, (HL)");
             A = mmu_read(s, HL);
             HL++;
             return;
         }
 
         Ox22: { // ldi (HL), A
-            logAndPause("ldi (HL), A");
+            //logAndPause("ldi (HL), A");
             mmu_write(s, HL, A);
             HL++;
             return;
@@ -1595,14 +1942,14 @@ static void cpu_do_instruction(struct gb_state *s) {
 
         // LDH
         OxE0: { // ldh (n), A
-            logAndPause("ldh (n), A");
+            //logAndPause("ldh (n), A");
             mmu_write(s, 0xff00 + IMM8, A);
             s->pc++;
             return;
         }
 
         OxF0: { // ldh A, (n)
-            logAndPause("ldh A, (n)");
+            //logAndPause("ldh A, (n)");
             A = mmu_read(s, 0xff00 + IMM8);
             s->pc++;
             return;
@@ -1611,32 +1958,25 @@ static void cpu_do_instruction(struct gb_state *s) {
         // 16 Bit Loads
         Ox01: // ld BC, nn
         Ox11: // ld DE, nn
-        Ox21:
-        Ox31: { // ld HL, nn
-            logAndPause("ld reg16, nn");
+        Ox21: // ld HL, nn
+        Ox31: { // ld SP, nn
+            //logAndPause("ld reg16, nn");
             u16 *dst = REG16(4);
             *dst = IMM16;
             s->pc += 2;
             return;
         }
 
-        // Stack operations
-        /*
-        Ox31: { // ld SP, nn
-            logAndPause("ld SP, nn");
-            s->sp = IMM16;
-            return;
-        }*/
 
         OxF9: { // ld SP, HL
-            logAndPause ("ld SP, (HL)");
-            s->sp = mmu_read(s, HL);
+            //logAndPause ("ld SP, HL");
+            s->sp = HL;
             return;
         }
 
         OxF8: { // ldhl SP, n
             // ld HL, SP + n
-            logAndPause ("ldhl SP, n");
+            //logAndPause ("ldhl SP, n");
             u32 res = (u32)s->sp + (s8)IMM8;
             ZF = 0;
             NF = 0;
@@ -1649,7 +1989,7 @@ static void cpu_do_instruction(struct gb_state *s) {
 
         Ox08: { // ld (nn), SP
             // push 16 bits on to stack and sp -= 2
-            logAndPause("ld (nn), SP");
+            //logAndPause("ld (nn), SP");
             mmu_write16(s, IMM16, s->sp);
             s->pc += 2;
             return;
@@ -1659,7 +1999,7 @@ static void cpu_do_instruction(struct gb_state *s) {
         OxC5: // push BC
         OxD5: // push DE
         OxE5: { // push HL
-            logAndPause("push reg16");
+            //logAndPause("push reg16");
             u16 *src = REG16S(4);
             mmu_push16(s,*src);
             return;
@@ -1670,7 +2010,7 @@ static void cpu_do_instruction(struct gb_state *s) {
         OxC1: // pop BC
         OxD1: // pop DE
         OxE1: { // pop HL
-            logAndPause("pop reg16");
+            //logAndPause("pop reg16");
             u16 *dst = REG16S(4);
             *dst = mmu_pop16(s);
             F = F & 0xf0;
@@ -1687,7 +2027,7 @@ static void cpu_do_instruction(struct gb_state *s) {
         Ox84: // add A, H
         Ox85: // add A, L
         Ox86: { // add A, (HL)
-            logAndPause("add A, reg8");
+            //logAndPause("add A, reg8");
             u8* src = REG8(0);
             u8 srcval = src ? *src : mem(HL);
             u16 res = A + srcval;
@@ -1700,7 +2040,7 @@ static void cpu_do_instruction(struct gb_state *s) {
         }
 
         OxC6: { // add A, n
-            logAndPause("add A, n");
+            //logAndPause("add A, n");
             u16 res = A + IMM8;
             ZF = (u8)res == 0;
             NF = 0;
@@ -1720,7 +2060,7 @@ static void cpu_do_instruction(struct gb_state *s) {
         Ox8C: // adc A, H
         Ox8D: // adc A, L
         Ox8E: { // adc A, (HL)
-            logAndPause("adc A, reg8");
+            //logAndPause("adc A, reg8");
             u8* src = REG8(0);
             u8 srcval = src ? *src : mem(HL);
             u16 res = A + srcval + CF;
@@ -1733,7 +2073,7 @@ static void cpu_do_instruction(struct gb_state *s) {
         }
 
         OxCE: { // adc A, n
-            logAndPause("adc A, n");
+            //logAndPause("adc A, n");
             u16 res = A + IMM8 + CF;
             ZF = (u8)res == 0;
             NF = 0;
@@ -1753,7 +2093,7 @@ static void cpu_do_instruction(struct gb_state *s) {
         Ox94: // sub H
         Ox95: // sub L
         Ox96: { // sub (HL)
-            logAndPause("sub reg8");
+            //logAndPause("sub reg8");
             u8 *reg = REG8(0);
             u8 val = reg ? *reg : mem(HL);
             u8 res = A - val;
@@ -1766,7 +2106,7 @@ static void cpu_do_instruction(struct gb_state *s) {
         }
 
         OxD6: { // sub n
-            logAndPause("sub n");
+            //logAndPause("sub n");
             u8 res = A - IMM8;
             ZF = res == 0;
             NF = 1;
@@ -1786,7 +2126,7 @@ static void cpu_do_instruction(struct gb_state *s) {
         Ox9C: // sbc A, H
         Ox9D: // sbc A, L
         Ox9E: { // sbc A, (HL)
-            logAndPause("sbc A, reg8");
+            //logAndPause("sbc A, reg8");
             u8 *reg = REG8(0);
             u8 regval = reg ? *reg : mem(HL);
             u8 res = A - regval - CF;
@@ -1799,7 +2139,7 @@ static void cpu_do_instruction(struct gb_state *s) {
         }
 
         OxDE: { // sbc A, n
-            logAndPause("sbc A, n");
+            //logAndPause("sbc A, n");
             u8 res = A - IMM8 - CF;
             ZF = res == 0;
             NF = 1;
@@ -1818,7 +2158,7 @@ static void cpu_do_instruction(struct gb_state *s) {
         OxA4: // and H
         OxA5: // and L
         OxA6: { // and (HL)
-            logAndPause("and reg8");
+            //logAndPause("and reg8");
             u8 *reg = REG8(0);
             u8 val = reg ? *reg : mem(HL);
             A = A & val;
@@ -1830,7 +2170,7 @@ static void cpu_do_instruction(struct gb_state *s) {
         }
 
         OxE6: { // and n
-            logAndPause("and n");
+            //logAndPause("and n");
             A = A & IMM8;
             s->pc++;
             ZF = A == 0;
@@ -1849,7 +2189,7 @@ static void cpu_do_instruction(struct gb_state *s) {
         OxB4: // or H
         OxB5: // or L
         OxB6: { // or (HL)
-            logAndPause("or reg8");
+            //logAndPause("or reg8");
             u8* src = REG8(0);
             u8 srcval = src ? *src : mem(HL);
             A |= srcval;
@@ -1858,7 +2198,7 @@ static void cpu_do_instruction(struct gb_state *s) {
         }
 
         OxF6: { // or n
-            logAndPause ("or n");
+            //logAndPause ("or n");
             A |= IMM8;
             F = A ? 0 : FLAG_Z;
             s->pc++;
@@ -1874,7 +2214,7 @@ static void cpu_do_instruction(struct gb_state *s) {
         OxAC: // xor H
         OxAD: // xor L
         OxAE: { // xor (HL)
-            logAndPause("xor reg8");
+            //logAndPause("xor reg8");
             u8* src = REG8(0);
             u8 srcval = src ? *src : mem(HL);
             A ^= srcval;
@@ -1883,7 +2223,7 @@ static void cpu_do_instruction(struct gb_state *s) {
         }
 
         OxEE: { // xor n
-            logAndPause("xor n");
+            //logAndPause("xor n");
             A ^= IMM8;
             s->pc++;
             F = A ? 0 : FLAG_Z;
@@ -1899,7 +2239,7 @@ static void cpu_do_instruction(struct gb_state *s) {
         OxBC: // cp H
         OxBD: // cp L
         OxBE: { // cp (HL)
-            logAndPause("cp reg8");
+            //logAndPause("cp reg8");
             u8 *reg = REG8(0);
             u8 regval = reg ? *reg : mem(HL);
 
@@ -1911,7 +2251,7 @@ static void cpu_do_instruction(struct gb_state *s) {
         }
 
         OxFE: { // cp n
-            logAndPause("cp n");
+            //logAndPause("cp n");
             u8 n = IMM8;
 
             ZF = A == n;
@@ -1931,7 +2271,7 @@ static void cpu_do_instruction(struct gb_state *s) {
         Ox24: // inc H
         Ox2C: // inc L
         Ox34: { // inc (HL)
-            logAndPause("inc reg8");
+            //logAndPause("inc reg8");
             u8* reg = REG8(3);
             u8 val = reg ? *reg : mem(HL);
             u8 res = val + 1;
@@ -1954,7 +2294,7 @@ static void cpu_do_instruction(struct gb_state *s) {
         Ox25: // dec H
         Ox2D: // dec L
         Ox35: { // dec (HL)
-            logAndPause("dec reg8");
+            //logAndPause("dec reg8");
             u8* reg = REG8(3);
             u8 val = reg ? *reg : mem(HL);
             val--;
@@ -1973,7 +2313,7 @@ static void cpu_do_instruction(struct gb_state *s) {
         Ox19: // add HL, DE
         Ox29: // add HL, HL
         Ox39: { // add HL, SP
-            logAndPause("add HL, reg16");
+            //logAndPause("add HL, reg16");
             u16 *src = REG16(4);
             u32 tmp = HL + *src;
             NF = 0;
@@ -1984,7 +2324,7 @@ static void cpu_do_instruction(struct gb_state *s) {
         }
 
         OxE8: { // add SP, n
-            logAndPause("add SP, n");
+            //logAndPause("add SP, n");
             s8 off = (s8)IMM8;
             u32 res = s->sp + off;
             ZF = 0;
@@ -2000,7 +2340,7 @@ static void cpu_do_instruction(struct gb_state *s) {
         Ox13: // inc DE
         Ox23: // inc HL
         Ox33: { // inc SP
-            logAndPause("inc reg16");
+            //logAndPause("inc reg16");
             u16 *reg = REG16(4);
             *reg += 1;
             return;
@@ -2010,7 +2350,7 @@ static void cpu_do_instruction(struct gb_state *s) {
         Ox1B: // dec DE
         Ox2B: // dec HL
         Ox3B: { // dec SP
-            logAndPause("dec reg16");
+            //logAndPause("dec reg16");
             u16 *reg = REG16(4);
             *reg -= 1;
             return;
@@ -2042,7 +2382,7 @@ static void cpu_do_instruction(struct gb_state *s) {
             // flag) we simiarly need to *subtract* Ox06/Ox60/Ox66 to again skip the
             // unused 6 values in each byte. The GB does this by only looking at the
             // NF and CF flags then.
-            logAndPause("daa");
+            //logAndPause("daa");
             s8 add = 0;
             if ((!NF && (A & 0xf) > 0x9) || HF)
                 add |= 0x6;
@@ -2057,7 +2397,7 @@ static void cpu_do_instruction(struct gb_state *s) {
         }
         Ox2F: { // cpl
             // flip all bits in A
-            logAndPause("cpl");
+            //logAndPause("cpl");
             A = ~A;
             NF = 1;
             HF = 1;
@@ -2065,7 +2405,7 @@ static void cpu_do_instruction(struct gb_state *s) {
         }
         Ox3F: { // ccf
             //flip carry flag
-            logAndPause("ccf");
+            //logAndPause("ccf");
             CF = CF ? 0 : 1;
             NF = 0;
             HF = 0;
@@ -2073,14 +2413,14 @@ static void cpu_do_instruction(struct gb_state *s) {
         }
         Ox37: { // scf
             // set carry flag
-            logAndPause("scf");
+            //logAndPause("scf");
             NF = 0;
             HF = 0;
             CF = 1;
             return;
         }
         Ox07: { // rlca - rotate a left - shift bit 7 to carry.
-            logAndPause("rlca");
+            //logAndPause("rlca");
             u8 res = (A << 1) | (A >> 7);
             F = (A >> 7) ? FLAG_C : 0;
             A = res;
@@ -2088,7 +2428,7 @@ static void cpu_do_instruction(struct gb_state *s) {
         }
         Ox17: { // rla
             // rotate a left - don't know how this differs with rlca
-            logAndPause("rla");
+            //logAndPause("rla");
             u8 res = A << 1 | (CF ? 1 : 0);
             F = (A & (1 << 7)) ? FLAG_C : 0;
             A = res;
@@ -2096,14 +2436,14 @@ static void cpu_do_instruction(struct gb_state *s) {
         }
         Ox0F: { // rrca
             // rotate a right - shift bit 0 to carry
-            logAndPause("rrca");
+            //logAndPause("rrca");
             F = (A & 1) ? FLAG_C : 0;
             A = (A >> 1) | ((A & 1) << 7);
             return;
         }
         Ox1F: { // rra
             // rotate a right - don't know how this differs with rrca
-            logAndPause("rra");
+            //logAndPause("rra");
             u8 res = (A >> 1) | (CF << 7);
             ZF = 0;
             NF = 0;
@@ -2115,36 +2455,36 @@ static void cpu_do_instruction(struct gb_state *s) {
 
         // Control
         Ox00: { // noop
-            logAndPause("noop");
+            //logAndPause("noop");
             return;
         }
         Ox76: { // halt
             // halt - do nothing until an interrupt occurs
             // implementation of interrupts / HALT op could be related to poor performance.
-            logAndPause("halt");
+            //logAndPause("halt");
             s->halt_for_interrupts = 1;
             return;
         }
         Ox10: // stop
-            logAndPause("stop");
+            //logAndPause("stop");
             // TODO
             return;
 
         OxF3: { // di
             // Disable interrupts
-            logAndPause("di");
+            //logAndPause("di");
             s->interrupts_master_enabled = 0;
             return;
         }
         OxFB: { // ei
             // Enable interrupts
-            logAndPause("ei");
+            //logAndPause("ei");
             s->interrupts_master_enabled = 1;
             return;
         }
         OxC3: { // jp nn
             // jump to nn
-            logAndPause("jp nn");
+            //logAndPause("jp nn");
             s->pc = IMM16;
             return;
         }
@@ -2152,7 +2492,7 @@ static void cpu_do_instruction(struct gb_state *s) {
         OxCA: // jp Z, nn - jump if Z
         OxD2: // jp NC, nn - jump if !C
         OxDA: { // jp C, nn - jump if C
-            logAndPause("jp cc, nn");
+            //logAndPause("jp cc, nn");
             u8 flag = (op >> 3) & 3;
             if (((F & flagmasks[flag]) ? 1 : 0) == (flag & 1))
                 s->pc = IMM16;
@@ -2162,13 +2502,13 @@ static void cpu_do_instruction(struct gb_state *s) {
         }
 
         OxE9: {// jp (HL)
-            logAndPause("jp, (HL)");
+            //logAndPause("jp, (HL)");
             s->pc = HL;
             return;
         }
         Ox18: { // jr n
             // jump n addresses forward
-            logAndPause("jr, n");
+            //logAndPause("jr, n");
             s->pc += (s8)IMM8 + 1;
             return;
         }
@@ -2176,7 +2516,7 @@ static void cpu_do_instruction(struct gb_state *s) {
         Ox28: // jr Z, n
         Ox30: // jr NC, n
         Ox38: { // jr C, n
-            logAndPause("jr cc, n");
+            //logAndPause("jr cc, n");
             u8 flag = (op >> 3) & 3;
 
             if (((F & flagmasks[flag]) ? 1 : 0) == (flag & 1)) {
@@ -2188,7 +2528,7 @@ static void cpu_do_instruction(struct gb_state *s) {
 
         // Push address of next instruction onto stack and then jump to address nn.
         OxCD: { // call nn
-            logAndPause("call nn");
+            //logAndPause("call nn");
             u16 dst = IMM16;
             mmu_push16(s, s->pc + 2);
             s->pc = dst;
@@ -2199,7 +2539,7 @@ static void cpu_do_instruction(struct gb_state *s) {
         OxCC: // call Z, nn
         OxD4: // call NC, cc
         OxDC: { // call C, nn
-            logAndPause("call cc, nn");
+            //logAndPause("call cc, nn");
             u16 dst = IMM16;
             s->pc += 2;
             u8 flag = (op >> 3) & 3;
@@ -2219,7 +2559,7 @@ static void cpu_do_instruction(struct gb_state *s) {
         OxEF: // rst $28
         OxF7: // rst $30
         OxFF: { // rst $38
-            logAndPause("rst n");
+            //logAndPause("rst n");
             mmu_push16(s, s->pc);
             s->pc = ((op >> 3) & 7) * 8;
             return;
@@ -2227,7 +2567,7 @@ static void cpu_do_instruction(struct gb_state *s) {
 
         // Return -- pop two bytes of stack and jump to that address
         OxC9: { // ret
-            logAndPause("ret");
+            //logAndPause("ret");
             s->pc = mmu_pop16(s);
             return;
         }
@@ -2236,7 +2576,7 @@ static void cpu_do_instruction(struct gb_state *s) {
         OxD0: // ret NC
         OxD8: { // ret C
             // TODO cyclecount depends on taken or not
-            logAndPause("ret cc");
+            //logAndPause("ret cc");
             u8 flag = (op >> 3) & 3;
             if (((F & flagmasks[flag]) ? 1 : 0) == (flag & 1))
                 s->pc = mmu_pop16(s);
@@ -2244,7 +2584,7 @@ static void cpu_do_instruction(struct gb_state *s) {
         }
 
         OxD9: { // reti
-            logAndPause("reti");
+            //logAndPause("reti");
             // return then enable interrupts.
             s->pc = mmu_pop16(s);
             s->interrupts_master_enabled = 1;
@@ -2252,8 +2592,7 @@ static void cpu_do_instruction(struct gb_state *s) {
         }
  }
 
-
-void cpu_step(struct gb_state *s) {
+ void cpu_step(struct gb_state *s) {
     u8 op;
 
     s->emu_state->last_op_cycles = 0;
@@ -2261,7 +2600,6 @@ void cpu_step(struct gb_state *s) {
     cpu_handle_interrupts(s);
 
     op = mmu_read(s, s->pc);
-
     s->emu_state->last_op_cycles = cycles_per_instruction[op];
     if (op == 0xcb) {
         op = mmu_read(s, s->pc + 1);
@@ -2269,7 +2607,11 @@ void cpu_step(struct gb_state *s) {
     }
 
     if (!s->halt_for_interrupts)
-        cpu_do_instruction(s);
+        if (false) {
+            cpu_do_instruction(s);
+        } else {
+            cpu_do_instruction_tree(s);    
+        }
     else
         if (!s->interrupts_enable)
             cpu_error("Waiting for interrupts while disabled, deadlock.\n");
