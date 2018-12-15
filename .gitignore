@@ -9,8 +9,8 @@ transferboy64.elf
 transferboy64.dfs
 transferboy64.bin
 test.sh
-*.gb
 *.o
 *~
+*.gb
 *.sym
-log.eeprom
+*.eeprom

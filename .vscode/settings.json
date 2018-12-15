@@ -1,0 +1,8 @@
+{
+	"rgbdz80.formatting.capitalization" : {
+		"language.keyword" : "lower",
+		"languarge.keyword.preprocessor" : "upper",
+		"language.register": "upper",
+		"language.conditioncode" : "upper"
+	}
+}

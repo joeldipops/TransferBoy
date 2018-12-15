@@ -379,7 +379,7 @@ int state_load(struct gb_state *s, u8 *state_buf, size_t state_buf_size) {
 */
 
 int state_save_extram(struct gb_state *s, u8 **ret_state_buf,
-        size_t *ret_state_size) {
+        size_t *ret_state_size) {   
     size_t extramsize = s->mem_num_banks_extram * EXTRAM_BANKSIZE;
     *ret_state_buf = malloc(extramsize);
     memcpy(*ret_state_buf, s->mem_EXTRAM, extramsize);
