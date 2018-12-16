@@ -21,6 +21,14 @@
 
 void mmu_step(struct gb_state *s);
 
+/**
+ * Optimises lookup of opcode of PC
+ * @param s gameboy state
+ * @param programCounter value of PC register.
+ * @return opcode that PC is pointing to.
+ */
+u8 getOpCodeFromROM(struct gb_state *s, const u16 programCounter);
+
 u8 mmu_read(struct gb_state *s, u16 location);
 void mmu_write(struct gb_state *s, u16 location, u8 value);
 

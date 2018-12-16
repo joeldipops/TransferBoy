@@ -31,9 +31,9 @@ void getPressedButtons(const N64ControllerState* input, const byte controllerNum
     output[CRight] = true && input->c[controllerNumber].C_right;
 
     sByte x = input->c[controllerNumber].x;
-    if (x < 0) {
+    if (x < STICK_DEADZONE * -1) {
         output[StickLeft] = true;
-    } else if (x > 0) {
+    } else if (x > STICK_DEADZONE) {
         output[StickRight] = true;
     } else {
         output[StickLeft] = false;
@@ -41,9 +41,9 @@ void getPressedButtons(const N64ControllerState* input, const byte controllerNum
     }
 
     sByte y = input->c[controllerNumber].y;
-    if (y < 0) {
+    if (y < STICK_DEADZONE * -1) {
         output[StickDown] = true;
-    } else if (y > 0) {
+    } else if (y > STICK_DEADZONE) {
         output[StickUp] = true;
     } else {
         output[StickUp] = false;
