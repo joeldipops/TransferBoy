@@ -14,7 +14,7 @@ endm
 ; swap A
 
     setSomeFlags
-    ld A
+    ld A, 0
     swap A
     ; AF=$00xx BC=fffe DE=fffe HL=fffe SP=cffe ZNHC=1000
     
@@ -93,8 +93,6 @@ endm
     swap [HL]
     ld A, [HL]
     ; AF=$78xx BC=7a59 DE=0000 HL=c221 SP=cffe ZNHC=0000   
-    
-    
    
     
     

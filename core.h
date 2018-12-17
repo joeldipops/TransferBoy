@@ -6,6 +6,7 @@ typedef enum { false, true } bool;
 
 #include "include/gbc_bundle.h"
 #include <libdragon.h>
+#include <time.h>
 
 typedef uint8_t byte;
 typedef int8_t sByte;
@@ -35,6 +36,7 @@ typedef enum { BorderNone } Border;
 const bool IsSGBEnabled = false;
 const bool IsLoggingEnabled = false;
 uLong frameCount = 0;
+long long lastClock = 0;
 
 /**
  * Reads a number from a substring, stopping after a certain number of characters.

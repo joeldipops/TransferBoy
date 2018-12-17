@@ -1,4 +1,5 @@
 #include <stdio.h>
+
 #include <math.h>
 #include <stdlib.h>
 #include "core.h"
@@ -239,9 +240,15 @@ void renderPixels(
 
     string text = "";
     //sprintf(text, "Frames: %lld Memory: %lld", frameCount, getCurrentMemory());
-    sprintf(text, "Frames: %lld", frameCount);    
+
+    long long thisClock = get_ticks_ms();
+    long diff = thisClock - lastClock;
+
+    sprintf(text, "Frames: %lld FPS: %f", frameCount, (2.0 / (double)diff) * 1000);
+    lastClock = thisClock;
     graphics_set_color(GLOBAL_TEXT_COLOUR, 0x0);
-    graphics_draw_text(frame, left, top, text);
+    graphics_draw_box(frame, 0, top - 10, 680, 10, GLOBAL_BACKGROUND_COLOUR);
+    graphics_draw_text(frame, left, top - 10, text);
 
     frameCount++;
 

@@ -30,10 +30,9 @@ void setGlobalConstants() {
  * Inititalises all required libdragon subsystems.
  */
 void initialiseSubsystems() {
-    srand(time(0));
-
     getMemoryLimit();
     init_interrupts();
+    timer_init();
     controller_init();
     dfs_init(DFS_DEFAULT_LOCATION);
     display_init(RESOLUTION_640x480, DEPTH_16_BPP, 2, GAMMA_NONE, ANTIALIAS_OFF);

@@ -74,14 +74,13 @@ divide:
     ld A, C                   ; result = -1
     ld C, -1
 .do                           ; do
-    sub B                     ;     A -= B
-    inc C                     ;     result++    
-    cp 0                      ; until (
-    jr Z, .until              ;     A == 0
-    jr C, .until              ;     || A < 0
-    jr .do                    ; )
+        sub B                     ;     A -= B
+        inc C                     ;     result++    
+        cp 0                      ; until (
+        jr Z, .until              ;     A == 0
+        jr C, .until              ;     || A < 0
+        jr .do                    ; )
 .until
-                
     ld A, C                   ; return result
     pop BC
     ret
@@ -102,17 +101,16 @@ multiply:
     push BC
     push DE
     ld C, A
-
 .do                         ; do
-    add A, C                ;     result += A
-    dec B                   ;     b--
-    ld D, A
-    ld A, B
-    cp 0                    ; until (b == 0)
-    ; really hope these are guaranteed not to mess with Z
-    ld B, A
-    ld A, D   
-    jr NZ, .do              
+        add A, C                ;     result += A
+        dec B                   ;     b--
+        ld D, A
+        ld A, B
+        cp 0                    ; until (b == 0)
+        ; really hope these are guaranteed not to mess with Z
+        ld B, A
+        ld A, D   
+        jr NZ, .do              
     pop DE
     pop BC
     ret
