@@ -243,12 +243,14 @@ void renderPixels(
 
     long long thisClock = get_ticks_ms();
     long diff = thisClock - lastClock;
+    string mode = "";
 
-    sprintf(text, "Frames: %lld FPS: %f", frameCount, (2.0 / (double)diff) * 1000);
+    strcpy(mode,  treeMode ? "Tree" : "Default");
+    sprintf(text, "Frames: %lld FPS: %f Mode: %s", frameCount, (2.0 / (double)diff) * 1000, mode);
     lastClock = thisClock;
     graphics_set_color(GLOBAL_TEXT_COLOUR, 0x0);
-    graphics_draw_box(frame, 0, top - 10, 680, 10, GLOBAL_BACKGROUND_COLOUR);
-    graphics_draw_text(frame, left, top - 10, text);
+    graphics_draw_box(frame, 0, 0, 680, 10, GLOBAL_BACKGROUND_COLOUR);
+    graphics_draw_text(frame, 5, 0, text);
 
     frameCount++;
 
@@ -329,6 +331,10 @@ void playLogic(RootState* state, const byte playerNumber) {
 
         bool releasedButtons[N64_BUTTON_COUNT] = {};
         getPressedButtons(&state->KeysReleased, playerNumber, releasedButtons);
+
+        if (state->KeysReleased.c[playerNumber].C_down) {
+            treeMode = !treeMode;
+        }
 
         if (releasedButtons[state->Players[playerNumber].SystemMenuButton]) {
             state->Players[playerNumber].ActiveMode = Menu;
