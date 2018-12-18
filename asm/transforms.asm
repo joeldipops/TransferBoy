@@ -94,5 +94,59 @@ endm
     ld A, [HL]
     ; AF=$78xx BC=7a59 DE=0000 HL=c221 SP=cffe ZNHC=0000   
    
+;;;;;;;;;;;;;;;;; DAA ;;;;;;;;;;;;;;;;;;;;;;;;;;    
+
+    daa
+    ; AF=$78xx BC=7a59 DE=0000 HL=c221 SP=cffe ZNHC=0000   
+    
+    ld A, $7c
+    daa
+    ; AF=$82xx BC=7a59 DE=0000 HL=c221 SP=cffe ZNHC=0000   
+    
+    ld A, 100
+    daa
+    ; AF=$00xx BC=7a59 DE=0000 HL=c221 SP=cffe ZNHC=1001
+    
+    ld A, 00
+    daa
+    ; AF=$00xx BC=7a59 DE=0000 HL=c221 SP=cffe ZNHC=1000
+    
+    ld A, $12
+    sub $05
+    daa
+    ; AF=07ff BC=7a59 DE=0000 HL=c221 SP=cffe ZNHC=1100
+    
+    ; I'm gonna just test this and see what happens, I just don't know how this is supposed to work
+    sub $08
+    daa
+    ; Test with half carry and/or carry set before calling daa
+    
+;;;;;;;;;;;;;;;; CPL ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+    ld A, 1
+    setSomeFlags
+    cpl
+    ; AF=fexx  BC=7a59 DE=0000 HL=c221 SP=cffe ZNHC=1110
+    
+    sub 1
+    cpl
+    ; AF=02exx  BC=7a59 DE=0000 HL=c221 SP=cffe ZNHC=0111
+    
+    ; Z flag not affected
+    ld A, 0
+    cpl
+    ; AF=00xx  BC=7a59 DE=0000 HL=c221 SP=cffe ZNHC=0111
+    
+;;;;;;;;;;;;;;; CCF ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    ld A, $28
+    ccf
+    ; AF=28xx  BC=7a59 DE=0000 HL=c221 SP=cffe ZNHC=0000
+    
+    xor A
+    ccf
+    ; AF=00xx  BC=7a59 DE=0000 HL=c221 SP=cffe ZNHC=1001
+    
+;;;;;;;;;;;;;;; SCF ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
     
     
