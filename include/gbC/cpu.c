@@ -2623,7 +2623,7 @@ static void cpu_do_instruction_tree(struct gb_state *s) {
     }
 
     if (!s->halt_for_interrupts) {
-        if (treeMode) {
+        if (true) { //treeMode) {
             cpu_do_instruction_tree(s);
         } else {
             cpu_do_instruction(s);

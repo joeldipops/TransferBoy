@@ -102,167 +102,13 @@ void mmu_step(struct gb_state *s) {
         mmu_hdma_do(s);
 }
 
-void mmu_write_tree(struct gb_state *s, u16 location, u8 value) {
-    // assuming 8 bit compares are faster than 16bit?
-    u8 highcation = location >> 8; 
-    if (highcation < 0x80) {
-        if (highcation < 0x40) {
-            if (highcation < 0x20) {
-                // 0000 - 1FFF: Fixed ROM bank
-                // Dummy, we always have those enabled.
-                // Turning off the RAM could indicate that battery-backed data is done
-                // being written and could be flushed to disk.
-                if (value == 0)
-                    s->emu_state->flush_extram = 1;          
-            } else {
-                // 2000 - 3FFF: Switchable ROM bank
-                if (value == 0 && s->mbc != 5)
-                    value = 1;
-
-                if (s->mbc == 0)
-                    ; //mmu_assert(value == 1);
-                else if (s->mbc == 1)
-                    value &= 0x1f;
-                else if (s->mbc == 3)
-                    value &= 0x7f;
-                else if (s->mbc == 5) {
-                    // MBC5 splits up this area into 2000-2fff for low bits rom bank,
-                    // and 3000-3fff for the high bit.
-                    if (location < 0x3000) /* lower 8 bit */
-                        s->mem_bank_rom = (s->mem_bank_rom & (1<<8)) | value;
-                    else /* Upper bit */
-                        s->mem_bank_rom = (s->mem_bank_rom & 0xff) | ((value & 1) << 8);    
-                } else {
-                    mmu_error("Area not implemented for this MBC (mbc=%d, loc=%.4x, val=%x)\n", s->mbc, location, value);
-                }
-                s->mem_bank_rom = value;
-            }
-        } else {
-            if (highcation < 0x60) {
-                // 0x4000 - 0x5FFF: More switchable ROM
-                if (s->mbc == 1) {
-                    if (s->mem_mbc1_romram_select == 0) { /* ROM mode */
-                        s->mem_mbc1_rombankupper = value & 3;
-                    } else {
-                        s->mem_mbc1_extrambank = value & 3;
-                        if (s->mem_num_banks_extram == 1)
-                            s->mem_mbc1_extrambank &= 1;
-                    }
-                } else if (s->mbc == 3) {
-                    if (value < 8)
-                        ; //mmu_assert(value < s->mem_num_banks_extram);
-                    else {
-                        ; //mmu_assert(value <= 0xc); /* RTC is at 08-0C */
-                        ; //mmu_assert(s->has_rtc);
-                    }
-                    s->mem_mbc3_extram_rtc_select = value;
-                } else if (s->mbc == 5) {
-                    s->mem_mbc5_extrambank = value & 0xf;
-                    s->mem_mbc5_extrambank &= s->mem_num_banks_extram - 1;
-                } else
-                    mmu_error("Area not implemented for this MBC (mbc=%d, loc=%.4x, val=%x)\n", s->mbc, location, value);
-            } else {
-                //0x6000 - 0x7FFF: More switchable ROM
-                if (s->mbc == 1) {      
-                    s       ->mem_mbc1_romram_select = value & 0x1;
-                } else if (s->has_rtc) { /* MBC3 only */
-                    if (s->mem_latch_rtc == 0x01 && value == 0x01) {
-                        // TODO... actually latch something?
-                        s->mem_latch_rtc = s->mem_latch_rtc;
-                    }
-                    s->mem_latch_rtc = value;
-                } else if (s->mbc == 3 || s->mbc == 5) { // MBC3 without RTC or MBC5
-                    // Just ignore it - Pokemon Red writes here because it's coded for
-                    // MBC1, but actually has an MBC3, for instance
-                } else {
-                    mmu_error("Area not implemented for this MBC (mbc=%d, loc=%.4x, val=%x)\n", s->mbc, location, value);
-                }
-            }
-        }
-    } else {
-        if (highcation < 0xC0) {
-            if (highcation < 0xA0) {
-                // 0x8000 - 0x9FFF: VRAM
-                s->mem_VRAM[s->mem_bank_vram * VRAM_BANKSIZE + location - 0x8000] = value;
-            } else {
-                // 0xA000 -0xB000: Cartridge RAM
-                if (s->mbc == 1) {
-                    if (!s->has_extram)
-                        return;
-                    if (s->mem_mbc1_romram_select == 1) { // RAM mode
-                        s->mem_EXTRAM[s->mem_mbc1_extrambank * EXTRAM_BANKSIZE + location - 0xa000] = value;
-                    } else { // ROM mode - we can only use bank 0 */
-                        s->mem_EXTRAM[location - 0xa000] = value;
-                    }
-                    s->emu_state->extram_dirty = 1;
-                } else if (s->mbc == 3) {
-                    if (s->mem_mbc3_extram_rtc_select < 0x04) {
-                        s->mem_EXTRAM[s->       mem_mbc3_extram_rtc_select * EXTRAM_BANKSIZE + location - 0xa000] = value;
-                        s->emu_state->extram_dirty = 1;
-                    } else if (s->mem_mbc3_extram_rtc_select >= 0x08 && s->mem_mbc3_extram_rtc_select <= 0x0c)
-                        s->mem_RTC[s->mem_mbc3_extram_rtc_select] = value;
-                    else
-                        mmu_error("Writing to extram/rtc with invalid selection (%d) @%x, val=%x", s->mem_mbc3_extram_rtc_select, location, value);
-                } else if (s->mbc == 5) {
-                    if (!s->has_extram)
-                        return;
-                    s->mem_EXTRAM[s->mem_mbc5_extrambank * EXTRAM_BANKSIZE + location - 0xa000] = value;
-                    s->emu_state->extram_dirty = 1;
-                } else
-                    mmu_error("Area not implemented for this MBC (mbc=%d, loc=%.4x, val=%x)\n", s->mbc, location, value);
-                return;
-            }
-        } else {
-            if (highcation < 0xD0) {
-                // 0xC000 - 0xCFFF: Fixed RAM
-                s->mem_WRAM[location - 0xc000] = value;
-            } else {
-                // 0xD000 - 0xDFFF: Switchable RAM
-                s->mem_WRAM[s->mem_bank_wram * WRAM_BANKSIZE + location - 0xd000] = value; 
-            }
-        }
-    } else {
-        if (highcation < 0xF0) {
-            // 0xE000 - 0FDFF: Echoed RAM
-            mmu_error("Writing to ECHO area (0xc00-0xfdff) @%x, val=%x", location, value);
-        } else {
-            if (highcation < 0xFF) {
-                if (location < 0xfdff) {
-                    // F000 - FDFF: More Echoed RAM
-                    mmu_error("Writing to ECHO area (0xc00-0xfdff) @%x, val=%x", location, value);
-                } else {
-                    if (location < 0xfea0) {
-                        // FE00 - FE9F: OAM RAM - Sprite Attribute Table
-                        s->mem_OAM[location - 0xfe00] = value;
-                    } else {
-                        // FEA0 - FEFF: Unused
-                        mmu_error("Writing to unusable area @%x, val=%x", location, value);
-                    }
-                }
-            } else {
-                if (location < 0xFF80) {
-                    //FF00 - FF7F: I/O Registers
-                    mmu_register_write(s, location, value);
-                } else {
-                    if (location < 0xFFFF) {
-                        // 0xFF80 - FFFE: Stack RAM
-                        s->mem_HRAM[location - 0xff80] = value;    
-                    } else {
-                        s->interrupts_enable = value;
-                    }
-                }
-            }   
-        }
-    }
-}
-
 /**
  * Writes to one of the IO registers
  * @param s gameboy state
  * @param location to write to
  * @param value to write.
  */
-void mmu_register_write(gb_state* s, u16 location, u8 value) {
+void mmu_register_write(struct gb_state* s, u16 location, u8 value) {
     // assuming 8 bit compares are faster than 16bit?
     u8 lowcation = location & 0x00FF;
     
@@ -324,7 +170,7 @@ void mmu_register_write(gb_state* s, u16 location, u8 value) {
                                     s->io_sound_channel1_sweep = value;
                                 } else {
                                     // FF11: channel 1 length/pattern
-                                    s->io_sounds_channel1_length_pattern = value;
+                                    s->io_sound_channel1_length_pattern = value;
                                 }
                             } else {
                                 if (lowcation < 0x13) {
@@ -339,14 +185,14 @@ void mmu_register_write(gb_state* s, u16 location, u8 value) {
                             if (lowcation < 0x16) {
                                 if (lowcation < 0x15) {
                                     // FF14: channel 1 frequency high bits and control
-                                    s->io_sound_channel_freq_hi = value;
+                                    s->io_sound_channel1_freq_hi = value;
                                 } else {
                                     // FF15: unused channel 2 sweep 
                                 }
                             } else {
                                 if (lowcation < 0x17) {
                                     // FF16: channel 2 length and pattern
-                                    s->io_sound_channel2_length_pattern;
+                                    s->io_sound_channel2_length_pattern = value;
                                 } else {
                                     // FF17: channel 2 envelope
                                     s->io_sound_channel2_envelope = value;
@@ -366,10 +212,10 @@ void mmu_register_write(gb_state* s, u16 location, u8 value) {
                             } else {
                                 if (lowcation < 0x1B) {
                                     // FF1A: channel 3 enable flag
-                                    s->io_sound_channel3_enabled = value
+                                    s->io_sound_channel3_enabled = value;
                                 } else {
                                     // FF1B: channel 3 length
-                                    s->io_sound_channel3_length;
+                                    s->io_sound_channel3_length = value;
                                 }
                             }
                         } else {
@@ -602,7 +448,163 @@ void mmu_register_write(gb_state* s, u16 location, u8 value) {
     }
 }
 
-void mmu_write(struct gb_state *s, u16 location, u8 value) {
+void mmu_write_tree(struct gb_state *s, u16 location, u8 value) {
+    // assuming 8 bit compares are faster than 16bit?
+    u8 highcation = location >> 8; 
+    if (highcation < 0x80) {
+        if (highcation < 0x40) {
+            if (highcation < 0x20) {
+                // 0000 - 1FFF: Fixed ROM bank
+                // Dummy, we always have those enabled.
+                // Turning off the RAM could indicate that battery-backed data is done
+                // being written and could be flushed to disk.
+                if (value == 0)
+                    s->emu_state->flush_extram = 1;          
+            } else {
+                // 2000 - 3FFF: Switchable ROM bank
+                if (value == 0 && s->mbc != 5)
+                    value = 1;
+
+                if (s->mbc == 0)
+                    ; //mmu_assert(value == 1);
+                else if (s->mbc == 1)
+                    value &= 0x1f;
+                else if (s->mbc == 3)
+                    value &= 0x7f;
+                else if (s->mbc == 5) {
+                    // MBC5 splits up this area into 2000-2fff for low bits rom bank,
+                    // and 3000-3fff for the high bit.
+                    if (location < 0x3000) /* lower 8 bit */
+                        s->mem_bank_rom = (s->mem_bank_rom & (1<<8)) | value;
+                    else /* Upper bit */
+                        s->mem_bank_rom = (s->mem_bank_rom & 0xff) | ((value & 1) << 8);    
+                } else {
+                    mmu_error("Area not implemented for this MBC (mbc=%d, loc=%.4x, val=%x)\n", s->mbc, location, value);
+                }
+                s->mem_bank_rom = value;
+            }
+        } else {
+            if (highcation < 0x60) {
+                // 0x4000 - 0x5FFF: More switchable ROM
+                if (s->mbc == 1) {
+                    if (s->mem_mbc1_romram_select == 0) { /* ROM mode */
+                        s->mem_mbc1_rombankupper = value & 3;
+                    } else {
+                        s->mem_mbc1_extrambank = value & 3;
+                        if (s->mem_num_banks_extram == 1)
+                            s->mem_mbc1_extrambank &= 1;
+                    }
+                } else if (s->mbc == 3) {
+                    if (value < 8)
+                        ; //mmu_assert(value < s->mem_num_banks_extram);
+                    else {
+                        ; //mmu_assert(value <= 0xc); /* RTC is at 08-0C */
+                        ; //mmu_assert(s->has_rtc);
+                    }
+                    s->mem_mbc3_extram_rtc_select = value;
+                } else if (s->mbc == 5) {
+                    s->mem_mbc5_extrambank = value & 0xf;
+                    s->mem_mbc5_extrambank &= s->mem_num_banks_extram - 1;
+                } else
+                    mmu_error("Area not implemented for this MBC (mbc=%d, loc=%.4x, val=%x)\n", s->mbc, location, value);
+            } else {
+                //0x6000 - 0x7FFF: More switchable ROM
+                if (s->mbc == 1) {      
+                    s       ->mem_mbc1_romram_select = value & 0x1;
+                } else if (s->has_rtc) { /* MBC3 only */
+                    if (s->mem_latch_rtc == 0x01 && value == 0x01) {
+                        // TODO... actually latch something?
+                        s->mem_latch_rtc = s->mem_latch_rtc;
+                    }
+                    s->mem_latch_rtc = value;
+                } else if (s->mbc == 3 || s->mbc == 5) { // MBC3 without RTC or MBC5
+                    // Just ignore it - Pokemon Red writes here because it's coded for
+                    // MBC1, but actually has an MBC3, for instance
+                } else {
+                    mmu_error("Area not implemented for this MBC (mbc=%d, loc=%.4x, val=%x)\n", s->mbc, location, value);
+                }
+            }
+        }
+    } else {
+        if (highcation < 0xC0) {
+            if (highcation < 0xA0) {
+                // 0x8000 - 0x9FFF: VRAM
+                s->mem_VRAM[s->mem_bank_vram * VRAM_BANKSIZE + location - 0x8000] = value;
+            } else {
+                // 0xA000 -0xBFFF: Cartridge RAM
+                if (s->mbc == 1) {
+                    if (!s->has_extram)
+                        return;
+                    if (s->mem_mbc1_romram_select == 1) { // RAM mode
+                        s->mem_EXTRAM[s->mem_mbc1_extrambank * EXTRAM_BANKSIZE + location - 0xa000] = value;
+                    } else { // ROM mode - we can only use bank 0 */
+                        s->mem_EXTRAM[location - 0xa000] = value;
+                    }
+                    s->emu_state->extram_dirty = 1;
+                } else if (s->mbc == 3) {
+                    if (s->mem_mbc3_extram_rtc_select < 0x04) {
+                        s->mem_EXTRAM[s->       mem_mbc3_extram_rtc_select * EXTRAM_BANKSIZE + location - 0xa000] = value;
+                        s->emu_state->extram_dirty = 1;
+                    } else if (s->mem_mbc3_extram_rtc_select >= 0x08 && s->mem_mbc3_extram_rtc_select <= 0x0c)
+                        s->mem_RTC[s->mem_mbc3_extram_rtc_select] = value;
+                    else
+                        mmu_error("Writing to extram/rtc with invalid selection (%d) @%x, val=%x", s->mem_mbc3_extram_rtc_select, location, value);
+                } else if (s->mbc == 5) {
+                    if (!s->has_extram)
+                        return;
+                    s->mem_EXTRAM[s->mem_mbc5_extrambank * EXTRAM_BANKSIZE + location - 0xa000] = value;
+                    s->emu_state->extram_dirty = 1;
+                } else
+                    mmu_error("Area not implemented for this MBC (mbc=%d, loc=%.4x, val=%x)\n", s->mbc, location, value);
+                return;
+            }
+        } else {
+            if (highcation < 0x0E) {
+                if (highcation < 0xD0) {
+                    // 0xC000 - 0xCFFF: Fixed RAM
+                    s->mem_WRAM[location - 0xc000] = value;
+                } else {
+                    // 0xD000 - 0xDFFF: Switchable RAM
+                    s->mem_WRAM[s->mem_bank_wram * WRAM_BANKSIZE + location - 0xd000] = value; 
+                }
+            } else {
+                if (highcation < 0xF0) {
+                    // 0xE000 - 0FDFF: Echoed RAM
+                    mmu_error("Writing to ECHO area (0xc00-0xfdff) @%x, val=%x", location, value);
+                } else {
+                    if (highcation < 0xFF) {
+                        if (location < 0xfdff) {
+                            // F000 - FDFF: More Echoed RAM
+                            mmu_error("Writing to ECHO area (0xc00-0xfdff) @%x, val=%x", location, value);
+                        } else {
+                            if (location < 0xfea0) {
+                                // FE00 - FE9F: OAM RAM - Sprite Attribute Table
+                                s->mem_OAM[location - 0xfe00] = value;
+                            } else {
+                                // FEA0 - FEFF: Unused
+                                mmu_error("Writing to unusable area @%x, val=%x", location, value);
+                            }
+                        }
+                    } else {
+                        if (location < 0xFF80) {
+                            //FF00 - FF7F: I/O Registers
+                            mmu_register_write(s, location, value);
+                        } else {
+                            if (location < 0xFFFF) {
+                                // 0xFF80 - FFFE: Stack RAM
+                                s->mem_HRAM[location - 0xff80] = value;    
+                            } else {
+                                s->interrupts_enable = value;
+                            }
+                        }
+                    }
+                }
+            }   
+        }
+    }
+}
+
+void mmu_write_table(struct gb_state *s, u16 location, u8 value) {
     //MMU_DEBUG_W("Mem write (%x) %x: ", location, value);
     switch (location & 0xf000) {
     case 0x0000: /* 0000 - 1FFF */
@@ -1373,4 +1375,12 @@ u16 mmu_pop16(struct gb_state *s) {
 void mmu_push16(struct gb_state *s, u16 value) {
     s->sp -= 2;
     mmu_write16(s, s->sp, value);
+}
+
+void mmu_write(struct gb_state *s, u16 location, u8 value) {
+    if (!treeMode) {
+        return mmu_write_tree(s, location, value);
+    } else {
+        return mmu_write_table(s, location, value);
+    }
 }
