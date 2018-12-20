@@ -19,4 +19,8 @@ RAM_8KB EQU $02
 FOREIGN_DESTINATION EQU $01
 
 USE_NEW_LICENSEE_CODE EQU $33
+
+;;;;;;;;;;;;;; DMA Related ;;;;;;;;;;;;;;;;;;
+
+DMA_WAIT_TIME EQU $28
 ENDC

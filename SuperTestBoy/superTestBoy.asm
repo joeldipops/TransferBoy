@@ -31,26 +31,60 @@ init: macro
 endm
 
 ;;;
-; Loads a value directly to a memory address
-; @param \1 the value
-; @param \2 a memory address
+; Loads something directly, bypassing the accumulator;
+; @param \1 the destination
+; @param \2 the source
 ; @registers A
 ;;;
-ldm: macro
-    ld A, \1
-    ld \2, A
+ldAny: macro
+    ld A, \2
+    ld \1, A
 endm
 
 ;;;
-; Loads a value directly to a memory address greater than $ff00
-; @param \1 the value
-; @param \2 a memory address
+; Loads something directly to a memory address greater than $ff00
+; @param \1 the destination
+; @param \2 the source
 ; @registers A
 ;;;
-ldhm: macro
-    ldh A, \1
-    ldh [\2], A
+ldhAny: macro
+    ld A, \2
+    ldh \1, A
 endm
+
+;;;
+; Loads a value directly to a memory address and increments HL
+; @param \1 The destination address 
+; @param \2 The source address (should be HL)
+;;;
+ldiAny: macro
+    ldi A, [HL]
+    ld \1, A
+endm
+
+;;;
+; Performs an OR on two values other than A
+;;;
+orAny: macro
+    ld a, \1
+    or \2
+endm
+
+;;;
+; Copies memory from source to destination
+; @reg HL Source address
+; @reg DE Destination address
+; @reg BC Number of bytes to copy.
+;;;
+SECTION "MemCopy", ROM0[$28]
+memcpy:
+.loop
+        ldiAny [DE], [HL]
+        inc DE
+        dec BC
+    orAny B, C
+    jr NZ, .loop
+    reti
 
 SECTION "Vblank", ROM0[$0040]
     jp onVBlank
@@ -67,7 +101,7 @@ SECTION "Serial", ROM0[$0058]
 SECTION "p1thru4", ROM0[$0060]
     jp onJoypadEvent
 
-SECTION "start", ROM0[$0100]
+SECTION "main", ROM0[$0100]
     nop
     jr main
     
@@ -106,10 +140,11 @@ main:
         and ~VBlankFlag
         ld [InterruptFlags], A ; isInVBlank = 0
         
-  
         call loadInput
         call runLogic
     jr .loop
+    
+
 
 ;;;
 ; Loads the pressed buttons in to B
@@ -118,7 +153,7 @@ main:
 loadInput:
     push AF
     ; Set the bit that indicates we want to read A/B/Start/Select
-    ldhm [JoypadRegister], GetButtonsBit
+    ldhAny [JoypadRegister], GetButtonsBit
 
     ; Read from JoypadRegister until the value settles
     ld A, [JoypadRegister]
@@ -132,7 +167,7 @@ loadInput:
     ld B, A
     
     ; Now we want to read the D-Pad
-    ldhm [JoypadRegister], GetDPadBit
+    ldhAny [JoypadRegister], GetDPadBit
 
     ; Read from JoypadRegister until the value settles
     ld A, [JoypadRegister]
@@ -147,7 +182,7 @@ loadInput:
     ld B, A
     
     ; Reset Joypad register
-    ldhm [JoypadRegister], $30
+    ldhAny [JoypadRegister], ClearJoypad
     
     pop AF
     ret
@@ -163,6 +198,24 @@ onVBlank:
     pushAll
     popAll
     reti
+    
+;;;
+; Kicks off the DMA copy to HRAM and then waits for it to complete
+;;;
+runDMA:
+    push BC
+    ; DMA starts when it recieves a memory address
+    ldhAny [DMASourceRegister], (OAMStage >> 8) ; Just the high byte, the low byte is already set (00)
+    ld A, DMA_WAIT_TIME
+.loop                   ; Loop until timer runs down and we can assume DMA is finished.
+        dec A
+    jr NZ, .loop
+    pop BC 
+    ret
+
+SECTION "Main Ram", WRAM0[$C000]
+OAMStage:
+    ds $00
 
   
 
