@@ -52,6 +52,40 @@ ldhm: macro
     ldh [\2], A
 endm
 
+;;;
+; Loads a value directly to a memory address and increments HL
+; @param \1 The destination address 
+; @param \2 The source address (should be HL)
+;;;
+ldim: macro
+    ldi A, [HL]
+    ld \2, A
+endm
+
+;;;
+; Performs an OR on two values other than A
+;;;
+orAny: macro
+    ld a, \1
+    or \2
+endm
+
+;;;
+; Copies memory from source to destination
+; @reg HL Source address
+; @reg DE Destination address
+; @reg BC Number of bytes to copy.
+;;;
+SECTION "MemCopy", ROM0[$28]
+memcpy:
+.loop
+        ldim [DE], [HL]
+        inc DE
+        dec BC
+    orAny B, C
+    jr NZ, .loop
+    reti
+
 SECTION "Vblank", ROM0[$0040]
     jp onVBlank
 
@@ -67,7 +101,7 @@ SECTION "Serial", ROM0[$0058]
 SECTION "p1thru4", ROM0[$0060]
     jp onJoypadEvent
 
-SECTION "start", ROM0[$0100]
+SECTION "main", ROM0[$0100]
     nop
     jr main
     
@@ -110,6 +144,8 @@ main:
         call loadInput
         call runLogic
     jr .loop
+    
+
 
 ;;;
 ; Loads the pressed buttons in to B
@@ -147,7 +183,7 @@ loadInput:
     ld B, A
     
     ; Reset Joypad register
-    ldhm [JoypadRegister], $30
+    ldhm [JoypadRegister], ClearJoypad
     
     pop AF
     ret
@@ -163,6 +199,25 @@ onVBlank:
     pushAll
     popAll
     reti
+    
+;;;
+; Kicks off the DMA copy to HRAM and then waits for it to complete
+;;;
+runDMA:
+    push BC
+    ld A, OAMStage
+    ld C, DMASourceRegister
+    ld [C], A           ; DMA starts when it recieves a memory address
+    ld A, DMATimer
+.loop                   ; Loop until timer runs down and we can assume DMA is finished.
+        dec A
+    jr NZ, .loop
+    pop BC 
+    ret
+
+SECTION "Main Ram", WRAM0[$C000]
+OAMStage:
+    ds $00
 
   
 
