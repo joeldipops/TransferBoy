@@ -3,7 +3,9 @@ ADDRESSES_INCLUDED SET 1
 
 ;;;;;;;;;;;;;;; ADDRESSES ;;;;;;;;;;;;;;;;;;;;;
 InterruptFlags EQU $ff0f
+
 DMASourceRegister EQU $ff46
+runDMA EQU $ff80
 
 VBlankFlag EQU $01
 
