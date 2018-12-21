@@ -27,6 +27,13 @@ endm
 ;;;
 init: macro
     di
+
+    ; Copy runDMA routine to HRAM, since that's the only place the CPU can call it from
+    ld HL, runDMAROM ; Source in ROM
+    ld DE, runDMA    ; Destination in HRAM
+    ld BC, (runDMAROMEnd - runDMAROM)
+    rst memcpy ; rst $28 if this won't compile
+
     ei
 endm
 
@@ -142,7 +149,8 @@ main:
         
         call loadInput
         call runLogic
-    jr .loop
+        call runDMA
+   jr .loop
     
 
 
@@ -202,16 +210,15 @@ onVBlank:
 ;;;
 ; Kicks off the DMA copy to HRAM and then waits for it to complete
 ;;;
-runDMA:
-    push BC
+runDMAROM:
     ; DMA starts when it recieves a memory address
     ldhAny [DMASourceRegister], (OAMStage >> 8) ; Just the high byte, the low byte is already set (00)
     ld A, DMA_WAIT_TIME
 .loop                   ; Loop until timer runs down and we can assume DMA is finished.
         dec A
     jr NZ, .loop
-    pop BC 
     ret
+runDMAROMEnd:
 
 SECTION "Main Ram", WRAM0[$C000]
 OAMStage:
