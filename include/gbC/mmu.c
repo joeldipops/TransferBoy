@@ -22,7 +22,7 @@
 
 #define mmu_error(fmt, ...) \
     do { \
-        printf("MMU Error: " fmt "\n", ##__VA_ARGS__); \
+        logAndPause("MMU Error: " fmt "\n", ##__VA_ARGS__); \
     } while (0)
 
 #define mmu_assert(cond) \
@@ -449,6 +449,44 @@ void mmu_register_write(struct gb_state* s, u16 location, u8 value) {
 }
 
 void mmu_write_tree(struct gb_state *s, u16 location, u8 value) {
+    u8 highcation = location >> 8; 
+    if (highcation < 0x80) {
+        if (highcation < 0x40) {
+            if (highcation < 0x20) {
+                // 0000 - 1FFF: Fixed ROM bank
+                // Dummy, we always have those enabled.
+                // Turning off the RAM could indicate that battery-backed data is done
+                // being written and could be flushed to disk.
+                if (value == 0)
+                    s->emu_state->flush_extram = 1;          
+            } else {
+                // 2000 - 3FFF: Switchable ROM bank
+                if (value == 0 && s->mbc != 5)
+                    value = 1;
+
+                if (s->mbc == 0)
+                    ; //mmu_assert(value == 1);
+                else if (s->mbc == 1)
+                    value &= 0x1f;
+                else if (s->mbc == 3)
+                    value &= 0x7f;
+                else if (s->mbc == 5) {
+                    // MBC5 splits up this area into 2000-2fff for low bits rom bank,
+                    // and 3000-3fff for the high bit.
+                    if (location < 0x3000) /* lower 8 bit */
+                        s->mem_bank_rom = (s->mem_bank_rom & (1<<8)) | value;
+                    else /* Upper bit */
+                        s->mem_bank_rom = (s->mem_bank_rom & 0xff) | ((value & 1) << 8);    
+                } else {
+                    mmu_error("Area not implemented for this MBC (mbc=%d, loc=%.4x, val=%x)\n", s->mbc, location, value);
+                }
+                s->mem_bank_rom = value;
+            }
+        } else {    
+            return mmu_write_table(s, location, value);
+}
+
+void mmu_write_tree_broken(struct gb_state *s, u16 location, u8 value) {
     // assuming 8 bit compares are faster than 16bit?
     u8 highcation = location >> 8; 
     if (highcation < 0x80) {
