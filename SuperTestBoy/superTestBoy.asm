@@ -1,6 +1,6 @@
 INCLUDE "addresses.asm"
 INCLUDE "constants.asm"
-
+INCLUDE "ops.asm"
 ;;;
 ; Push all registers on to the stack so we can interrupt safely.
 ;;;
@@ -27,54 +27,49 @@ endm
 ;;;
 init: macro
     di
+    ; turn off the screen
+    resAny 7, [LcdControl]
 
-    ; Copy runDMA routine to HRAM, since that's the only place the CPU can call it from
-    ld HL, runDMAROM ; Source in ROM
-    ld DE, runDMA    ; Destination in HRAM
-    ld BC, (runDMAROMEnd - runDMAROM)
-    rst memcpy ; rst $28 if this won't compile
+    ld SP, stackFloor
 
+    ; 0 Out the RAM
+    ld A, 0
+    ld DE, $c000
+    ld BC, $1fff
+    call memset
+
+    ; Use the default palette everywhere to start with
+    ld A, DEFAULT_PALETTE
+    ldh [BackgroundPalette], A
+    ldh [SpritePalette1], A
+    ldh [SpritePalette2], A
+
+    ld A, 0
+    ldh [BackgroundScrollX], A
+    ldh [BackgroundScrollY], A
+
+    ; Clear OAM
+    ld DE, OamStage
+    ld BC, OAM_SIZE
+    call memset
+
+    ; Set the tile map to all blanks
+    ld DE, BACKGROUND_MAP_1
+    ld BC, BACKGROUND_BYTE_HEIGHT * BACKGROUND_BYTE_WIDTH
+    call memset
+
+    ; Copy runDma routine to HRAM, since that's the only place the CPU can call it from
+    ld HL, runDmaRom ; Source in ROM
+    ld DE, runDma    ; Destination in HRAM
+    ld BC, (runDmaRomEnd - runDmaRom)
+    rst $28 ; memcpy
+
+    ; Turn the screen on and set it up.
+    ldhAny [LcdControl], \
+        LCD_ON | BACKGROUND_ON |  SPRITES_ON | WINDOW_OFF | SQUARE_TILES \
+        | BACKGROUND_MAP_1 | WINDOW_MAP_2 | TILE_DATA_80  
+    
     ei
-endm
-
-;;;
-; Loads something directly, bypassing the accumulator;
-; @param \1 the destination
-; @param \2 the source
-; @registers A
-;;;
-ldAny: macro
-    ld A, \2
-    ld \1, A
-endm
-
-;;;
-; Loads something directly to a memory address greater than $ff00
-; @param \1 the destination
-; @param \2 the source
-; @registers A
-;;;
-ldhAny: macro
-    ld A, \2
-    ldh \1, A
-endm
-
-;;;
-; Loads a value directly to a memory address and increments HL
-; @param \1 The destination address 
-; @param \2 The source address (should be HL)
-;;;
-ldiAny: macro
-    ldi A, [HL]
-    ld \1, A
-endm
-
-;;;
-; Performs an OR on two values other than A
-;;;
-orAny: macro
-    ld a, \1
-    or \2
 endm
 
 ;;;
@@ -89,7 +84,7 @@ memcpy:
         ldiAny [DE], [HL]
         inc DE
         dec BC
-    orAny B, C
+    orReg B, C
     jr NZ, .loop
     reti
 
@@ -141,19 +136,32 @@ main:
 
         ; wait for VBlank, if another interrupt occurs, start waiting again.
         ld A, [InterruptFlags]
-        and VBlankFlag
+        and INTERRUPT_VBLANK
         jr Z, .loop          ; if (!isInVBlank) continue
   
-        and ~VBlankFlag
+        and ~INTERRUPT_VBLANK
         ld [InterruptFlags], A ; isInVBlank = 0
         
         call loadInput
         call runLogic
-        call runDMA
+        call runDma
    jr .loop
     
-
-
+;;;
+; Set a block of bytes to a single value.
+; (Normally 0)
+; @param A The value
+; @param DE The address
+; @param BC The number of bytes
+;;;  
+memset:
+.loop
+        ld [DE], A
+        inc DE
+        dec BC
+    orReg B, C
+    jr NZ, .loop
+    ret
 ;;;
 ; Loads the pressed buttons in to B
 ; @output B - the pressed buttons in format <DpadABSS>
@@ -161,12 +169,12 @@ main:
 loadInput:
     push AF
     ; Set the bit that indicates we want to read A/B/Start/Select
-    ldhAny [JoypadRegister], GetButtonsBit
+    ldhAny [JoypadIo], JOYPAD_GET_BUTTONS
 
     ; Read from JoypadRegister until the value settles
-    ld A, [JoypadRegister]
-    ld A, [JoypadRegister]
-    ld A, [JoypadRegister]
+    ld A, [JoypadIo]
+    ld A, [JoypadIo]
+    ld A, [JoypadIo]
     
     ; bits are 0 if pressed for some reason
     cpl
@@ -175,13 +183,13 @@ loadInput:
     ld B, A
     
     ; Now we want to read the D-Pad
-    ldhAny [JoypadRegister], GetDPadBit
+    ldhAny [JoypadIo], JOYPAD_GET_DPAD
 
     ; Read from JoypadRegister until the value settles
-    ld A, [JoypadRegister]
-    ld A, [JoypadRegister]
-    ld A, [JoypadRegister]
-    
+    ld A, [JoypadIo]
+    ld A, [JoypadIo]
+    ld A, [JoypadIo]
+        
     cpl
     and $0f
     ; don't overwrite what we already have in B
@@ -190,7 +198,7 @@ loadInput:
     ld B, A
     
     ; Reset Joypad register
-    ldhAny [JoypadRegister], ClearJoypad
+    ldhAny [JoypadIo], JOYPAD_CLEAR
     
     pop AF
     ret
@@ -210,18 +218,58 @@ onVBlank:
 ;;;
 ; Kicks off the DMA copy to HRAM and then waits for it to complete
 ;;;
-runDMAROM:
+runDmaRom:
     ; DMA starts when it recieves a memory address
-    ldhAny [DMASourceRegister], (OAMStage >> 8) ; Just the high byte, the low byte is already set (00)
+    ldhAny [DmaSourceRegister], (OamStage >> 8) ; Just the high byte, the low byte is already set (00)
     ld A, DMA_WAIT_TIME
 .loop                   ; Loop until timer runs down and we can assume DMA is finished.
         dec A
     jr NZ, .loop
     ret
-runDMAROMEnd:
+runDmaRomEnd:
+
+graphics:
+OPT  b.x
+
+db %........
+db %........
+db %........
+db %........
+db %........
+db %........
+db %........
+db %........
+
+db %.x.x.x.x
+db %.x.x.x.x
+db %.x.x.x.x
+db %.x.x.x.x
+db %.x.x.x.x
+db %.x.x.x.x
+db %.x.x.x.x
+db %.x.x.x.x
+
+db %x.x.x.x.
+db %x.x.x.x.
+db %x.x.x.x.
+db %x.x.x.x.
+db %x.x.x.x.
+db %x.x.x.x.
+db %x.x.x.x.
+db %x.x.x.x.
+
+db %xxxxxxxx
+db %xxxxxxxx
+db %xxxxxxxx
+db %xxxxxxxx
+db %xxxxxxxx
+db %xxxxxxxx
+db %xxxxxxxx
+db %xxxxxxxx
+
 
 SECTION "Main Ram", WRAM0[$C000]
-OAMStage:
+OamStage:
     ds $00
 
   
