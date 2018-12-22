@@ -3,6 +3,8 @@
 #include "mmu.h"
 #include "hwdefs.h"
 
+void mmu_write_table(struct gb_state *s, u16 location, u8 value);
+
 #if 1
 #define MMU_DEBUG_W(fmt, ...) \
     do { \
@@ -449,8 +451,8 @@ void mmu_register_write(struct gb_state* s, u16 location, u8 value) {
 }
 
 void mmu_write_tree(struct gb_state *s, u16 location, u8 value) {
-    u8 highcation = location >> 8; 
-    if (highcation < 0x80) {
+    u8 highcation = location >> 8;
+     if (highcation < 0x80) {
         if (highcation < 0x40) {
             if (highcation < 0x20) {
                 // 0000 - 1FFF: Fixed ROM bank
@@ -473,9 +475,9 @@ void mmu_write_tree(struct gb_state *s, u16 location, u8 value) {
                 else if (s->mbc == 5) {
                     // MBC5 splits up this area into 2000-2fff for low bits rom bank,
                     // and 3000-3fff for the high bit.
-                    if (location < 0x3000) /* lower 8 bit */
+                    if (location < 0x3000) // lower 8 bit
                         s->mem_bank_rom = (s->mem_bank_rom & (1<<8)) | value;
-                    else /* Upper bit */
+                    else // Upper bit
                         s->mem_bank_rom = (s->mem_bank_rom & 0xff) | ((value & 1) << 8);    
                 } else {
                     mmu_error("Area not implemented for this MBC (mbc=%d, loc=%.4x, val=%x)\n", s->mbc, location, value);
@@ -483,49 +485,10 @@ void mmu_write_tree(struct gb_state *s, u16 location, u8 value) {
                 s->mem_bank_rom = value;
             }
         } else {    
-            return mmu_write_table(s, location, value);
-}
-
-void mmu_write_tree_broken(struct gb_state *s, u16 location, u8 value) {
-    // assuming 8 bit compares are faster than 16bit?
-    u8 highcation = location >> 8; 
-    if (highcation < 0x80) {
-        if (highcation < 0x40) {
-            if (highcation < 0x20) {
-                // 0000 - 1FFF: Fixed ROM bank
-                // Dummy, we always have those enabled.
-                // Turning off the RAM could indicate that battery-backed data is done
-                // being written and could be flushed to disk.
-                if (value == 0)
-                    s->emu_state->flush_extram = 1;          
-            } else {
-                // 2000 - 3FFF: Switchable ROM bank
-                if (value == 0 && s->mbc != 5)
-                    value = 1;
-
-                if (s->mbc == 0)
-                    ; //mmu_assert(value == 1);
-                else if (s->mbc == 1)
-                    value &= 0x1f;
-                else if (s->mbc == 3)
-                    value &= 0x7f;
-                else if (s->mbc == 5) {
-                    // MBC5 splits up this area into 2000-2fff for low bits rom bank,
-                    // and 3000-3fff for the high bit.
-                    if (location < 0x3000) /* lower 8 bit */
-                        s->mem_bank_rom = (s->mem_bank_rom & (1<<8)) | value;
-                    else /* Upper bit */
-                        s->mem_bank_rom = (s->mem_bank_rom & 0xff) | ((value & 1) << 8);    
-                } else {
-                    mmu_error("Area not implemented for this MBC (mbc=%d, loc=%.4x, val=%x)\n", s->mbc, location, value);
-                }
-                s->mem_bank_rom = value;
-            }
-        } else {
             if (highcation < 0x60) {
                 // 0x4000 - 0x5FFF: More switchable ROM
                 if (s->mbc == 1) {
-                    if (s->mem_mbc1_romram_select == 0) { /* ROM mode */
+                    if (s->mem_mbc1_romram_select == 0) { // ROM mode
                         s->mem_mbc1_rombankupper = value & 3;
                     } else {
                         s->mem_mbc1_extrambank = value & 3;
@@ -536,20 +499,21 @@ void mmu_write_tree_broken(struct gb_state *s, u16 location, u8 value) {
                     if (value < 8)
                         ; //mmu_assert(value < s->mem_num_banks_extram);
                     else {
-                        ; //mmu_assert(value <= 0xc); /* RTC is at 08-0C */
+                        ; //mmu_assert(value <= 0xc); // RTC is at 08-0C
                         ; //mmu_assert(s->has_rtc);
                     }
                     s->mem_mbc3_extram_rtc_select = value;
                 } else if (s->mbc == 5) {
                     s->mem_mbc5_extrambank = value & 0xf;
                     s->mem_mbc5_extrambank &= s->mem_num_banks_extram - 1;
-                } else
+                } else {
                     mmu_error("Area not implemented for this MBC (mbc=%d, loc=%.4x, val=%x)\n", s->mbc, location, value);
+                }
             } else {
-                //0x6000 - 0x7FFF: More switchable ROM
+                                //0x6000 - 0x7FFF: More switchable ROM
                 if (s->mbc == 1) {      
                     s       ->mem_mbc1_romram_select = value & 0x1;
-                } else if (s->has_rtc) { /* MBC3 only */
+                } else if (s->has_rtc) { // MBC3 only
                     if (s->mem_latch_rtc == 0x01 && value == 0x01) {
                         // TODO... actually latch something?
                         s->mem_latch_rtc = s->mem_latch_rtc;
@@ -575,7 +539,7 @@ void mmu_write_tree_broken(struct gb_state *s, u16 location, u8 value) {
                         return;
                     if (s->mem_mbc1_romram_select == 1) { // RAM mode
                         s->mem_EXTRAM[s->mem_mbc1_extrambank * EXTRAM_BANKSIZE + location - 0xa000] = value;
-                    } else { // ROM mode - we can only use bank 0 */
+                    } else { // ROM mode - we can only use bank 0
                         s->mem_EXTRAM[location - 0xa000] = value;
                     }
                     s->emu_state->extram_dirty = 1;
@@ -597,7 +561,7 @@ void mmu_write_tree_broken(struct gb_state *s, u16 location, u8 value) {
                 return;
             }
         } else {
-            if (highcation < 0x0E) {
+            if (highcation < 0xE0) {
                 if (highcation < 0xD0) {
                     // 0xC000 - 0xCFFF: Fixed RAM
                     s->mem_WRAM[location - 0xc000] = value;
@@ -605,7 +569,7 @@ void mmu_write_tree_broken(struct gb_state *s, u16 location, u8 value) {
                     // 0xD000 - 0xDFFF: Switchable RAM
                     s->mem_WRAM[s->mem_bank_wram * WRAM_BANKSIZE + location - 0xd000] = value; 
                 }
-            } else {
+            } else { 
                 if (highcation < 0xF0) {
                     // 0xE000 - 0FDFF: Echoed RAM
                     mmu_error("Writing to ECHO area (0xc00-0xfdff) @%x, val=%x", location, value);
@@ -641,6 +605,7 @@ void mmu_write_tree_broken(struct gb_state *s, u16 location, u8 value) {
         }
     }
 }
+
 
 void mmu_write_table(struct gb_state *s, u16 location, u8 value) {
     //MMU_DEBUG_W("Mem write (%x) %x: ", location, value);
@@ -1088,6 +1053,7 @@ void mmu_write_table(struct gb_state *s, u16 location, u8 value) {
     }
 }
 
+
 /**
  * Optimises lookup of opcode of PC
  * @param s gameboy state
@@ -1416,7 +1382,7 @@ void mmu_push16(struct gb_state *s, u16 value) {
 }
 
 void mmu_write(struct gb_state *s, u16 location, u8 value) {
-    if (!treeMode) {
+    if (treeMode) {
         return mmu_write_tree(s, location, value);
     } else {
         return mmu_write_table(s, location, value);

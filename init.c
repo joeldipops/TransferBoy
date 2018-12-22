@@ -45,6 +45,7 @@ void initLogic(RootState* state, const byte playerNumber) {
         bool releasedButtons[N64_BUTTON_COUNT] = {};
         getPressedButtons(&state->KeysReleased, playerNumber, releasedButtons);
 
+        //if (true) { 
         if (releasedButtons[A] /*|| releasedButtons[Start]*/) {
             state->RequiresControllerRead = true;
             state->RequiresRepaint = true;
