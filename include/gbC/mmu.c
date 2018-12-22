@@ -4,6 +4,7 @@
 #include "hwdefs.h"
 
 void mmu_write_table(struct gb_state *s, u16 location, u8 value);
+u8 mmu_read_table(struct gb_state *s, u16 location);
 
 #if 1
 #define MMU_DEBUG_W(fmt, ...) \
@@ -451,6 +452,11 @@ void mmu_register_write(struct gb_state* s, u16 location, u8 value) {
 }
 
 void mmu_write_tree(struct gb_state *s, u16 location, u8 value) {
+    // Jump straight to IO registers.
+    if (location >= 0xFF00 && location < 0xFF80) {
+        return mmu_register_write(s, location, value);
+    }
+
     u8 highcation = location >> 8;
      if (highcation < 0x80) {
         if (highcation < 0x40) {
@@ -1078,7 +1084,11 @@ u8 getOpCodeFromROM(struct gb_state *s, const u16 programCounter) {
     }
 }
 
-u8 mmu_read(struct gb_state *s, u16 location) {
+u8 mmu_read_tree(struct gb_state* s, u16 location) {
+    return mmu_read_table(s, location);
+}
+
+u8 mmu_read_table(struct gb_state *s, u16 location) {
     //MMU_DEBUG_R("Mem read (%x): ", location); */
     if (s->in_bios && location < 0x100)
     {
@@ -1386,5 +1396,13 @@ void mmu_write(struct gb_state *s, u16 location, u8 value) {
         return mmu_write_tree(s, location, value);
     } else {
         return mmu_write_table(s, location, value);
+    }
+}
+
+u8 mmu_read(struct gb_state* s, u16 location) {
+    if (treeMode) {
+        return mmu_read_tree(s, location);
+    } else {
+        return mmu_read_table(s, location);
     }
 }
