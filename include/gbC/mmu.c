@@ -1085,7 +1085,106 @@ u8 getOpCodeFromROM(struct gb_state *s, const u16 programCounter) {
 }
 
 u8 mmu_read_tree(struct gb_state* s, u16 location) {
-    return mmu_read_table(s, location);
+    u8 highcation = location >> 8;
+    if (s->in_bios && highcation < 0x01) {
+        return s->mem_BIOS[location];
+    }
+
+    if (highcation < 0x80) {
+        if (highcation < 0x40) {
+            return s->mem_ROM[location];
+        } else {
+            //MMU_DEBUG_R("ROM B%d, %4x", s->mem_bank_rom, s->mem_bank_rom * 0x4000 + (location - 0x4000));
+            u8 bank = s->mem_bank_rom;
+            if (s->mbc == 1 && s->mem_mbc1_romram_select == 0)
+                bank |= s->mem_mbc1_rombankupper << 5;
+            //mmu_assert(s->mem_num_banks_rom > 0);
+            //mmu_assert(bank > 0 || s->mbc == 5);
+            bank &= s->mem_num_banks_rom - 1;
+            return s->mem_ROM[bank * 0x4000 + (location - 0x4000)];
+        }
+    } else {
+        if (highcation < 0xC0) {
+            if (highcation < 0xA0) {
+                //MMU_DEBUG_R("VRAM");
+                return s->mem_VRAM[s->mem_bank_vram * VRAM_BANKSIZE + location - 0x8000];
+            } else {
+                if (s->mbc == 1) {
+                    //MMU_DEBUG_R("EXTRAM (rom/ram: %d, B%d)", s->mem_mbc1_romram_select, s->mem_mbc1_extrambank);
+                    if (!s->has_extram)
+                        return 0xff;
+                    if (s->mem_mbc1_romram_select == 1) { /* RAM mode */
+                        //mmu_assert(s->mem_mbc1_extrambank < s->mem_num_banks_extram);
+                        return s->mem_EXTRAM[s->mem_mbc1_extrambank * EXTRAM_BANKSIZE + location - 0xa000];
+                    } else /* ROM mode - we can only be bank 0 */
+                        return s->mem_EXTRAM[location - 0xa000];
+                } else if (s->mbc == 3) {
+                    //MMU_DEBUG_R("EXTRAM (sw)/RTC (B%d)", s->mem_mbc3_extram_rtc_select);
+                    if (s->mem_mbc3_extram_rtc_select < 0x04)
+                        return s->mem_EXTRAM[s->mem_mbc3_extram_rtc_select * EXTRAM_BANKSIZE + location - 0xa000];
+                    else if (s->mem_mbc3_extram_rtc_select >= 0x08 && s->mem_mbc3_extram_rtc_select <= 0x0c)
+                        return s->mem_RTC[s->mem_mbc3_extram_rtc_select];
+                    else
+                        mmu_error("Reading from extram/rtc with invalid selection (%d) @%x", s->mem_mbc3_extram_rtc_select, location);
+                } else if (s->mbc == 5) {
+                    //MMU_DEBUG_R("EXTRAM B%d", s->mem_mbc5_extrambank);
+                    if (!s->has_extram)
+                        return 0xff;
+                    //mmu_assert(s->mem_mbc5_extrambank < s->mem_num_banks_extram);
+                    return s->mem_EXTRAM[s->mem_mbc5_extrambank * EXTRAM_BANKSIZE + location - 0xa000];
+                } else
+                    mmu_error("Area not implemented for this MBC (mbc=%d, location=%.4x)\n", s->mbc, location);
+
+                return 0;
+            }
+        } else {
+            if (highcation < 0xE0) {
+                if (highcation < 0xD0) {
+                    //MMU_DEBUG_R("WRAM B0  @%x", (location - 0xc000));
+                    return s->mem_WRAM[location - 0xc000];
+                } else {
+                    //MMU_DEBUG_R("WRAM B%d @%x", s->mem_bank_wram, location - 0xd000);
+                    return s->mem_WRAM[s->mem_bank_wram * WRAM_BANKSIZE + location - 0xd000];
+                }
+            } else {
+                if (highcation < 0xF0) {
+                   return mmu_read(s, location - 0x2000); /* TODO XXX */
+                    //mmu_error("Reading from ECHO (0xc000 - 0xddff) B0: %x", location);
+                } else {
+                    if (location < 0xfea0) {
+                        if (highcation < 0xfe) {
+                            return 0;
+                        } else {
+                            // FE00 - FE9F
+                            //MMU_DEBUG_R("Sprite attribute table (OAM)");
+                            return s->mem_OAM[location - 0xfe00];
+                        }
+                    } else {
+                        if (location < 0xff80) {
+                            if (highcation < 0xff) {
+                                // FEA0 - FEFF
+                                return 0;
+                            } else {
+                                //return mmu_register_read(s, location);
+                                return mmu_read_table(s, location);
+                
+                            }
+                        } else {
+                            if (location < 0xffff) {
+                                // FF80 - FFFE
+                                //MMU_DEBUG_R("HRAM  @%x (%x)", location - 0xff80, s->mem_HRAM[location - 0xff80]);
+                                return s->mem_HRAM[location - 0xff80];
+                            } else {
+                                // FFFF
+                                //MMU_DEBUG_R("Interrupt enable");
+                                return s->interrupts_enable;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 u8 mmu_read_table(struct gb_state *s, u16 location) {
@@ -1400,9 +1499,9 @@ void mmu_write(struct gb_state *s, u16 location, u8 value) {
 }
 
 u8 mmu_read(struct gb_state* s, u16 location) {
-    if (treeMode) {
+    //if (treeMode) {
         return mmu_read_tree(s, location);
-    } else {
-        return mmu_read_table(s, location);
-    }
+    //} else {
+      //  return mmu_read_table(s, location);
+    //}
 }
