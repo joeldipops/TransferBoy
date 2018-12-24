@@ -88,6 +88,40 @@ memcpy:
     jr NZ, .loop
     reti
 
+;;;
+; Loads a value directly to a memory address and increments HL
+; @param \1 The destination address 
+; @param \2 The source address (should be HL)
+;;;
+ldim: macro
+    ldi A, [HL]
+    ld \2, A
+endm
+
+;;;
+; Performs an OR on two values other than A
+;;;
+orAny: macro
+    ld a, \1
+    or \2
+endm
+
+;;;
+; Copies memory from source to destination
+; @reg HL Source address
+; @reg DE Destination address
+; @reg BC Number of bytes to copy.
+;;;
+SECTION "MemCopy", ROM0[$28]
+memcpy:
+.loop
+        ldim [DE], [HL]
+        inc DE
+        dec BC
+    orAny B, C
+    jr NZ, .loop
+    reti
+
 SECTION "Vblank", ROM0[$0040]
     jp onVBlank
 
@@ -162,6 +196,7 @@ memset:
     orReg B, C
     jr NZ, .loop
     ret
+
 ;;;
 ; Loads the pressed buttons in to B
 ; @output B - the pressed buttons in format <DpadABSS>
