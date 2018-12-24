@@ -3,9 +3,6 @@
 #include "mmu.h"
 #include "hwdefs.h"
 
-void mmu_write_table(struct gb_state *s, u16 location, u8 value);
-u8 mmu_read_table(struct gb_state *s, u16 location);
-
 #if 1
 #define MMU_DEBUG_W(fmt, ...) \
     do { \
@@ -36,7 +33,7 @@ u8 mmu_read_table(struct gb_state *s, u16 location);
     } while (0)
 
 static void mmu_hdma_do(struct gb_state *s) {
-    /* DMA one block (0x10 byte), should be called at start of H-Blank. */
+    // DMA one block (0x10 byte), should be called at start of H-Blank. */
     //mmu_assert(s->io_hdma_running);
     //mmu_assert((s->io_hdma_status & (1<<7)) == 0);
     //mmu_assert((s->io_lcd_STAT & 3) == 0);
@@ -105,7 +102,7 @@ void mmu_step(struct gb_state *s) {
         mmu_hdma_do(s);
 }
 
-u8 mmu_register_read(struct gb_state* s, u16 location, u8 value) {
+u8 mmu_register_read(struct gb_state* s, u16 location) {
     u8 lowcation = location & 0x00FF;
     
     if (lowcation < 0x80) {
@@ -275,7 +272,7 @@ u8 mmu_register_read(struct gb_state* s, u16 location, u8 value) {
                             } else {
                                 if (lowcation < 0x27) {
                                     // FF26: Sound master switch
-                                    s->io_sound_enabled = (value & 0x80) | (s->io_sound_enabled & 0x7f);
+                                    return s->io_sound_enabled;
                                 } else {
                                     ; //unused
                                 }
@@ -425,7 +422,8 @@ u8 mmu_register_read(struct gb_state* s, u16 location, u8 value) {
                 }   
             }
         }
-    }    
+    }  
+    return 0x00;  
 }
 
 /**
@@ -652,7 +650,7 @@ void mmu_register_write(struct gb_state* s, u16 location, u8 value) {
                                     
                                     // Normally this transfer takes ~160ms (during which only HRAM
                                     // is accessible) but it's okay to be instantaneous. Normally
-                                    // roms loop for ~200 cycles or so to wait.  */
+                                    // roms loop for ~200 cycles or so to wait.  
                                     for (unsigned i = 0; i < OAM_SIZE; i++)
                                         s->mem_OAM[i] = mmu_read(s, (value << 8) + i);
                                 } else {
@@ -774,7 +772,7 @@ void mmu_register_write(struct gb_state* s, u16 location, u8 value) {
     }
 }
 
-void mmu_write_tree(struct gb_state *s, u16 location, u8 value) {
+void mmu_write(struct gb_state *s, u16 location, u8 value) {
     // Jump straight to IO registers.
     if (location >= 0xFF00 && location < 0xFF80) {
         return mmu_register_write(s, location, value);
@@ -935,20 +933,20 @@ void mmu_write_tree(struct gb_state *s, u16 location, u8 value) {
     }
 }
 
-
+/*
 void mmu_write_table(struct gb_state *s, u16 location, u8 value) {
     //MMU_DEBUG_W("Mem write (%x) %x: ", location, value);
     switch (location & 0xf000) {
-    case 0x0000: /* 0000 - 1FFF */
+    case 0x0000:  0000 - 1FFF 
     case 0x1000:
         //MMU_DEBUG_W("EXTRAM(+RTC) enable");
-        /* Dummy, we always have those enabled. */
-        /* Turning off the RAM could indicate that battery-backed data is done
-         * being written and could be flushed to disk. */
+         //Dummy, we always have those enabled.
+        // Turning off the RAM could indicate that battery-backed data is done
+        // being written and could be flushed to disk.
         if (value == 0)
             s->emu_state->flush_extram = 1;
         break;
-    case 0x2000: /* 2000 - 3FFF */
+    case 0x2000: // 2000 - 3FFF 
     case 0x3000:
         //MMU_DEBUG_W("ROM bank number");
         if (value == 0 && s->mbc != 5)
@@ -961,11 +959,11 @@ void mmu_write_table(struct gb_state *s, u16 location, u8 value) {
         else if (s->mbc == 3)
             value &= 0x7f;
         else if (s->mbc == 5) {
-            /* MBC5 splits up this area into 2000-2fff for low bits rom bank,
-             * and 3000-3fff for the high bit. */
-            if (location < 0x3000) /* lower 8 bit */
+            // MBC5 splits up this area into 2000-2fff for low bits rom bank,
+             * and 3000-3fff for the high bit. 
+            if (location < 0x3000) // lower 8 bit 
                 s->mem_bank_rom = (s->mem_bank_rom & (1<<8)) | value;
-            else /* Upper bit */
+            else // Upper bit 
                 s->mem_bank_rom = (s->mem_bank_rom & 0xff) | ((value & 1) << 8);
             break;
         } else
@@ -973,10 +971,10 @@ void mmu_write_table(struct gb_state *s, u16 location, u8 value) {
         //mmu_assert(s->mbc == 0 || value < s->mem_num_banks_rom);
         s->mem_bank_rom = value;
         break;
-    case 0x4000: /* 4000 - 5FFF */
+    case 0x4000: // 4000 - 5FFF 
     case 0x5000:
         if (s->mbc == 1) {
-            if (s->mem_mbc1_romram_select == 0) { /* ROM mode */
+            if (s->mem_mbc1_romram_select == 0) { // ROM mode 
                 //MMU_DEBUG_W("upper bits ROM bank number");
                 s->mem_mbc1_rombankupper = value & 3;
             } else {
@@ -990,7 +988,7 @@ void mmu_write_table(struct gb_state *s, u16 location, u8 value) {
             if (value < 8)
                 ;//mmu_assert(value < s->mem_num_banks_extram);
             else {
-                //mmu_assert(value <= 0xc); /* RTC is at 08-0C */
+                //mmu_assert(value <= 0xc); // RTC is at 08-0C 
                 //mmu_assert(s->has_rtc);
             }
             s->mem_mbc3_extram_rtc_select = value;
@@ -1001,41 +999,41 @@ void mmu_write_table(struct gb_state *s, u16 location, u8 value) {
         } else
             mmu_error("Area not implemented for this MBC (mbc=%d, loc=%.4x, val=%x)\n", s->mbc, location, value);
         break;
-    case 0x6000: /* 6000 - 7FFF */
+    case 0x6000: // 6000 - 7FFF 
     case 0x7000:
         if (s->mbc == 1) {
             //MMU_DEBUG_W("ROM/RAM mode select");
             s->mem_mbc1_romram_select = value & 0x1;
-        } else if (s->has_rtc) { /* MBC3 only */
+        } else if (s->has_rtc) { // MBC3 only 
             //MMU_DEBUG_W("Latch clock data");
             if (s->mem_latch_rtc == 0x01 && value == 0x01) {
-                /* TODO... actually latch something? */
+                // TODO... actually latch something? 
                 s->mem_latch_rtc = s->mem_latch_rtc;
             }
             s->mem_latch_rtc = value;
-        } else if (s->mbc == 3 || s->mbc == 5) { /* MBC3 without RTC or MBC5 */
+        } else if (s->mbc == 3 || s->mbc == 5) { // MBC3 without RTC or MBC5 
             //MMU_DEBUG_W("Invalid write for MBC%d", s->mbc);
-            /* Just ignore it - Pokemon Red writes here because it's coded for
-             * MBC1, but actually has an MBC3, for instance */
+            // Just ignore it - Pokemon Red writes here because it's coded for
+             * MBC1, but actually has an MBC3, for instance 
         } else
             mmu_error("Area not implemented for this MBC (mbc=%d, loc=%.4x, val=%x)\n", s->mbc, location, value);
         break;
-    case 0x8000: /* 8000 - 9FFF */
+    case 0x8000: // 8000 - 9FFF 
     case 0x9000:
         //MMU_DEBUG_W("VRAM (B%d)", s->mem_bank_vram);
         s->mem_VRAM[s->mem_bank_vram * VRAM_BANKSIZE + location - 0x8000]
             = value;
         break;
-    case 0xa000: /* A000 - BFFF */
+    case 0xa000: // A000 - BFFF 
     case 0xb000:
         if (s->mbc == 1) {
             if (!s->has_extram)
                 break;
-            if (s->mem_mbc1_romram_select == 1) { /* RAM mode */
+            if (s->mem_mbc1_romram_select == 1) { // RAM mode 
                 //MMU_DEBUG_W("EXTRAM (B%d)", s->mem_mbc1_extrambank);
                 //mmu_assert(s->mem_mbc1_extrambank < s->mem_num_banks_extram);
                 s->mem_EXTRAM[s->mem_mbc1_extrambank * EXTRAM_BANKSIZE + location - 0xa000] = value;
-            } else { /* ROM mode - we can only use bank 0 */
+            } else { // ROM mode - we can only use bank 0 
                 //MMU_DEBUG_W("EXTRAM (B0)");
                 s->mem_EXTRAM[location - 0xa000] = value;
             }
@@ -1059,15 +1057,15 @@ void mmu_write_table(struct gb_state *s, u16 location, u8 value) {
         } else
             mmu_error("Area not implemented for this MBC (mbc=%d, loc=%.4x, val=%x)\n", s->mbc, location, value);
         break;
-    case 0xc000: /* C000 - CFFF */
+    case 0xc000: // C000 - CFFF 
         //MMU_DEBUG_W("WRAM B0");
         s->mem_WRAM[location - 0xc000] = value;
         break;
-    case 0xd000: /* D000 - DFFF */
+    case 0xd000: // D000 - DFFF 
         //MMU_DEBUG_W("WRAM B%d", s->mem_bank_wram);
         s->mem_WRAM[s->mem_bank_wram * WRAM_BANKSIZE + location - 0xd000] = value;
         break;
-    case 0xe000: /* E000 - FDFF */
+    case 0xe000: // E000 - FDFF 
         mmu_error("Writing to ECHO area (0xc00-0xfdff) @%x, val=%x", location, value);
         break;
     case 0xf000:
@@ -1076,17 +1074,17 @@ void mmu_write_table(struct gb_state *s, u16 location, u8 value) {
             mmu_error("Writing to ECHO area (0xc00-0xfdff) @%x, val=%x", location, value);
             break;
         }
-        if (location < 0xfea0) { /* FE00 - FE9F */
+        if (location < 0xfea0) { // FE00 - FE9F 
             //MMU_DEBUG_W("Sprite attribute table (OAM)");
             s->mem_OAM[location - 0xfe00] = value;
             break;
         }
-        if (location < 0xff00) { /* FEA0 - FEFF */
+        if (location < 0xff00) { // FEA0 - FEFF 
             //MMU_DEBUG_W("NOT USABLE");
             mmu_error("Writing to unusable area @%x, val=%x", location, value);
             break;
         }
-        if (location < 0xff80) { /* FF00 - FF7F */
+        if (location < 0xff80) { // FF00 - FF7F 
             //MMU_DEBUG_W("I/O ports ");
 
             switch(location) {
@@ -1213,7 +1211,7 @@ void mmu_write_table(struct gb_state *s, u16 location, u8 value) {
                 s->io_sound_enabled = (value & 0x80) | (s->io_sound_enabled & 0x7f);
                 break;
             case 0xff29:
-                /* Donkey Kong Land 3 accesses this... */
+                // Donkey Kong Land 3 accesses this... 
                 //MMU_DEBUG_W("Unknown sound reg");
                 break;
             case 0xff30:
@@ -1263,9 +1261,9 @@ void mmu_write_table(struct gb_state *s, u16 location, u8 value) {
                 break;
             case 0xff46:
                 //MMU_DEBUG_W("DMA source=%.4x dest=0xfe00 (OAM)", value << 8);
-                /* Normally this transfer takes ~160ms (during which only HRAM
+                // Normally this transfer takes ~160ms (during which only HRAM
                  * is accessible) but it's okay to be instantaneous. Normally
-                 * roms loop for ~200 cycles or so to wait.  */
+                 * roms loop for ~200 cycles or so to wait.  
                 for (unsigned i = 0; i < OAM_SIZE; i++)
                     s->mem_OAM[i] = mmu_read(s, (value << 8) + i);
                 break;
@@ -1364,7 +1362,7 @@ void mmu_write_table(struct gb_state *s, u16 location, u8 value) {
             break;
         }
 
-        if (location < 0xffff) { /* FF80 - FFFE */
+        if (location < 0xffff) { // FF80 - FFFE 
             //MMU_DEBUG_W("HRAM ");
             if (location == 0xffa0) {
                 //MMU_DEBUG_W("HRAM FFA0: %x", value);
@@ -1372,7 +1370,7 @@ void mmu_write_table(struct gb_state *s, u16 location, u8 value) {
             s->mem_HRAM[location - 0xff80] = value;
             break;
         }
-        if (location == 0xffff) { /* FFFF */
+        if (location == 0xffff) { // FFFF 
             //MMU_DEBUG_W("Interrupt enable");
             s->interrupts_enable = value;
             break;
@@ -1381,7 +1379,7 @@ void mmu_write_table(struct gb_state *s, u16 location, u8 value) {
         mmu_error("Invalid write location: %x val=%x", location, value);
     }
 }
-
+*/
 
 /**
  * Optimises lookup of opcode of PC
@@ -1407,7 +1405,12 @@ u8 getOpCodeFromROM(struct gb_state *s, const u16 programCounter) {
     }
 }
 
-u8 mmu_read_tree(struct gb_state* s, u16 location) {
+u8 mmu_read(struct gb_state* s, u16 location) {
+    // Jump straight to IO registers.
+    if (location >= 0xFF00 && location < 0xFF80) {
+        return mmu_register_read(s, location);
+    }
+
     u8 highcation = location >> 8;
     if (s->in_bios && highcation < 0x01) {
         return s->mem_BIOS[location];
@@ -1488,9 +1491,7 @@ u8 mmu_read_tree(struct gb_state* s, u16 location) {
                                 // FEA0 - FEFF
                                 return 0;
                             } else {
-                                //return mmu_register_read(s, location);
-                                return mmu_read_table(s, location);
-                
+                                return mmu_register_read(s, location);
                             }
                         } else {
                             if (location < 0xffff) {
@@ -1510,22 +1511,23 @@ u8 mmu_read_tree(struct gb_state* s, u16 location) {
     }
 }
 
+/*
 u8 mmu_read_table(struct gb_state *s, u16 location) {
-    //MMU_DEBUG_R("Mem read (%x): ", location); */
+    //MMU_DEBUG_R("Mem read (%x): ", location);
     if (s->in_bios && location < 0x100)
     {
-        //MMU_DEBUG_R("BIOS: %04x: %02x", location, s->bios[location]); */
+        //MMU_DEBUG_R("BIOS: %04x: %02x", location, s->bios[location]); 
         return s->mem_BIOS[location];
     }
 
     switch (location & 0xf000) {
-    case 0x0000: /* 0000 - 3FFF */
+    case 0x0000: // 0000 - 3FFF 
     case 0x1000:
     case 0x2000:
     case 0x3000:
-        //MMU_DEBUG_R("ROM B0 @ %4x", location); */
+        //MMU_DEBUG_R("ROM B0 @ %4x", location); 
         return s->mem_ROM[location];
-    case 0x4000: /* 4000 - 7FFF */
+    case 0x4000: // 4000 - 7FFF 
     case 0x5000:
     case 0x6000:
     case 0x7000:
@@ -1539,20 +1541,20 @@ u8 mmu_read_table(struct gb_state *s, u16 location) {
         bank &= s->mem_num_banks_rom - 1;
         return s->mem_ROM[bank * 0x4000 + (location - 0x4000)];
     }
-    case 0x8000: /* 8000 - 9FFF */
+    case 0x8000: // 8000 - 9FFF 
     case 0x9000:
         //MMU_DEBUG_R("VRAM");
         return s->mem_VRAM[s->mem_bank_vram * VRAM_BANKSIZE + location - 0x8000];
-    case 0xa000: /* A000 - BFFF */
+    case 0xa000: // A000 - BFFF 
     case 0xb000:
         if (s->mbc == 1) {
             //MMU_DEBUG_R("EXTRAM (rom/ram: %d, B%d)", s->mem_mbc1_romram_select, s->mem_mbc1_extrambank);
             if (!s->has_extram)
                 return 0xff;
-            if (s->mem_mbc1_romram_select == 1) { /* RAM mode */
+            if (s->mem_mbc1_romram_select == 1) { // RAM mode 
                 //mmu_assert(s->mem_mbc1_extrambank < s->mem_num_banks_extram);
                 return s->mem_EXTRAM[s->mem_mbc1_extrambank * EXTRAM_BANKSIZE + location - 0xa000];
-            } else /* ROM mode - we can only be bank 0 */
+            } else // ROM mode - we can only be bank 0 
                 return s->mem_EXTRAM[location - 0xa000];
         } else if (s->mbc == 3) {
             //MMU_DEBUG_R("EXTRAM (sw)/RTC (B%d)", s->mem_mbc3_extram_rtc_select);
@@ -1572,14 +1574,14 @@ u8 mmu_read_table(struct gb_state *s, u16 location) {
             mmu_error("Area not implemented for this MBC (mbc=%d, location=%.4x)\n", s->mbc, location);
 
         return 0;
-    case 0xc000: /* C000 - CFFF */
+    case 0xc000: // C000 - CFFF 
         //MMU_DEBUG_R("WRAM B0  @%x", (location - 0xc000));
         return s->mem_WRAM[location - 0xc000];
-    case 0xd000: /* D000 - DFFF */
+    case 0xd000: // D000 - DFFF 
         //MMU_DEBUG_R("WRAM B%d @%x", s->mem_bank_wram, location - 0xd000);
         return s->mem_WRAM[s->mem_bank_wram * WRAM_BANKSIZE + location - 0xd000];
-    case 0xe000: /* E000 - FDFF */
-        return mmu_read(s, location - 0x2000); /* TODO XXX */
+    case 0xe000: // E000 - FDFF 
+        return mmu_read(s, location - 0x2000); // TODO XXX 
         //mmu_error("Reading from ECHO (0xc000 - 0xddff) B0: %x", location);
     case 0xf000:
         if (location < 0xfe00) {
@@ -1587,18 +1589,18 @@ u8 mmu_read_table(struct gb_state *s, u16 location) {
             return 0;
         }
 
-        if (location < 0xfea0) { /* FE00 - FE9F */
+        if (location < 0xfea0) { // FE00 - FE9F 
             //MMU_DEBUG_R("Sprite attribute table (OAM)");
             return s->mem_OAM[location - 0xfe00];
         }
 
-        if (location < 0xff00) { /* FEA0 - FEFF */
+        if (location < 0xff00) { // FEA0 - FEFF 
             //mmu_error("Reading from unusable area: %x", location);
             return 0;
         }
 
-        if (location < 0xff80) { /* FF00 - FF7F */
-            //MMU_DEBUG_R("I/O ports "); */
+        if (location < 0xff80) { // FF00 - FF7F 
+            //MMU_DEBUG_R("I/O ports "); 
             switch (location) {
             case 0xff00: {
                 //MMU_DEBUG_R("Joypad");
@@ -1696,7 +1698,7 @@ u8 mmu_read_table(struct gb_state *s, u16 location) {
                 //MMU_DEBUG_R("Sound enabled flags");
                 return s->io_sound_enabled;
             case 0xff29:
-                /* Donkey Kong Land 3 accesses this... */
+                // Donkey Kong Land 3 accesses this... 
                 //MMU_DEBUG_R("Unknown sound reg");
                 return 0xff;
             case 0xff30:
@@ -1730,7 +1732,7 @@ u8 mmu_read_table(struct gb_state *s, u16 location) {
                 //MMU_DEBUG_R("Scroll X");
                 return s->io_lcd_SCX;
             case 0xff44:
-                //MMU_DEBUG_R("LCD LY"); */
+                //MMU_DEBUG_R("LCD LY"); 
                 return s->io_lcd_LY;
             case 0xff45:
                 //MMU_DEBUG_R("LCD LYC");
@@ -1752,7 +1754,7 @@ u8 mmu_read_table(struct gb_state *s, u16 location) {
                 return s->io_lcd_WX;
             case 0xff4d:
                 //MMU_DEBUG_R("KEY1: CGB speed (ignored)");
-                return 1<<7; /* TODO XXX */
+                return 1<<7; // TODO XXX 
             case 0xff4f:
                 //MMU_DEBUG_R("VRAM Bank");
                 //mmu_assert(s->gb_type == GB_TYPE_CGB);
@@ -1777,11 +1779,11 @@ u8 mmu_read_table(struct gb_state *s, u16 location) {
             mmu_error("Reading from unknown IO port @%.4x", location);
             return 0;
         }
-        if (location < 0xffff) { /* FF80 - FFFE */
+        if (location < 0xffff) { // FF80 - FFFE 
             //MMU_DEBUG_R("HRAM  @%x (%x)", location - 0xff80, s->mem_HRAM[location - 0xff80]);
             return s->mem_HRAM[location - 0xff80];
         }
-        if (location == 0xffff) { /* FFFF */
+        if (location == 0xffff) { // FFFF 
             //MMU_DEBUG_R("Interrupt enable");
             return s->interrupts_enable;
         }
@@ -1792,6 +1794,7 @@ u8 mmu_read_table(struct gb_state *s, u16 location) {
     }
     return 0;
 }
+*/
 
 u16 mmu_read16(struct gb_state *s, u16 location) {
     return mmu_read(s, location) | ((u16)mmu_read(s, location + 1) << 8);
@@ -1811,20 +1814,4 @@ u16 mmu_pop16(struct gb_state *s) {
 void mmu_push16(struct gb_state *s, u16 value) {
     s->sp -= 2;
     mmu_write16(s, s->sp, value);
-}
-
-void mmu_write(struct gb_state *s, u16 location, u8 value) {
-    if (treeMode) {
-        return mmu_write_tree(s, location, value);
-    } else {
-        return mmu_write_table(s, location, value);
-    }
-}
-
-u8 mmu_read(struct gb_state* s, u16 location) {
-    //if (treeMode) {
-        return mmu_read_tree(s, location);
-    //} else {
-      //  return mmu_read_table(s, location);
-    //}
 }
