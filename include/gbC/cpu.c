@@ -360,8 +360,8 @@ static void cpu_do_cb_instruction(struct gb_state *s) {
         cpu_error("Unknown instruction");
     }
 }
-
-static void cpu_do_instruction(struct gb_state *s) {
+/*
+static void cpu_do_instruction_linear(struct gb_state *s) {
     u8 op = mmu_read(s, s->pc++);
     if (M(op, 0x00, 0xff)) { // NOP 
     } else if (M(op, 0x01, 0xcf)) { // LD reg16, u16 
@@ -722,9 +722,10 @@ static void cpu_do_instruction(struct gb_state *s) {
         cpu_error("Unknown instruction");
     }
 }
+*/
 
 
-static void cpu_do_instruction_tree(struct gb_state *s) {
+static void cpu_do_instruction(struct gb_state *s) {
     u8 op = getOpCodeFromROM(s, s->pc++);
 
     /*
@@ -2623,11 +2624,7 @@ static void cpu_do_instruction_tree(struct gb_state *s) {
     }
 
     if (!s->halt_for_interrupts) {
-        if (treeMode) {
-            cpu_do_instruction_tree(s);
-        } else {
-            cpu_do_instruction(s);
-        }    
+        cpu_do_instruction(s);
     } else {
         if (!s->interrupts_enable)
             cpu_error("Waiting for interrupts while disabled, deadlock.\n");

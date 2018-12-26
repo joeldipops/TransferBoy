@@ -16,3 +16,4 @@ test.sh
 *.eeprom
 *.exe
 *.dll
+bgb*
