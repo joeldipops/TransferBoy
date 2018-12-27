@@ -21,6 +21,9 @@ popAll: macro
     pop AF
 endm
 
+;;; 
+; Lets us put a break point on a nop
+;;;
 debugger: macro
     or A
     jr NZ .skip
@@ -61,7 +64,6 @@ SECTION "p1thru4", ROM0[$0060]
 
 SECTION "main", ROM0[$0100]
     nop
-    ;jr main
     jp main
     
     ; HEADER START
@@ -89,7 +91,6 @@ SECTION "main", ROM0[$0100]
 ;;;
 init: macro
     di
-    nop
 
     ; turn off outputs
     call turnOffScreen

@@ -28,6 +28,5 @@ SpritePalette2 EQU $ff49
 ;;;;;;;;;;;;;; Software Addresses ;;;;;;;;;;;;;;;;;;;;;;
 stackFloor EQU $ffff ; Might change to DFFF when actually start using the stack
 runDma EQU $ff80
-oamStage EQU $c000
 
     ENDC
