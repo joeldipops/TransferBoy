@@ -105,8 +105,9 @@ init: macro
     call memset
 
     ; Use the default palette everywhere to start with
-    ld A, DEFAULT_PALETTE
-    ldh [BackgroundPalette], A
+    ld A, BG_PALETTE
+    ldhAny [BackgroundPalette], BG_PALETTE
+    ld A, FG_PALETTE
     ldh [SpritePalette1], A
     ldh [SpritePalette2], A
 
@@ -144,6 +145,7 @@ init: macro
 
     ; Set software variables
     ldAny [state], INIT_STATE
+    ldAny [cursorPosition], -1
     ei
 endm
         
@@ -234,7 +236,16 @@ memset:
 ; @output B - the pressed buttons in format <DpadABSS>
 ;;;
 loadInput:
-    push AF
+    ld A, [inputThrottleCount]
+    or A
+    jr Z, .else
+        dec A
+        ld [inputThrottleCount], A
+        ld B, 0
+        ret
+.else
+    ldAny [inputThrottleCount], INPUT_THROTTLE
+
     ; Set the bit that indicates we want to read A/B/Start/Select
     ldhAny [JoypadIo], JOYPAD_GET_BUTTONS
 
@@ -267,7 +278,6 @@ loadInput:
     ; Reset Joypad register
     ldhAny [JoypadIo], JOYPAD_CLEAR
     
-    pop AF
     ret
     
 ;;;
@@ -275,36 +285,66 @@ loadInput:
 ; @param B The joypad state
 ;;;
 runLogic:
-    ; if state will init, set up Sprite
-    cpAny [state], INIT_STATE
-    jp NZ, .isSetUp
-        ldAny [PcX], 8
-        ldAny [PcY], 16
-        ldAny [PcImage], DARK
-        ldAny [PcSpriteFlags], HAS_PRIORITY | USE_PALETTE_0
-        ldAny [state], MAIN_MENU_STATE
-.isSetUp
-    ; Do nothing if no button pressed.
-    andReg B, UP | DOWN | LEFT | RIGHT
-        jr Z, .return
+    ; Jump table
+    ld A, [state]
+    cp INIT_STATE
+        call Z, initStep
+    cp MAIN_MENU_STATE
+        call Z, mainMenuStep
+    ret
 
-    andReg B, DOWN
-    jr Z, .notDown
-        incAny [PcY]
-.notDown
-    andReg B, UP
-    jr Z, .notUp
-        decAny [PcY]
-.notUp
-    andReg B, LEFT
-    jr Z, .notLeft
-        decAny [PcX]
-.notLeft
-    andReg B, RIGHT
-    jr Z, .return
-        incAny [PcX]
+;;;
+; We're done with initialisation.  Move on to the menu.
+; @param B Joypad button flags {SsABDULR}
+;;;
+initStep:
+    ldAny [state], MAIN_MENU_STATE
+    ret
+
+mainMenuStep:
     
+    cpAny [cursorPosition], -1
+    jr NZ, .elseInit
+        ldAny [cursorPosition], 0
+        ldAny [PcX], MENU_MARGIN_LEFT
+        ldAny [PcY], MENU_MARGIN_TOP
+        ldAny [PcImage], LIGHTEST
+        ldAny [PcSpriteFlags], HAS_PRIORITY | USE_PALETTE_0
+
+.elseInit
+    ; if no relevant buttons pressed.
+    
+    andReg B, START | A_BTN | DOWN | UP
+        jr Z, .return
+    andReg B, UP
+        jr Z, .elseUp
+
+        ; If already at top of menu, bail
+        cpAny [cursorPosition], 0
+            jr Z, .elseUp
+        decAny [cursorPosition]
+.elseUp
+    andReg B, DOWN
+        jr Z, .elseDown
+        ; If already at bottom of menu, bail
+        cpAny [cursorPosition], MENU_ITEMS_COUNT - 1
+            jr Z, .elseDown
+        incAny [cursorPosition]
+.elseDown
+    andReg B, START | A_BTN
+        jr Z, .elseA
+        call mainMenuItemSelected
+.elseA
+    ; Move the cursor
+    ld A, [cursorPosition]
+    mult A, 8
+    add MENU_MARGIN_TOP
+    ld [PcY], A
+     
 .return
+    ret
+
+mainMenuItemSelected:
     ret
 
 ;;;
@@ -348,9 +388,6 @@ runDmaRom:
     jr NZ, .loop
     ret
 runDmaRomEnd:
-
-WooYeah:
-    jr WooYeah
 
 SECTION "Graphics ROM", ROM0[$3000]
 Graphics:
@@ -410,12 +447,9 @@ SpriteFlags\@: db
 
 ProgramStateFlags:
 state: ds 1
-HOME_STATE EQU 0
-JOYPAD_TEST_STATE EQU 1
-AUDIO_TEST_STATE EQU 2
-SGB_TEST_STATE EQU 3
 
-cursorPosition: ds 1    
+cursorPosition: db  
+inputThrottleCount: db   
 
 
 
