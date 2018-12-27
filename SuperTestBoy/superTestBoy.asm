@@ -21,6 +21,13 @@ popAll: macro
     pop AF
 endm
 
+debugger: macro
+    or A
+    jr NZ .skip
+    nop
+.skip 
+endm
+
 ;;;
 ; Copies memory from source to destination
 ; @reg HL Source address
@@ -54,7 +61,8 @@ SECTION "p1thru4", ROM0[$0060]
 
 SECTION "main", ROM0[$0100]
     nop
-    jr main
+    ;jr main
+    jp main
     
     ; HEADER START
     ; not adding the logo here #illegal ;)
@@ -81,7 +89,9 @@ SECTION "main", ROM0[$0100]
 ;;;
 init: macro
     di
-    ; turn off the screen and audio
+    nop
+
+    ; turn off outputs
     call turnOffScreen
     resIO AUDIO_ON_BIT, [AudioState]
 
@@ -101,7 +111,7 @@ init: macro
 
     ld A, 0
     ldh [BackgroundScrollX], A
-    ldh [BackgroundScrollY], A
+    ldh [BackgroundScrollY], A    
 
     ; Clear OAM
     ld DE, OamStage
@@ -109,13 +119,13 @@ init: macro
     call memset
 
     ; Copy the ROM tile data to VRAM
-    ld HL, graphics
+    ld HL, Graphics
     ld DE, TileData
     ld BC, NUMBER_OF_TILES * TILE_SIZE
-    call memcpy
+    call memcpy    
 
     ; Set the tile map to all the same colour.
-    ld A, 0
+    ld A, LIGHTEST
     ld DE, BackgroundMap1
     ld BC, SCREEN_BYTE_WIDTH * SCREEN_BYTE_HEIGHT
     call setVRAM
@@ -129,25 +139,25 @@ init: macro
     ; Turn the screen on and set it up.
     ldhAny [LcdControl], \
         LCD_ON | BACKGROUND_ON |  SPRITES_ON | WINDOW_OFF | SQUARE_TILES \
-        | BACKGROUND_MAP_1 | WINDOW_MAP_2 | TILE_DATA_80
-    
+        | BACKGROUND_MAP_1 | WINDOW_MAP_2 | TILE_DATA_80    
+
+    ; Set software variables
+    ldAny [state], INIT_STATE
     ei
 endm
         
 ;;;
 ; Main loop
+; Never returns.
 ;;;
 main:
     nop ; This instruction sometimes gets skipped???
     init
 .loop
-        halt
-        nop
-
         ; wait for VBlank, if another interrupt occurs, start waiting again.
         ld A, [InterruptFlags]
         and INTERRUPT_VBLANK
-        jr Z, .loop          ; if (!isInVBlank) continue
+    jr Z, .loop          ; if (!isInVBlank) continue
   
         and ~INTERRUPT_VBLANK
         ld [InterruptFlags], A ; isInVBlank = 0
@@ -158,6 +168,25 @@ main:
    jr .loop
 
 ;;;
+; Sets a tile with a given x/y position to a certain sprite.
+; @param B The tile index.
+; @param D The x position.
+; @param E THe y position.
+;;;
+drawTile:
+    push HL
+    ; calculate the offset from start of the map
+    mult E, SCREEN_BYTE_WIDTH
+    add (BackgroundMap1 & $00ff)
+    add D
+    ; Then load in to memory
+    ld H, (BackgroundMap1 >> 8)     
+    ld L, A
+    ld [HL], B
+    pop HL
+    ret
+
+;;;
 ; Copy data to VRAM, but only when available
 ; @param A value to set
 ; @param DE destination start address
@@ -165,14 +194,13 @@ main:
 ;;; 
 setVRAM:
     push HL
+    ld L, A
 .untilFinished  
-        push AF
         di
 .untilVRAM
             andAny [LcdStatus], VRAM_BUSY, H
         jr NZ, .untilVRAM
-        pop AF
-        ld [DE], A
+        ldAny [DE], L
         inc DE
         dec	BC
         ei
@@ -189,12 +217,15 @@ setVRAM:
 ; @param BC The number of bytes
 ;;;  
 memset:
+    push HL
+    ld L, A
 .loop
-        ld [DE], A
+        ldAny [DE], L
         inc DE
         dec BC
     orReg B, C
     jr NZ, .loop
+    pop HL
     ret
 
 ;;;
@@ -224,7 +255,7 @@ loadInput:
     ld A, [JoypadIo]
     ld A, [JoypadIo]
     ld A, [JoypadIo]
-        
+
     cpl
     and $0f
     ; don't overwrite what we already have in B
@@ -238,8 +269,42 @@ loadInput:
     pop AF
     ret
     
+;;;
+; The logic of the program.
+; @param B The joypad state
+;;;
 runLogic:
-    ret  
+    ; if state will init, set up Sprite
+    cpAny [state], INIT_STATE
+    jp NZ, .isSetUp
+        ldAny [PcX], 8
+        ldAny [PcY], 16
+        ldAny [PcImage], DARK
+        ldAny [PcSpriteFlags], HAS_PRIORITY | USE_PALETTE_0
+        ldAny [state], MAIN_MENU_STATE
+.isSetUp
+    ; Do nothing if no button pressed.
+    andReg B, UP | DOWN | LEFT | RIGHT
+        jr Z, .return
+
+    andReg B, DOWN
+    jr Z, .notDown
+        incAny [PcY]
+.notDown
+    andReg B, UP
+    jr Z, .notUp
+        decAny [PcY]
+.notUp
+    andReg B, LEFT
+    jr Z, .notLeft
+        decAny [PcX]
+.notLeft
+    andReg B, RIGHT
+    jr Z, .return
+        incAny [PcX]
+    
+.return
+    ret
 
 ;;;
 ; Wait until VBlank and then turn off LCD
@@ -275,7 +340,7 @@ onVBlank:
 ;;;
 runDmaRom:
     ; DMA starts when it recieves a memory address
-    ;ldhAny [DmaSourceRegister], (OamStage >> 8) ; Just the high byte, the low byte is already set (00)
+    ldhAny [DmaSourceRegister], (OamStage >> 8) ; Just the high byte, the low byte is already set (00)
     ld A, DMA_WAIT_TIME
 .loop                   ; Loop until timer runs down and we can assume DMA is finished.
         dec A
@@ -283,48 +348,76 @@ runDmaRom:
     ret
 runDmaRomEnd:
 
-graphics:
-OPT  b.x
+WooYeah:
+    jr WooYeah
 
-db %........
-db %........
-db %........
-db %........
-db %........
-db %........
-db %........
-db %........
+SECTION "Graphics ROM", ROM0[$3000]
+Graphics:
+PUSHO
+OPT  g.oOB
 
-db %.x.x.x.x
-db %.x.x.x.x
-db %.x.x.x.x
-db %.x.x.x.x
-db %.x.x.x.x
-db %.x.x.x.x
-db %.x.x.x.x
-db %.x.x.x.x
+    dw `........
+    dw `........
+    dw `........
+    dw `........
+    dw `........
+    dw `........
+    dw `........
+    dw `........
 
-db %x.x.x.x.
-db %x.x.x.x.
-db %x.x.x.x.
-db %x.x.x.x.
-db %x.x.x.x.
-db %x.x.x.x.
-db %x.x.x.x.
-db %x.x.x.x.
+    dw `oooooooo
+    dw `oooooooo
+    dw `oooooooo
+    dw `oooooooo
+    dw `oooooooo
+    dw `oooooooo
+    dw `oooooooo
+    dw `oooooooo
 
-db %xxxxxxxx
-db %xxxxxxxx
-db %xxxxxxxx
-db %xxxxxxxx
-db %xxxxxxxx
-db %xxxxxxxx
-db %xxxxxxxx
-db %xxxxxxxx
+    dw `OOOOOOOO
+    dw `OOOOOOOO
+    dw `OOOOOOOO
+    dw `OOOOOOOO
+    dw `OOOOOOOO
+    dw `OOOOOOOO
+    dw `OOOOOOOO
+    dw `OOOOOOOO
 
+    dw `BBBBBBBB
+    dw `BBBBBBBB
+    dw `BBBBBBBB
+    dw `BBBBBBBB
+    dw `BBBBBBBB
+    dw `BBBBBBBB
+    dw `BBBBBBBB
+    dw `BBBBBBBB
+POPO
 
 SECTION "Main Ram", WRAM0[$C000]
-OamStage:
+OamStage
+PcY: db
+PcX: db
+PcImage: db
+PcSpriteFlags: db
+
+    REPT 39
+SpriteX\@: db
+SpriteY\@: db
+SpriteTile\@: db
+SpriteFlags\@: db
+    ENDR
+
+ProgramStateFlags:
+state: ds 1
+HOME_STATE EQU 0
+JOYPAD_TEST_STATE EQU 1
+AUDIO_TEST_STATE EQU 2
+SGB_TEST_STATE EQU 3
+
+cursorPosition: ds 1    
+
+
+
 
   
 
