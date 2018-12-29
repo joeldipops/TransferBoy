@@ -29,8 +29,47 @@ endm
 
 
 ;;;
-; Loads a byte from anywhere into anything that holds a byte
-; @usage ldAny
+; Loads byte from anywhere to anywhere else that takes a byte.
+; ldAny r8, [n16]
+; Cycles: 5 
+; Bytes: 4 
+; Flags: None
+;
+; ldAny r8, [r16]
+; Cycles: 3
+; Bytes: 2 
+; Flags: None
+;
+; ldAny [n16], r8
+; Cycles: 5
+; Bytes: 4
+; Flags: None
+;
+; ldAny [r16], r8
+; Cycles: 3
+; Bytes: 2
+; Flags: None
+;
+; ldAny [r16], [r16]
+; Cycles: 4
+; Bytes: 2
+; Flags: None
+;
+; ldAny [r16], [n16]
+; Cycles: 6
+; Bytes: 4
+; Flags: None
+;
+; ldAny [n16], [r16]
+; Cycles: 6
+; Bytes: 4
+; Flags: None
+;
+; ldAny [n16], [n16]
+; Cycles: 8
+; Bytes: 6
+; Flags: None
+; ldAny [n16], n8
 ;;;
 ldAny: macro
     ld A, \2
@@ -38,8 +77,41 @@ ldAny: macro
 endm
 
 ;;;
-; Loads a byte from anywhere into a memory address greater than $ff00
-; @usage ldhAny [Channel2Envelope], [nextEnvelope]
+; Loads from an address in IO space
+; ldhAny r8, [$ff00 + n8]
+; Cycles: 4
+; Bytes: 3 
+; Flags: None
+;
+; ldhAny [r16], [$ff00 + n8]
+; Cycles: 5 
+; Bytes: 3 
+; Flags: None
+;
+; ldhAny [n16], [$ff00 + n8]
+; Cycles: 7
+; Bytes: 5 
+; Flags: None 
+;
+; ldhAny [$ff00 + n8], n8
+; Cycles: 5
+; Bytes: 4 
+; Flags: None 
+;
+; ldhAny [$ff00 + n8], r8
+; Cycles: 4
+; Bytes: 3 
+; Flags: None
+;
+; ldhAny [$ff00 + n8], [r16]
+; Cycles: 5
+; Bytes: 3 
+; Flags: None 
+;
+; ldhAny [$ff00 + n8], [n16]
+; Cycles: 7
+; Bytes: 5 
+; Flags: None 
 ;;;
 ldhAny: macro
     ld A, \2
@@ -47,8 +119,21 @@ ldhAny: macro
 endm
 
 ;;;
-; Loads a byte from [HL] into anything that holds a byte and then increments HL
-; @usage ldiAny [$c123], [HL]
+; Loads from [HL] then increments HL
+; ldiAny r8, [HL]
+; Cycles: 3
+; Bytes: 2
+; Flags: None
+;
+; ldiAny [r16], [HL]
+; Cycles: 4
+; Bytes: 2
+; Flags: None
+;
+; ldiAny [n16], [HL]
+; Cycles: 6
+; Bytes: 4
+; Flags: None
 ;;;
 ldiAny: macro
     ldi A, [HL]
@@ -56,69 +141,176 @@ ldiAny: macro
 endm
 
 ;;;
-; Performs an OR on any two 8bit registers. Usual flags affected and A set to the result.
-; @usage orReg B, C
+; ORs the bits of two registers, result in A
+;
+; orAny r8, r8
+; Cycles: 2
+; Bytes: 2
+; Flags: Z=? N=0 H=0 C=0
+; 
+; orAny r8, n8
+; Cycles: 4
+; Bytes: 4 
+; Flags: Z=? N=0 H=0 C=0
+;
+; orAny r8, [HL]
+; Cycles: 3
+; Bytes: 2
+; Flags: Z=? N=0 H=0 C=0
+;
+; orAny [r16], r8
+; Cycles: 3
+; Bytes: 2
+; Flags: Z=? N=0 H=0 C=0
+; 
+; orAny [r16], n8
+; Cycles: 4
+; Bytes: 3 
+; Flags: Z=? N=0 H=0 C=0
+;
+; orAny [r16], [HL]
+; Cycles: 4
+; Bytes: 2
+; Flags: Z=? N=0 H=0 C=0
+;
+; orAny [n16], r8
+; Cycles: 5
+; Bytes: 4
+; Flags: Z=? N=0 H=0 C=0
+; 
+; orAny [n16], n8
+; Cycles: 6
+; Bytes: 5 
+; Flags: Z=? N=0 H=0 C=0
+;
+; orAny [n16], [HL]
+; Cycles: 6
+; Bytes: 4
+; Flags: Z=? N=0 H=0 C=0
 ;;;
-orReg: macro
+orAny: macro
     ld A, \1
     or \2
 endm
 
 ;;;
-; Performs an AND on any two 8bit registers. Usual flags affected and A set to the result.
-; @usage andReg C, [HL], B
-; @param \3 Nominate a register to be overwritten
+; ANDs the bit of two registers, result in A
+;
+; andAny r8, r8
+; Cycles: 2
+; Bytes: 2
+; Flags: Z=? N=0 H=1 C=0
+; 
+; andAny r8, n8
+; Cycles: 4
+; Bytes: 4 
+; Flags: Z=? N=0 H=1 C=0
+;
+; andAny r8, [HL]
+; Cycles: 3
+; Bytes: 2
+; Flags: Z=? N=0 H=1 C=0
+;
+; andAny [r16], r8
+; Cycles: 3
+; Bytes: 2
+; Flags: Z=? N=0 H=1 C=0
+; 
+; andAny [r16], n8
+; Cycles: 4
+; Bytes: 3 
+; Flags: Z=? N=0 H=1 C=0
+;
+; andAny [r16], [HL]
+; Cycles: 4
+; Bytes: 2
+; Flags: Z=? N=0 H=1 C=0
+;
+; andAny [n16], r8
+; Cycles: 5
+; Bytes: 4
+; Flags: Z=? N=0 H=1 C=0
+; 
+; andAny [n16], n8
+; Cycles: 6
+; Bytes: 5 
+; Flags: Z=? N=0 H=1 C=0
+;
+; andAny [n16], [HL]
+; Cycles: 6
+; Bytes: 4
+; Flags: Z=? N=0 H=1 C=0
 ;;;
-andReg: macro
+andAny: macro
     ld A, \1
     and \2
 endm
 
 ;;;
 ; Performs an XOR on any two 8bit registers. Usual flags affected and A set to the result.
-; @usage xorReg D, $32 
+;
+; xorAny r8, r8
+; Cycles: 2
+; Bytes: 2
+; Flags: Z=? N=0 H=0 C=0
+; 
+; xorAny r8, n8
+; Cycles: 4
+; Bytes: 4 
+; Flags: Z=? N=0 H=0 C=0
+;
+; xorAny r8, [HL]
+; Cycles: 3
+; Bytes: 2
+; Flags: Z=? N=0 H=0 C=0
+;
+; xorAny [r16], r8
+; Cycles: 3
+; Bytes: 2
+; Flags: Z=? N=0 H=0 C=0
+; 
+; xorAny [r16], n8
+; Cycles: 4
+; Bytes: 3 
+; Flags: Z=? N=0 H=0 C=0
+;
+; xorAny [r16], [HL]
+; Cycles: 4
+; Bytes: 2
+; Flags: Z=? N=0 H=0 C=0
+;
+; xorAny [n16], r8
+; Cycles: 5
+; Bytes: 4
+; Flags: Z=? N=0 H=0 C=0
+; 
+; xorAny [n16], n8
+; Cycles: 6
+; Bytes: 5 
+; Flags: Z=? N=0 H=0 C=0
+;
+; xorAny [n16], [HL]
+; Cycles: 6
+; Bytes: 4
+; Flags: Z=? N=0 H=0 C=0
 ;;;
-xorReg: macro
+xorAny: macro
     ld A, \1
     xor \2
 endm
 
 ;;;
-; Performs an OR on any two bytes. Usual flags affected and A set to the result.
-; @usage orReg [DE], [$c337], B
-; @param \3 Nominate register to be overwritten
-;;;
-orAny: macro
-    ld A, \1
-    ld \3, \2
-    or \3
-endm
-
-;;;
-; Performs an AND on any two bytes. Usual flags affected and A set to the result.
-; @usage andAny C, [HL], B
-; @param \3 Nominate register to be overwritten
-;;;
-andAny: macro
-    ld A, \1
-    ld \3, \2
-    and \3
-endm
-
-;;;
-; Performs a XOR on any two bytes. Usual flags affected and A set to the result.
-; @usage xorAny D, $32
-; @param \3 Nominate register to be overwritten
-;;;
-xorAny: macro
-    ld A, \1
-    ld \3, \2
-    xor \3
-endm
-
-;;;
 ; Resets a bit of an 8bit piece of memory
-; @usage resAny <0-7>, [memory location]
+;
+; resAny u3, [n16]
+; Cycles: 10 
+; Bytes: 8
+; Flags: None
+;
+; resAny u3, [r16]
+; Cycles: 6
+; Bytes: 4
+; Flags: None
 ;;;
 resAny: macro
     ld A, \2
@@ -127,9 +319,13 @@ resAny: macro
 endm
 
 ;;;
-; Resets a bit in the IO space of memory ($ff00 - $ffff)
-; @usage resIO <0-7>, [memory location] 
-;;
+; Resets a bit of an 8bit piece of IO space memory
+;
+; resIO u3, [$ff00 + n8]
+; Cycles: 8 
+; Bytes: 6
+; Flags: None
+;;;
 resIO: macro
     ldh A, \2
     res \1, A
@@ -137,10 +333,22 @@ resIO: macro
 endm
 
 ;;;
-; Compares a value with a value in the IO space of memory.
-; @param \1 The value in IO memory.
-; @param \2 The other value
-; @usage cpIO $ff88, B 
+; Compares a value with a value in the IO space of memory and sets flags.
+;
+; cpIO [$ff00 + n8], n8
+; Cycles: 5
+; Bytes: 4
+; Flags: Z=? N=1, H=? C=?
+;
+; cpIO [$ff00 + n8], r8 
+; Cycles: 4
+; Bytes: 3
+; Flags: Z=? N=1, H=? C=?
+;
+; cpIO [$ff00 + n8], [HL] 
+; Cycles: 5
+; Bytes: 3
+; Flags: Z=? N=1, H=? C=?
 ;;;
 cpIO: macro
     ldh A, \1
@@ -149,7 +357,51 @@ endm
 
 ;;;
 ; Compares two values, setting appropriate flags.
-; @usage cpAny B, [$c312] 
+;
+; cpAny r8, n8
+; Cycles: 4
+; Bytes: 4
+; Flags: Z=? N=1, H=? C=?
+;
+; cpAny r8, r8
+; Cycles: 3
+; Bytes: 3
+; Flags: Z=? N=1, H=? C=?
+;
+; cpAny r8, [HL]
+; Cycles: 4
+; Bytes: 3
+; Flags: Z=? N=1, H=? C=?
+;
+; cpAny [r16], n8
+; Cycles: 4
+; Bytes: 3
+; Flags: Z=? N=1, H=? C=?
+;
+; cpAny [r16], r8
+; Cycles: 3
+; Bytes: 2
+; Flags: Z=? N=1, H=? C=?
+;
+; cpAny [r16], [HL]
+; Cycles: 4
+; Bytes: 2
+; Flags: Z=? N=1, H=? C=?
+;
+; cpAny [n16], n8
+; Cycles: 6
+; Bytes: 5
+; Flags: Z=? N=1, H=? C=?
+;
+; cpAny [n16], r8
+; Cycles: 5
+; Bytes: 4
+; Flags: Z=? N=1, H=? C=?
+;
+; cpAny [n16], [HL]
+; Cycles: 6
+; Bytes: 4
+; Flags: Z=? N=1, H=? C=?
 ;;;
 cpAny: macro
     ld A, \1
@@ -157,8 +409,17 @@ cpAny: macro
 endm
 
 ;;;
-; Increment any 8bit value
-; @usage incAny [SomeAddress]
+; Increment an 8bit value
+;
+; incAny [n16]
+; Cycles: 9
+; Bytes: 7
+; Flags: Z=? N=0 H=? C=C
+;
+; incAny [r16]
+; Cycles: 5
+; Bytes: 3
+; Flags: Z=? N=0 H=? C=C
 ;;;
 incAny: macro
     ld A, \1
@@ -167,8 +428,17 @@ incAny: macro
 endm
 
 ;;;
-; Decrement any 8bit value
-; @usage decAny [SomeAddress]
+; Decrement an 8bit value
+;
+; decAny [n16]
+; Cycles: 9
+; Bytes: 7
+; Flags: Z=? N=1 H=? C=C
+;
+; decAny [r16]
+; Cycles: 5
+; Bytes: 3
+; Flags: Z=? N=1 H=? C=C
 ;;;
 decAny: macro
     ld A, \1
@@ -178,7 +448,20 @@ endm
 
 ;;;
 ; Loads one 16 bit register into another
-; ld16 H,L, B,C
+;
+; ld16 r16high,r16low, r16high,r16low
+; Cycles: 2
+; Bytes: 2
+; Flags: None
+;
+; @example - ld16 H,L, B,C
+; @notes - rgbasm has the conditional assembly directive IF - I thought I would be able to be like 
+; IF (\2 == BC) 
+;    \3 = B 
+;    \4 = C 
+; ENDC
+; so that this could be called as ld16 HL, BC.
+; But no, it seems IFs can only be used with integer constants, so I'm stuck with this syntax until I feel like forking rednex 
 ;;;
 ld16: macro
     ld \1, \3
@@ -186,13 +469,21 @@ ld16: macro
 endm
 
 ;;;
-; Subtracts one 16 bit register from another.
-; @usage sub16 H,L, B,C calculates HL-BC.  Result in HL 
-; @notes
-; Ideally I'd like to do this so we can pass it sub16 HL, BC
-; registers and it could use IF/ENDC blocks to figure out whether
-; to use B & C or H & L etc.  Don't see any reason why the assembler can't do this
-; For now we have to pass all four registers :(
+; Subtracts one 16 bit register from another with result in \1,\2.
+; 
+; sub16 r16high,r16low, r16high,r16low
+; Cycles: 6
+; Bytes: 6
+; Flags: Z=? N=1 H=? C=?
+;
+; @example - sub16 H,L, B,C
+; @notes - rgbasm has the conditional assembly directive IF - I thought I would be able to be like 
+; IF (\2 == BC) 
+;    \3 = B 
+;    \4 = C 
+; ENDC
+; so that this could be called as sub16 HL, BC.
+; But no, it seems IFs can only be used with integer constants, so I'm stuck with this syntax until I feel like forking rednex.
 ;;;
 sub16: macro
     ld A, \2
@@ -202,4 +493,5 @@ sub16: macro
     sbc \3
     ld \1, A 
 endm
-    ENDC
+    
+	ENDC

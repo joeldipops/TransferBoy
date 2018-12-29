@@ -43,7 +43,7 @@ memcpy:
         ldiAny [DE], [HL]
         inc DE
         dec BC
-    orReg B, C
+    orAny B, C
     jr NZ, .loop
     reti
 
@@ -203,9 +203,7 @@ drawTile:
 printString:
     push BC
     push HL
-    ld B, H
-    ld C, L
-    ;ld BC, HL
+    ld16 B,C, H,L
 .loop
         ldi A, [HL]
         or A
@@ -231,13 +229,13 @@ copyToVRAM:
 .untilFinished  
         di
 .untilVRAM
-        andReg [LcdStatus], VRAM_BUSY
+        andAny [LcdStatus], VRAM_BUSY
             jr NZ, .untilVRAM
         ldiAny [DE], [HL]
         inc DE
         dec	BC
         ei
-	    orReg B, C
+	    orAny B, C
 	jr NZ, .untilFinished
     ret
 
@@ -253,13 +251,13 @@ setVRAM:
 .untilFinished  
         di
 .untilVRAM
-        andReg [LcdStatus], VRAM_BUSY
+        andAny [LcdStatus], VRAM_BUSY
         jr NZ, .untilVRAM
         ldAny [DE], L
         inc DE
         dec	BC
         ei
-	    orReg B, C
+	    orAny B, C
 	jr NZ, .untilFinished
     pop HL
 	ret
@@ -278,7 +276,7 @@ memset:
         ldAny [DE], L
         inc DE
         dec BC
-    orReg B, C
+    orAny B, C
     jr NZ, .loop
     pop HL
     ret
@@ -390,9 +388,9 @@ mainMenuStep:
 .elseInit
     ; if no relevant buttons pressed.
     
-    andReg B, START | A_BTN | DOWN | UP
+    andAny B, START | A_BTN | DOWN | UP
         jr Z, .return
-    andReg B, UP
+    andAny B, UP
         jr Z, .elseUp
 
         ; If already at top of menu, bail
@@ -400,14 +398,14 @@ mainMenuStep:
             jr Z, .elseUp
         decAny [cursorPosition]
 .elseUp
-    andReg B, DOWN
+    andAny B, DOWN
         jr Z, .elseDown
         ; If already at bottom of menu, bail
         cpAny [cursorPosition], MENU_ITEMS_COUNT - 1
             jr Z, .elseDown
         incAny [cursorPosition]
 .elseDown
-    andReg B, START | A_BTN
+    andAny B, START | A_BTN
         jr Z, .elseA
         call mainMenuItemSelected
 .elseA
