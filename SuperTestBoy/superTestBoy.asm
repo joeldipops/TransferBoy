@@ -123,8 +123,14 @@ init: macro
     ; Copy the ROM tile data to VRAM
     ld HL, Graphics
     ld DE, TileData
-    ld BC, NUMBER_OF_TILES * TILE_SIZE
-    call memcpy    
+    ld BC, GraphicsEnd - Graphics
+    call memcpy
+
+    ld HL, Ascii
+    ; First relevant character is $20 ascii
+    ld DE, TileData + ($20 * TILE_SIZE) 
+    ld BC, AsciiEnd - Ascii
+    call memcpy
 
     ; Set the tile map to all the same colour.
     ld A, LIGHTEST
@@ -190,6 +196,52 @@ drawTile:
     ret
 
 ;;;
+; Prints a null terminated string directly to the screen.
+; @param HL string address
+; @param DE tile start address
+;;;
+printString:
+    push BC
+    push HL
+    ld B, H
+    ld C, L
+    ;ld BC, HL
+.loop
+        ldi A, [HL]
+        or A
+    jr NZ, .loop
+    sub16 H,L, B,C
+    ; 16 bit subtraction.
+    ld16 B,C, H,L
+    ; Don't include the null
+    dec BC
+    pop HL
+    call copyToVRAM
+    pop BC
+    ret    
+    
+
+;;;
+; Copy data to VRAM
+; @param HL Source start address.
+; @param DE Destination start address.
+; @param BC Length of data
+;;;
+copyToVRAM:
+.untilFinished  
+        di
+.untilVRAM
+        andReg [LcdStatus], VRAM_BUSY
+            jr NZ, .untilVRAM
+        ldiAny [DE], [HL]
+        inc DE
+        dec	BC
+        ei
+	    orReg B, C
+	jr NZ, .untilFinished
+    ret
+
+;;;
 ; Copy data to VRAM, but only when available
 ; @param A value to set
 ; @param DE destination start address
@@ -201,7 +253,7 @@ setVRAM:
 .untilFinished  
         di
 .untilVRAM
-            andAny [LcdStatus], VRAM_BUSY, H
+        andReg [LcdStatus], VRAM_BUSY
         jr NZ, .untilVRAM
         ldAny [DE], L
         inc DE
@@ -301,15 +353,39 @@ initStep:
     ldAny [state], MAIN_MENU_STATE
     ret
 
+;;;
+; Sets up the screen for the main menu page
+;;;
+initMainMenu:
+    ; Set up cursor
+    ldAny [cursorPosition], 0
+    ldAny [PcX], MENU_MARGIN_LEFT
+    ldAny [PcY], MENU_MARGIN_TOP
+    ldAny [PcImage], LIGHTEST
+    ldAny [PcSpriteFlags], HAS_PRIORITY | USE_PALETTE_0
+
+    ; Set up menu items
+    ld HL, JoypadLabel
+    ld DE, BackgroundMap1 + (MENU_MARGIN_LEFT / SPRITE_WIDTH)
+    call printString
+
+    ld HL, SGBLabel
+    ld DE, BackgroundMap1 + (CANVAS_WIDTH + MENU_MARGIN_LEFT) / SPRITE_WIDTH
+    call printString
+
+    ld HL, AudioLabel
+    ld DE, BackgroundMap1 + (CANVAS_WIDTH * 2 + MENU_MARGIN_LEFT) / SPRITE_WIDTH
+    call printString
+    ret
+
+;;;
+; Handle interactions with the main menu
+; @param B The joypad state 
+;;;
 mainMenuStep:
-    
     cpAny [cursorPosition], -1
     jr NZ, .elseInit
-        ldAny [cursorPosition], 0
-        ldAny [PcX], MENU_MARGIN_LEFT
-        ldAny [PcY], MENU_MARGIN_TOP
-        ldAny [PcImage], LIGHTEST
-        ldAny [PcSpriteFlags], HAS_PRIORITY | USE_PALETTE_0
+        call initMainMenu
 
 .elseInit
     ; if no relevant buttons pressed.
@@ -358,8 +434,9 @@ turnOffScreen:
     ld A, SCREEN_HEIGHT    
     push HL
     ld HL, CurrentLine
-; Loop until display is past the bottom of the screen
+
 .loop
+    ; Loop until display is past the bottom of the screen
     cp [HL]
     jr NC, .loop
 
@@ -367,6 +444,9 @@ turnOffScreen:
     pop HL
     ret
 
+;;;
+; Interrupt handlers.
+;;;
 onHBlank:
 onJoypadEvent:
 onTransfer:
@@ -388,6 +468,9 @@ runDmaRom:
     jr NZ, .loop
     ret
 runDmaRomEnd:
+
+SECTION "Strings ROM", ROM0[$2800]
+INCLUDE "strings.asm"
 
 SECTION "Graphics ROM", ROM0[$3000]
 Graphics:
@@ -430,6 +513,14 @@ OPT  g.oOB
     dw `BBBBBBBB
     dw `BBBBBBBB
 POPO
+GraphicsEnd:
+
+SECTION "ASCII ROM", ROMX[$4000], BANK[1]
+INCLUDE "imports/ibmpc1.inc"
+Ascii:
+    ; Import ascii character set
+    chr_IBMPC1 2, 4
+AsciiEnd:
 
 SECTION "Main Ram", WRAM0[$C000]
 OamStage

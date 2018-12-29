@@ -17,3 +17,4 @@ test.sh
 *.exe
 *.dll
 bgb*
+SuperTestBoy/imports/*

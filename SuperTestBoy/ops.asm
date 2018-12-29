@@ -174,6 +174,32 @@ decAny: macro
     ld A, \1
     dec A
     ld \1, A
-    
+endm
+
+;;;
+; Loads one 16 bit register into another
+; ld16 H,L, B,C
+;;;
+ld16: macro
+    ld \1, \3
+    ld \2, \4
+endm
+
+;;;
+; Subtracts one 16 bit register from another.
+; @usage sub16 H,L, B,C calculates HL-BC.  Result in HL 
+; @notes
+; Ideally I'd like to do this so we can pass it sub16 HL, BC
+; registers and it could use IF/ENDC blocks to figure out whether
+; to use B & C or H & L etc.  Don't see any reason why the assembler can't do this
+; For now we have to pass all four registers :(
+;;;
+sub16: macro
+    ld A, \2
+    sub \4
+    ld \2, A
+    ld A, \1
+    sbc \3
+    ld \1, A 
 endm
     ENDC
