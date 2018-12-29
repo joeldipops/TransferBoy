@@ -77,21 +77,7 @@ ldAny: macro
 endm
 
 ;;;
-; Loads from an address in IO space
-; ldhAny r8, [$ff00 + n8]
-; Cycles: 4
-; Bytes: 3 
-; Flags: None
-;
-; ldhAny [r16], [$ff00 + n8]
-; Cycles: 5 
-; Bytes: 3 
-; Flags: None
-;
-; ldhAny [n16], [$ff00 + n8]
-; Cycles: 7
-; Bytes: 5 
-; Flags: None 
+; Loads to an address in IO space
 ;
 ; ldhAny [$ff00 + n8], n8
 ; Cycles: 5
