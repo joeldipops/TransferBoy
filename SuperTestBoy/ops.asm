@@ -69,7 +69,12 @@ endm
 ; Cycles: 8
 ; Bytes: 6
 ; Flags: None
+;
 ; ldAny [n16], n8
+; Cycles: 
+; Bytes:
+; Flags: None
+;
 ;;;
 ldAny: macro
     ld A, \2
@@ -124,6 +129,17 @@ endm
 ldiAny: macro
     ldi A, [HL]
     ld \1, A
+endm
+
+;;;
+; ldHLi [HL], n8
+; Cycles: 6
+; Bytes: 4
+; Flags: None
+;;;
+ldHLi: macro
+    ld A, \2
+    ldi [HL], A
 endm
 
 ;;;

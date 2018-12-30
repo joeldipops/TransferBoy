@@ -120,11 +120,11 @@ init: macro
 
     ; Use the default palette everywhere to start with
     ld A, BG_PALETTE
-    ldhAny [BackgroundPalette], BG_PALETTE
+    ldh [BackgroundPalette], A
     ld A, FG_PALETTE
-    ldh [SpritePalette1], A
     ldh [SpritePalette2], A
-
+    ldh [SpritePalette1], A
+    
     ld A, 0
     ldh [BackgroundScrollX], A
     ldh [BackgroundScrollY], A    
@@ -147,10 +147,7 @@ init: macro
     call memcpy
 
     ; Set the tile map to all the same colour.
-    ld A, LIGHTEST
-    ld DE, BackgroundMap1
-    ld BC, SCREEN_BYTE_WIDTH * SCREEN_BYTE_HEIGHT
-    call setVRAM
+    resetBackground
 
     ; Copy runDma routine to HRAM, since that's the only place the CPU can call it from
     ld HL, runDmaRom ; Source in ROM
@@ -167,6 +164,7 @@ init: macro
     ; Set software variables
     ldAny [state], INIT_STATE
     ldAny [cursorPosition], -1
+    ldAny [stateInitialised], 0
     ei
 endm
         
@@ -330,15 +328,16 @@ PcX: db
 PcImage: db
 PcSpriteFlags: db
 
-    REPT 39
-SpriteX\@: db
-SpriteY\@: db
-SpriteTile\@: db
-SpriteFlags\@: db
-    ENDR
+SpriteY: db
+SpriteX: db
+SpriteImage: db
+SpriteFlags: db
+
+ds 38 * SPRITE_WIDTH
 
 ProgramStateFlags:
 state: ds 1
+stateInitialised: db
 
 cursorPosition: db  
 inputThrottleCount: db   
