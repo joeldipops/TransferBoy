@@ -163,6 +163,7 @@ init: macro
 
     ; Set software variables
     ldAny [state], INIT_STATE
+    ldAny [inputThrottleAmount], INPUT_THROTTLE    
     ldAny [cursorPosition], -1
     ldAny [stateInitialised], 0
     ei
@@ -211,7 +212,7 @@ loadInput:
         ld B, 0
         ret
 .else
-    ldAny [inputThrottleCount], INPUT_THROTTLE
+    ldAny [inputThrottleCount], [inputThrottleAmount]
 
     ; Set the bit that indicates we want to read A/B/Start/Select
     ldhAny [JoypadIo], JOYPAD_GET_BUTTONS
@@ -340,7 +341,8 @@ state: ds 1
 stateInitialised: db
 
 cursorPosition: db  
-inputThrottleCount: db   
+inputThrottleCount: db
+inputThrottleAmount: db
 
 
 

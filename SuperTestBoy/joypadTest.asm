@@ -24,47 +24,53 @@ initJoypadTest:
     ld HL, SpriteY
     ; The first parameter to ldHLi is ignored, but we can use it to keep track of where we're up to ldi wise.
     ldHLi [A_SPRITE + SpriteY], MENU_MARGIN_TOP
-    ldHLi [A_SPRITE + SpriteX], MENU_MARGIN_LEFT 
+    ldHLi [A_SPRITE + SpriteX], MARGIN_LEFT 
     ldHLi [A_SPRITE + SpriteImage], "A"
     ldHLi [A_SPRITE + SpriteFlags], HAS_PRIORITY | USE_PALETTE_1
 
     ldHLi [B_SPRITE + SpriteY], MENU_MARGIN_TOP
-    ldHLi [B_SPRITE + SpriteX], MENU_MARGIN_LEFT * 2
+    ldHLi [B_SPRITE + SpriteX], MARGIN_LEFT * 2
     ldHLi [B_SPRITE + SpriteImage], "B"
     ldHLi [B_SPRITE + SpriteFlags], HAS_PRIORITY | USE_PALETTE_1
 
-    ldHLi [SpriteY + SPRITE_SIZE * 2], MENU_MARGIN_TOP
-    ldHLi [SpriteX + SPRITE_SIZE * 2], MENU_MARGIN_LEFT * 3
-    ldHLi [SpriteImage + SPRITE_SIZE * 2], "S"
-    ldHLi [SpriteFlags + SPRITE_SIZE *2], HAS_PRIORITY | USE_PALETTE_1
+    ldHLi [START_SPRITE + SpriteY], MENU_MARGIN_TOP
+    ldHLi [START_SPRITE + SpriteX], MARGIN_LEFT * 3
+    ldHLi [START_SPRITE + SpriteImage], "S"
+    ldHLi [START_SPRITE + SpriteFlags], HAS_PRIORITY | USE_PALETTE_1
 
-    ldHLi [SpriteY + SPRITE_SIZE * 3], MENU_MARGIN_TOP
-    ldHLi [SpriteX + SPRITE_SIZE * 3], MENU_MARGIN_LEFT * 4
-    ldHLi [SpriteImage + SPRITE_SIZE * 3], "s"
-    ldHLi [SpriteFlags + SPRITE_SIZE * 3], HAS_PRIORITY | USE_PALETTE_1
+    ldHLi [SELECT_SPRITE + SpriteY], MENU_MARGIN_TOP
+    ldHLi [SELECT_SPRITE + SpriteX], MARGIN_LEFT * 4
+    ldHLi [SELECT_SPRITE + SpriteImage], "s"
+    ldHLi [SELECT_SPRITE + SpriteFlags], HAS_PRIORITY | USE_PALETTE_1
 
-    ldHLi [SpriteY + SPRITE_SIZE * 4], MENU_MARGIN_TOP
-    ldHLi [SpriteX + SPRITE_SIZE * 4], MENU_MARGIN_LEFT * 5
-    ldHLi [SpriteImage + SPRITE_SIZE * 4], "U"
-    ldHLi [SpriteFlags + SPRITE_SIZE * 4], HAS_PRIORITY | USE_PALETTE_1
+    ldHLi [UP_SPRITE + SpriteY], MENU_MARGIN_TOP
+    ldHLi [UP_SPRITE + SpriteX], MARGIN_LEFT * 5
+    ldHLi [UP_SPRITE + SpriteImage], "U"
+    ldHLi [UP_SPRITE + SpriteFlags], HAS_PRIORITY | USE_PALETTE_1
 
-    ldHLi [SpriteY + SPRITE_SIZE * 5, MENU_MARGIN_TOP
-    ldHLi [SpriteX + SPRITE_SIZE * 5], MENU_MARGIN_LEFT * 6
-    ldHLi [SpriteImage + SPRITE_SIZE * 5], "D"
-    ldHLi [SpriteFlags + SPRITE_SIZE * 5], HAS_PRIORITY | USE_PALETTE_1
+    ldHLi [DOWN_SPRITE + SpriteY], MENU_MARGIN_TOP
+    ldHLi [DOWN_SPRITE + SpriteX], MARGIN_LEFT * 6
+    ldHLi [DOWN_SPRITE + SpriteImage], "D"
+    ldHLi [DOWN_SPRITE + SpriteFlags], HAS_PRIORITY | USE_PALETTE_1
 
-    ldHLi [SpriteY + SPRITE_SIZE * 6], MENU_MARGIN_TOP
-    ldHLi [SpriteX + SPRITE_SIZE * 6], MENU_MARGIN_LEFT * 7
-    ldHLi [SpriteImage + SPRITE_SIZE * 6], "L"
-    ldHLi [SpriteFlags + SPRITE_SIZE * 6], HAS_PRIORITY | USE_PALETTE_1
+    ldHLi [LEFT_SPRITE + SpriteY], MENU_MARGIN_TOP
+    ldHLi [LEFT_SPRITE + SpriteX], MARGIN_LEFT * 7
+    ldHLi [LEFT_SPRITE + SpriteImage], "L"
+    ldHLi [LEFT_SPRITE + SpriteFlags], HAS_PRIORITY | USE_PALETTE_1
 
-    ldHLi [SpriteY + SPRITE_SIZE * 7], MENU_MARGIN_TOP
-    ldHLi [SpriteX + SPRITE_SIZE * 7], MENU_MARGIN_LEFT * 8
-    ldHLi [SpriteImage + SPRITE_SIZE * 7], "R"
-    ldHLi [SpriteFlags + SPRITE_SIZE * 7], HAS_PRIORITY | USE_PALETTE_1
+    ldHLi [RIGHT_SPRITE + SpriteY], MENU_MARGIN_TOP
+    ldHLi [RIGHT_SPRITE + SpriteX], MARGIN_LEFT * 8
+    ldHLi [RIGHT_SPRITE + SpriteImage], "R"
+    ldHLi [RIGHT_SPRITE + SpriteFlags], HAS_PRIORITY | USE_PALETTE_1
 
+    ld HL, JoypadTestInstructions
+    ld DE, BackgroundMap1 + (CANVAS_WIDTH * 17) / SPRITE_WIDTH
+    call printString 
+
+    ; Turn off input throttle so holding down the button counts.
+    ldAny [inputThrottleAmount], 0
     ldAny [stateInitialised], 1        
-    
+   
     pop HL
     ret
 
@@ -72,7 +78,6 @@ initJoypadTest:
 ; Puts us back to how we were before we entered this screen.
 ;;;
 back:
-
     ldAny [SpritePalette2], FG_PALETTE
 
     ; hide all the sprites off screen.
@@ -86,8 +91,27 @@ back:
     ld [LEFT_SPRITE + SpriteY], A
     ld [RIGHT_SPRITE + SpriteY], A
                            
+    ; Wait a bit before allowing the next input so we don't keep jumping back in to joypad test after holding down A & START 
+    ldAny [inputThrottleCount], 32
+
     backToMainMenu
     ret
+
+;;;
+; Lights up the indicator if the button is pressed, turns it off if it is not.
+; @param \1 The button
+; @param \2 Sprite for the button.
+; @reg B pressed buttons.
+;;; 
+setButtonIndicator: macro
+    andAny B, \1
+    jr NZ, .else\@
+        ldAny [\2 + SpriteFlags], HAS_PRIORITY | USE_PALETTE_1
+        jr .end\@
+.else\@
+        ldAny [\2 + SpriteFlags], HAS_PRIORITY | USE_PALETTE_0
+.end\@    
+endm
 
 ;;;
 ; Screen that reacts to each button press.
@@ -99,38 +123,18 @@ joypadTestStep:
     or A
         call Z, initJoypadTest
     
-    ; Go back if B pressed
-    ; Yes I know this is kinda incompatible with the whole "Test the joypad" thing.
-    ; I'll change it to A & B & START & SELECT when I get it working.
-    cpAny B, B_BTN
+    ; Go back if A, B, START, SELECT all held down.
+    cpAny B, A_BTN | B_BTN | START | SELECT 
         call Z, back
 
-    andAny B, A_BTN
-    ld A, [A_SPRITE + SpriteFlags]
-    jr NZ, .elseA
-        or USE_PALETTE_0
-        jr .endA
-.elseA
-        or USE_PALETTE_1   
-.endA
-    ld [A_SPRITE + SpriteFlags], A
-
-    andAny B, START
-    ld A, [START_SPRITE + SpriteFlags]
-    jr NZ, .elseStart
-        or USE_PALETTE_0
-        jr .endStart
-.elseStart
-        or USE_PALETTE_1   
-.endStart
-    ld [START_SPRITE + SpriteFlags], A
-
-.elseSelect
-.endSelect
-.elseU
-.elseD
-.elseL
-.elseR
+    setButtonIndicator A_BTN, A_SPRITE
+    setButtonIndicator B_BTN, B_SPRITE
+    setButtonIndicator START, START_SPRITE 
+    setButtonIndicator SELECT, SELECT_SPRITE
+    setButtonIndicator UP, UP_SPRITE
+    setButtonIndicator DOWN, DOWN_SPRITE
+    setButtonIndicator LEFT, LEFT_SPRITE
+    setButtonIndicator RIGHT, RIGHT_SPRITE            
 
     ret
     

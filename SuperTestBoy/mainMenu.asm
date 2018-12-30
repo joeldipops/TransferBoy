@@ -51,6 +51,7 @@ mainMenuStep:
 ;;;
 initMainMenu:
     ; Set up cursor
+    ldAny [inputThrottleAmount], INPUT_THROTTLE
     ldAny [cursorPosition], 0
     ldAny [PcX], MENU_MARGIN_LEFT
     ldAny [PcY], MENU_MARGIN_TOP
