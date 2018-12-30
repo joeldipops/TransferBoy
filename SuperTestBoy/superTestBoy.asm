@@ -1,35 +1,47 @@
 INCLUDE "addresses.asm"
 INCLUDE "constants.asm"
 INCLUDE "ops.asm"
+INCLUDE "utilMacros.asm"
+
+SECTION "errorHandler", ROM0[$0000]
 ;;;
-; Push all registers on to the stack so we can interrupt safely.
+; Alias for 'rst handleError'
 ;;;
-pushAll: macro
-    push AF
-    push BC
-    push DE
-    push HL
+throw: macro
+    rst handleError
 endm
 
 ;;;
-; Pop all registers when we're done with an interrupt.
+; Do something with the call stack and then hit the reset button.
 ;;;
-popAll: macro
+handleError EQU $0000
+rst_handleError:
+    ; Do something with the stack
     pop HL
-    pop DE
-    pop BC
-    pop AF
-endm
+    ; Then restart from the beginning
+    jp main
 
-;;; 
-; Lets us put a break point on a nop
+
 ;;;
-debugger: macro
-    or A
-    jr NZ .skip
-    nop
-.skip 
-endm
+; Set a block of bytes to a single value.
+; (Normally 0)
+; @param A The value
+; @param DE The address
+; @param BC The number of bytes
+;;;
+SECTION "memset", ROM0[$0010]
+memset EQU $0010
+rst_memset:
+    push HL
+    ld L, A
+.loop
+        ldAny [DE], L
+        inc DE
+        dec BC
+    orAny B, C
+    jr NZ, .loop
+    pop HL
+    ret
 
 ;;;
 ; Copies memory from source to destination
@@ -37,15 +49,16 @@ endm
 ; @reg DE Destination address
 ; @reg BC Number of bytes to copy.
 ;;;
-SECTION "MemCopy", ROM0[$0028]
-memcpy:
+SECTION "memcpy", ROM0[$20]
+memcpy EQU $0020
+rst_memcpy:
 .loop
         ldiAny [DE], [HL]
         inc DE
         dec BC
     orAny B, C
     jr NZ, .loop
-    reti
+    ret
 
 SECTION "Vblank", ROM0[$0040]
     jp onVBlank
@@ -53,13 +66,13 @@ SECTION "Vblank", ROM0[$0040]
 SECTION "LCDC", ROM0[$0048]
     jp onHBlank
 
-SECTION "Timer_Overflow", ROM0[$0050]
+SECTION "TimerOverflow", ROM0[$0050]
     jp onTimeout
 
 SECTION "Serial", ROM0[$0058]
     jp onTransfer
 
-SECTION "p1thru4", ROM0[$0060]
+SECTION "JoypadPressed", ROM0[$0060]
     jp onJoypadEvent
 
 SECTION "main", ROM0[$0100]
@@ -94,7 +107,7 @@ init: macro
 
     ; turn off outputs
     call turnOffScreen
-    resIO AUDIO_ON_BIT, [AudioState]
+    resH AUDIO_ON_BIT, [AudioState]
 
     ld SP, stackFloor
 
@@ -102,7 +115,8 @@ init: macro
     ld A, 0
     ld DE, $c000
     ld BC, $1fff
-    call memset
+    rst memset
+    ;call memset
 
     ; Use the default palette everywhere to start with
     ld A, BG_PALETTE
@@ -142,7 +156,8 @@ init: macro
     ld HL, runDmaRom ; Source in ROM
     ld DE, runDma    ; Destination in HRAM
     ld BC, (runDmaRomEnd - runDmaRom)
-    rst $28 ; memcpy
+    rst memcpy
+    ;rst $10 ; memcpy
 
     ; Turn the screen on and set it up.
     ldhAny [LcdControl], \
@@ -176,110 +191,14 @@ main:
         call runDma
    jr .loop
 
-;;;
-; Sets a tile with a given x/y position to a certain sprite.
-; @param B The tile index.
-; @param D The x position.
-; @param E THe y position.
-;;;
-drawTile:
-    push HL
-    ; calculate the offset from start of the map
-    mult E, SCREEN_BYTE_WIDTH
-    add (BackgroundMap1 & $00ff)
-    add D
-    ; Then load in to memory
-    ld H, (BackgroundMap1 >> 8)     
-    ld L, A
-    ld [HL], B
-    pop HL
-    ret
+audioTestStep:
+sgbTestStep:
+    throw ; Not yet implemented
 
-;;;
-; Prints a null terminated string directly to the screen.
-; @param HL string address
-; @param DE tile start address
-;;;
-printString:
-    push BC
-    push HL
-    ld16 B,C, H,L
-.loop
-        ldi A, [HL]
-        or A
-    jr NZ, .loop
-    sub16 H,L, B,C
-    ; 16 bit subtraction.
-    ld16 B,C, H,L
-    ; Don't include the null
-    dec BC
-    pop HL
-    call copyToVRAM
-    pop BC
-    ret    
-    
-
-;;;
-; Copy data to VRAM
-; @param HL Source start address.
-; @param DE Destination start address.
-; @param BC Length of data
-;;;
-copyToVRAM:
-.untilFinished  
-        di
-.untilVRAM
-        andAny [LcdStatus], VRAM_BUSY
-            jr NZ, .untilVRAM
-        ldiAny [DE], [HL]
-        inc DE
-        dec	BC
-        ei
-	    orAny B, C
-	jr NZ, .untilFinished
-    ret
-
-;;;
-; Copy data to VRAM, but only when available
-; @param A value to set
-; @param DE destination start address
-; @param BC length of data.
-;;; 
-setVRAM:
-    push HL
-    ld L, A
-.untilFinished  
-        di
-.untilVRAM
-        andAny [LcdStatus], VRAM_BUSY
-        jr NZ, .untilVRAM
-        ldAny [DE], L
-        inc DE
-        dec	BC
-        ei
-	    orAny B, C
-	jr NZ, .untilFinished
-    pop HL
-	ret
-    
-;;;
-; Set a block of bytes to a single value.
-; (Normally 0)
-; @param A The value
-; @param DE The address
-; @param BC The number of bytes
-;;;  
-memset:
-    push HL
-    ld L, A
-.loop
-        ldAny [DE], L
-        inc DE
-        dec BC
-    orAny B, C
-    jr NZ, .loop
-    pop HL
-    ret
+; Include routines
+INCLUDE "lcd.asm"
+INCLUDE "mainMenu.asm"
+INCLUDE "joypadTest.asm"
 
 ;;;
 ; Loads the pressed buttons in to B
@@ -335,12 +254,27 @@ loadInput:
 ; @param B The joypad state
 ;;;
 runLogic:
+    push BC
+
     ; Jump table
-    ld A, [state]
-    cp INIT_STATE
+    cpAny [state], INIT_STATE
         call Z, initStep
-    cp MAIN_MENU_STATE
+    cpAny [state], MAIN_MENU_STATE
         call Z, mainMenuStep
+    cpAny [state], JOYPAD_TEST_STATE
+        call Z, joypadTestStep
+    cpAny [state], SGB_TEST_STATE
+        call Z, sgbTestStep
+    cpAny [state], AUDIO_TEST_STATE
+        call Z, audioTestStep
+
+    ; If set to a state higher than what's defined, it's an error
+    ldAny C, [state] 
+    cpAny AUDIO_TEST_STATE - 1, C
+        jr NC, .return
+        throw
+.return
+    pop BC
     ret
 
 ;;;
@@ -349,97 +283,6 @@ runLogic:
 ;;;
 initStep:
     ldAny [state], MAIN_MENU_STATE
-    ret
-
-;;;
-; Sets up the screen for the main menu page
-;;;
-initMainMenu:
-    ; Set up cursor
-    ldAny [cursorPosition], 0
-    ldAny [PcX], MENU_MARGIN_LEFT
-    ldAny [PcY], MENU_MARGIN_TOP
-    ldAny [PcImage], LIGHTEST
-    ldAny [PcSpriteFlags], HAS_PRIORITY | USE_PALETTE_0
-
-    ; Set up menu items
-    ld HL, JoypadLabel
-    ld DE, BackgroundMap1 + (MENU_MARGIN_LEFT / SPRITE_WIDTH)
-    call printString
-
-    ld HL, SGBLabel
-    ld DE, BackgroundMap1 + (CANVAS_WIDTH + MENU_MARGIN_LEFT) / SPRITE_WIDTH
-    call printString
-
-    ld HL, AudioLabel
-    ld DE, BackgroundMap1 + (CANVAS_WIDTH * 2 + MENU_MARGIN_LEFT) / SPRITE_WIDTH
-    call printString
-    ret
-
-;;;
-; Handle interactions with the main menu
-; @param B The joypad state 
-;;;
-mainMenuStep:
-    cpAny [cursorPosition], -1
-    jr NZ, .elseInit
-        call initMainMenu
-
-.elseInit
-    ; if no relevant buttons pressed.
-    
-    andAny B, START | A_BTN | DOWN | UP
-        jr Z, .return
-    andAny B, UP
-        jr Z, .elseUp
-
-        ; If already at top of menu, bail
-        cpAny [cursorPosition], 0
-            jr Z, .elseUp
-        decAny [cursorPosition]
-.elseUp
-    andAny B, DOWN
-        jr Z, .elseDown
-        ; If already at bottom of menu, bail
-        cpAny [cursorPosition], MENU_ITEMS_COUNT - 1
-            jr Z, .elseDown
-        incAny [cursorPosition]
-.elseDown
-    andAny B, START | A_BTN
-        jr Z, .elseA
-        call mainMenuItemSelected
-.elseA
-    ; Move the cursor
-    ld A, [cursorPosition]
-    mult A, 8
-    add MENU_MARGIN_TOP
-    ld [PcY], A
-     
-.return
-    ret
-
-mainMenuItemSelected:
-    ret
-
-;;;
-; Wait until VBlank and then turn off LCD
-;;;
-turnOffScreen:
-    ldh A, [LcdControl]
-    rlca    ; Put the high bit of LCDC into the Carry flag
-    ret NC  ; Screen is off already.
-
-    ld A, SCREEN_HEIGHT    
-    push HL
-    ld HL, CurrentLine
-
-.loop
-    ; Loop until display is past the bottom of the screen
-    cp [HL]
-    jr NC, .loop
-
-    resAny LCD_ON_BIT, [LcdControl]
-    pop HL
     ret
 
 ;;;
@@ -471,47 +314,7 @@ SECTION "Strings ROM", ROM0[$2800]
 INCLUDE "strings.asm"
 
 SECTION "Graphics ROM", ROM0[$3000]
-Graphics:
-PUSHO
-OPT  g.oOB
-
-    dw `........
-    dw `........
-    dw `........
-    dw `........
-    dw `........
-    dw `........
-    dw `........
-    dw `........
-
-    dw `oooooooo
-    dw `oooooooo
-    dw `oooooooo
-    dw `oooooooo
-    dw `oooooooo
-    dw `oooooooo
-    dw `oooooooo
-    dw `oooooooo
-
-    dw `OOOOOOOO
-    dw `OOOOOOOO
-    dw `OOOOOOOO
-    dw `OOOOOOOO
-    dw `OOOOOOOO
-    dw `OOOOOOOO
-    dw `OOOOOOOO
-    dw `OOOOOOOO
-
-    dw `BBBBBBBB
-    dw `BBBBBBBB
-    dw `BBBBBBBB
-    dw `BBBBBBBB
-    dw `BBBBBBBB
-    dw `BBBBBBBB
-    dw `BBBBBBBB
-    dw `BBBBBBBB
-POPO
-GraphicsEnd:
+INCLUDE "tiles.asm"
 
 SECTION "ASCII ROM", ROMX[$4000], BANK[1]
 INCLUDE "imports/ibmpc1.inc"

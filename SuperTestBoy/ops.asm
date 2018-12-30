@@ -307,12 +307,12 @@ endm
 ;;;
 ; Resets a bit of an 8bit piece of IO space memory
 ;
-; resIO u3, [$ff00 + n8]
+; resH u3, [$ff00 + n8]
 ; Cycles: 8 
 ; Bytes: 6
 ; Flags: None
 ;;;
-resIO: macro
+resH: macro
     ldh A, \2
     res \1, A
     ldh \2, A
@@ -321,22 +321,22 @@ endm
 ;;;
 ; Compares a value with a value in the IO space of memory and sets flags.
 ;
-; cpIO [$ff00 + n8], n8
+; cpH [$ff00 + n8], n8
 ; Cycles: 5
 ; Bytes: 4
 ; Flags: Z=? N=1, H=? C=?
 ;
-; cpIO [$ff00 + n8], r8 
+; cpH [$ff00 + n8], r8 
 ; Cycles: 4
 ; Bytes: 3
 ; Flags: Z=? N=1, H=? C=?
 ;
-; cpIO [$ff00 + n8], [HL] 
+; cpH [$ff00 + n8], [HL] 
 ; Cycles: 5
 ; Bytes: 3
 ; Flags: Z=? N=1, H=? C=?
 ;;;
-cpIO: macro
+cpH: macro
     ldh A, \1
     cp \2
 endm
@@ -480,4 +480,4 @@ sub16: macro
     ld \1, A 
 endm
     
-	ENDC
+    ENDC
