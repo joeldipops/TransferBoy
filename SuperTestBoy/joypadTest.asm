@@ -63,8 +63,10 @@ initJoypadTest:
     ldHLi [RIGHT_SPRITE + SpriteImage], "R"
     ldHLi [RIGHT_SPRITE + SpriteFlags], HAS_PRIORITY | USE_PALETTE_1
 
+    ; Message at the bottom of the screen.
     ld HL, JoypadTestInstructions
-    ld DE, BackgroundMap1 + (CANVAS_WIDTH * 17) / SPRITE_WIDTH
+    ld D, 0
+    ld E, BACKGROUND_HEIGHT - 1
     call printString 
 
     ; Turn off input throttle so holding down the button counts.

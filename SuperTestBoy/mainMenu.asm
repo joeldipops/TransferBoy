@@ -39,6 +39,7 @@ mainMenuStep:
     ; Move the cursor
     ld A, [cursorPosition]
     mult A, 8
+    ld A, L
     add MENU_MARGIN_TOP
     ld [PcY], A
      
@@ -60,15 +61,18 @@ initMainMenu:
 
     ; Set up menu items
     ld HL, JoypadLabel
-    ld DE, BackgroundMap1 + (MENU_MARGIN_LEFT / SPRITE_WIDTH)
+    ld D, 3
+    ld E, 0
     call printString
 
     ld HL, SGBLabel
-    ld DE, BackgroundMap1 + (CANVAS_WIDTH + MENU_MARGIN_LEFT) / SPRITE_WIDTH
+    ld D, 3
+    ld E, 1
     call printString
 
     ld HL, AudioLabel
-    ld DE, BackgroundMap1 + (CANVAS_WIDTH * 2 + MENU_MARGIN_LEFT) / SPRITE_WIDTH
+    ld D, 3
+    ld E, 2
     call printString
     ret
 

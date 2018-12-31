@@ -1,32 +1,46 @@
     IF !DEF(PSEUDO_OPS_INCLUDED)
 PSEUDO_OPS_INCLUDED SET 1
 
+addAny: macro
+    ld A, \1
+    add \2
+    ld \1, A 
+endm
+
+adcAny: macro
+    ld A, \1
+    adc \2
+    ld \1, A 
+endm
+
 ;;;
-; Multiplies two numbers
-; @param \1 the first number
-; @param \2 the second number
-; @return A the multiplied result.
-; Don't use this as a macro if you're running out of ROM space
+; mult r8, r8
+; Multiples two numbers, result in HL
 ;;;
 mult: macro
     push BC
-    push DE
+    ld HL, 0
     ld B, \1
     ld C, \2
+
+    ; If either of the operands are 0, return 0
+    or B
+        jr Z, .end
+    or C
+        jr Z, .end
+
     ld A, 0
-.loop                         ; do
-        add A, C                ;     result += A
-        dec B                   ;     b--
-        ld D, A
-        ld A, B
-        cp 0                    ; until (b == 0)
-        ld B, A
-        ld A, D   
-        jr NZ, .loop              
-    pop DE
+.loop
+        ; TODO can we use `add HL, r16`??
+        add A, C
+        ld L, A
+        adcAny H, 0
+        dec B
+        ld A, L
+    jr NZ, .loop
+.end
     pop BC
 endm
-
 
 ;;;
 ; Loads byte from anywhere to anywhere else that takes a byte.
