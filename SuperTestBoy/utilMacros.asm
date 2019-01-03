@@ -1,6 +1,19 @@
     IF (!DEF(UTILS_INCLUDED))
 UTILS_INCLUDED SET 1
 
+;;; 
+; Places the cursor according to the value at [HL]
+; @param \1 Top margin
+; @reg [HL] Logical y-position of the cursor
+;;;
+moveCursor: macro
+    ld A, [cursorPosition]
+    mult A, SPRITE_WIDTH
+    ld A, L
+    add \1
+    ld [PcY], A
+endm
+
 ;;;
 ; Push all registers on to the stack so we can interrupt safely.
 ;;;

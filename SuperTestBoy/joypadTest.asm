@@ -19,7 +19,7 @@ initJoypadTest:
     ldAny [PcX], 0
     ldAny [PcY], 0
 
-    ldhAny [SpritePalette2], %01001110    
+    ldhAny [SpritePalette1], %01001110    
 
     ld HL, SpriteY
     ; The first parameter to ldHLi is ignored, but we can use it to keep track of where we're up to ldi wise.
@@ -79,8 +79,8 @@ initJoypadTest:
 ;;;
 ; Puts us back to how we were before we entered this screen.
 ;;;
-back:
-    ldAny [SpritePalette2], FG_PALETTE
+backFromJoypadTest:
+    ldAny [SpritePalette1], FG_PALETTE
 
     ; hide all the sprites off screen.
     ld A, 0
@@ -127,7 +127,7 @@ joypadTestStep:
     
     ; Go back if A, B, START, SELECT all held down.
     cpAny B, A_BTN | B_BTN | START | SELECT 
-        call Z, back
+        call Z, backFromJoypadTest
 
     setButtonIndicator A_BTN, A_SPRITE
     setButtonIndicator B_BTN, B_SPRITE

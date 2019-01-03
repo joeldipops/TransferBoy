@@ -85,7 +85,7 @@ SECTION "main", ROM0[$0100]
     db $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
     db $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
     db $00
-    db "SUPERTESTBOY",0,0,0 ; name
+    db "SUPERTESTBOY",0,0 ; name
     db NO_COLOUR_SUPPORT ; Colour type 
     dw UNLICENSED ; Licensee
     db SGB_SUPPORTED ; SuperGameBoy support
@@ -122,8 +122,8 @@ init: macro
     ld A, BG_PALETTE
     ldh [BackgroundPalette], A
     ld A, FG_PALETTE
-    ldh [SpritePalette2], A
     ldh [SpritePalette1], A
+    ldh [SpritePalette0], A
     
     ld A, 0
     ldh [BackgroundScrollX], A
@@ -191,13 +191,13 @@ main:
    jr .loop
 
 audioTestStep:
-sgbTestStep:
     throw ; Not yet implemented
 
 ; Include routines
 INCLUDE "lcd.asm"
 INCLUDE "mainMenu.asm"
 INCLUDE "joypadTest.asm"
+INCLUDE "sgbTest.asm"
 
 ;;;
 ; Loads the pressed buttons in to B
@@ -343,6 +343,8 @@ stateInitialised: db
 cursorPosition: db  
 inputThrottleCount: db
 inputThrottleAmount: db
+sgbTransferPacket0: ds 16
+sgbTransferPacketX: ds 16
 
 
 

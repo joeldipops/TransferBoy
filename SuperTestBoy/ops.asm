@@ -1,16 +1,32 @@
     IF !DEF(PSEUDO_OPS_INCLUDED)
 PSEUDO_OPS_INCLUDED SET 1
 
+;;;
+; Adds two values, result in A
+; addAny r8, [r16]
+;;;;
 addAny: macro
     ld A, \1
     add \2
     ld \1, A 
 endm
 
+;;;
+; Adds two values + 1 if carry flag set.
+; adcAny r8, [r16]
+;;;
 adcAny: macro
     ld A, \1
     adc \2
     ld \1, A 
+endm
+
+;;;
+; Inserts a null terminated string into ROM
+; dbs string
+;;;
+dbs: macro
+    db \1,0
 endm
 
 ;;;

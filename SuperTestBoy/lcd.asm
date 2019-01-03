@@ -69,10 +69,10 @@ copyToVRAM:
     ; Use either map depending on what's in A
     pop AF
     or A
-    jr NZ, .elseMap
+    jr NZ, .notMap1
         ld DE, BackgroundMap1
         jr .endMap
-.elseMap
+.notMap1
         ld DE, BackgroundMap2
 .endMap
     add HL, DE

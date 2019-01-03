@@ -1,6 +1,9 @@
     IF !DEF(MAIN_MENU_INCLUDED)
 MAIN_MENU_INCLUDED SET 1
 
+MENU_ITEMS_COUNT EQU 3
+
+
 ;;;
 ; Handle interactions with the main menu
 ; @param B The joypad state 
@@ -9,39 +12,35 @@ mainMenuStep:
     push HL
     ld HL, cursorPosition
     cpAny -1, [HL]
-    jr NZ, .elseInit
+    jr NZ, .notRequiresInit
         call initMainMenu
 
-.elseInit
+.notRequiresInit
     ; if no relevant buttons pressed.
     
     andAny B, START | A_BTN | DOWN | UP
         jr Z, .return
     andAny B, UP
-        jr Z, .elseUp
+        jr Z, .notUp
 
         ; If already at top of menu, bail
-        cpAny 0, [HL]
-            jr Z, .elseUp
-        decAny [HL]
-.elseUp
+        orAny [HL], [HL]
+        jr Z, .notUp
+            decAny [HL]
+.notUp
     andAny B, DOWN
-        jr Z, .elseDown
+        jr Z, .notDown
         ; If already at bottom of menu, bail
         cpAny MENU_ITEMS_COUNT - 1, [HL] 
-            jr Z, .elseDown
-        incAny [HL]
-.elseDown
+        jr Z, .notDown
+            incAny [HL]
+.notDown
     andAny B, START | A_BTN
-        jr Z, .elseA
+        jr Z, .notA
         call mainMenuItemSelected
-.elseA
+.notA
     ; Move the cursor
-    ld A, [cursorPosition]
-    mult A, 8
-    ld A, L
-    add MENU_MARGIN_TOP
-    ld [PcY], A
+    moveCursor MENU_MARGIN_TOP
      
 .return
     pop HL
@@ -60,12 +59,12 @@ initMainMenu:
     ldAny [PcSpriteFlags], HAS_PRIORITY | USE_PALETTE_0
 
     ; Set up menu items
-    ld HL, JoypadLabel
+    ld HL, SGBLabel
     ld D, 3
     ld E, 0
     call printString
 
-    ld HL, SGBLabel
+    ld HL, JoypadLabel
     ld D, 3
     ld E, 1
     call printString
@@ -82,22 +81,22 @@ initMainMenu:
 mainMenuItemSelected:
     push HL
     ld HL, cursorPosition
-    orAny 0, [HL]
-        jr NZ, .elseJoypad
+    cpAny 1, [HL]
+        jr NZ, .notJoypad
         ldAny [state], JOYPAD_TEST_STATE
         jr .return
-.elseJoypad
-    cpAny 1, [HL]
-        jr NZ, .elseSGB
+.notJoypad
+    orAny 0, [HL]
+        jr NZ, .notSGB
         ldAny [state], SGB_TEST_STATE
         jr .return
-.elseSGB
+.notSGB
     cpAny 2, [HL]
-        jr NZ, .elseAudio
+        jr NZ, .notAudio
         ldAny [state], AUDIO_TEST_STATE
         jr .return  
 
-.elseAudio
+.notAudio
     throw
 
 .return

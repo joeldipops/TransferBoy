@@ -22,8 +22,8 @@ CurrentLine EQU $ff44
 
 DmaSourceRegister EQU $ff46
 BackgroundPalette EQU $ff47
-SpritePalette1 EQU $ff48
-SpritePalette2 EQU $ff49
+SpritePalette0 EQU $ff48
+SpritePalette1 EQU $ff49
 
 ;;;;;;;;;;;;;; Software Addresses ;;;;;;;;;;;;;;;;;;;;;;
 stackFloor EQU $ffff ; Might change to DFFF when actually start using the stack
