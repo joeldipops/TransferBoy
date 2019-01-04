@@ -31,14 +31,14 @@ turnOffScreen:
 printString:
     push BC
     push HL
-    ld16 B,C, H,L
+    ld16RR B,C, H,L
 .loop
         ldi A, [HL]
         or A
     jr NZ, .loop
     sub16 H,L, B,C
     ; 16 bit subtraction.
-    ld16 B,C, H,L
+    ld16RR B,C, H,L
     ; Don't include the null
     dec BC
     pop HL
@@ -46,16 +46,13 @@ printString:
     pop BC
     ret    
     
-
 ;;;
-; Copy data to VRAM
-; @param HL Source start address.
-; @param D x coordinate of start address
-; @param E y co-ordinate of start address.
-; @param BC Length of data
+; Takes an x and y co-ordinate and finds the corresponding memory address
+; @param D the X co-ord
+; @param E the Y co-ord
 ; @param A 0 if using Map1, 1 if using Map2
-;;;
-copyToVRAM:
+; @returns result in DE
+coordsToAddress:
     push HL
     push AF
 
@@ -78,9 +75,21 @@ copyToVRAM:
     add HL, DE
 
     ; Destination address now in DE
-    ld16 D,E, H,L
+    ld16RR D,E, H,L
     pop HL
+    ret
 
+
+;;;
+; Copy data to VRAM
+; @param HL Source start address.
+; @param D x coordinate of start address
+; @param E y co-ordinate of start address.
+; @param BC Length of data
+; @param A 0 if using Map1, 1 if using Map2
+;;;
+copyToVRAM:
+    call coordsToAddress
 ; Copy each byte across but only during H or V blank
 .untilFinished  
         di
@@ -96,14 +105,17 @@ copyToVRAM:
     ret
 
 ;;;
-; Copy data to VRAM, but only when available
-; @param A value to set
-; @param DE destination start address
-; @param BC length of data.
-;;; 
+; Copy data to VRAM
+; @param L Character to set.
+; @param D x coordinate of start address
+; @param E y co-ordinate of start address.
+; @param BC Length of data
+; @param A 0 if using Map1, 1 if using Map2
+;;;
 setVRAM:
     push HL
-    ld L, A
+    call coordsToAddress
+    pop HL
 .untilFinished  
         di
 .untilVRAM
@@ -115,7 +127,6 @@ setVRAM:
         ei
 	    orAny B, C
 	jr NZ, .untilFinished
-    pop HL
 	ret
 
     ENDC

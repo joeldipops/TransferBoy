@@ -99,10 +99,12 @@ SECTION "main", ROM0[$0100]
     db 0 ; checksum - rgbfix sets this
 
 ;;;
-; Set up registers and RAM to a known start state.
-; Conceptually a routine, but implemented as a macro since we probably don't need to call it more than once.
+; Main loop
+; Never returns.
 ;;;
-init: macro
+main:
+    nop
+    ; Initialisation.
     di
 
     ; turn off outputs
@@ -179,15 +181,7 @@ init: macro
 
     ldAny [stateInitialised], 0
     ei
-endm
-        
-;;;
-; Main loop
-; Never returns.
-;;;
-main:
-    nop ; This instruction sometimes gets skipped???
-    init
+
 .loop
         ; wait for VBlank, if another interrupt occurs, start waiting again.
         ld A, [InterruptFlags]
@@ -276,12 +270,14 @@ runLogic:
         call Z, joypadTestStep
     cpAny [state], SGB_TEST_STATE
         call Z, sgbTestStep
+    cpAny [state], MLT_REQ_STATE
+        call Z, mltReqStep
     cpAny [state], AUDIO_TEST_STATE
         call Z, audioTestStep
 
     ; If set to a state higher than what's defined, it's an error
     ldAny C, [state] 
-    cpAny AUDIO_TEST_STATE - 1, C
+    cpAny MAX_STATE, C
         jr NC, .return
         throw
 .return

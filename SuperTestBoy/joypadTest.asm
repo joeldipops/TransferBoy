@@ -96,7 +96,8 @@ backFromJoypadTest:
     ; Wait a bit before allowing the next input so we don't keep jumping back in to joypad test after holding down A & START 
     ldAny [inputThrottleCount], 32
 
-    backToMainMenu
+    ldAny [state], MAIN_MENU_STATE
+    backToPrevMenu
     ret
 
 ;;;

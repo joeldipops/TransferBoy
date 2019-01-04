@@ -48,30 +48,22 @@ endm
 ; Resets background to all light tiles.
 ;;;
 resetBackground: macro
-    ld A, LIGHTEST
-    ld DE, BackgroundMap1
+    ld A, 0
+    ld D, 0
+    ld E, 0
+    ld L, LIGHTEST
     ld BC, SCREEN_BYTE_WIDTH * SCREEN_BYTE_HEIGHT
     call setVRAM    
 endm
 
 ;;;
-; Loads the position of the current cursor in to HL
-; @reg HL is loaded with cursor position.
-;;;
-loadCursorPosition: macro
-    ldAny H, [cursorPosition]
-    ldAny L, [cursorPosition+1]
-endm
-
-;;;
 ; Jumps back to the previous menu level.
 ;;;
-backToMainMenu: macro
+backToPrevMenu: macro
     resetBackground
-    ldAny [state], MAIN_MENU_STATE
     
     ; Set position to 0 and dec depth.
-    loadCursorPosition
+    ld16RA H,L, cursorPosition
     xor A
     ld [HL], A
     dec HL

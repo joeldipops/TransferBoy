@@ -57,7 +57,7 @@ PALpq:
     ENDR
 
     ; Pad out 1 byte at the end.
-    ld16 D,E, H,L
+    ld16RR D,E, H,L
     ld BC, 1
     xor A
     call memset
@@ -93,7 +93,7 @@ MLT_REQ:
  
 .continue
     ; Set the rest of the packet to 0
-    ld16 D,E, H,L
+    ld16RR D,E, H,L
     ld BC, 14
     xor A
     call memset
@@ -135,7 +135,8 @@ initSgbTest:
     ret
 
 backFromSgbTest:
-    backToMainMenu
+    ldAny [state], MAIN_MENU_STATE
+    backToPrevMenu
     ret
 
 ;;;
@@ -194,16 +195,143 @@ transferSgbPackets:
     ret
 
 ;;;
+; Prepare background/sprites/variables for mlt_req setup
+;;;
+initMltReq:
+    ld L, "_"
+    ld A, 0
+    ld D, 0
+    ld E, SGB_ITEMS_COUNT + 1
+    ld BC, BACKGROUND_WIDTH
+    call setVRAM
+
+    ld A, SGB_ITEMS_COUNT * SPRITE_WIDTH + MENU_MARGIN_TOP + (SPRITE_WIDTH * 3)
+    ld [PcY], A
+    ld [SpriteY + SPRITE_SIZE * 0], A
+    ld [SpriteY + SPRITE_SIZE * 1], A
+    ld [SpriteY + SPRITE_SIZE * 2], A
+
+    ldAny [SpriteImage              ], "1"
+    ldAny [SpriteX                  ], 3 * SPRITE_WIDTH
+    ldAny [SpriteFlags              ], USE_PALETTE_1 | HAS_PRIORITY
+
+    ldAny [SpriteImage + SPRITE_SIZE * 1], "2"
+    ldAny [SpriteX     + SPRITE_SIZE * 1], 6 * SPRITE_WIDTH
+    ldAny [SpriteFlags + SPRITE_SIZE * 1], USE_PALETTE_1 | HAS_PRIORITY
+
+    ldAny [SpriteImage + SPRITE_SIZE * 2], "4"
+    ldAny [SpriteX     + SPRITE_SIZE * 2], 9 * SPRITE_WIDTH
+    ldAny [SpriteFlags + SPRITE_SIZE * 2], USE_PALETTE_1 | HAS_PRIORITY
+
+    incAny [cursorPosition+1]
+    ldAny [stateInitialised], 1
+    ret
+
+;;;
+; Set up a MLT_REQ command (just pick number of players)
+;;;
+mltReqStep:
+    ; Init if not already
+    orAny [stateInitialised], A
+        call Z, initMltReq
+
+    ; Go back if B pressed.
+    cpAny B, B_BTN
+    jr NZ, .notB
+        ldAny [state], SGB_TEST_STATE
+        backToPrevMenu
+        jr .return
+
+.notB
+    ld16RA H,L, cursorPosition
+
+    andAny B, LEFT | RIGHT | A_BTN | START
+        jr Z, .return
+
+    ld A, B
+
+    ; Move the cursor if left or right pressed.
+    cp LEFT
+    jr NZ, .notLeft
+        ; Don't go less than 0
+        cpAny 0, [HL]
+            jr Z, .notLeft
+        dec [HL]
+        jr .moveCursor
+
+.notLeft    
+    cp RIGHT
+    jr NZ, .notRight
+        cpAny 2, [HL]
+            jr Z, .notRight
+        inc [HL]
+        jr .moveCursor
+
+.notRight
+    ; When a or start is pressed
+    ; Depending on what's highlighted, set the corresponding value in B 
+    ; And then run the command.
+    ld B, A
+    and A_BTN | START
+    jr Z, .notA
+        cpAny 0, [HL]
+        jr NZ, .not1Player
+            ld B, 1
+            jr .sendCommand
+
+.not1Player
+        cpAny 1, [HL]
+        jr NZ, .not2Player
+            ld B, 2
+            jr .sendCommand
+
+.not2Player
+        cpAny 2, [HL]
+        jr NZ, .not4Player
+            ld B, 4
+            jr .sendCommand
+
+.sendCommand
+    call MLT_REQ
+    call transferSgbPackets
+
+.not4Player
+        throw
+
+.notA
+.moveCursor
+    cpAny 0, [HL]
+    jr NZ, .notCursor0
+        ldAny [PcX], 2 * SPRITE_WIDTH
+        jr .return
+
+.notCursor0
+    cpAny 1, [HL]
+    jr NZ, .notCursor1
+        ldAny [PcX], 5 * SPRITE_WIDTH
+        jr .return
+
+.notCursor1
+    cpAny 2, [HL]
+    jr NZ, .notCursor2
+        ldAny [PcX], 8 * SPRITE_WIDTH
+
+.notCursor2
+.return
+    ret
+;;;
 ; Shows the MLT_REQ submenu where you can select number of players to request.
 ;;;
 mltReqSelected:
+    ldAny [stateInitialised], 0
+    ldAny [state], MLT_REQ_STATE
     ret
 
 ;;;
 ; Goes to next step after selecting a command to send.
 ;;;
 sgbItemSelected:
-    loadCursorPosition
+    ld16RA H,L, cursorPosition
     ld A, [HL]
     cp MLT_REQ_ITEM
     jr NZ, .notMLT_REQ
@@ -231,7 +359,7 @@ sgbItemSelected:
     throw
 
 .return
-    call transferSgbPackets
+    ;call transferSgbPackets
     ret
 
 ;;;
@@ -254,9 +382,7 @@ sgbTestStep:
     andAny B, START | A_BTN | DOWN | UP
         jr Z, .return
 
-    ; cursor position pointer in HL
-    loadCursorPosition
-
+    ld16RA H,L, cursorPosition
     andAny B, UP
         jr Z, .notUp
 
