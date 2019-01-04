@@ -2,7 +2,7 @@
 PSEUDO_OPS_INCLUDED SET 1
 
 ;;;
-; Adds two values, result in A
+; Adds two values, Result in r8
 ; addAny r8, [r16]
 ;;;;
 addAny: macro
@@ -12,7 +12,7 @@ addAny: macro
 endm
 
 ;;;
-; Adds two values + 1 if carry flag set.
+; Adds two values + 1 if carry flag set. Result in r8.
 ; adcAny r8, [r16]
 ;;;
 adcAny: macro
@@ -24,6 +24,9 @@ endm
 ;;;
 ; Inserts a null terminated string into ROM
 ; dbs string
+; Bytes: Length of String + 1
+; Cycles: N/A
+; Flags: N/A
 ;;;
 dbs: macro
     db \1,0
