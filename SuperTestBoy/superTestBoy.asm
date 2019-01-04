@@ -164,7 +164,19 @@ init: macro
     ; Set software variables
     ldAny [state], INIT_STATE
     ldAny [inputThrottleAmount], INPUT_THROTTLE    
-    ldAny [cursorPosition], -1
+
+    ; Set up the menu cursors. We can have up to 4 levels of menus, 
+    ; and we preserve the last cursor position at each level.
+    ld HL, cursorPositionBase
+    ldAny [cursorPosition], H
+    ldAny [cursorPosition+1], L
+
+    ; Set the initial cursor at each level to 0
+    ld A, 0
+    ld DE, cursorPositionBase
+    ld BC, MAX_MENU_DEPTH
+    rst memset
+
     ldAny [stateInitialised], 0
     ei
 endm
@@ -340,9 +352,12 @@ ProgramStateFlags:
 state: ds 1
 stateInitialised: db
 
-cursorPosition: db  
+; Guess we can go 4 menus deep 
+cursorPositionBase: ds MAX_MENU_DEPTH
+cursorPosition: dw
 inputThrottleCount: db
 inputThrottleAmount: db
+
 sgbTransferPacket0: ds 16
 sgbTransferPacketX: ds 16
 

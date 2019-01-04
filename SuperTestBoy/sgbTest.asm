@@ -105,7 +105,6 @@ initSgbTest:
 
     ; Set up cursor
     ldAny [inputThrottleAmount], INPUT_THROTTLE
-    ldAny [cursorPosition], 0
     ldAny [PcX], MENU_MARGIN_LEFT
     ldAny [PcY], MENU_MARGIN_TOP + SPRITE_WIDTH
     ldAny [PcImage], LIGHTEST
@@ -194,15 +193,22 @@ transferSgbPackets:
     ei
     ret
 
+;;;
+; Shows the MLT_REQ submenu where you can select number of players to request.
+;;;
+mltReqSelected:
+    ret
 
+;;;
+; Goes to next step after selecting a command to send.
+;;;
 sgbItemSelected:
-    ld A, [cursorPosition]
+    loadCursorPosition
+    ld A, [HL]
     cp MLT_REQ_ITEM
-    jr NZ, .notMLT_REQ  
-        ; Just request 2 player every time for now.
-        ld B, 2
-        call MLT_REQ
-        jr .end
+    jr NZ, .notMLT_REQ
+        call mltReqSelected
+        jr .return
 
 .notMLT_REQ
     cp PALPQ_ITEM
@@ -212,22 +218,25 @@ sgbItemSelected:
         ld DE, $0008
         ld HL, %0000000000000011
         call PALpq
-        jr .end
+        jr .return
 
 .notPALPQ
     cp ATTR_LIN_ITEM
     jr NZ, .notATTR_LIN
         ld C, 1 ;1 packet
         call ATTR_LIN
-        jr .end
+        jr .return
 
 .notATTR_LIN
     throw
 
-.end
+.return
     call transferSgbPackets
     ret
 
+;;;
+; Handles input to select an sgb command.
+;;;
 sgbTestStep:
     push HL
     ld A, [stateInitialised]
@@ -236,33 +245,40 @@ sgbTestStep:
 
     ; Go back if B is pressed
     cpAny B, B_BTN
-        call Z, backFromSgbTest
+    jr NZ, .notB
+        call backFromSgbTest
+        jr .return
 
+.notB
     ; Nothing pressed, so return
     andAny B, START | A_BTN | DOWN | UP
         jr Z, .return
 
-    ld HL, cursorPosition
+    ; cursor position pointer in HL
+    loadCursorPosition
+
     andAny B, UP
         jr Z, .notUp
 
         orAny [HL], [HL]
         jr Z, .notUp
-            decAny [HL]
-.notUp
+            dec [HL]
 
+.notUp
     andAny B, DOWN
         jr Z, .notDown
         
         ; Do nothing if alread at bottom of menu.
         cpAny SGB_ITEMS_COUNT - 1, [HL]
         jr Z, .notDown
-            incAny [HL]
-.notDown
+            inc [HL]
 
+.notDown
     andAny B, START | A_BTN
     jr Z, .notA
         call sgbItemSelected
+        jr .return
+
 .notA
     moveCursor MENU_MARGIN_TOP + SPRITE_WIDTH 
 

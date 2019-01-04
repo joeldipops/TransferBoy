@@ -10,14 +10,14 @@ MENU_ITEMS_COUNT EQU 3
 ;;;
 mainMenuStep:
     push HL
-    ld HL, cursorPosition
-    cpAny -1, [HL]
-    jr NZ, .notRequiresInit
-        call initMainMenu
 
-.notRequiresInit
+    ld A, [stateInitialised]
+    or A
+        call Z, initMainMenu
+
     ; if no relevant buttons pressed.
-    
+    loadCursorPosition
+
     andAny B, START | A_BTN | DOWN | UP
         jr Z, .return
     andAny B, UP
@@ -26,19 +26,21 @@ mainMenuStep:
         ; If already at top of menu, bail
         orAny [HL], [HL]
         jr Z, .notUp
-            decAny [HL]
+            dec [HL]
 .notUp
     andAny B, DOWN
-        jr Z, .notDown
+    jr Z, .notDown
         ; If already at bottom of menu, bail
         cpAny MENU_ITEMS_COUNT - 1, [HL] 
         jr Z, .notDown
-            incAny [HL]
+            inc [HL]
 .notDown
     andAny B, START | A_BTN
-        jr Z, .notA
+    jr Z, .notA
         call mainMenuItemSelected
+        jr .return
 .notA
+
     ; Move the cursor
     moveCursor MENU_MARGIN_TOP
      
@@ -52,11 +54,14 @@ mainMenuStep:
 initMainMenu:
     ; Set up cursor
     ldAny [inputThrottleAmount], INPUT_THROTTLE
-    ldAny [cursorPosition], 0
     ldAny [PcX], MENU_MARGIN_LEFT
-    ldAny [PcY], MENU_MARGIN_TOP
     ldAny [PcImage], LIGHTEST
     ldAny [PcSpriteFlags], HAS_PRIORITY | USE_PALETTE_0
+
+    loadCursorPosition
+    moveCursor MENU_MARGIN_TOP
+
+    ldAny [stateInitialised], 1
 
     ; Set up menu items
     ld HL, SGBLabel
@@ -80,16 +85,19 @@ initMainMenu:
 ;;;
 mainMenuItemSelected:
     push HL
-    ld HL, cursorPosition
+
+    loadCursorPosition
     cpAny 1, [HL]
         jr NZ, .notJoypad
         ldAny [state], JOYPAD_TEST_STATE
         jr .return
+
 .notJoypad
     orAny 0, [HL]
         jr NZ, .notSGB
         ldAny [state], SGB_TEST_STATE
         jr .return
+
 .notSGB
     cpAny 2, [HL]
         jr NZ, .notAudio
@@ -100,6 +108,10 @@ mainMenuItemSelected:
     throw
 
 .return
+    ; We're changing menu levels, so inc the cursor pointer.
+    incAny [cursorPosition + 1]
+    ldAny [stateInitialised], 0
+
     pop HL
     ret
 

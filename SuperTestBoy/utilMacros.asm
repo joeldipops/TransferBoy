@@ -7,7 +7,7 @@ UTILS_INCLUDED SET 1
 ; @reg [HL] Logical y-position of the cursor
 ;;;
 moveCursor: macro
-    ld A, [cursorPosition]
+    ld A, [HL]
     mult A, SPRITE_WIDTH
     ld A, L
     add \1
@@ -54,10 +54,29 @@ resetBackground: macro
     call setVRAM    
 endm
 
+;;;
+; Loads the position of the current cursor in to HL
+; @reg HL is loaded with cursor position.
+;;;
+loadCursorPosition: macro
+    ldAny H, [cursorPosition]
+    ldAny L, [cursorPosition+1]
+endm
+
+;;;
+; Jumps back to the previous menu level.
+;;;
 backToMainMenu: macro
     resetBackground
     ldAny [state], MAIN_MENU_STATE
-    ldAny [cursorPosition], -1        
+    
+    ; Set position to 0 and dec depth.
+    loadCursorPosition
+    xor A
+    ld [HL], A
+    dec HL
+    decAny [cursorPosition + 1]
+
     ldAny [stateInitialised], 0 
 endm
 
