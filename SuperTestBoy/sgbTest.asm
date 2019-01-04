@@ -151,8 +151,8 @@ transferSgbPackets:
     di
 
     ; Set bits 4 & 5 of Joypad register to 0
-    ldAny [JoypadIo], 0
-    ldAny [JoypadIo], %00110000
+    ldhAny [JoypadIo], 0
+    ldhAny [JoypadIo], %00110000
 
     ld HL, sgbTransferPacket0
     ld BC, SGB_PACKET_SIZE 
@@ -164,14 +164,14 @@ transferSgbPackets:
             andAny E, D
             jr NZ, .not0
                 ; Represents a 0
-                ldAny [JoypadIo], %00100000
+                ldhAny [JoypadIo], %00100000
             jr .end0    
 .not0
                 ; Represents a 1
-                ldAny [JoypadIo], %00010000
+                ldhAny [JoypadIo], %00010000
 .end0
             ; Sent between each bit
-            ldAny [JoypadIo], %00110000
+            ldhAny [JoypadIo], %00110000
 
             ; Go bit by bit, so loop until D carries
             sla D
@@ -183,9 +183,9 @@ transferSgbPackets:
     jp NZ, .loopBytes
 
     ; send a final 0 to end the message
-    ldAny [JoypadIo], %00100000
-    ldAny [JoypadIo], %00110000
-    ldAny [JoypadIo], 0
+    ldhAny [JoypadIo], %00100000
+    ldhAny [JoypadIo], %00110000
+    ldhAny [JoypadIo], 0
 
     pop DE
     pop BC
