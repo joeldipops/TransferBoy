@@ -15,7 +15,7 @@ RIGHT_SPRITE EQU SPRITE_SIZE * 7
 ;;;
 initJoypadTest:
     push HL
-    resetBackground
+    call resetBackground
     ldAny [PcX], 0
     ldAny [PcY], 0
 

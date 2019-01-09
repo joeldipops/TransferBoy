@@ -149,7 +149,7 @@ main:
     call memcpy
 
     ; Set the tile map to all the same colour.
-    resetBackground
+    call resetBackground
 
     ; Copy runDma routine to HRAM, since that's the only place the CPU can call it from
     ld HL, runDmaRom ; Source in ROM

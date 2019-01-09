@@ -79,6 +79,35 @@ coordsToAddress:
     pop HL
     ret
 
+;;;
+; Resets background to all light tiles.
+;;
+resetBackground:
+    ld A, 0
+    ld D, 0
+    ld E, 0
+    ld L, LIGHTEST
+    ld BC, SCREEN_BYTE_WIDTH * SCREEN_BYTE_HEIGHT
+    call setVRAM    
+    ret
+
+;;;
+; Moves every sprite off-screen.
+;;;
+resetForeground:
+    ld BC, SPRITE_COUNT 
+    ld HL, PcY
+
+.loop
+        ld [HL], 0
+        REPT SPRITE_SIZE
+            inc HL
+        ENDR
+        dec BC
+        orAny B, C
+    jr NZ, .loop    
+    ret
+
 
 ;;;
 ; Copy data to VRAM

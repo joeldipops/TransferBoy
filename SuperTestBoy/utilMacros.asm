@@ -45,22 +45,11 @@ debugger: macro
 endm
 
 ;;;
-; Resets background to all light tiles.
-;;;
-resetBackground: macro
-    ld A, 0
-    ld D, 0
-    ld E, 0
-    ld L, LIGHTEST
-    ld BC, SCREEN_BYTE_WIDTH * SCREEN_BYTE_HEIGHT
-    call setVRAM    
-endm
-
-;;;
 ; Jumps back to the previous menu level.
 ;;;
 backToPrevMenu: macro
-    resetBackground
+    call resetBackground
+    call resetForeground
     
     ; Set position to 0 and dec depth.
     ld16RA H,L, cursorPosition
