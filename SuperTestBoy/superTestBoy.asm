@@ -272,6 +272,8 @@ runLogic:
         call Z, sgbTestStep
     cpAny [state], MLT_REQ_STATE
         call Z, mltReqStep
+    cpAny [state], PALPQ_STATE
+        call Z, palpqStep
     cpAny [state], AUDIO_TEST_STATE
         call Z, audioTestStep
 

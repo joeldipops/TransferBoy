@@ -33,6 +33,16 @@ dbs: macro
 endm
 
 ;;;
+; Pushes an immediate value on to the stack.
+; pushAny r16
+; Affects HL
+;;;
+pushAny: macro
+    ld HL, \1
+    push HL
+endm
+
+;;;
 ; mult r8, r8
 ; Multiples two numbers, result in HL
 ;;;

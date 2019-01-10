@@ -25,6 +25,16 @@ pushAll: macro
 endm
 
 ;;;
+; Pushes a 16bit colour on to the stack.
+; @param \1 red 5yte
+; @param \2 green 5yte 
+; @param \3 blue 5yte
+;;;
+pushColour: macro
+    pushAny 1 << 15 | (\3 << 10 | \2 << 5 | \1)
+endm
+
+;;;
 ; Pop all registers when we're done with an interrupt.
 ;;;
 popAll: macro
@@ -55,7 +65,6 @@ backToPrevMenu: macro
     ld16RA H,L, cursorPosition
     xor A
     ld [HL], A
-    dec HL
     decAny [cursorPosition + 1]
 
     ldAny [stateInitialised], 0 
