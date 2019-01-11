@@ -360,17 +360,4 @@ cursorPosition: dw
 inputThrottleCount: db
 inputThrottleAmount: db
 
-sgbTransferPacket0: ds 16
-sgbTransferPacketX: ds 16
-
-
-
-
-  
-
-  
-  
-  
-  
-  
-  
+sgbTransferPacket: ds 16

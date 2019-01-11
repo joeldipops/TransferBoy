@@ -3,12 +3,15 @@ SGB_TEST_INCLUDED SET 1
 
 INCLUDE "sgbCommands.asm"
 
-SGB_ITEMS_COUNT EQU 4
+SGB_ITEMS_COUNT EQU 6
 
-PALPQ_ITEM EQU      0
-ATTR_LIN_ITEM EQU   1
-MLT_REQ_ITEM EQU    2
-MASK_EN_ITEM EQU    3
+INIT_ITEM EQU       0
+PALPQ_ITEM EQU      1
+ATTR_LIN_ITEM EQU   2
+MLT_REQ_ITEM EQU    3
+PCT_TRN_ITEM EQU    4
+MASK_EN_ITEM EQU    5
+
    
 ;;;
 ; Sets up super game boy test page.
@@ -33,6 +36,11 @@ initSgbTest:
     ld E, 0
     call printString
 
+    ld HL, InitialiseSGB
+    ld D, 3
+    ld E, INIT_ITEM + 1
+    call printString
+
     ; Menu items
     ld HL, PalPqLabel
     ld D, 3
@@ -48,6 +56,11 @@ initSgbTest:
     ld D, 3
     ld E, MLT_REQ_ITEM + 1
     call printString
+
+    ld HL, PctTrnLabel
+    ld D, 3
+    ld E, PCT_TRN_ITEM + 1
+    call printString    
 
     ld HL, MaskEnLabel
     ld D, 3
@@ -424,6 +437,13 @@ maskedEnStep:
 sgbItemSelected:
     ld16RA H,L, cursorPosition
     ld A, [HL]
+
+    cp INIT_ITEM
+    jr NZ, .notINIT
+        call initialiseSGB
+        jr .return
+        
+.notINIT
     cp MLT_REQ_ITEM
     jr NZ, .notMLT_REQ
         call mltReqSelected
@@ -455,6 +475,12 @@ sgbItemSelected:
         jr .return
 
 .notMASK_EN
+    cp PCT_TRN_ITEM
+    jr NZ, .notPCT_TRN
+        call PCT_TRN
+        jr .return
+
+.notPCT_TRN
     throw
 
 .return

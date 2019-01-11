@@ -549,5 +549,18 @@ sub16: macro
     sbc \3
     ld \1, A 
 endm
+
+;;;
+; Adds two 16bit registers together. Result in the first.
+; add16 r16high,r16low, r16high,r16low
+;;;
+add16: macro
+    ld A, \2
+    add \4
+    ld \2, A
+    ld A, \1
+    adc \3
+    ld \1, A
+endm
     
     ENDC

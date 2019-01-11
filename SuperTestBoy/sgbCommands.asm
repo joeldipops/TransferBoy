@@ -28,6 +28,19 @@ padHL: macro
 endm
 
 ;;;
+; These are sent to the SGB after a MLT_REQ to set something or other up at the SNES end.
+;;;
+sgbInitPackets:
+    db $79,$5d,$08,$00,$0b,$8c,$d0,$f4,$60,$00,$00,$00,$00,$00,$00,$00
+    db $79,$52,$08,$00,$0b,$a9,$e7,$9f,$01,$c0,$7e,$e8,$e8,$e8,$e8,$e0
+    db $79,$47,$08,$00,$0b,$c4,$d0,$16,$a5,$cb,$c9,$05,$d0,$10,$a2,$28
+    db $79,$3c,$08,$00,$0b,$f0,$12,$a5,$c9,$c9,$c8,$d0,$1c,$a5,$ca,$c9
+    db $79,$31,$08,$00,$0b,$0c,$a5,$ca,$c9,$7e,$d0,$06,$a5,$cb,$c9,$7e
+    db $79,$26,$08,$00,$0b,$39,$cd,$48,$0c,$d0,$34,$a5,$c9,$c9,$80,$d0
+    db $79,$1b,$08,$00,$0b,$ea,$ea,$ea,$ea,$ea,$a9,$01,$cd,$4f,$0c,$d0
+    db $79,$10,$08,$00,$0b,$4c,$20,$08,$ea,$ea,$ea,$ea,$ea,$60,$ea,$ea
+
+;;;
 ; Transfers command to SuperGameBoy 
 ; Uses data at sgbTransferPacket memory address.
 ;;;
@@ -43,7 +56,7 @@ transferSgbPackets:
     ldhAny [JoypadIo], 0
     ldhAny [JoypadIo], %00110000
 
-    ld HL, sgbTransferPacket0
+    ld HL, sgbTransferPacket
     ld BC, SGB_PACKET_SIZE 
 
 .loopBytes
@@ -94,6 +107,35 @@ transferSgbPackets:
     ret
 
 ;;;
+; Sends 8 initialisation packets to the Super Game Boy.
+;;;
+initialiseSGB:
+    push HL
+    push BC
+    push DE
+
+    ld HL, sgbInitPackets
+    ld BC, 8 
+.loop
+        ld DE, sgbTransferPacket
+
+        ; Counter on the stack
+        push BC
+
+        ld BC, SGB_PACKET_SIZE
+        rst memcpy
+        call transferSgbPackets
+        pop BC
+
+        dec C
+    jr NZ, .loop
+    
+    pop DE
+    pop BC
+    pop HL
+    ret
+
+;;;
 ; Command Codes:
 ; $00 - PAL01, $01 - PAL23, $02 - $PAL03, $03 - PAL12
 ;
@@ -109,7 +151,7 @@ PALpq:
     ld HL, SP + 6 ; return address & two pushes 
     ld16RR B,C, H,L
 
-    ld HL, sgbTransferPacket0
+    ld HL, sgbTransferPacket
     ldHLi [HL], %00000001 ; Command code $00, 1 packet
 
     ; TODO - just use memcpy here.
@@ -143,7 +185,7 @@ PALpq:
 ATTR_LIN:
     push HL
     push DE
-    ld DE, sgbTransferPacket0
+    ld DE, sgbTransferPacket
     ld A, C
     and %00000111
     or  %00101000 ; Command code $05
@@ -170,7 +212,7 @@ ATTR_LIN:
 ; @param B Number of players requested (1, 2 or 4)
 ;;;
 MLT_REQ:
-    ld HL, sgbTransferPacket0
+    ld HL, sgbTransferPacket
     ldHLi [HL], %10001001
 
     ld A, B
@@ -208,9 +250,11 @@ MLT_REQ:
 ; Transfers screen color data for sgb frame
 ;;;
 PCT_TRN:
-    ld HL, sgbTransferPacket0
+    ld HL, sgbTransferPacket
     ldHLi [HL], %10100001
     padHL 15
+
+    call transferSgbPackets
     ret
 
 ;;;
@@ -220,7 +264,7 @@ PCT_TRN:
 ; Blanks the display so VRAM can be used to transfer.
 ; @param C Mask mode - NONE/FROZEN/BLACK/COLOURED  
 MASK_EN:
-    ld HL, sgbTransferPacket0
+    ld HL, sgbTransferPacket
     ldHLi [HL], %10111001
     ldHLi [HL], C
     padHL 14
