@@ -7,6 +7,26 @@ INCLUDE "ops.asm"
 
 SGB_PACKET_SIZE EQU 16
 
+MASK_NONE EQU   0
+MASK_FROZEN EQU 1
+MASK_BLACK EQU  2
+MASK_COLOUR EQU  3
+
+;;;
+; Pads remainder or SGB packet with zeroes
+; @param \1 Number of bytes to pad.
+;;;
+padHL: macro
+    push DE
+    push BC
+        xor A
+        ld16RR D,E, H,L
+        ld BC, \1
+        rst memset
+    pop BC
+    pop DE
+endm
+
 ;;;
 ; Transfers command to SuperGameBoy 
 ; Uses data at sgbTransferPacket memory address.
@@ -91,6 +111,8 @@ PALpq:
 
     ld HL, sgbTransferPacket0
     ldHLi [HL], %00000001 ; Command code $00, 1 packet
+
+    ; TODO - just use memcpy here.
     REPT 14
         ld A, [C]
         ldi [HL], A
@@ -143,7 +165,8 @@ ATTR_LIN:
 ;;;
 ; Command Codes:
 ; $11 - MLT_REQ
-; Request SGB Multiplayer mode
+;
+; Request Multiplayer mode
 ; @param B Number of players requested (1, 2 or 4)
 ;;;
 MLT_REQ:
@@ -173,7 +196,7 @@ MLT_REQ:
     ld16RR D,E, H,L
     ld BC, 14
     xor A
-    call memset
+    rst memset
 
     call transferSgbPackets
     ret
@@ -187,9 +210,22 @@ MLT_REQ:
 PCT_TRN:
     ld HL, sgbTransferPacket0
     ldHLi [HL], %10100001
-    ; Pad out 15 bytes.
-    REPT 15
-        ldHLi [HL], 0
-    ENDR
+    padHL 15
     ret
+
+;;;
+; Command Codes: 
+; $17 - MASK_EN
+;
+; Blanks the display so VRAM can be used to transfer.
+; @param C Mask mode - NONE/FROZEN/BLACK/COLOURED  
+MASK_EN:
+    ld HL, sgbTransferPacket0
+    ldHLi [HL], %10111001
+    ldHLi [HL], C
+    padHL 14
+
+    call transferSgbPackets    
+    ret
+
     ENDC

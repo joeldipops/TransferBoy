@@ -6,4 +6,7 @@ SgbStepTitle:   dbs "Select Command Type"
 MltReqLabel:    dbs "MLT_REQ"
 PalPqLabel:     dbs "PALxx"
 AttrLinLabel:   dbs "ATTR_LIN"
-
+MaskEnLabel:    dbs "MASK_EN"
+MaskFrozen:     dbs "FRZ"
+MaskBlack:      dbs "BLK"
+MaskColour:     dbs "CLR"

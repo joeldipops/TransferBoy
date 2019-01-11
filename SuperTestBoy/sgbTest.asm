@@ -3,11 +3,12 @@ SGB_TEST_INCLUDED SET 1
 
 INCLUDE "sgbCommands.asm"
 
-SGB_ITEMS_COUNT EQU 3
+SGB_ITEMS_COUNT EQU 4
 
-MLT_REQ_ITEM EQU    0
-PALPQ_ITEM EQU      1
-ATTR_LIN_ITEM EQU   2
+PALPQ_ITEM EQU      0
+ATTR_LIN_ITEM EQU   1
+MLT_REQ_ITEM EQU    2
+MASK_EN_ITEM EQU    3
    
 ;;;
 ; Sets up super game boy test page.
@@ -33,24 +34,27 @@ initSgbTest:
     call printString
 
     ; Menu items
-    ld HL, MltReqLabel
-    ld D, 3
-    ld E, 1
-    call printString
-
     ld HL, PalPqLabel
     ld D, 3
-    ld E, 2
+    ld E, PALPQ_ITEM + 1
     call printString
 
     ld HL, AttrLinLabel
     ld D, 3
-    ld E, 3
+    ld E, ATTR_LIN_ITEM + 1
+    call printString
+
+    ld HL, MltReqLabel
+    ld D, 3
+    ld E, MLT_REQ_ITEM + 1
+    call printString
+
+    ld HL, MaskEnLabel
+    ld D, 3
+    ld E, MASK_EN_ITEM + 1
     call printString
 
     ret
-
-
 
 ;;;
 ; Prepare background/sprites/variables for mlt_req setup
@@ -263,6 +267,156 @@ palpqSelected:
     ldAny [state], PALPQ_STATE
     ret
 
+;;;
+; Sets up the mask_en submenu.
+;;;
+initMaskEn:
+    ld L, "_"
+    ld A, 0
+    ld D, 0
+    ld E, SGB_ITEMS_COUNT + 1
+    ld BC, BACKGROUND_WIDTH
+    call setVRAM
+
+    ld A, SGB_ITEMS_COUNT * SPRITE_WIDTH + MENU_MARGIN_TOP + (SPRITE_WIDTH * 3)
+    ld [PcY], A
+
+    ld A, SGB_ITEMS_COUNT + 3
+    ld HL, MaskFrozen
+    ld D, 3
+    ld E, A  
+    call printString
+
+    ld HL, MaskBlack
+    ld D, 9
+    ld E, A  
+    call printString
+
+    ld HL, MaskColour
+    ld D, 15
+    ld E, A  
+    call printString    
+
+    incAny [cursorPosition+1]
+    ldAny [stateInitialised], 1
+    ret
+
+;;;
+; State where user can choose what type of mask_en to send.
+; @param Joypad input state.
+;;;
+maskEnStep:
+    ; Init if not already
+    orAny [stateInitialised], A
+        call Z, initMaskEn
+
+    ; Go back if B pressed.
+    cpAny B, B_BTN
+    jr NZ, .notB
+        ldAny [state], SGB_TEST_STATE
+        backToPrevMenu
+        jr .return
+
+.notB
+    ld16RA H,L, cursorPosition
+
+    andAny B, LEFT | RIGHT | A_BTN | START
+        jr Z, .return
+
+    ld A, B
+
+    ; Move the cursor if left or right pressed.
+    cp LEFT
+    jr NZ, .notLeft
+        ; Don't go less than 0
+        cpAny 0, [HL]
+            jr Z, .notLeft
+        dec [HL]
+        jr .moveCursor
+
+.notLeft    
+    cp RIGHT
+    jr NZ, .notRight
+        ; Don't go more than 2
+        cpAny 2, [HL]
+            jr Z, .notRight
+        inc [HL]
+        jr .moveCursor
+
+.notRight
+    ; When a or start is pressed
+    ; Depending on what's highlighted, set the corresponding value in B 
+    ; And then run the command.
+    ld B, A
+    and A_BTN | START
+    jr Z, .notA
+        cpAny 0, [HL]
+        jr NZ, .notFrozen
+            ld C, MASK_FROZEN
+            jr .sendCommand
+
+.notFrozen
+        cpAny 1, [HL]
+        jr NZ, .notBlack
+            ld C, MASK_BLACK
+            jr .sendCommand
+
+.notBlack
+        cpAny 2, [HL]
+        jr NZ, .notColour
+            ld C, MASK_COLOUR
+            jr .sendCommand
+
+.sendCommand
+    call MASK_EN
+    ldAny [state], MASKED_EN_STATE
+
+    ; Reset the joypad and wait a bit before accepting new input
+    ; so we don't immediately unmask again.
+    ld B, 0
+    ldAny [inputThrottleCount], 32    
+    jr .return    
+
+.notColour
+        throw
+
+.notA
+.moveCursor
+    cpAny 0, [HL]
+    jr NZ, .notCursor0
+        ldAny [PcX], 2 * SPRITE_WIDTH
+        jr .return
+
+.notCursor0
+    cpAny 1, [HL]
+    jr NZ, .notCursor1
+        ldAny [PcX], 8 * SPRITE_WIDTH
+        jr .return
+
+.notCursor1
+    cpAny 2, [HL]
+    jr NZ, .notCursor2
+        ldAny [PcX], 14 * SPRITE_WIDTH
+
+.notCursor2
+.return
+    ret
+
+;;;
+; Waits for a button press once the screen is masked.
+; @param B Joypad state.
+;;;
+maskedEnStep:
+    xor A
+    ; Wait for a button press.
+    or B
+        ret Z
+
+    ld C, MASK_NONE
+    call MASK_EN
+    ldAny [state], MASK_EN_STATE        
+    ret
+
 
 ;;;
 ; Goes to next step after selecting a command to send.
@@ -293,6 +447,14 @@ sgbItemSelected:
         jr .return
 
 .notATTR_LIN
+    cp MASK_EN_ITEM
+    jr NZ, .notMASK_EN
+        ldAny [state], MASK_EN_STATE
+        ldAny [stateInitialised], 0
+
+        jr .return
+
+.notMASK_EN
     throw
 
 .return

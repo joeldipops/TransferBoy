@@ -276,6 +276,10 @@ runLogic:
         call Z, palpqStep
     cpAny [state], AUDIO_TEST_STATE
         call Z, audioTestStep
+    cpAny [state], MASK_EN_STATE
+        call Z, maskEnStep
+    cpAny [state], MASKED_EN_STATE
+        call Z, maskedEnStep
 
     ; If set to a state higher than what's defined, it's an error
     ldAny C, [state] 

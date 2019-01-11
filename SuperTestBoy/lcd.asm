@@ -29,6 +29,7 @@ turnOffScreen:
 ; @param E tile y coordinate
 ;;;
 printString:
+    push AF
     push BC
     push HL
     ld16RR B,C, H,L
@@ -44,6 +45,7 @@ printString:
     pop HL
     call copyToVRAM
     pop BC
+    pop AF
     ret    
     
 ;;;
