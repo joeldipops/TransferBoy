@@ -525,6 +525,16 @@ ld16RA: macro
 endm
 
 ;;;
+; Loads a 16bit regisuter in to memory
+;;;
+ld16AR: macro
+    ld A, \2
+    ld [\1], A
+    ld A, \3
+    ld [\3 + 1], A
+endm
+
+;;;
 ; Subtracts one 16 bit register from another with result in \1,\2.
 ; 
 ; sub16 r16high,r16low, r16high,r16low
@@ -549,6 +559,8 @@ sub16: macro
     sbc \3
     ld \1, A 
 endm
+
+
 
 ;;;
 ; Adds two 16bit registers together. Result in the first.

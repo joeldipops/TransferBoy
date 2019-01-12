@@ -337,7 +337,7 @@ Ascii:
 AsciiEnd:
 
 SECTION "Main Ram", WRAM0[$C000]
-OamStage
+OamStage:
 PcY: db
 PcX: db
 PcImage: db
@@ -350,8 +350,11 @@ SpriteFlags: db
 
 ds 38 * SPRITE_WIDTH
 
-ProgramStateFlags:
-state: ds 1
+; Heap pointer.
+HP: ds $ff
+
+; Program state flags
+state: db
 stateInitialised: db
 
 ; Guess we can go 4 menus deep 

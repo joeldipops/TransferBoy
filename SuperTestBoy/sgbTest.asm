@@ -249,7 +249,7 @@ mltReqSelected:
 ; Sets up and makes a PALpq command.  
 ; Palette numbers and colours will eventually be selectable. 
 ;;;
-palpqStep:
+executePalpq:
     push HL
     ; push Palette q
     pushColour $1f, 0, $1f
@@ -274,9 +274,224 @@ palpqStep:
     pop HL
     ret
 
+;;;
+; Heap offsets for palpq state.
+;;;
+PQ SET 0
+; Each colour is a word
+P_COLOUR_0 SET 1
+P_COLOUR_1 SET 3
+P_COLOUR_2 SET 5
+P_COLOUR_3 SET 7
+Q_COLOUR_1 SET 9
+Q_COLOUR_2 SET 11
+Q_COLOUR_3 SET 13
+CURRENT_COLOUR SET 15
+COLOUR_STRING SET 17
+
+
+colourLocations:
+    db $02,$0B
+    db $02,$0C
+    db $02,$0D
+    db $02,$0E
+
+    db $0C,$0C
+    db $0C,$0D
+    db $0C,$0E
+
+;;;
+; Adds the primary colour value to the buffer.
+; @param A Primary Colour 5yte 
+; @param DE Next buffer address
+; @affects DE += 2
+; @affects B 
+;;;
+writeColour:
+    ; Cache A
+    ld B, A
+
+    ; First character can either be 0 or 1, based on bit 4
+    bit 4, A
+    jr NZ, .topBitSet
+        ld A, "0"
+        jr .topBitSetEnd
+.topBitSet
+        ld A, "1"
+.topBitSetEnd
+    ld [DE], A
+    inc DE
+
+    ; Second character can be 0 - F
+    ld A, B
+    and %00001111
+
+    cp $a 
+    jr NC, .gt9
+        ; if A < 10, add $30 to get the right offset
+        ld B, $30
+        jr .gt9End
+.gt9
+        ; otherwise, add $41
+        ld B, $41
+.gt9End
+    add B
+    ld [DE], A
+    inc DE
+
+    ret
+
+;;;
+; Displays two palette's worth of colour values so that PALpq can be set up
+;;;
+renderPalPqColours:
+    push DE
+    push BC
+
+    ld C, 0 ; Number of colours
+    ld HL, HP+ P_COLOUR_0
+.loop
+        ld DE, HP+ COLOUR_STRING ; Buffer being written to.
+
+        ldiAny [HP+ CURRENT_COLOUR], [HL]
+        ldiAny [HP+ CURRENT_COLOUR+1], [HL]
+
+        ; Red is in the top byte.
+        ld A, [HP+ CURRENT_COLOUR]
+        srl A
+        srl A
+        and %00011111
+        call writeColour
+
+        ; Green crosses two bytes
+        push DE
+        ld16RA D,E, HP+ CURRENT_COLOUR
+        REPT 3
+            sla D
+            rlc E
+        ENDR
+        andAny D, %00011000
+        ld D, A
+        andAny E, %00000111
+        or D
+        pop DE
+        call writeColour        
+
+        ; Blue is simple.
+        ld A, [HP+ CURRENT_COLOUR+1]
+        and %00011111
+        call writeColour
+
+        ; 0 terminate the string.
+        xor A
+        ld [DE], A
+        inc DE
+
+        push HL
+
+        ; Place each colour string in a location specified in the colourLocations array
+        ld HL, colourLocations
+        ld B, 0
+
+        ; Add C twice because each location is two bytes long 
+        add HL, BC
+        add HL, BC
+
+        ld D, [HL]
+        inc HL
+        ld E, [HL]
+
+        ld HL, HP+ COLOUR_STRING
+        call printString
+        pop HL
+
+        inc C
+        ld A, C
+    cp 7
+    jr NZ, .loop
+
+    pop BC
+    pop DE
+    ret
+
+;;;
+; Sets up the palpq submenu.
+;;;
+initPalpq:
+    ld L, "_"
+    ld A, 0
+    ld D, 0
+    ld E, SGB_ITEMS_COUNT + 1
+    ld BC, BACKGROUND_WIDTH
+    call setVRAM
+
+    ldAny [cursorSubPosition], 0
+
+    ld A, SGB_ITEMS_COUNT * SPRITE_WIDTH + MENU_MARGIN_TOP + (SPRITE_WIDTH * 3)
+    ld [PcY], A
+
+    ld A, SGB_ITEMS_COUNT + 3
+    
+    ; Palette Selection
+    ld HL, Pal01
+    ld D, 2
+    ld E, A  
+    call printString
+
+    ld HL, Pal23
+    ld D, 7
+    ld E, A  
+    call printString
+
+    ld HL, Pal03
+    ld D, 12
+    ld E, A  
+    call printString
+
+    ld HL, Pal12
+    ld D, 17
+    ld E, A  
+    call printString
+
+    ; Initialise the heap
+    ld DE, HP+ P_COLOUR_0
+    ld BC, Q_COLOUR_3 + 1
+    xor A
+    rst memset
+
+    call renderPalPqColours
+
+    incAny [cursorPosition+1]
+    ldAny [stateInitialised], 1
+    ret   
+
+;;;
+; Allows a PALpq command to be set up with selection of palettes and colours for each.
+;;;
+palpqStep:
+    orAny [stateInitialised], A
+        call Z, initPalpq
+
+    ; If no button pressed, do nothing.
+    andAny B, A_BTN | START | B_BTN | UP | DOWN | LEFT | RIGHT 
+        jr Z, .return
+
+    ; Back to previous menu if B pressed.
+    andAny B, B_BTN
+    jr Z, .notB
+        ldAny [state], SGB_TEST_STATE
+        backToPrevMenu
+        jr .return
+.notB
+    andAny B, A_BTN | START
+        ;onPalpqAPressed
+
+
+.return    
+    ret
+
 palpqSelected:
     ldAny [stateInitialised], 0
-    incAny [cursorPosition+1]    
     ldAny [state], PALPQ_STATE
     ret
 
@@ -336,11 +551,9 @@ maskEnStep:
     andAny B, LEFT | RIGHT | A_BTN | START
         jr Z, .return
 
-    ld A, B
-
     ; Move the cursor if left or right pressed.
-    cp LEFT
-    jr NZ, .notLeft
+    andAny B, LEFT
+    jr Z, .notLeft
         ; Don't go less than 0
         cpAny 0, [HL]
             jr Z, .notLeft
@@ -348,8 +561,8 @@ maskEnStep:
         jr .moveCursor
 
 .notLeft    
-    cp RIGHT
-    jr NZ, .notRight
+    andAny B, RIGHT
+    jr Z, .notRight
         ; Don't go more than 2
         cpAny 2, [HL]
             jr Z, .notRight
@@ -360,8 +573,7 @@ maskEnStep:
     ; When a or start is pressed
     ; Depending on what's highlighted, set the corresponding value in B 
     ; And then run the command.
-    ld B, A
-    and A_BTN | START
+    andAny B, A_BTN | START
     jr Z, .notA
         cpAny 0, [HL]
         jr NZ, .notFrozen
@@ -442,7 +654,7 @@ sgbItemSelected:
     jr NZ, .notINIT
         call initialiseSGB
         jr .return
-        
+
 .notINIT
     cp MLT_REQ_ITEM
     jr NZ, .notMLT_REQ
@@ -453,9 +665,6 @@ sgbItemSelected:
     cp PALPQ_ITEM
     jr NZ, .notPALPQ
         ; for now, send PAL01 specifically and point to some random data
-        ld BC, $0000
-        ld DE, $0008
-        ld HL, %0000000000000011
         call palpqSelected
         jr .return
 
@@ -496,8 +705,8 @@ sgbTestStep:
         call Z, initSgbTest
 
     ; Go back if B is pressed
-    cpAny B, B_BTN
-    jr NZ, .notB
+    andAny B, B_BTN
+    jr Z, .notB
         ldAny [state], MAIN_MENU_STATE
         backToPrevMenu
         jr .return

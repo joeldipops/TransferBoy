@@ -125,8 +125,8 @@ initialiseSGB:
         ld BC, SGB_PACKET_SIZE
         rst memcpy
         call transferSgbPackets
-        pop BC
 
+        pop BC
         dec C
     jr NZ, .loop
     
