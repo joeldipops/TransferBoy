@@ -158,13 +158,6 @@ int main(void) {
 }
 
 
-// cheating because the makefile doesn't work.
-void _exit(int status)
-{
-  (void) status;
-  abort();
-}
-
 #include "core.c"
 #include "resources.c"
 #include "init.c"

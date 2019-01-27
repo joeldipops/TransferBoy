@@ -61,7 +61,6 @@ bool isCartridgeInserted(const byte controllerNumber) {
  * @return true if there is a transfer pak inserted.
  */
 bool isTPakInserted(const byte controllerNumber) {
-    get_accessories_present();
     if (identify_accessory(controllerNumber) != ACCESSORY_MEMPAK) {
         return false;
     }
