@@ -425,8 +425,6 @@ initPalpq:
     ld BC, BACKGROUND_WIDTH
     call setVRAM
 
-    ldAny [cursorSubPosition], 0
-
     ld A, SGB_ITEMS_COUNT * SPRITE_WIDTH + MENU_MARGIN_TOP + (SPRITE_WIDTH * 3)
     ld [PcY], A
 

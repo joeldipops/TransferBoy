@@ -142,12 +142,6 @@ main:
     ld BC, GraphicsEnd - Graphics
     call memcpy
 
-    ld HL, Ascii
-    ; First relevant character is $20 ascii
-    ld DE, TileData + ($20 * TILE_SIZE) 
-    ld BC, AsciiEnd - Ascii
-    call memcpy
-
     ; Set the tile map to all the same colour.
     call resetBackground
 
@@ -327,14 +321,9 @@ SECTION "Strings ROM", ROM0[$2800]
 INCLUDE "strings.asm"
 
 SECTION "Graphics ROM", ROM0[$3000]
-INCLUDE "tiles.asm"
-
-SECTION "ASCII ROM", ROMX[$4000], BANK[1]
-INCLUDE "imports/ibmpc1.inc"
-Ascii:
-    ; Import ascii character set
-    chr_IBMPC1 2, 4
-AsciiEnd:
+Graphics:
+INCLUDE "tiles.inc"
+GraphicsEnd:
 
 SECTION "Main Ram", WRAM0[$C000]
 OamStage:
