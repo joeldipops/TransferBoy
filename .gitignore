@@ -1,6 +1,6 @@
 bin/
 obj/
-filesystem/bios.bin
+filesystem/
 .git
 TransferBoy64.cbp
 TransferBoy64.depend
@@ -11,10 +11,7 @@ transferboy64.bin
 test.sh
 *.o
 *~
-*.gb
 *.sym
 *.eeprom
 *.exe
 *.dll
-bgb*
-SuperTestBoy/imports/*

@@ -34,6 +34,8 @@ void initLogic(RootState* state, const byte playerNumber) {
         }
     }
 
+    bool loadInternal = false;
+
     if (state->Players[playerNumber].InitState == InitPending) {
         sByte result = getCartridgeMetaData(playerNumber, &state->Players[playerNumber].Cartridge);
 
@@ -55,6 +57,10 @@ void initLogic(RootState* state, const byte playerNumber) {
             state->Players[playerNumber].InitState = InitStart;
             freeTPakIo();
             retries++;
+        } else if (releasedButtons[CDown]) {
+            // Load internal easter egg cartridge.
+            state->Players[playerNumber].InitState = InitLoading;
+            loadInternal = true;
         }
     } else if (state->Players[playerNumber].InitState == InitReady) {
         // Show the loading message.
@@ -65,8 +71,17 @@ void initLogic(RootState* state, const byte playerNumber) {
     if (state->Players[playerNumber].InitState == InitLoading) {
         state->RequiresRepaint = true;
 
-        readCartridge(playerNumber, &state->Players[playerNumber].Cartridge);
+        if (loadInternal) {
+            strcpy(state->Players[0].Cartridge.Title, "Easter egg");
+            sInt result = loadInternalRom(&state->Players[0].Cartridge.RomData);
+            if (result == -1) {
+                logAndPauseFrame(0, "Error loading internal ROM");
+            }
 
+            state->Players[playerNumber].Cartridge.SaveData.Size = 0x00;
+        } else {
+            readCartridge(playerNumber, &state->Players[playerNumber].Cartridge);
+        }
         Rectangle screen = {};
         getScreenPosition(state, playerNumber, &screen);
 

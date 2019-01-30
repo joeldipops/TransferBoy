@@ -125,6 +125,27 @@ sByte initResources() {
 }
 
 /**
+ * Loads a ROM stored in the n64 filesystem rather than from the TPAK
+ * @out output data for the rom goes here.
+ * @returns success/error code
+ ** 0   loaded successfully
+ ** -1  file not found.
+ */
+sByte loadInternalRom(ByteArray* output) {
+    sInt pointer = dfs_open("/superTestBoy.gb");
+    if (!pointer) {
+        return -1;
+    }
+
+    output->Size = dfs_size(pointer);
+    output->Data = malloc(output->Size);
+    dfs_read(output->Data, 1, output->Size,pointer);
+    dfs_close(pointer);
+
+    return 0;
+}
+
+/**
  * Gets sprite sheet of textual characters.
  * @return pointer to sprite sheet.
  */

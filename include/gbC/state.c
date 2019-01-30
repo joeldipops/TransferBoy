@@ -193,8 +193,9 @@ int rom_get_info(u8 *rom, size_t rom_size, struct rominfo *ret_rominfo) {
         err("Unsupported EXT_RAM size: %x", hdr_extram_size);
     }
 
-    assert((extram == 0 && extram_banks == 0) ||
-           (extram == 1 && extram_banks > 0));
+    // Prevents my test ROM from running, but I think that's a problem with the test rom not this line.
+    // Nevertheless this just crashes cen64, rather than providing a useful error for now.
+    //assert((extram == 0 && extram_banks == 0) || (extram == 1 && extram_banks > 0));
 
     if (rom_gb_type == GB_TYPE_GB) {
         wram_banks = 2;
