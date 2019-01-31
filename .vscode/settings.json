@@ -4,5 +4,8 @@
 		"languarge.keyword.preprocessor" : "upper",
 		"language.register": "upper",
 		"language.conditioncode" : "upper"
+	},
+	"files.associations": {
+		"resources.h": "c"
 	}
 }

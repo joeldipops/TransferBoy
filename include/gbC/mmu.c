@@ -772,7 +772,7 @@ void mmu_register_write(struct gb_state* s, u16 location, u8 value) {
     }
 }
 
-void mmu_write(struct gb_state *s, u16 location, u8 value) {
+void mmu_write_tree(struct gb_state *s, u16 location, u8 value) {
     // Jump straight to IO registers.
     if (location >= 0xFF00 && location < 0xFF80) {
         return mmu_register_write(s, location, value);
@@ -933,11 +933,10 @@ void mmu_write(struct gb_state *s, u16 location, u8 value) {
     }
 }
 
-/*
-void mmu_write_table(struct gb_state *s, u16 location, u8 value) {
+void mmu_write(struct gb_state *s, u16 location, u8 value) {
     //MMU_DEBUG_W("Mem write (%x) %x: ", location, value);
     switch (location & 0xf000) {
-    case 0x0000:  0000 - 1FFF 
+    case 0x0000: // 0000 - 1FFF 
     case 0x1000:
         //MMU_DEBUG_W("EXTRAM(+RTC) enable");
          //Dummy, we always have those enabled.
@@ -960,7 +959,7 @@ void mmu_write_table(struct gb_state *s, u16 location, u8 value) {
             value &= 0x7f;
         else if (s->mbc == 5) {
             // MBC5 splits up this area into 2000-2fff for low bits rom bank,
-             * and 3000-3fff for the high bit. 
+             //* and 3000-3fff for the high bit. 
             if (location < 0x3000) // lower 8 bit 
                 s->mem_bank_rom = (s->mem_bank_rom & (1<<8)) | value;
             else // Upper bit 
@@ -1014,7 +1013,7 @@ void mmu_write_table(struct gb_state *s, u16 location, u8 value) {
         } else if (s->mbc == 3 || s->mbc == 5) { // MBC3 without RTC or MBC5 
             //MMU_DEBUG_W("Invalid write for MBC%d", s->mbc);
             // Just ignore it - Pokemon Red writes here because it's coded for
-             * MBC1, but actually has an MBC3, for instance 
+            // MBC1, but actually has an MBC3, for instance 
         } else
             mmu_error("Area not implemented for this MBC (mbc=%d, loc=%.4x, val=%x)\n", s->mbc, location, value);
         break;
@@ -1262,8 +1261,8 @@ void mmu_write_table(struct gb_state *s, u16 location, u8 value) {
             case 0xff46:
                 //MMU_DEBUG_W("DMA source=%.4x dest=0xfe00 (OAM)", value << 8);
                 // Normally this transfer takes ~160ms (during which only HRAM
-                 * is accessible) but it's okay to be instantaneous. Normally
-                 * roms loop for ~200 cycles or so to wait.  
+                // * is accessible) but it's okay to be instantaneous. Normally
+                // * roms loop for ~200 cycles or so to wait.  
                 for (unsigned i = 0; i < OAM_SIZE; i++)
                     s->mem_OAM[i] = mmu_read(s, (value << 8) + i);
                 break;
@@ -1379,7 +1378,6 @@ void mmu_write_table(struct gb_state *s, u16 location, u8 value) {
         mmu_error("Invalid write location: %x val=%x", location, value);
     }
 }
-*/
 
 /**
  * Optimises lookup of opcode of PC
@@ -1405,7 +1403,14 @@ u8 getOpCodeFromROM(struct gb_state *s, const u16 programCounter) {
     }
 }
 
-u8 mmu_read(struct gb_state* s, u16 location) {
+/*
+ * OK, so with this function here, (not being called or anything)
+ * my framerate on cen64/tetris is about 1fps faster...
+ * ...uhhhhhh
+ * At any rate I'll just leave the function on the ROM until I find some other ways of
+ * improving fps
+ */
+u8 mmu_read_tree(struct gb_state* s, u16 location) {
     // Jump straight to IO registers.
     if (location >= 0xFF00 && location < 0xFF80) {
         return mmu_register_read(s, location);
@@ -1439,10 +1444,10 @@ u8 mmu_read(struct gb_state* s, u16 location) {
                     //MMU_DEBUG_R("EXTRAM (rom/ram: %d, B%d)", s->mem_mbc1_romram_select, s->mem_mbc1_extrambank);
                     if (!s->has_extram)
                         return 0xff;
-                    if (s->mem_mbc1_romram_select == 1) { /* RAM mode */
+                    if (s->mem_mbc1_romram_select == 1) { // RAM mode
                         //mmu_assert(s->mem_mbc1_extrambank < s->mem_num_banks_extram);
                         return s->mem_EXTRAM[s->mem_mbc1_extrambank * EXTRAM_BANKSIZE + location - 0xa000];
-                    } else /* ROM mode - we can only be bank 0 */
+                    } else // ROM mode - we can only be bank 0
                         return s->mem_EXTRAM[location - 0xa000];
                 } else if (s->mbc == 3) {
                     //MMU_DEBUG_R("EXTRAM (sw)/RTC (B%d)", s->mem_mbc3_extram_rtc_select);
@@ -1474,7 +1479,7 @@ u8 mmu_read(struct gb_state* s, u16 location) {
                 }
             } else {
                 if (highcation < 0xF0) {
-                   return mmu_read(s, location - 0x2000); /* TODO XXX */
+                   return mmu_read(s, location - 0x2000); // TODO XXX 
                     //mmu_error("Reading from ECHO (0xc000 - 0xddff) B0: %x", location);
                 } else {
                     if (location < 0xfea0) {
@@ -1511,8 +1516,7 @@ u8 mmu_read(struct gb_state* s, u16 location) {
     }
 }
 
-/*
-u8 mmu_read_table(struct gb_state *s, u16 location) {
+u8 mmu_read(struct gb_state *s, u16 location) { //mmu_read_table
     //MMU_DEBUG_R("Mem read (%x): ", location);
     if (s->in_bios && location < 0x100)
     {
@@ -1794,7 +1798,6 @@ u8 mmu_read_table(struct gb_state *s, u16 location) {
     }
     return 0;
 }
-*/
 
 u16 mmu_read16(struct gb_state *s, u16 location) {
     return mmu_read(s, location) | ((u16)mmu_read(s, location + 1) << 8);
