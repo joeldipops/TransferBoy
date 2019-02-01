@@ -32,11 +32,8 @@ typedef struct {
 typedef enum { Quit, Init, Play, Menu, Options } Mode;
 typedef enum { BorderNone } Border;
 
-const bool IsSGBEnabled = false;
-const bool IsLoggingEnabled = false;
 uLong frameCount = 0;
 long long lastClock = 0;
-bool treeMode = true;
 
 /**
  * Reads a number from a substring, stopping after a certain number of characters.

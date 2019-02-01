@@ -1,3 +1,4 @@
+#include "config.h"
 #include "core.h"
 #include "play.h"
 #include "menu.h"

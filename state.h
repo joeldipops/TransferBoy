@@ -30,6 +30,7 @@ typedef struct {
     sByte OptionsCursorRow;
     sByte MenuCursorRow;
     sByte MenuCursorColumn;
+    bool WasFrameSkipped;
 } PlayerState;
 
 typedef struct {
