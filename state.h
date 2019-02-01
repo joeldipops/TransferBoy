@@ -23,7 +23,6 @@ typedef struct {
     N64Button GbStartButton;
     N64Button GbSelectButton;
     CartridgeData Cartridge;
-    bool WasFrameSkipped;
     bool AudioEnabled;
     GbState EmulationState;
     SuperGameboyState SGBState;

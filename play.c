@@ -309,12 +309,6 @@ void playLogic(RootState* state, const byte playerNumber) {
     }
 
     if (emulatorState->emu_state->lcd_entered_vblank) {
-        state->Players[playerNumber].WasFrameSkipped = !state->Players[playerNumber].WasFrameSkipped;
-        if (state->Players[playerNumber].WasFrameSkipped) {
-            frameCount++;
-            return;
-        }
-
         GbController* input = calloc(1, sizeof(GbController));
 
         bool pressedButtons[N64_BUTTON_COUNT] = {};
@@ -368,10 +362,6 @@ void playLogic(RootState* state, const byte playerNumber) {
  * @param playerNumber player in play mode.
  */
 void playDraw(const RootState* state, const byte playerNumber) {
-    if (state->Players[playerNumber].WasFrameSkipped) {
-        return;
-    }
-
     // Main background.
     Rectangle screen = {};
     getScreenPosition(state, playerNumber, &screen);
