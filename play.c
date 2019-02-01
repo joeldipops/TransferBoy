@@ -238,19 +238,19 @@ void renderPixels(
             break;
     }
 
-    string text = "";
-    //sprintf(text, "Frames: %lld Memory: %lld", frameCount, getCurrentMemory());
+    if (SHOW_FRAME_COUNT) {
+        string text = "";
 
-    long long thisClock = get_ticks_ms();
-    long diff = thisClock - lastClock;
+        long long thisClock = get_ticks_ms();
+        long diff = thisClock - lastClock;
 
-    sprintf(text, "Frames: %lld FPS: %f", frameCount, (2.0 / (double)diff) * 1000);
-    lastClock = thisClock;
-    graphics_set_color(GLOBAL_TEXT_COLOUR, 0x0);
-    graphics_draw_box(frame, 0, 0, 680, 10, GLOBAL_BACKGROUND_COLOUR);
-    graphics_draw_text(frame, 5, 0, text);
-
-    frameCount++;
+        sprintf(text, "Frames: %lld FPS: %f", frameCount, (2.0 / (double)diff) * 1000);
+        //sprintf(text, "Frames: %lld Memory: %lld", frameCount, getCurrentMemory());        
+        lastClock = thisClock;
+        graphics_set_color(GLOBAL_TEXT_COLOUR, 0x0);
+        graphics_draw_box(frame, 0, 0, 680, 10, GLOBAL_BACKGROUND_COLOUR);
+        graphics_draw_text(frame, 5, 0, text);
+    }
 
     rdp_detach_display();
 }
@@ -303,16 +303,18 @@ void playLogic(RootState* state, const byte playerNumber) {
 
     emu_step(emulatorState);
 
-    if (IsSGBEnabled && state->Players[playerNumber].Cartridge.IsSuperGbCart) {
+    if (IS_SGB_ENABLED && state->Players[playerNumber].Cartridge.IsSuperGbCart) {
         processSGBData(&state->Players[playerNumber]);
         performSGBFunctions(&state->Players[playerNumber]);
     }
 
     if (emulatorState->emu_state->lcd_entered_vblank) {
-        state->Players[playerNumber].WasFrameSkipped = !state->Players[playerNumber].WasFrameSkipped;
-        if (state->Players[playerNumber].WasFrameSkipped) {
-            frameCount++;
+        frameCount++;
+        if (FRAMES_TO_SKIP && (frameCount % (FRAMES_TO_SKIP + 1))) {
+            state->Players[playerNumber].WasFrameSkipped = true;
             return;
+        } else {
+            state->Players[playerNumber].WasFrameSkipped = false;
         }
 
         GbController* input = calloc(1, sizeof(GbController));
@@ -353,7 +355,7 @@ void playLogic(RootState* state, const byte playerNumber) {
         }
 
         // Audio off until I can test it properly.
-        if (false && state->Players[playerNumber].AudioEnabled) {
+        if (IS_AUDIO_ENABLED && state->Players[playerNumber].AudioEnabled) {
             playAudio(emulatorState);
         }
 
@@ -379,7 +381,7 @@ void playDraw(const RootState* state, const byte playerNumber) {
     PaletteType palette = GameboyPalette;
     if (state->Players[playerNumber].Cartridge.IsGbcCart) {
         palette = GameboyColorPalette;
-    } else if (IsSGBEnabled && state->Players[playerNumber].Cartridge.IsSuperGbCart) {
+    } else if (IS_SGB_ENABLED && state->Players[playerNumber].Cartridge.IsSuperGbCart) {
         palette = SuperGameboyPalette;
     }
 

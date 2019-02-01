@@ -94,7 +94,7 @@ void printSegment(const byte* start) {
  * @param ... Parameters for the format string.
  */
 void logAndPause(const string text, ...) {
-    if (!IsLoggingEnabled) {
+    if (!IS_LOGGING_ENABLED) {
         return;
     }
 
