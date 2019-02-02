@@ -109,47 +109,6 @@ void mapGbInputs(const char controllerNumber, const GbButton* buttonMap, const N
     }
 }
 
-/**
- * Renders a gameboy pixel with a preset colour as an RDP rectangle.
- * @param offsetX How far from the left x=0 should be.
- * @param offsetY How far from the top y=0 should be.
- * @param x The horizontal position of the pixel.
- * @param y The vertical position of the pixel.
- * @param size The size in actual pixels of the gamebou pixel.
- */
-void renderPixel(
-    const natural offsetX,
-    const natural offsetY,
-    const natural x,
-    const natural y,
-    const float size
-) {
-    natural tx = x * size + offsetX;
-    natural ty = y * size + offsetY;
-
-    rdp_draw_filled_rectangle(tx, ty, tx + size, ty + size);
-}
-
-/**
- * Renders a gameboy pixel with a unique colour as an RDP rectangle.
- * @param offsetX How far from the left x=0 should be.
- * @param offsetY How far from the top y=0 should be.
- * @param x The horizontal position of the pixel.
- * @param y The vertical position of the pixel.
- * @param size The size in actual pixels of the gamebou pixel.
- * @param colour The 16 bit colour of the pixel.
- */
-void renderColouredPixel(
-    const natural offsetX,
-    const natural offsetY,
-    const natural x,
-    const natural y,
-    const float size,
-    const uInt colour
-) {
-    rdp_set_primitive_color(colour);
-    renderPixel(offsetX, offsetY, x, y, size);
-}
 
 /**
  * Take the array of pixels produced by the emulator and throw it up on to the screen.
@@ -171,9 +130,6 @@ void renderPixels(
     const SuperGameboyState* sgbState
 ) {
     // TODO - Scaling for when between whole number scales.
-    rdp_set_default_clipping();
-    rdp_attach_display(frame);
-    rdp_enable_primitive_fill();
 
     switch(paletteType) {
         case SuperGameboyPalette:
@@ -186,10 +142,12 @@ void renderPixels(
                 generateSGBPixels(sgbState, pixelBuffer, pixels);
 
                 for (natural y = 0; y < GB_LCD_HEIGHT; y++) {
+                    natural ty = y * avgPixelSize + top;                    
                     for (natural x = 0; x < GB_LCD_WIDTH; x++) {
                         natural index = x + y * GB_LCD_WIDTH;
+                        natural tx = x * avgPixelSize + left;                        
 
-                        renderColouredPixel(left, top, x, y, avgPixelSize, pixels[index]);
+                        graphics_draw_box(frame, tx, ty, avgPixelSize, avgPixelSize, pixels[index]);                        
                     }
                 }
             }
@@ -197,41 +155,37 @@ void renderPixels(
             pixels = null;
             break;
         case GameboyPalette:
-            for (byte i = 0; i < 4; i++) {
-                rdp_set_primitive_color(MONOCHROME_PALETTE[i]);
+            // The colors stored in pixbuf already went through the palette
+            // translation, but are still 2 bit monochrome.
+            for (natural y = 0; y < GB_LCD_HEIGHT; y++) {
+                natural ty = y * avgPixelSize + top;
+                for (natural x = 0; x < GB_LCD_WIDTH; x++) {
+                    natural index = x + y * GB_LCD_WIDTH;
+                    natural tx = x * avgPixelSize + left;
 
-                // The colors stored in pixbuf already went through the palette
-                // translation, but are still 2 bit monochrome.
-                for (natural y = 0; y < GB_LCD_HEIGHT; y++) {
-                    for (natural x = 0; x < GB_LCD_WIDTH; x++) {
-                        natural index = x + y * GB_LCD_WIDTH;
-                        if (pixelBuffer[index] == i) {
-
-                            renderPixel(left, top, x, y, avgPixelSize);
-                        }
-                    }
+                    graphics_draw_box(frame, tx, ty, avgPixelSize, avgPixelSize, MONOCHROME_PALETTE[pixelBuffer[index]]);
                 }
             }
             break;
         case GameboyColorPalette:
             for (natural y = 0; y < GB_LCD_HEIGHT; y++) {
+                natural ty = y * avgPixelSize + top;
                 for (natural x = 0; x < GB_LCD_WIDTH; x++) {
                     natural index = x + y * GB_LCD_WIDTH;
+                    natural tx = x * avgPixelSize + left;                    
 
-                    renderColouredPixel(left, top, x, y, avgPixelSize, massageColour(pixelBuffer[index]));
+                    graphics_draw_box(frame, tx, ty, avgPixelSize, avgPixelSize, massageColour(pixelBuffer[index]));
                 }
             }
             break;
         default:
             // black screen, oh well
-            rdp_set_primitive_color(0x00010001);
             for (natural y = 0; y < GB_LCD_HEIGHT; y++) {
+                natural ty = y * avgPixelSize + top;
                 for (natural x = 0; x < GB_LCD_WIDTH; x++) {
-
                     natural tx = x * avgPixelSize + left;
-                    natural ty = y * avgPixelSize + top;
 
-                    rdp_draw_filled_rectangle(tx, ty, tx + avgPixelSize, ty + avgPixelSize);
+                    graphics_draw_box(frame, tx, ty, avgPixelSize, avgPixelSize, 0x00010001);
                 }
             }
 
@@ -251,8 +205,6 @@ void renderPixels(
         graphics_draw_box(frame, 0, 0, 680, 10, GLOBAL_BACKGROUND_COLOUR);
         graphics_draw_text(frame, 5, 0, text);
     }
-
-    rdp_detach_display();
 }
 
 void playAudio(const GbState* state) {
