@@ -155,6 +155,8 @@ void renderPixels(
             pixels = null;
             break;
         case GameboyPalette:
+            graphics_draw_box(frame, left, top, GB_LCD_WIDTH * avgPixelSize, GB_LCD_HEIGHT * avgPixelSize, MONOCHROME_PALETTE[0]);
+
             // The colors stored in pixbuf already went through the palette
             // translation, but are still 2 bit monochrome.
             for (natural y = 0; y < GB_LCD_HEIGHT; y++) {
@@ -163,7 +165,9 @@ void renderPixels(
                     natural index = x + y * GB_LCD_WIDTH;
                     natural tx = x * avgPixelSize + left;
 
-                    graphics_draw_box(frame, tx, ty, avgPixelSize, avgPixelSize, MONOCHROME_PALETTE[pixelBuffer[index]]);
+                    if (pixelBuffer[index] != 0) {
+                        graphics_draw_box(frame, tx, ty, avgPixelSize, avgPixelSize, MONOCHROME_PALETTE[pixelBuffer[index]]);
+                    }
                 }
             }
             break;
