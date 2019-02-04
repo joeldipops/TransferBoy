@@ -264,8 +264,9 @@ static void lcd_render_current_line(struct gb_state *gb_state) {
             u16 col = 0;
             if (use_col)
                 col = palette_get_col(gb_state->io_lcd_BGPD, 0, colidx);
-            else
+            else {
                 col = palette_get_gray(bgwin_palette, colidx);
+            }
             pixels[x] = (Pixel){col, true};
         }
     }
@@ -316,8 +317,9 @@ static void lcd_render_current_line(struct gb_state *gb_state) {
                 u8 palidx = attr & 7;
 
                 col = palette_get_col(gb_state->io_lcd_BGPD, palidx, colidx);
-            } else
+            } else {
                 col = palette_get_gray(bgwin_palette, colidx);
+            }
             pixels[x] = (Pixel){col, true};
         }
     } else {
@@ -330,6 +332,11 @@ static void lcd_render_current_line(struct gb_state *gb_state) {
 
     natural lineValue = y * GB_LCD_WIDTH;
     for (natural x = 0; x < GB_LCD_WIDTH; x++) {
-        gb_state->emu_state->lcd_pixbuf[x + lineValue] = pixels[x].Colour;
+        u16 colour = pixels[x].Colour;
+        gb_state->emu_state->lcd_pixbuf[x + lineValue] = colour;
+        if (!gb_state->emu_state->colour_count[colour]) {
+            gb_state->emu_state->colours_count++;
+        }
+        gb_state->emu_state->colour_count[colour]++;        
     }
 }

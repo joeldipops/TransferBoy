@@ -31,4 +31,11 @@ void playLogic(RootState* state, const byte playerNumber);
  */
 void playDraw(const RootState* state, const byte playerNumber);
 
+/**
+ * Does any necessary cleanup after drawing.
+ * @param state program state.
+ * @param playerNumber player in play mode.
+ */
+void playAfter(RootState* state, const byte playerNumber);
+
 #endif

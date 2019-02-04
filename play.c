@@ -127,7 +127,8 @@ void renderPixels(
     const float avgPixelSize,
     const natural left,
     const natural top,
-    const SuperGameboyState* sgbState
+    const SuperGameboyState* sgbState,
+    const byte bgColourIndex
 ) {
     // TODO - Scaling for when between whole number scales.
 
@@ -266,7 +267,9 @@ void playLogic(RootState* state, const byte playerNumber) {
 
     if (emulatorState->emu_state->lcd_entered_vblank) {
         frameCount++;
+
         if (FRAMES_TO_SKIP && (frameCount % (FRAMES_TO_SKIP + 1))) {
+            playAfter(state, playerNumber);
             state->Players[playerNumber].WasFrameSkipped = true;
             return;
         } else {
@@ -318,6 +321,8 @@ void playLogic(RootState* state, const byte playerNumber) {
         state->RequiresRepaint = true;
         state->RequiresControllerRead = true;
     }
+
+
 }
 
 /**
@@ -337,6 +342,20 @@ void playDraw(const RootState* state, const byte playerNumber) {
         palette = SuperGameboyPalette;
     }
 
+    struct emu_state* emuState = state->Players[playerNumber].EmulationState.emu_state;
+    uInt maxColour = 0;
+    uInt maxCount = 0;
+    for (
+        byte i = 0;
+        i < emuState->colours_count;
+        i++
+    ) {
+        if (maxCount <= emuState->colour_count[i]) {
+            maxCount = emuState->colour_count[i];
+            maxColour = i;
+        }
+    }
+
     renderPixels(
         state->Frame,
         state->Players[playerNumber].EmulationState.emu_state->lcd_pixbuf,
@@ -344,6 +363,21 @@ void playDraw(const RootState* state, const byte playerNumber) {
         (float)screen.Height / (float)GB_LCD_HEIGHT,
         screen.Left,
         screen.Top,
-        &state->Players[playerNumber].SGBState
+        &state->Players[playerNumber].SGBState,
+        maxColour
     );
 }
+
+/**
+ * Does any necessary cleanup after drawing.
+ * @param state program state.
+ * @param playerNumber player in play mode.
+ */
+void playAfter(RootState* state, const byte playerNumber) {
+    state->Players[playerNumber].EmulationState.emu_state->colours_count = 0;
+    for (uInt i = 0; i < 256; i++) {
+        state->Players[playerNumber].EmulationState.emu_state->colour_count[i] = 0;
+    }
+}
+
+

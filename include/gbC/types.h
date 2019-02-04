@@ -30,6 +30,8 @@ struct emu_state {
     bool lcd_entered_hblank; /* Set at the end of every HBlank. */
     bool lcd_entered_vblank; /* Set at the beginning of every VBlank. */
     u16 *lcd_pixbuf; /* 2-bit or 15-bit color per pixel. */
+    u16 colour_count[256];
+    u8 colours_count;
 
     bool flush_extram; /* Flush battery-backed RAM when it's disabled. */
     bool extram_dirty; /* Write battery-backed RAM periodically when dirty. */

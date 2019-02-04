@@ -124,6 +124,7 @@ void mainLoop(RootState* state) {
                         break;
                     case Play:
                         playDraw(state, i);
+                        playAfter(state, i);
                         break;
                     case Menu:
                         menuDraw(state, i);
