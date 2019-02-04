@@ -118,6 +118,9 @@ void mapGbInputs(const char controllerNumber, const GbButton* buttonMap, const N
  * @param avgPixelSize upscaled TV size of gameboy pixels
  * @param left left bound of the gb screen to render.
  * @param top top bound of the gb screen to render.
+ * @param sgbState SuperGameBoy related variables.
+ * @param bgColourIndex which colour fills the most pixels and should therefore be 
+ *        drawn once as a background
  * @private
  */
 void renderPixels(
@@ -156,7 +159,7 @@ void renderPixels(
             pixels = null;
             break;
         case GameboyPalette:
-            graphics_draw_box(frame, left, top, GB_LCD_WIDTH * avgPixelSize, GB_LCD_HEIGHT * avgPixelSize, MONOCHROME_PALETTE[0]);
+            graphics_draw_box(frame, left, top, GB_LCD_WIDTH * avgPixelSize, GB_LCD_HEIGHT * avgPixelSize, MONOCHROME_PALETTE[bgColourIndex]);
 
             // The colors stored in pixbuf already went through the palette
             // translation, but are still 2 bit monochrome.
@@ -166,7 +169,7 @@ void renderPixels(
                     natural index = x + y * GB_LCD_WIDTH;
                     natural tx = x * avgPixelSize + left;
 
-                    if (pixelBuffer[index] != 0) {
+                    if (pixelBuffer[index] != bgColourIndex) {
                         graphics_draw_box(frame, tx, ty, avgPixelSize, avgPixelSize, MONOCHROME_PALETTE[pixelBuffer[index]]);
                     }
                 }

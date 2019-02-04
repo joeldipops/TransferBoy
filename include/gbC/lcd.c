@@ -4,6 +4,8 @@
 #include "lcd.h"
 #include "hwdefs.h"
 
+#define palette_get_gray(palette, colidx) (palette >> (colidx << 1)) & 0x3;
+
 static void lcd_render_current_line(struct gb_state *gb_state);
 
 int lcd_init(struct gb_state *s) {
@@ -94,10 +96,6 @@ struct __attribute__((__packed__)) OAMentry {
 u16 palette_get_col(u8 *palettedata, u8 palidx, u8 colidx) {
     u8 idx = palidx * 8 + colidx * 2;
     return palettedata[idx] | (palettedata[idx + 1] << 8);
-}
-
-u8 palette_get_gray(u8 palette, u8 colidx) {
-    return (palette >> (colidx << 1)) & 0x3;
 }
 
 typedef struct {
@@ -264,9 +262,9 @@ static void lcd_render_current_line(struct gb_state *gb_state) {
             u16 col = 0;
             if (use_col)
                 col = palette_get_col(gb_state->io_lcd_BGPD, 0, colidx);
-            else {
+            else
                 col = palette_get_gray(bgwin_palette, colidx);
-            }
+
             pixels[x] = (Pixel){col, true};
         }
     }
