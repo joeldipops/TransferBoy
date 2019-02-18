@@ -86,6 +86,7 @@ void pal12(PlayerState* state) {
     palpq(state, 1, 2);
 }
 
+
 /**
  * Covers the screen so no-one sees anything ugly while we're getting SGB stuff ready.
  * @param state Program state including supergameboy request data.
@@ -103,32 +104,7 @@ sByte mask_en(PlayerState* state) {
         return -2;
     }
 
-    natural colour;
-    switch (state->SGBState.Buffer[1] & 0x03) {
-        // Mask by leaving the screen as-is until unmasked
-        case 1:
-            state->SGBState.IsWindowFrozen = true;
-            return 0;
-        // Paint the entire screen black
-        case 2:
-            colour = 0x8000;
-            break;
-        // Paint the entire screen with the colour shared between palettes.
-        case 3:
-            colour = state->SGBState.Palettes[0][0];
-            break;
-        // Don't mask anymore.
-        case 0:
-        default:
-            state->SGBState.IsWindowFrozen = false;
-            return 0;
-    }
-
-    for (byte i = 0; i < 4; i++) {
-        for (byte j = 0; j < 4; j++) {
-            state->SGBState.Palettes[i][j] = colour;
-        }
-    }
+    state->SGBState.MaskState = (state->SGBState.Buffer[1] & 0x03);
 
     return 0;
 }
@@ -422,6 +398,9 @@ sByte attr_blk(PlayerState* state) {
 /**
  * Executes one of sgb commands, if implemented.
  * @param state The state of the player to execute the command against.
+ * @return Error Code
+ **  0 Success
+ ** -1 Unknown command 
  * @private
  */
 void executeSgbCommand(PlayerState* state) {
@@ -468,8 +447,13 @@ void executeSgbCommand(PlayerState* state) {
         case SGBApplyPaletteToBlocks:
             attr_blk(state);
             break;
-        default: break;//logAndPause("SGB Command: %02x", state->SGBState.CurrentCommand); break;
+        default: 
+            logAndPause("SGB Command: %02x", state->SGBState.CurrentCommand); break;
+            return -1;
+        //default: break;        
     }
+
+    return 0;
 }
 
 /**
@@ -563,7 +547,7 @@ void resetSGBState(SuperGameboyState* state) {
        state->TilePalettes[i] = 0;
     }
 
-    state->IsWindowFrozen = false;
+    state->MaskState = SGBNoMask;
     state->HasPriority = false;
     state->PlayersMode = 0;
     state->CurrentController = 0;
@@ -646,8 +630,39 @@ void processSGBData(PlayerState* state) {
  * @param stateCurrent Super Gameboy data state.
  * @param pixelBuffer Greyscale Gameboy pixel buffer
  * @out pixels Pixels having gone through sgb transformations.
+ * @return Error code
+ ** 0  Success.
+ ** -1 Unknown mask type.
  */
-void generateSGBPixels(const SuperGameboyState* state, const natural* pixelBuffer, uInt* pixels) {
+sByte generateSGBPixels(const SuperGameboyState* state, const natural* pixelBuffer, uInt* pixels) {
+    if (state->MaskState) {
+        natural colour;
+        switch (state->MaskState) {
+            case SGBBlkMask:
+                colour = massageColour(0x8000);
+                for (natural y = 0; y < GB_LCD_HEIGHT; y++) {
+                    for (natural x = 0; x < GB_LCD_WIDTH; x++) {                
+                        natural index = x + y * GB_LCD_WIDTH;
+                        pixels[index] = colour;
+                    }
+                }
+                break;
+            case SGBColMask:
+                colour = massageColour(state->Palettes[0][0]);
+                for (natural y = 0; y < GB_LCD_HEIGHT; y++) {
+                    for (natural x = 0; x < GB_LCD_WIDTH; x++) {                
+                        natural index = x + y * GB_LCD_WIDTH;
+                        pixels[index] = colour;                        
+                    }
+                }
+                break;
+            case SGBFrzMask: break; // Nothing to do.
+            default: return -1;
+        }
+        return 0;
+    }
+    
+    
     if (state->HasPriority) {
         for (natural y = 0; y < GB_LCD_HEIGHT; y++) {
             for (natural x = 0; x < GB_LCD_WIDTH; x++) {
@@ -668,4 +683,6 @@ void generateSGBPixels(const SuperGameboyState* state, const natural* pixelBuffe
             }
         }
     }
+
+    return 0;
 }

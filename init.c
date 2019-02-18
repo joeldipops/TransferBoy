@@ -47,8 +47,7 @@ void initLogic(RootState* state, const byte playerNumber) {
         bool releasedButtons[N64_BUTTON_COUNT] = {};
         getPressedButtons(&state->KeysReleased, playerNumber, releasedButtons);
 
-        //if (true) { 
-        if (releasedButtons[A] /*|| releasedButtons[Start]*/) {
+        if (releasedButtons[A] || releasedButtons[Start]) {
             state->RequiresControllerRead = true;
             state->RequiresRepaint = true;
             state->Players[playerNumber].InitState = InitReady;
@@ -79,6 +78,7 @@ void initLogic(RootState* state, const byte playerNumber) {
             }
 
             state->Players[playerNumber].Cartridge.SaveData.Size = 0x00;
+            state->Players[playerNumber].Cartridge.IsSuperGbCart = true;            
         } else {
             readCartridge(playerNumber, &state->Players[playerNumber].Cartridge);
         }

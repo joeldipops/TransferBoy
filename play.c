@@ -140,7 +140,7 @@ void renderPixels(
             ;
             uInt* pixels = calloc(GB_LCD_HEIGHT * GB_LCD_WIDTH, sizeof(uInt));
 
-            if (sgbState->IsWindowFrozen) {
+            if (sgbState->MaskState == SGBFrzMask) {
                 ; // Leave display as is / frozen
             } else {
                 generateSGBPixels(sgbState, pixelBuffer, pixels);

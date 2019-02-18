@@ -29,6 +29,13 @@ typedef enum {
     SGBNoop = 0x1A // TransferBoy noop
 } SuperGameboyCommand;
 
+typedef enum {
+    SGBNoMask,
+    SGBFrzMask,
+    SGBBlkMask,
+    SGBColMask
+} SGBMaskState;
+
 typedef natural Palette[4];
 typedef natural SgbPalette[16];
 
@@ -60,10 +67,9 @@ typedef struct {
 
     byte PlayersMode:2; //0-3
     byte CurrentController:2;
-    bool IsWindowFrozen:1;
+    SGBMaskState MaskState:2;
     bool HasPriority:1;
     bool HasRamData:1;
-    byte pad0:2;
 
     byte BitBuffer;
     byte BitPointer;

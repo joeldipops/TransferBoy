@@ -6,6 +6,6 @@ const char FRAMES_TO_SKIP = 1;
 const bool SHOW_FRAME_COUNT = true;
 const bool IS_LOGGING_ENABLED = false;
 const bool IS_AUDIO_ENABLED = false;
-const bool IS_SGB_ENABLED = false;
+const bool IS_SGB_ENABLED = true;
 
 #endif
