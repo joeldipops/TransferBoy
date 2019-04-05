@@ -163,9 +163,9 @@ void renderPixels(
 
             // The colors stored in pixbuf already went through the palette
             // translation, but are still 2 bit monochrome.
-            for (natural y = 0; y < GB_LCD_HEIGHT; y++) {
+            for (natural y = (frameCount / 2 ) % 2 ? 0 : 1; y < GB_LCD_HEIGHT; y+=2) {
                 natural ty = y * avgPixelSize + top;
-                for (natural x = 0; x < GB_LCD_WIDTH; x++) {
+                for (natural x = 0; x < GB_LCD_WIDTH; x+=1) {
                     natural index = x + y * GB_LCD_WIDTH;
                     natural tx = x * avgPixelSize + left;
 

@@ -403,7 +403,7 @@ sByte attr_blk(PlayerState* state) {
  ** -1 Unknown command 
  * @private
  */
-void executeSgbCommand(PlayerState* state) {
+int executeSgbCommand(PlayerState* state) {
     switch(state->SGBState.CurrentCommand) {
         case SGBSetPalette01:
             pal01(state);
@@ -537,9 +537,10 @@ void resetSGBTransfer(SuperGameboyState* state) {
 void resetSGBState(SuperGameboyState* state) {
     // TODO Get rid of HasBuffer & HasRamData, we can just set to 0 and check that.
     resetSGBTransfer(state);
+    // Set all palettes to default monochrome palette to start with.
     for (byte i = 0; i < 4; i++) {
         for (byte j = 0; j < 4; j++) {
-            state->Palettes[i][j] = 0;
+            state->Palettes[i][j] = MONOCHROME_PALETTE[j];
         }
     }
 
@@ -548,7 +549,7 @@ void resetSGBState(SuperGameboyState* state) {
     }
 
     state->MaskState = SGBNoMask;
-    state->HasPriority = false;
+    state->HasPriority = true;
     state->PlayersMode = 0;
     state->CurrentController = 0;
     state->SnesRamBlockCount = 0;

@@ -16,3 +16,4 @@ test.sh
 *.exe
 *.dll
 *.mips
+.vscode/*
