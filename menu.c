@@ -173,11 +173,7 @@ char addPlayer(RootState* state) {
     state->PlayerCount++;
 
     // Now that we've flushed, we need to put the GB screen back.
-    state->Frame = 1;
     playDraw(state, 0);
-    state->Frame = 2;
-    playDraw(state, 0);
-    state->Frame = 0;
     return 0;
 }
 

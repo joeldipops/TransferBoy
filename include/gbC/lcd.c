@@ -8,13 +8,22 @@
 
 static void lcd_render_current_line(struct gb_state *gb_state);
 
+/**
+ *
+ * @return error code
+ **  0 - Successful
+ ** -1 - Out of memory.
+ */
 int lcd_init(struct gb_state *s) {
-    s->emu_state->lcd_pixbuf =
-        malloc(GB_LCD_WIDTH * GB_LCD_HEIGHT * sizeof(u16));
-    if (!s->emu_state->lcd_pixbuf)
-        return 1;
-    memset(s->emu_state->lcd_pixbuf, 0,
-            GB_LCD_WIDTH * GB_LCD_HEIGHT * sizeof(u16));
+    for (u8 i = 0; i < 4; i++) {
+        s->emu_state->pixel_buffers[i] = calloc(sizeof(u16), GB_LCD_WIDTH * GB_LCD_HEIGHT);
+        if (!s->emu_state->pixel_buffers[i]) {
+            return -1;
+        }
+    }
+
+    s->emu_state->current_buffer = 0;
+
     return 0;
 }
 
@@ -131,7 +140,6 @@ static void lcd_render_current_line(struct gb_state *gb_state) {
 
     int y = gb_state->io_lcd_LY;
 
-    //u16 *pixbuf = gb_state->emu_state->lcd_pixbuf;
     Pixel pixels[GB_LCD_WIDTH] = {0};
 
     u8 use_col = gb_state->gb_type == GB_TYPE_CGB;
@@ -329,9 +337,10 @@ static void lcd_render_current_line(struct gb_state *gb_state) {
     }
 
     natural lineValue = y * GB_LCD_WIDTH;
+    byte index = gb_state->emu_state->current_buffer;
     for (natural x = 0; x < GB_LCD_WIDTH; x++) {
         u16 colour = pixels[x].Colour;
-        gb_state->emu_state->lcd_pixbuf[x + lineValue] = colour;
+        gb_state->emu_state->pixel_buffers[index][x + lineValue] = colour;
         if (!gb_state->emu_state->colour_count[colour]) {
             gb_state->emu_state->colours_count++;
         }

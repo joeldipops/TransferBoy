@@ -66,6 +66,8 @@ void mainLoop(RootState* state) {
     state->RequiresControllerRead = true;
     uLong iterations = 0;
 
+    while(!(state->Frame = display_lock()));
+
     while (!allQuit) {
         allQuit = true;
 
@@ -114,8 +116,6 @@ void mainLoop(RootState* state) {
 
         if (state->RequiresRepaint) {
             state->RequiresRepaint = false;
-
-            while(!(state->Frame = display_lock()));
 
             for (byte i = 0; i < state->PlayerCount; i++) {
                 switch(modes[i]) {

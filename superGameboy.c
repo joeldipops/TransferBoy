@@ -114,13 +114,13 @@ sByte mask_en(PlayerState* state) {
  * These are mainly used to draw borders, but can be used to overlay and colourise the screen as well.
  * @param state Program state including supergameboy request data.
  */
-void chr_trn(PlayerState* state) {
-    natural index = 0;
+sByte chr_trn(PlayerState* state) {
+    //natural index = 0;
     // There are 256 characters in total, but we can only transfer one at a time,
     // So this bit determines whether it's the first or second 128.
-    if(state->SGBState.Buffer[1] & 0x01) {
-        index = 128 * 32;
-    }
+    //if(state->SGBState.Buffer[1] & 0x01) {
+        //index = 128 * 32;
+    //}
 
     // The data is lifted from the screen buffer.
     // Usually when this happens, the screen is masked with mask_en, so it looks blank
@@ -128,7 +128,10 @@ void chr_trn(PlayerState* state) {
 
     // lcd_pixbuf is probably not the right place to read from.  probably need to get it from the Gameboy buffers rather than
     // gbC's wrapper.
-    memcpy(state->SGBState.SpriteData + index, state->EmulationState.emu_state->lcd_pixbuf, 128 * 32);
+    // Correct, needs to come from VRAM - April 2019
+    //memcpy(state->SGBState.SpriteData + index, state->EmulationState.emu_state->lcd_pixbuf, 128 * 32);
+
+    return -1;
 }
 
 
