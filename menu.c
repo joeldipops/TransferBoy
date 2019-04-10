@@ -75,6 +75,7 @@ byte getNewRow(const float oldRowCount, const float newRowCount, const float cur
  */
 void resumePlay(PlayerState* playerState) {
     playerState->MenuCursorRow = -1;
+    playerState->BuffersInitialised = 0;    
     playerState->ActiveMode = Play;
 }
 

@@ -135,16 +135,23 @@ void renderPixels(
     const SuperGameboyState* sgbState,
     const bool isInitialised
 ) {
-    // TODO - Scaling for when between whole number scales.
-
     const natural* currentPixels = pixelBuffer[bufferIndex];
 
     const natural* lastPixels = 0;
-    switch(bufferIndex) {
-        case 0: lastPixels = pixelBuffer[3]; break;
-        case 1: lastPixels = pixelBuffer[0]; break;
-        case 2: lastPixels = pixelBuffer[1]; break;
-        case 3: lastPixels = pixelBuffer[2]; break;
+    if (FRAMES_TO_SKIP) {
+        switch(bufferIndex) {
+            case 0: lastPixels = pixelBuffer[2]; break;
+            case 1: lastPixels = pixelBuffer[3]; break;
+            case 2: lastPixels = pixelBuffer[0]; break;
+            case 3: lastPixels = pixelBuffer[1]; break;
+        }
+    } else {
+        switch(bufferIndex) {
+            case 0: lastPixels = pixelBuffer[3]; break;
+            case 1: lastPixels = pixelBuffer[0]; break;
+            case 2: lastPixels = pixelBuffer[1]; break;
+            case 3: lastPixels = pixelBuffer[2]; break;
+        }
     }
 
     switch(paletteType) {
@@ -157,7 +164,7 @@ void renderPixels(
                 ; // Leave display as is / frozen
             } else {
                 // Can be improved by caching old pixels but lazy to do it now.
-                generateSGBPixels(sgbState, lastPixels, oldPixels);
+                //generateSGBPixels(sgbState, lastPixels, oldPixels);
                 generateSGBPixels(sgbState, currentPixels, pixels);
 
                 for (natural y = 0; y < GB_LCD_HEIGHT; y++) {
@@ -166,9 +173,9 @@ void renderPixels(
                         natural index = x + y * GB_LCD_WIDTH;
                         natural tx = x * avgPixelSize + left;                        
 
-                        if (!isInitialised || oldPixels[index] != pixels[index]) {
+                        //if (!isInitialised || oldPixels[index] != pixels[index]) {
                             graphics_draw_box(frame, tx, ty, avgPixelSize, avgPixelSize, pixels[index]);                        
-                        }
+                        //}
                     }
                 }
             }
@@ -214,12 +221,12 @@ void renderPixels(
     if (SHOW_FRAME_COUNT) {
         string text = "";
 
-        //long long thisClock = get_ticks_ms();
-        //long diff = thisClock - lastClock;
+        long long thisClock = get_ticks_ms();
+        long diff = thisClock - lastClock;
 
-        //sprintf(text, "Frames: %lld FPS: %f", frameCount, (2.0 / (double)diff) * 1000);
-        sprintf(text, "Frames: %lld Memory: %lld", frameCount, getCurrentMemory());        
-        //lastClock = thisClock;
+        sprintf(text, "Frames: %lld FPS: %f", frameCount, (2.0 / (double)diff) * 1000);
+        //sprintf(text, "Frames: %lld Memory: %lld", frameCount, getCurrentMemory());        
+        lastClock = thisClock;
         graphics_set_color(GLOBAL_TEXT_COLOUR, 0x0);
         graphics_draw_box(frame, 0, 0, 680, 10, GLOBAL_BACKGROUND_COLOUR);
         graphics_draw_text(frame, 5, 0, text);
