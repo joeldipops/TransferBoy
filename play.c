@@ -161,29 +161,18 @@ void renderPixels(
             if (sgbState->MaskState == SGBFrzMask) {
                 ; // Leave display as is / frozen
             } else {
-                uInt* pixels = calloc(GB_LCD_HEIGHT * GB_LCD_WIDTH, sizeof(uInt));                
-
-                // Can be improved by caching old pixels but lazy to do it now.
-                generateSGBPixels(sgbState, currentPixels, pixels);
-
                 for (natural y = 0; y < GB_LCD_HEIGHT; y++) {
                     natural ty = y * avgPixelSize + top;                    
                     for (natural x = 0; x < GB_LCD_WIDTH; x++) {
                         natural index = x + y * GB_LCD_WIDTH;
                         natural tx = x * avgPixelSize + left;                        
 
-                        //if (!isInitialised || sgbState->PreviousPixels[index] != pixels[index]) {
-                            graphics_draw_box(frame, tx, ty, avgPixelSize, avgPixelSize, pixels[index]);                        
-                        //}
+                        if (!isInitialised || lastPixels[index] != currentPixels[index]) {
+                            // SGB Colours are already massaged.
+                            graphics_draw_box(frame, tx, ty, avgPixelSize, avgPixelSize, currentPixels[index]);
+                        }
                     }
                 }
-
-                if (sgbState->PreviousPixels != 0) {
-                    //free(sgbState->PreviousPixels);
-                }
-                free(pixels);
-                //sgbState->PreviousPixels = pixels;
-                pixels = null;                
             }
 
             break;
@@ -298,6 +287,15 @@ void playLogic(RootState* state, const byte playerNumber) {
             return;
         } else {
             state->Players[playerNumber].WasFrameSkipped = false;
+        }
+
+        if (IS_SGB_ENABLED && state->Players[playerNumber].Cartridge.IsSuperGbCart) {
+            applySGBPalettes(
+                &state->Players[playerNumber].SGBState, 
+                state->Players[playerNumber].EmulationState.emu_state->pixel_buffers[
+                    state->Players[playerNumber].EmulationState.emu_state->current_buffer
+                ]
+            );
         }
 
         GbController* input = calloc(1, sizeof(GbController));

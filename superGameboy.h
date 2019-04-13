@@ -25,11 +25,10 @@ void performSGBFunctions(PlayerState* state);
 /**
  * Applies Supergameboy colourisation to the pixels in the buffer.
  * @param stateCurrent Super Gameboy data state.
- * @param pixelBuffer Greyscale Gameboy pixel buffer
- * @out pixels Pixels having gone through sgb transformations.
+ * @param pixelBuffer Greyscale Gameboy pixel buffer that will be overwritten.
  * @return Error code
  ** 0  Success.
  ** -1 Unknown mask type.
  */
-sByte generateSGBPixels(const SuperGameboyState* state, const natural* pixelBuffer, uInt* pixels);
+sByte applySGBPalettes(const SuperGameboyState* state, natural* pixelBuffer);
 #endif

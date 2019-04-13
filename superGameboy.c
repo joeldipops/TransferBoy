@@ -633,13 +633,12 @@ void processSGBData(PlayerState* state) {
 /**
  * Applies Supergameboy colourisation to the pixels in the buffer.
  * @param stateCurrent Super Gameboy data state.
- * @param pixelBuffer Greyscale Gameboy pixel buffer
- * @out pixels Pixels having gone through sgb transformations.
+ * @param pixelBuffer Greyscale Gameboy pixel buffer that will be overwritten.
  * @return Error code
  ** 0  Success.
  ** -1 Unknown mask type.
  */
-sByte generateSGBPixels(const SuperGameboyState* state, const natural* pixelBuffer, uInt* pixels) {
+sByte applySGBPalettes(const SuperGameboyState* state, natural* pixelBuffer) {
     if (state->MaskState) {
         natural colour;
         switch (state->MaskState) {
@@ -648,7 +647,7 @@ sByte generateSGBPixels(const SuperGameboyState* state, const natural* pixelBuff
                 for (natural y = 0; y < GB_LCD_HEIGHT; y++) {
                     for (natural x = 0; x < GB_LCD_WIDTH; x++) {                
                         natural index = x + y * GB_LCD_WIDTH;
-                        pixels[index] = colour;
+                        pixelBuffer[index] = colour;
                     }
                 }
                 break;
@@ -657,7 +656,7 @@ sByte generateSGBPixels(const SuperGameboyState* state, const natural* pixelBuff
                 for (natural y = 0; y < GB_LCD_HEIGHT; y++) {
                     for (natural x = 0; x < GB_LCD_WIDTH; x++) {                
                         natural index = x + y * GB_LCD_WIDTH;
-                        pixels[index] = colour;                        
+                        pixelBuffer[index] = colour;                        
                     }
                 }
                 break;
@@ -666,28 +665,20 @@ sByte generateSGBPixels(const SuperGameboyState* state, const natural* pixelBuff
         }
         return 0;
     }
-    
-    
+
     if (state->HasPriority) {
         for (natural y = 0; y < GB_LCD_HEIGHT; y++) {
             for (natural x = 0; x < GB_LCD_WIDTH; x++) {
                 natural index = x + y * GB_LCD_WIDTH;
 
                 natural tile = (x / 8) + (y / 8 * HORIZONTAL_TILES);
-                natural colour = state->Palettes[state->TilePalettes[tile]][pixelBuffer[index]];
 
-                pixels[index] = massageColour(colour);
-            }
-        }
-    } else {
-        // If priority not set, use greyscale.
-        for (natural y = 0; y < GB_LCD_HEIGHT; y++) {
-            for (natural x = 0; x < GB_LCD_WIDTH; x++) {
-                natural index = x + y * GB_LCD_WIDTH;
-                pixels[index] = MONOCHROME_PALETTE[pixelBuffer[index]];
+                natural colour = state->Palettes[state->TilePalettes[tile]][pixelBuffer[index]];
+                pixelBuffer[index] = massageColour(colour);
             }
         }
     }
 
+    // If priority not set, just leave it as it is.
     return 0;
 }
