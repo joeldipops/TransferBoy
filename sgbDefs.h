@@ -85,6 +85,7 @@ typedef struct {
     byte TilePalettes[360]; // 20 x 18 tiles.
     SnesRamBlock* RamBlocks;
     byte* Buffer;
+    natural* PreviousPixels;
 } SuperGameboyState;
 
 #endif

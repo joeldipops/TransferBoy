@@ -138,6 +138,10 @@ static void lcd_render_current_line(struct gb_state *gb_state) {
         return;
     }
 
+    if (FRAMES_TO_SKIP && ((frameCount + 1) % (FRAMES_TO_SKIP + 1))) {    
+        return;
+    }
+
     int y = gb_state->io_lcd_LY;
 
     Pixel pixels[GB_LCD_WIDTH] = {0};
@@ -341,9 +345,5 @@ static void lcd_render_current_line(struct gb_state *gb_state) {
     for (natural x = 0; x < GB_LCD_WIDTH; x++) {
         u16 colour = pixels[x].Colour;
         gb_state->emu_state->pixel_buffers[index][x + lineValue] = colour;
-        if (!gb_state->emu_state->colour_count[colour]) {
-            gb_state->emu_state->colours_count++;
-        }
-        gb_state->emu_state->colour_count[colour]++;        
     }
 }

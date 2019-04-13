@@ -157,14 +157,13 @@ void renderPixels(
     switch(paletteType) {
         case SuperGameboyPalette:
             ;
-            uInt* pixels = calloc(GB_LCD_HEIGHT * GB_LCD_WIDTH, sizeof(uInt));
-            uInt* oldPixels = calloc(GB_LCD_HEIGHT * GB_LCD_WIDTH, sizeof(uInt));
 
             if (sgbState->MaskState == SGBFrzMask) {
                 ; // Leave display as is / frozen
             } else {
+                uInt* pixels = calloc(GB_LCD_HEIGHT * GB_LCD_WIDTH, sizeof(uInt));                
+
                 // Can be improved by caching old pixels but lazy to do it now.
-                //generateSGBPixels(sgbState, lastPixels, oldPixels);
                 generateSGBPixels(sgbState, currentPixels, pixels);
 
                 for (natural y = 0; y < GB_LCD_HEIGHT; y++) {
@@ -173,16 +172,20 @@ void renderPixels(
                         natural index = x + y * GB_LCD_WIDTH;
                         natural tx = x * avgPixelSize + left;                        
 
-                        //if (!isInitialised || oldPixels[index] != pixels[index]) {
+                        //if (!isInitialised || sgbState->PreviousPixels[index] != pixels[index]) {
                             graphics_draw_box(frame, tx, ty, avgPixelSize, avgPixelSize, pixels[index]);                        
                         //}
                     }
                 }
+
+                if (sgbState->PreviousPixels != 0) {
+                    //free(sgbState->PreviousPixels);
+                }
+                free(pixels);
+                //sgbState->PreviousPixels = pixels;
+                pixels = null;                
             }
-            free(pixels);
-            free(oldPixels);
-            oldPixels = null;
-            pixels = null;
+
             break;
         case GameboyPalette:
             // The colors stored in pixbuf already went through the palette
@@ -224,7 +227,7 @@ void renderPixels(
         long long thisClock = get_ticks_ms();
         long diff = thisClock - lastClock;
 
-        sprintf(text, "Frames: %lld FPS: %f", frameCount, (2.0 / (double)diff) * 1000);
+        sprintf(text, "Frames: %lld FPS: %f", frameCount, ((FRAMES_TO_SKIP + 1) / (double)diff) * 1000);
         //sprintf(text, "Frames: %lld Memory: %lld", frameCount, getCurrentMemory());        
         lastClock = thisClock;
         graphics_set_color(GLOBAL_TEXT_COLOUR, 0x0);
@@ -316,6 +319,8 @@ void playLogic(RootState* state, const byte playerNumber) {
             state->Players[playerNumber].ActiveMode = Menu;
             state->RequiresRepaint = true;
             return;
+        } else if (releasedButtons[CUp]) {
+            FRAMES_TO_SKIP = !FRAMES_TO_SKIP;
         }
 
         emu_process_inputs(emulatorState, input);

@@ -551,6 +551,7 @@ void resetSGBState(SuperGameboyState* state) {
        state->TilePalettes[i] = 0;
     }
 
+    state->PreviousPixels = 0;
     state->MaskState = SGBNoMask;
     state->HasPriority = true;
     state->PlayersMode = 0;
