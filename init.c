@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include "init.h"
-#include "tpakio.h"
+#include "tpakioInterface.h"
 #include "screen.h"
 #include "play.h"
 #include "controller.h"

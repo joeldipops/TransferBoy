@@ -3,7 +3,7 @@
 
 static byte cursorPosition = 0;
 static const byte EEPROM_BLOCKS = 64;
-static const byte BLOCK_SIZE = 8;
+static const byte EEPROM_BLOCK_SIZE = 8;
 
 /**
  * Gets the next available eeprom block.
@@ -29,16 +29,16 @@ sByte writeToEeprom(const byte blockNumber, const ByteArray* stream) {
 
     natural index = 0;
 
-    while(index <= stream->Size / BLOCK_SIZE) {
-        natural start = index * BLOCK_SIZE;
-        natural end = start + BLOCK_SIZE;
-        byte* block = calloc(BLOCK_SIZE, sizeof(byte));
+    while(index <= stream->Size / EEPROM_BLOCK_SIZE) {
+        natural start = index * EEPROM_BLOCK_SIZE;
+        natural end = start + EEPROM_BLOCK_SIZE;
+        byte* block = calloc(EEPROM_BLOCK_SIZE, sizeof(byte));
         if (end <= stream->Size) {
-            memcpy(block, stream->Data + start, BLOCK_SIZE);
+            memcpy(block, stream->Data + start, EEPROM_BLOCK_SIZE);
         } else {
             // pad out the rest of the block with zeroes.
             byte diff = end - stream->Size;
-            memcpy(block, stream->Data + start, BLOCK_SIZE - diff);
+            memcpy(block, stream->Data + start, EEPROM_BLOCK_SIZE - diff);
         }
 
         eeprom_write(blockNumber + index, block);

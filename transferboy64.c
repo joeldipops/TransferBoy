@@ -5,7 +5,7 @@
 #include "options.h"
 #include "logger.h"
 #include "text.h"
-#include "tpakio.h"
+#include "tpakioInterface.h"
 #include "init.h"
 #include "controller.h"
 #include "state.h"
@@ -166,7 +166,7 @@ int main(void) {
 #include "play.c"
 #include "menu.c"
 #include "options.c"
-#include "tpakio.c"
+#include "tpakioInterface.c"
 #include "logger.c"
 #include "text.c"
 #include "controller.c"
@@ -178,3 +178,5 @@ int main(void) {
 #include "superGameboy.c"
 #include "include/libgbpak.c"
 #include "include/gbc_bundle.c"
+
+#include "include/tpakio.c"

@@ -7,7 +7,7 @@
 #include "controller.h"
 #include "screen.h"
 #include "include/gbc_bundle.h"
-#include "tpakio.h"
+#include "tpakioInterface.h"
 #include "link.h"
 #include "sound.h"
 #include "superGameboy.h"

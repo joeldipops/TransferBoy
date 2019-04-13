@@ -1,5 +1,5 @@
-#ifndef TPAKIO_INLCUDED
-#define TPAKIO_INCLUDED
+#ifndef TPAKIO_INTERFACE_INLCUDED
+#define TPAKIO_INTERFACE_INCLUDED
 #include "core.h"
 
 /**

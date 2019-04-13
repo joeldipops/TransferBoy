@@ -1,7 +1,7 @@
 #include "include/libgbpak.h"
 #include <libdragon.h>
 #include "logger.h"
-#include "tpakio.h"
+#include "tpakioInterface.h"
 
 static GameboyCart* _pakInit[4]  = {null, null, null, null};
 
