@@ -180,6 +180,9 @@ bool checkHeader(CartridgeHeader* header) {
     byte* data = (byte*) header;
 
     // sum values from 0x0134 (title) to 0x014C (version number)
+    
+    // TODO - I need to start from the title, not the beginning of the header *headdesk*
+    
     for(byte i = 0; i <= 25; i++) {
         sum = sum - data[i] - 1;
     }
