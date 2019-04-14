@@ -1,95 +1,34 @@
 #ifndef TPAKIO_INLCUDED
 #define TPAKIO_INCLUDED
 
-typedef int8_t s8;
-typedef uint8_t u8;
-typedef uint16_t u16;
-typedef uint64_t u64;
+#include "core.h"
 
-typedef struct {
-    u64 Length;
-    u8* Data;
-} Buffer;
-
-typedef enum {
-    // 32kB ROM
-    ROM_ONLY,
-
-    // MBC1 - max 2MB ROM and/or 32kB RAM)
-    MBC1,
-    MBC1_RAM,
-    MBC1_BATTERY,
-    
-    // MBC2 - max 256kB ROM and 256B RAM
-    MBC2 = 0x05,
-    MBC2_BATTERY,
-    MBC2_RAM = 0x08,
-    MBC2_RAM_BATTERY,
-
-    // MMO1 - max 8MB ROM and 128kB RAM
-    MMM01 = 0x0b,
-    MMM01_RAM,
-    MMM01_RAM_BATTERY,
-
-    // MBC3 - max 2MB ROM and/or 32kB RAM and Timer
-    MBC3_TIMER_BATTERY = 0x0f,
-    MBC3_TIMER_RAM_BATTERY,
-    MBC3,
-    MBC3_RAM,
-    MBC3_RAM_BATTERY,
-
-    // MBC5 - max 8MB ROM and/or 128kB RAM
-    MBC5 = 0x19,
-    MBC5_RAM,
-    MBC5_RAM_BATTERY,
-    MBC5_RUMBLE,
-    MBC5_RUMBLE_RAM,
-    MBC5_RUMBLE_RAM_BATTER,
-
-    // MBC6 - who knows?
-    MBC6 = 0x20,
-
-    // MBC7 - max 8MB ROM or 256kB RAM and Accelerometer
-    MBC7_SENSOR_RUMBLE_RAM_BATTERY = 0x22    
-} CatridgeTypes;
-
-// For some
-const u8 BLOCK_SIZE = 32;
-const u16 ENABLE_TPAK_ADDRESS = 0x8001;
-const u8 ENABLE_TPAK = 0x84;
-const u8 DISABLE_TPAK = 0xFE;
-
-// Might not actually describe what this does.
-const u16 TPAK_CART_ON_ADDRESS = 0xB010;
-const u8 ENABLED = 0x01;
-const u8 DISABLED = 0x00;
-
-const u16 TPAK_BANK_SWITCH_ADDRESS = 0xA00C;
-
-const u16 ROM_ADDRESS_OFFSET = 0xC000;
-
-
-
+/**
+ * Imports the entire cartridge in to RAM as CartridgeData
+ * @param controllerNumber get from T-Pak plugged in to this controller slot.
+ * @out catridge GB/GBC catridge rom/ram 
+ */
+sByte importCartridge(const byte controllerNumber, CartridgeData* cartridge);
 
 /**
  * Gets the complete ROM data from the cartridge a transfer pak.
  * @param controllerNumber T-Pak plugged in to this controller slot.
- * @param romData ROM will be copied to this address.
+ * @out romData ROM will be copied to this address.
  * @returns Error codes
  ** 0  - Successful
  ** -1 - Error
  */
-s8 getRom(const u8 controllerNumber, Buffer romData);
+sByte getRom(const byte controllerNumber, ByteArray* romData);
 
 /**
  * Gets the complete ROM data from the cartridge in a transfer pak.
  * @param controllerNumber T-Pak plugged in to this controller slot.
- * @param ramData RAM will be copied to this address.
+ * @out ramData RAM will be copied to this address.
  * @returns Error codes
  **  0 - Successful
  ** -1 - Error
  */
-s8 getRam(const u8 controllerNumber, Buffer ramData);
+sByte getRam(const byte controllerNumber, ByteArray* ramData);
 
 /**
  * Sets the cartridge RAM with the data in ramData.
@@ -99,7 +38,7 @@ s8 getRam(const u8 controllerNumber, Buffer ramData);
  **  0 - Successful
  ** -1 - Error
  */
-s8 setRam(const u8 controllerNumber, Buffer ramData);
+sByte setRam(const u8 controllerNumber, ByteArray* ramData);
 
 
 /*********************************************************************************************
