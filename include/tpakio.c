@@ -180,7 +180,9 @@ bool checkHeader(CartridgeHeader* header) {
     byte* data = (byte*) header;
 
     // sum values from 0x0134 (title) to 0x014C (version number)
-    for(byte i = 0; i <= 25; i++) {
+    const byte start = 0x34;
+    const byte end = 0x4C;
+    for(byte i = start; i <= end; i++) {
         sum = sum - data[i] - 1;
     }
     
