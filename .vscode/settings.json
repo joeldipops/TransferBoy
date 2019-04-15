@@ -8,6 +8,7 @@
 	"files.associations": {
 		"*.inc": "gbz80",
 		"resources.h": "c",
-		"tpakiointerface.h": "c"
+		"tpakiointerface.h": "c",
+		"type_traits": "c"
 	}
 }

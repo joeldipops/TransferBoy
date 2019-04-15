@@ -72,6 +72,8 @@ void printSegment(const byte* start) {
     display_context_t frame = null;
     while(!(frame = display_lock()));
 
+    graphics_fill_screen(frame, GLOBAL_BACKGROUND_COLOUR);    
+
     printSegmentToFrame(start, frame);
 
     display_show(frame);

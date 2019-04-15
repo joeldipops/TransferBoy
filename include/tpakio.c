@@ -98,16 +98,17 @@ typedef struct {
             GbcSupport gbcSupport;            
         } CGBTitle;
     };
-    byte NewLicenseeCode[2];
+    natural NewLicenseeCode;
     bool IsSgbSupported;
-    CartridgeType cartridgeType;
+    CartridgeType CartridgeType;
     byte RomSizeCode;
     byte RamSizeCode;
     byte Destination;
     byte OldLicenseeCode;
     byte VersionNumber;
     byte HeaderChecksum;
-    byte GlobalChecksum[2];
+    natural GlobalChecksum;
+    byte overflow[16];
 } CartridgeHeader;
 
 /**
@@ -128,11 +129,11 @@ sByte initialiseTPak(const u8 controllerNumber) {
         return -2;
     }
 
-    u8 block[32];
-    memset(block, ENABLE_TPAK, BLOCK_SIZE);
+    byte block[32];
+    sByte result = 0;    
 
     // Wake up the transfer pak
-    sByte result = 0;
+    memset(block, ENABLE_TPAK, BLOCK_SIZE);
     result = write_mempak_address(controllerNumber, ENABLE_TPAK_ADDRESS, block);
     if (result) {
         return result;
@@ -193,16 +194,18 @@ bool checkHeader(CartridgeHeader* header) {
  * Reads the gameboy header so we know what banks to switch etc.
  * Call after initialise TPak
  * @param controllerNumber controller slot the T-Pak is plugge in to.
- * @out headerData header data will be populated here.
+ * @out header header data will be populated here.
  * @returns ErrorCode
  ** 0 - Successful
  */
-sByte getHeader(const byte controllerNumber, CartridgeHeader* headerData) {
+sByte getHeader(const byte controllerNumber, CartridgeHeader* header) {
     natural address = ROM_ADDRESS_OFFSET + 0x0100;
+    
     byte offset = 0;
+    byte* headerData = (byte*) header;
 
     for(byte i = 0; i < 3; i++) {
-        sByte result = read_mempak_address(controllerNumber, address + offset, ((byte*)headerData) + offset);
+        sByte result = read_mempak_address(controllerNumber, address + offset, headerData + offset);
         if (result) {
             return result;
         }
@@ -289,12 +292,14 @@ natural getRamBankSize(CartridgeHeader* header) {
  ** -40 - No cartridge in Tpak.
  ** -50 - Tpak not behaving as expected.
  */
-sByte importCartridge(const byte controllerNumber, CartridgeData* cartridge) {
+sByte importCartridge(byte controllerNumber, CartridgeData* cartridge) {
     if (controllerNumber <= 0 || controllerNumber > 4) {
         return -1;
     }
 
-    sByte result = initialiseTPak(controllerNumber - 1);
+    controllerNumber -= 1;
+
+    sByte result = initialiseTPak(controllerNumber);
     if (result) {
         return result * 10;
     }
