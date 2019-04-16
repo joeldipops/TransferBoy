@@ -39,42 +39,48 @@ const natural TPAK_BANK_SWITCH_ADDRESS = 0xA00C;
 
 const natural ROM_ADDRESS_OFFSET = 0xC000;
 
-typedef enum { GBC_NOT_SUPPORTED, GBC_DMG_SUPPORTED, GBC_ONLY_SUPPORTED } GbcSupport;
+// Must be packed into a single byte to fit in the header.
+typedef enum __attribute__ ((packed)) {
+    GBC_NOT_SUPPORTED = 0x00, 
+    GBC_DMG_SUPPORTED = 0x80,
+    GBC_ONLY_SUPPORTED = 0xC0 
+} GbcSupport;
 
-typedef enum {
+// Must be packed into a single byte to fit in the header
+typedef enum __attribute__ ((packed)) {
     // 32kB ROM
-    ROM_ONLY,
+    ROM_ONLY = 0x00,
 
     // MBC1 - max 2MB ROM and/or 32kB RAM)
-    MBC1,
-    MBC1_RAM,
-    MBC1_BATTERY,
+    MBC1 = 0x01,
+    MBC1_RAM = 0x02, 
+    MBC1_BATTERY = 0x03,
     
     // MBC2 - max 256kB ROM and 256B RAM
     MBC2 = 0x05,
-    MBC2_BATTERY,
+    MBC2_BATTERY = 0x06,
     MBC2_RAM = 0x08,
-    MBC2_RAM_BATTERY,
+    MBC2_RAM_BATTERY = 0x09,
 
     // MMO1 - max 8MB ROM and 128kB RAM
-    MMM01 = 0x0b,
-    MMM01_RAM,
-    MMM01_RAM_BATTERY,
+    MMM01 = 0x0B,
+    MMM01_RAM = 0x0C,
+    MMM01_RAM_BATTERY = 0x0D,
 
     // MBC3 - max 2MB ROM and/or 32kB RAM and Timer
     MBC3_TIMER_BATTERY = 0x0f,
-    MBC3_TIMER_RAM_BATTERY,
-    MBC3,
-    MBC3_RAM,
-    MBC3_RAM_BATTERY,
+    MBC3_TIMER_RAM_BATTERY = 0x10,
+    MBC3 = 0x11,
+    MBC3_RAM = 0x012,
+    MBC3_RAM_BATTERY = 0x013,
 
     // MBC5 - max 8MB ROM and/or 128kB RAM
     MBC5 = 0x19,
-    MBC5_RAM,
-    MBC5_RAM_BATTERY,
-    MBC5_RUMBLE,
-    MBC5_RUMBLE_RAM,
-    MBC5_RUMBLE_RAM_BATTER,
+    MBC5_RAM = 0x1A,
+    MBC5_RAM_BATTERY = 0x1B,
+    MBC5_RUMBLE = 0x1C,
+    MBC5_RUMBLE_RAM = 0x1D,
+    MBC5_RUMBLE_RAM_BATTERY = 0x1E,
 
     // MBC6 - who knows?
     MBC6 = 0x20,
@@ -89,13 +95,13 @@ typedef struct {
     union {
         byte DMGTitle[16];
         struct {
-            byte DMGTitle[15];            
-            GbcSupport gbcSupport;
+            byte DMGTitle[15];
+            GbcSupport GbcSupport;
         } OldCGBTitle;
         struct {
             byte CGBTitle[11];
             byte ManufacturerCode[4];
-            GbcSupport gbcSupport;            
+            GbcSupport GbcSupport;            
         } CGBTitle;
     };
     natural NewLicenseeCode;
@@ -166,8 +172,6 @@ sByte initialiseTPak(const u8 controllerNumber) {
 
     return 0;
 }
-
-
 
 /**
  * Calculates and checks the gameboy header checksum.

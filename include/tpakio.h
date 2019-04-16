@@ -7,6 +7,16 @@
  * Imports the entire cartridge in to RAM as CartridgeData
  * @param controllerNumber get from T-Pak plugged in to this controller slot.
  * @out catridge GB/GBC catridge rom/ram 
+ * @returns Error Code
+ **   0 - Successful
+ **  -1 - Invalid controller slot (must be 1-4)
+ **  -2 - Cartridge header contains invalid values.
+ **  -3 - Header failed checksum
+ ** -10 - Controller not plugged in.
+ ** -20 - Transfer pak not detected.
+ ** -30 - Data corruption.
+ ** -40 - No cartridge in Tpak.
+ ** -50 - Tpak not behaving as expected.
  */
 sByte importCartridge(const byte controllerNumber, CartridgeData* cartridge);
 
