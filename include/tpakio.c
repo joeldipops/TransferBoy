@@ -231,13 +231,13 @@ sByte importCartridge(byte controllerNumber, GameBoyCartridge* cartridge) {
 
     sByte result = initialiseTPak(controllerNumber);
     if (result) {
-        return result + 10;
+        return result - 10;
     }
 
     CartridgeHeader header;
     result = getHeader(controllerNumber, &header);
     if (result) {
-        return result + 10;
+        return result - 10;
     }
 
     if (!checkHeader(&header)) {
@@ -254,12 +254,12 @@ sByte importCartridge(byte controllerNumber, GameBoyCartridge* cartridge) {
 
     result = _importRom(controllerNumber, cartridge);
     if (result) {
-        return result + 20;
+        return result - 20;
     }
 
     result = _importRam(controllerNumber, cartridge);
     if (result) {
-        return result + 30;
+        return result - 30;
     }
 
     return 0;
