@@ -164,12 +164,10 @@ sByte initialiseTPak(const u8 controllerNumber) {
         return -5;
     }    
 
-    // Set bank 0
-    memset(block, 0, BLOCK_SIZE);
-    write_mempak_address(controllerNumber, TPAK_BANK_SWITCH_ADDRESS, block);
-
     return 0;
 }
+
+
 
 /**
  * Calculates and checks the gameboy header checksum.
@@ -199,6 +197,12 @@ bool checkHeader(CartridgeHeader* header) {
  ** 0 - Successful
  */
 sByte getHeader(const byte controllerNumber, CartridgeHeader* header) {
+    // Set bank 0
+    byte block[BLOCK_SIZE];
+    memset(block, 0, BLOCK_SIZE);
+    write_mempak_address(controllerNumber, TPAK_BANK_SWITCH_ADDRESS, block);
+    
+    // Header starts at 0x0100 in bank 0 and goes for 80 bytes (rounded up to 96)
     natural address = ROM_ADDRESS_OFFSET + 0x0100;
     
     byte offset = 0;
