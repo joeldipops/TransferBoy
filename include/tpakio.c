@@ -281,6 +281,10 @@ sByte _importRom(const byte controllerNumber, GameBoyCartridge* cartridge) {
     byte* pointer = (byte*) cartridge->Rom.Data;
 
     for (natural bank = 0; bank < cartridge->RomBankCount; bank++) {
+        byte block[BLOCK_SIZE];
+        memset(block, bank, BLOCK_SIZE);
+        write_mempak_address(controllerNumber, TPAK_BANK_SWITCH_ADDRESS, block);
+        
         // Read into memory 32bytes at a time.
         for (natural address = 0; address < BANK_SIZE; address += BLOCK_SIZE) {
             read_mempak_address(controllerNumber, ROM_ADDRESS_OFFSET + address, pointer + (address * bank));
