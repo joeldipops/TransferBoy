@@ -3,6 +3,31 @@
 
 #include "core.h"
 
+typedef enum {
+    TPAK_SUCCESS = 0,
+    // Invalid controller slot (must be 0-3)    
+    TPAK_ERR_NO_SLOT = -127,
+    // Cartridge header contains invalid/unknown values.    
+    TPAK_ERR_INVALID_HEADER,
+    // Header failed checksum
+    TPAK_ERR_CORRUPT_HEADER,
+    // Cartridge failed global checksum
+    TPAK_ERR_CORRUPT_DATA,
+    // If we loaded this cart we'd probably run out of memory.  An expansion pak may help here.
+    TPAK_ERR_INSUFFICIENT_MEMORY,
+    // Controller not plugged in.    
+    TPAK_ERR_NO_CONTROLLER,
+    // Controller detected but no transfer pak.
+    TPAK_ERR_NO_TPAK,
+    // Transfer pak detected, but no cartridge.
+    TPAK_ERR_NO_CARTRIDGE,
+    // Transfer pak isn't giving us the initialisation values we expect it to.
+    TPAK_ERR_UNKNOWN_BEHAVIOUR,
+    // libdragon read_mempak_address returned an error code
+    // todo - break these down into useful errors we can respond to.
+    TPAK_ERR_SYSTEM_ERROR
+} TpakError;
+
 // Must be packed into a single byte to fit in the header.
 typedef enum __attribute__ ((packed)) {
     GBC_NOT_SUPPORTED = 0x00, 
@@ -91,32 +116,34 @@ typedef struct {
     bool IsGbcSupported;
 } GameBoyCartridge;
 
+
+
 /**
  * Imports the entire cartridge in to RAM as CartridgeData
  * @param controllerNumber get from T-Pak plugged in to this controller slot.
  * @out catridge GB/GBC catridge rom/ram 
  * @returns Error Code
- **   0 - Successful
- **  -1 - Invalid controller slot (must be 1-4)
- **  -2 - Cartridge header contains invalid values.
- **  -3 - Header failed checksum
- ** -10 - Controller not plugged in.
- ** -20 - Transfer pak not detected.
- ** -30 - Data corruption.
- ** -40 - No cartridge in Tpak.
- ** -50 - Tpak not behaving as expected.
  */
-sByte importCartridge(byte controllerNumber, GameBoyCartridge* cartridge);
+sByte importCartridge(const byte controllerNumber, GameBoyCartridge* cartridge);
 
 /**
- * Gets the complete ROM data from the cartridge a transfer pak.
- * @param controllerNumber T-Pak plugged in to this controller slot.
- * @param cartridge Structure to copy ROM to.
- * @returns Error codes
- ** 0  - Successful
- ** -1 - Error
+ * Imports a cartridge header from the TPAK as well as some derived metadata values.
+ * @param controllerNumber number of controller slot cartridge is plugged in to.
+ * @out cartridge metadata will be set on the object.
+ * @returns Error Code
  */
-sByte _importRom(const byte controllerNumber, GameBoyCartridge* cartridge);
+sByte getCartridgeMetadata(const byte controllerNumber, GameBoyCartridge* cartridge);
+
+/**
+ * Sets the cartridge RAM with the data in ramData.
+ * @param controllerNumber T-Pak plugged in to this controller slot.
+ * @param ramData RAM to copy in to the cartridge.
+ * @returns Error codes
+ **  0 - Successful
+ ** -1 - Error
+ ** -2 - Invalid controller slot (must be 0-3) 
+ */
+sByte exportCartridgeRam(const byte controllerNumber, ByteArray* ramData);
 
 /**
  * Gets the complete ROM data from the cartridge in a transfer pak.
@@ -126,7 +153,7 @@ sByte _importRom(const byte controllerNumber, GameBoyCartridge* cartridge);
  **  0 - Successful
  ** -1 - Error
  */
-sByte _importRam(const byte controllerNumber, GameBoyCartridge* cartridge);
+sByte importCartridgeRam(const byte controllerNumber, ByteArray* cartridge);
 
 
 /*********************************************************************************************

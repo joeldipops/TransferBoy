@@ -30,8 +30,9 @@ void emu_step(struct gb_state *s) {
 
     if (s->emu_state->flush_extram) {
         s->emu_state->flush_extram = 0;
-        if (s->emu_state->extram_dirty)
+        if (s->emu_state->extram_dirty) {
             ; //Handled by play.c wrapper.
+        }
         s->emu_state->extram_dirty = 0;
     }
 }

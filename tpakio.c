@@ -1,3 +1,4 @@
+#include "core.h"
 #include "tpakio.h"
 #include <libdragon.h>
 #include <math.h>
@@ -45,18 +46,12 @@ const natural ROM_ADDRESS_OFFSET = 0xC000;
  * Puts Tpak/Cartridge in to a state where it's ready to be read from.
  * @param controllerNumber controller slot the Tpak is plugged in to.
  * @returns Error Code
- *  0 - Success
- * -1 - Controller not plugged in.
- * -2 - Transfer pak not detected.
- * -3 - Data corruption.
- * -4 - No cartridge inserted into TPAK.
- * -5 - Tpak not behaving as expected.
  */
-sByte initialiseTPak(const u8 controllerNumber) {
+sByte initialiseTPak(const byte controllerNumber) {
     int accessory = identify_accessory(controllerNumber);
 
     if (accessory != ACCESSORY_MEMPAK) {
-        return -2;
+        return TPAK_ERR_NO_TPAK;
     }
 
     byte block[BLOCK_SIZE];
@@ -66,11 +61,11 @@ sByte initialiseTPak(const u8 controllerNumber) {
     memset(block, ENABLE_TPAK, BLOCK_SIZE);
     result = write_mempak_address(controllerNumber, ENABLE_TPAK_ADDRESS, block);
     if (result) {
-        return result;
+        return TPAK_ERR_SYSTEM_ERROR;
     }
     read_mempak_address(controllerNumber, ENABLE_TPAK_ADDRESS, block);
     if (block[0] != 0x84) {
-        return -2;
+        return TPAK_ERR_NO_TPAK;
     }
 
     // And enable cart mode 1 (which doesn't do anything much according to the cen64 source.)
@@ -81,20 +76,20 @@ sByte initialiseTPak(const u8 controllerNumber) {
     memset(block, 0, BLOCK_SIZE);
     read_mempak_address(controllerNumber, TPAK_MODE_ADDRESS, block);
     if (block[0] == TPAK_NO_CART_ERROR) {
-        return -4;
+        return TPAK_ERR_NO_CARTRIDGE;
     }
 
     if (block[0] != TPAK_MODE_CHANGED_1) {
-        return -5;
+        return TPAK_ERR_UNKNOWN_BEHAVIOUR;
     }
 
     memset(block, 0, BLOCK_SIZE);
     read_mempak_address(controllerNumber, TPAK_MODE_ADDRESS, block);
     if (block[0] != TPAK_MODE_UNCHANGED_1) {
-        return -5;
+        return TPAK_ERR_UNKNOWN_BEHAVIOUR;
     }    
 
-    return 0;
+    return TPAK_SUCCESS;
 }
 
 /**
@@ -102,7 +97,7 @@ sByte initialiseTPak(const u8 controllerNumber) {
  * @param header The header to check.
  * @returns true if checksum passes, false otherwise.
  */
-bool checkHeader(CartridgeHeader* header) {
+bool checkHeader(const CartridgeHeader* header) {
     byte sum = 0;
     byte* data = (byte*) header;
 
@@ -122,7 +117,7 @@ bool checkHeader(CartridgeHeader* header) {
  * @param data The data to check.
  * @returns true if values match, false otherwise.
  */
-bool checkRom(natural expected, ByteArray* data) {
+bool checkRom(const natural expected, const ByteArray* data) {
     natural sum = 0;
     for (uLong i = 0; i < data->Size; i++) {
         sum += data->Data[i];
@@ -158,7 +153,7 @@ sByte getHeader(const byte controllerNumber, CartridgeHeader* header) {
     for(byte i = 0; i < 3; i++) {
         sByte result = read_mempak_address(controllerNumber, address + offset, headerData + offset);
         if (result) {
-            return result;
+            return TPAK_ERR_SYSTEM_ERROR;
         }
         offset += BLOCK_SIZE;
     }
@@ -172,8 +167,16 @@ sByte getHeader(const byte controllerNumber, CartridgeHeader* header) {
  * @param header The header.
  * @returns Number of 16kB rom banks (including the first, fixed bank)
  * or -1 if unknown code.
+ * 
+ ** Bank size codes.
+ ** 00h - None
+ ** 01h - 2 KBytes
+ ** 02h - 8 Kbytes
+ ** 03h - 32 KBytes (4 banks of 8KBytes each)
+ ** 04h - 128 KBytes (16 banks of 8KBytes each)
+ ** 05h - 64 KBytes (8 banks of 8KBytes each)
  */
-sShort getNumberOfRomBanks(CartridgeHeader* header) {
+sShort getNumberOfRomBanks(const CartridgeHeader* header) {
     if (header->RomSizeCode <= 8) {
         return pow(2, header->RomSizeCode + 1);
     } else {
@@ -187,22 +190,12 @@ sShort getNumberOfRomBanks(CartridgeHeader* header) {
     return -1;
 }
 
- /*********************************
-  * Bank size codes.
-  * 00h - None
-  * 01h - 2 KBytes
-  * 02h - 8 Kbytes
-  * 03h - 32 KBytes (4 banks of 8KBytes each)
-  * 04h - 128 KBytes (16 banks of 8KBytes each)
-  * 05h - 64 KBytes (8 banks of 8KBytes each)
-  **********************************/
-
 /**
  * Determines the number of RAM banks from the Ram Size code in the cartridge header. 
  * @param header the header.
  * @returns Number of banks, or -1 if unknown code.
  */
-sByte getNumberOfRamBanks(CartridgeHeader* header) {
+sByte getNumberOfRamBanks(const CartridgeHeader* header) {
     switch(header->RamSizeCode) {
         case 0: return 0;
         case 1: return 1;
@@ -220,86 +213,13 @@ sByte getNumberOfRamBanks(CartridgeHeader* header) {
  * @param header the header.
  * @returns the size of each ram bank.
  */
-natural getRamBankSize(CartridgeHeader* header) {
+natural getRamBankSize(const CartridgeHeader* header) {
     switch(header->RamSizeCode) {
         case 0: return 0;
         case 1: return 2 * 1024;
         default: return 8 * 1024;
     }
 }
-
-/**
- * Imports the entire cartridge in to RAM as CartridgeData
- * @param controllerNumber get from T-Pak plugged in to this controller slot.
- * @out catridge GB/GBC catridge rom/ram 
- * @returns Error Code
- **   0 - Successful
- **  -1 - Invalid controller slot (must be 1-4)
- **  -2 - Cartridge header contains invalid values.
- **  -3 - Header failed checksum
- **  -4 - Global checksum check failed
- ** -11 - Controller not plugged in.
- ** -12 - Transfer pak not detected.
- ** -13 - Data corruption.
- ** -14 - No cartridge in Tpak.
- ** -15 - Tpak not behaving as expected.
- */
-sByte importCartridge(byte controllerNumber, GameBoyCartridge* cartridge) {
-    if (controllerNumber <= 0 || controllerNumber > 4) {
-        return -1;
-    }
-
-    controllerNumber -= 1;
-
-    sByte result = initialiseTPak(controllerNumber);
-    if (result) {
-        return result - 10;
-    }
-
-    CartridgeHeader header;
-    result = getHeader(controllerNumber, &header);
-    if (result) {
-        return result - 10;
-    }
-
-    if (!checkHeader(&header)) {
-        return -3;
-    }
-
-    cartridge->IsGbcSupported = header.CGBTitle.GbcSupport == GBC_DMG_SUPPORTED || header.CGBTitle.GbcSupport == GBC_ONLY_SUPPORTED;        
-
-    sShort romBanks = getNumberOfRomBanks(&header);
-    sByte ramBanks = getNumberOfRamBanks(&header);
-    sInt ramBankSize = getRamBankSize(&header); 
-
-    if (romBanks < 0 || ramBanks < 0 || ramBankSize < 0) {
-        return -2; 
-    }
-
-    cartridge->RomBankCount = romBanks;
-    cartridge->RamBankCount = ramBanks;
-    cartridge->RamBankSize = (natural) ramBankSize;
-
-    result = _importRom(controllerNumber, cartridge);
-    if (result) {
-        return result - 20;
-    }
-
-    if (!checkRom(header.GlobalChecksum, &cartridge->Rom)) 
-    {
-        return -4;
-    }
-
-    result = _importRam(controllerNumber, cartridge);
-    if (result) {
-        return result - 30;
-    }
-
-    memcpy(&cartridge->Header, &header, HEADER_SIZE);    
-
-    return 0;
-}
-
 
 /**
  * Gets the complete ROM data from the cartridge a transfer pak.
@@ -309,8 +229,11 @@ sByte importCartridge(byte controllerNumber, GameBoyCartridge* cartridge) {
  ** 0  - Successful
  ** -1 - Error
  */
-sByte _importRom(const byte controllerNumber, GameBoyCartridge* cartridge) {
+sByte importRom(const byte controllerNumber, GameBoyCartridge* cartridge) {
     cartridge->Rom.Size = BANK_SIZE * cartridge->RomBankCount;
+    if (cartridge->Rom.Data) {
+        free(cartridge->Rom.Data);
+    }
     cartridge->Rom.Data = calloc(cartridge->Rom.Size, 1);
 
     // Loop through each bank
@@ -326,7 +249,7 @@ sByte _importRom(const byte controllerNumber, GameBoyCartridge* cartridge) {
         }
     }
 
-    return 0;
+    return TPAK_SUCCESS;
 }
 
 /**
@@ -337,10 +260,9 @@ sByte _importRom(const byte controllerNumber, GameBoyCartridge* cartridge) {
  **  0 - Successful
  ** -1 - Error
  */
-sByte _importRam(const byte controllerNumber, GameBoyCartridge* cartridge) {
+sByte importCartridgeRam(const byte controllerNumber, ByteArray* cartridge) {
     return -1;
 }
-
 /**
  * Sets the cartridge RAM with the data in ramData.
  * @param controllerNumber T-Pak plugged in to this controller slot.
@@ -348,11 +270,85 @@ sByte _importRam(const byte controllerNumber, GameBoyCartridge* cartridge) {
  * @returns Error codes
  **  0 - Successful
  ** -1 - Error
- ** -2 - Invalid controller slot (must be 1-4) 
+ ** -2 - Invalid controller slot (must be 0-3) 
  */
-sByte setRam(const u8 controllerNumber, ByteArray* ramData) {
-    if (controllerNumber <= 0 || controllerNumber > 4) {
-        return -2;
+sByte exportCartridgeRam(const byte controllerNumber, ByteArray* ramData) {
+    if (controllerNumber > 3) {
+        return TPAK_ERR_NO_SLOT;
     }
     return -1;
+}
+
+/**
+ * Imports a cartridge header from the TPAK as well as some derived metadata values.
+ * @param controllerNumber number of controller slot cartridge is plugged in to.
+ * @out cartridge metadata will be set on the object.
+ * @returns Error Code
+ */
+sByte getCartridgeMetadata(const byte controllerNumber, GameBoyCartridge* cartridge) {
+    if (controllerNumber > 3) {
+        return TPAK_ERR_NO_SLOT;
+    }
+
+    sByte result = initialiseTPak(controllerNumber);
+    if (result) {
+        return result;
+    }
+
+    CartridgeHeader header;
+    result = getHeader(controllerNumber, &header);
+    if (result) {
+        return result;
+    }
+
+    if (!checkHeader(&header)) {
+        return TPAK_ERR_CORRUPT_HEADER;
+    }
+
+    cartridge->IsGbcSupported = header.CGBTitle.GbcSupport == GBC_DMG_SUPPORTED || header.CGBTitle.GbcSupport == GBC_ONLY_SUPPORTED;        
+
+    sShort romBanks = getNumberOfRomBanks(&header);
+    sByte ramBanks = getNumberOfRamBanks(&header);
+    sInt ramBankSize = getRamBankSize(&header); 
+
+    if (romBanks * BANK_SIZE * 3 >= getMemoryLimit()) {
+        return TPAK_ERR_INSUFFICIENT_MEMORY;
+    }
+
+    if (romBanks < 0 || ramBanks < 0 || ramBankSize < 0) {
+        return TPAK_ERR_INVALID_HEADER; 
+    }
+
+    cartridge->RomBankCount = romBanks;
+    cartridge->RamBankCount = ramBanks;
+    cartridge->RamBankSize = (natural) ramBankSize;     
+
+    memcpy(&cartridge->Header, &header, HEADER_SIZE);
+
+    return TPAK_SUCCESS;
+}
+
+/**
+ * Imports the entire cartridge in to RAM as CartridgeData
+ * @param controllerNumber get from T-Pak plugged in to this controller slot.
+ * @out catridge GB/GBC catridge rom/ram 
+ * @returns Error Code
+ */
+sByte importCartridge(const byte controllerNumber, GameBoyCartridge* cartridge) {
+    sByte result = getCartridgeMetadata(controllerNumber, cartridge);
+    if (result) {
+        return result;
+    }
+
+    result = importRom(controllerNumber, cartridge);
+    if (result) {
+        return result;
+    }
+
+    if (!checkRom(cartridge->Header.GlobalChecksum, &cartridge->Rom)) 
+    {
+        return TPAK_ERR_CORRUPT_DATA;
+    }
+
+    return TPAK_SUCCESS;
 }

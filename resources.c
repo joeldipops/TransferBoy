@@ -9,7 +9,7 @@ static bool resourcesInitted = false;
 typedef struct {
     byte SheetIndex;
     byte SpriteCode;
-    sByte Transformation;
+    Transformation Transformation;
     sprite_t* Sprite;
     byte Position;
 } SpriteLookup;
