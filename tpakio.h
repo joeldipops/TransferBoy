@@ -57,13 +57,13 @@ typedef struct {
     byte entryScript[4];
     byte logo[48];
     union {
-        byte DMGTitle[16];
+        char Title[16];
         struct {
-            byte DMGTitle[15];
+            char Title[15];
             GbcSupport GbcSupport;
         } OldCGBTitle;
         struct {
-            byte CGBTitle[11];
+            char Title[11];
             byte ManufacturerCode[4];
             GbcSupport GbcSupport;            
         } CGBTitle;
@@ -88,6 +88,7 @@ typedef struct {
     natural RomBankCount;
     byte RamBankCount;
     natural RamBankSize;
+    bool IsGbcSupported;
 } GameBoyCartridge;
 
 /**

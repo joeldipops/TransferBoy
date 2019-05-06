@@ -1,5 +1,6 @@
 #include "tpakio.h"
 #include <libdragon.h>
+#include <math.h>
 
 /******************
  * command 00 - joystick status, if a transferpak exists
@@ -13,6 +14,7 @@
 
 const byte BLOCK_SIZE = 32;
 const natural BANK_SIZE = 16 * 1024; // 16kB banks.
+const byte HEADER_SIZE = 80;
 
 // According to the cen64 source, address is 0x8000 and the 1 is from a 5 bit cyclic redundancy check
 const natural ENABLE_TPAK_ADDRESS = 0x8001; 
@@ -115,6 +117,25 @@ bool checkHeader(CartridgeHeader* header) {
 }
 
 /**
+ * Calculates and checks the gameboy global checksum.
+ * @param expected The expected result of the check.
+ * @param data The data to check.
+ * @returns true if values match, false otherwise.
+ */
+bool checkRom(natural expected, ByteArray* data) {
+    natural sum = 0;
+    for (uLong i = 0; i < data->Size; i++) {
+        sum += data->Data[i];
+    }
+
+    // Bytes of checksum ignored by algorithm.
+    sum -= expected & 0x00FF;
+    sum -= expected >> 8;
+
+    return expected == sum;
+}
+
+/**
  * Reads the gameboy header so we know what banks to switch etc.
  * Call after initialise TPak
  * @param controllerNumber controller slot the T-Pak is plugge in to.
@@ -154,7 +175,7 @@ sByte getHeader(const byte controllerNumber, CartridgeHeader* header) {
  */
 sShort getNumberOfRomBanks(CartridgeHeader* header) {
     if (header->RomSizeCode <= 8) {
-        return 2 ^ (header->RomSizeCode + 1);
+        return pow(2, header->RomSizeCode + 1);
     } else {
         switch(header->RomSizeCode) {
             case 0x52: return 72;
@@ -216,6 +237,7 @@ natural getRamBankSize(CartridgeHeader* header) {
  **  -1 - Invalid controller slot (must be 1-4)
  **  -2 - Cartridge header contains invalid values.
  **  -3 - Header failed checksum
+ **  -4 - Global checksum check failed
  ** -11 - Controller not plugged in.
  ** -12 - Transfer pak not detected.
  ** -13 - Data corruption.
@@ -231,36 +253,49 @@ sByte importCartridge(byte controllerNumber, GameBoyCartridge* cartridge) {
 
     sByte result = initialiseTPak(controllerNumber);
     if (result) {
-        return result + 10;
+        return result - 10;
     }
 
     CartridgeHeader header;
     result = getHeader(controllerNumber, &header);
     if (result) {
-        return result + 10;
+        return result - 10;
     }
 
     if (!checkHeader(&header)) {
         return -3;
     }
 
+    cartridge->IsGbcSupported = header.CGBTitle.GbcSupport == GBC_DMG_SUPPORTED || header.CGBTitle.GbcSupport == GBC_ONLY_SUPPORTED;        
+
     sShort romBanks = getNumberOfRomBanks(&header);
     sByte ramBanks = getNumberOfRamBanks(&header);
-    natural ramBankSize = getRamBankSize(&header); 
+    sInt ramBankSize = getRamBankSize(&header); 
 
     if (romBanks < 0 || ramBanks < 0 || ramBankSize < 0) {
         return -2; 
     }
 
+    cartridge->RomBankCount = romBanks;
+    cartridge->RamBankCount = ramBanks;
+    cartridge->RamBankSize = (natural) ramBankSize;
+
     result = _importRom(controllerNumber, cartridge);
     if (result) {
-        return result + 20;
+        return result - 20;
+    }
+
+    if (!checkRom(header.GlobalChecksum, &cartridge->Rom)) 
+    {
+        return -4;
     }
 
     result = _importRam(controllerNumber, cartridge);
     if (result) {
-        return result + 30;
+        return result - 30;
     }
+
+    memcpy(&cartridge->Header, &header, HEADER_SIZE);    
 
     return 0;
 }
@@ -275,19 +310,23 @@ sByte importCartridge(byte controllerNumber, GameBoyCartridge* cartridge) {
  ** -1 - Error
  */
 sByte _importRom(const byte controllerNumber, GameBoyCartridge* cartridge) {
+    cartridge->Rom.Size = BANK_SIZE * cartridge->RomBankCount;
+    cartridge->Rom.Data = calloc(cartridge->Rom.Size, 1);
+
     // Loop through each bank
-
-    cartridge->Rom.Data = calloc(cartridge->RomBankCount * BANK_SIZE, 1);
-    byte* pointer = (byte*) cartridge->Rom.Data;
-
     for (natural bank = 0; bank < cartridge->RomBankCount; bank++) {
+        // Set bank
+        byte block[BLOCK_SIZE];
+        memset(block, bank, BLOCK_SIZE);
+        write_mempak_address(controllerNumber, TPAK_BANK_SWITCH_ADDRESS, block);
+
         // Read into memory 32bytes at a time.
         for (natural address = 0; address < BANK_SIZE; address += BLOCK_SIZE) {
-            read_mempak_address(controllerNumber, ROM_ADDRESS_OFFSET + address, pointer + (address * bank));
+            read_mempak_address(controllerNumber, ROM_ADDRESS_OFFSET + address, cartridge->Rom.Data + (bank * BANK_SIZE) + address);
         }
     }
-    
-    return -1;
+
+    return 0;
 }
 
 /**
