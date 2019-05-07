@@ -143,7 +143,7 @@ sByte getCartridgeMetadata(const byte controllerNumber, GameBoyCartridge* cartri
  ** -1 - Error
  ** -2 - Invalid controller slot (must be 0-3) 
  */
-sByte exportCartridgeRam(const byte controllerNumber, ByteArray* ramData);
+sByte exportCartridgeRam(const byte controllerNumber, GameBoyCartridge* ramData);
 
 /**
  * Gets the complete ROM data from the cartridge in a transfer pak.
@@ -153,7 +153,7 @@ sByte exportCartridgeRam(const byte controllerNumber, ByteArray* ramData);
  **  0 - Successful
  ** -1 - Error
  */
-sByte importCartridgeRam(const byte controllerNumber, ByteArray* cartridge);
+sByte importCartridgeRam(const byte controllerNumber, GameBoyCartridge* cartridge);
 
 
 /*********************************************************************************************

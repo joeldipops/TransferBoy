@@ -18,12 +18,12 @@ const natural BANK_SIZE = 16 * 1024; // 16kB banks.
 const byte HEADER_SIZE = 80;
 
 // According to the cen64 source, address is 0x8000 and the 1 is from a 5 bit cyclic redundancy check
-const natural ENABLE_TPAK_ADDRESS = 0x8001; 
+const natural ENABLE_TPAK_ADDRESS = 0x8000; 
 const byte ENABLE_TPAK = 0x84;
 const byte DISABLE_TPAK = 0xFE;
 
-// Likewise, address is 0xB000 + 5 bit CRC
-const natural TPAK_MODE_ADDRESS = 0xB010;
+// Likewise, address is 0xB010 including 5 bit CRC
+const natural TPAK_MODE_ADDRESS = 0xB000;
 // No-one in the homebrew community seems to have an explanation for what this mode
 // is for, but can be used to check that everything is working properly.
 const byte TPAK_MODE_SET_0 = 0x00;
@@ -36,11 +36,64 @@ const byte TPAK_MODE_CHANGED_1 = 0x8D;
 
 const byte TPAK_NO_CART_ERROR = 0x40;
 
-// Address is 0xA000...
-const natural TPAK_BANK_SWITCH_ADDRESS = 0xA00C;
+// The transfer pak has 4 16kB banks in its address space (0xC000 - 0xFFFF)
+// for four chunks of the gameboy address space.
+const natural TPAK_BANK_ADDRESS = 0xA000; // 0xA00C?
 
+// And the cartridge also has banks switchable at 0x4000-0x8000 of gb address space.
+// So to access mbc1 bank 2:
+// 1) set TPAK_BANK to 0 ("ROM0"), so we can access gb 0x2000
+// 2) set GB_BANK to 2
+// 3) set TPAK_BANK to 1 so we can access "ROMX" (ie 0x4000 - 0x8000, the banked rom section)
+// 4) read from 0xC000 - 0xFFFF, where 0xC000 is equivalent to 0x4000 of the gb memory map
+
+// GB_ROM_BANK_ADDRESS is only a 5bit register.  For banks higher than 1F we also
+// need to set 0x4000 for the upper two bits.
+typedef enum {
+    ROM0 = 0,
+    ROMX = 1,
+    SRAM = 2,
+    WRAM = 3
+} TpakBanks;
+
+const natural GB_ROM_BANK_ADDRESS = 0x2000;
+const natural GB_RAM_BANK_ADDRESS = 0x4000;
 
 const natural ROM_ADDRESS_OFFSET = 0xC000;
+const natural RAM_BANK_ADDRESS = 0xE000;
+
+/**
+ * Helper for when we just want to configure some single value, such as enabling the tpak, or switching banks.
+ * Don't use this if you actually want to write to cartridge RAM.
+ * @param controllerNumber Identifies the tpak to configure
+ * @param address Address of the setting to update.
+ * @param value New value to set.
+ * @returns Error Code from write_mempak_address.
+ */
+sByte setTpakValue(const byte controllerNumber, const natural address, const byte value) {
+    byte block[BLOCK_SIZE];
+    memset(block, value, BLOCK_SIZE);
+    return write_mempak_address(controllerNumber, address, block);
+}
+
+/**
+ * For a given gameboy memory space address, determines the respective TPAK memory space address.
+ * @param address An address in gameboy memory space.
+ * @returns The corresponding tpak memory space address.
+ */
+natural mapAddress(const natural address) {
+    natural offset = ROM_ADDRESS_OFFSET;
+    if (address < 0x4000) {
+        return address + offset;
+    } else if (address < 0x8000) {
+        offset -= 0x4000;
+    } else if (address < 0xC000) {
+        offset -= 0x8000;
+    } else {
+        offset = 0;
+    }
+    return address + offset;
+}
 
 /**
  * Puts Tpak/Cartridge in to a state where it's ready to be read from.
@@ -58,8 +111,7 @@ sByte initialiseTPak(const byte controllerNumber) {
     sByte result = 0;    
 
     // Wake up the transfer pak
-    memset(block, ENABLE_TPAK, BLOCK_SIZE);
-    result = write_mempak_address(controllerNumber, ENABLE_TPAK_ADDRESS, block);
+    result = setTpakValue(controllerNumber, ENABLE_TPAK_ADDRESS, ENABLE_TPAK);
     if (result) {
         return TPAK_ERR_SYSTEM_ERROR;
     }
@@ -69,8 +121,7 @@ sByte initialiseTPak(const byte controllerNumber) {
     }
 
     // And enable cart mode 1 (which doesn't do anything much according to the cen64 source.)
-    memset(block, TPAK_MODE_SET_1, BLOCK_SIZE);
-    write_mempak_address(controllerNumber, TPAK_MODE_ADDRESS, block);
+    setTpakValue(controllerNumber, TPAK_MODE_ADDRESS, TPAK_MODE_SET_1);
 
     // Do some sanity checks to make sure the tpak is responding as expected.
     memset(block, 0, BLOCK_SIZE);
@@ -130,6 +181,29 @@ bool checkRom(const natural expected, const ByteArray* data) {
     return expected == sum;
 }
 
+sByte switchBank(const byte controllerNumber, const natural bank) {
+    if (bank == 0) {
+        // Bank 0 is always ROM0
+        setTpakValue(controllerNumber, TPAK_BANK_ADDRESS, ROM0);
+        return 0;
+    } else {
+        // Set upper two bits of the bank number at this address.
+        // (Need to be in ROMX for this)
+        setTpakValue(controllerNumber, TPAK_BANK_ADDRESS, ROMX);
+        setTpakValue(controllerNumber, mapAddress(GB_RAM_BANK_ADDRESS), (bank & 0x60) >> 5);
+
+        // And lower five bits at this other address.
+        // (which is in ROM0)
+        setTpakValue(controllerNumber, TPAK_BANK_ADDRESS, ROM0);
+        setTpakValue(controllerNumber, mapAddress(GB_ROM_BANK_ADDRESS), bank & 0x1F);        
+
+        // GB Bank should have switched now, so switch the TPAK bank so we can access it.
+        setTpakValue(controllerNumber, TPAK_BANK_ADDRESS, ROMX);        
+    }
+
+    return -1;
+}
+
 /**
  * Reads the gameboy header so we know what banks to switch etc.
  * Call after initialise TPak
@@ -139,12 +213,10 @@ bool checkRom(const natural expected, const ByteArray* data) {
  ** 0 - Successful
  */
 sByte getHeader(const byte controllerNumber, CartridgeHeader* header) {
-    // Set bank 0
-    byte block[BLOCK_SIZE];
-    memset(block, 0, BLOCK_SIZE);
-    write_mempak_address(controllerNumber, TPAK_BANK_SWITCH_ADDRESS, block);
+    // Set tpak bank to 0 since the header is at 0x0100
+    switchBank(controllerNumber, 0);
     
-    // Header starts at 0x0100 in bank 0 and goes for 80 bytes (rounded up to 96)
+    // Header starts at 0x0100 and goes for 80 bytes (rounded up to 96)
     natural address = ROM_ADDRESS_OFFSET + 0x0100;
     
     byte offset = 0;
@@ -238,10 +310,7 @@ sByte importRom(const byte controllerNumber, GameBoyCartridge* cartridge) {
 
     // Loop through each bank
     for (natural bank = 0; bank < cartridge->RomBankCount; bank++) {
-        // Set bank
-        byte block[BLOCK_SIZE];
-        memset(block, bank, BLOCK_SIZE);
-        write_mempak_address(controllerNumber, TPAK_BANK_SWITCH_ADDRESS, block);
+        switchBank(controllerNumber, bank);
 
         // Read into memory 32bytes at a time.
         for (natural address = 0; address < BANK_SIZE; address += BLOCK_SIZE) {
@@ -260,9 +329,28 @@ sByte importRom(const byte controllerNumber, GameBoyCartridge* cartridge) {
  **  0 - Successful
  ** -1 - Error
  */
-sByte importCartridgeRam(const byte controllerNumber, ByteArray* cartridge) {
-    return -1;
+sByte importCartridgeRam(const byte controllerNumber, GameBoyCartridge* cartridge) {
+    cartridge->Ram.Size = cartridge->RamBankSize * cartridge->RamBankCount;
+    if (cartridge->Ram.Data) {
+        free(cartridge->Ram.Data);
+    }
+    cartridge->Ram.Data = calloc(cartridge->Ram.Size, 1);
+
+    // Loop through each bank
+    for (natural bank = 0; bank < cartridge->RamBankCount; bank++) {
+        // Set bank
+        switchBank(controllerNumber, bank);
+
+
+        // Read into memory 32bytes at a time.
+        for (natural address = 0; address < cartridge->RamBankSize; address += BLOCK_SIZE) {
+            //read_mempak_address(controllerNumber, RAM_ADDRESS_OFFSET + address, cartridge->Ram.Data + (bank * cartridge->RamBankSize) + address);
+        }
+    }
+
+    return TPAK_SUCCESS;
 }
+
 /**
  * Sets the cartridge RAM with the data in ramData.
  * @param controllerNumber T-Pak plugged in to this controller slot.
@@ -272,7 +360,7 @@ sByte importCartridgeRam(const byte controllerNumber, ByteArray* cartridge) {
  ** -1 - Error
  ** -2 - Invalid controller slot (must be 0-3) 
  */
-sByte exportCartridgeRam(const byte controllerNumber, ByteArray* ramData) {
+sByte exportCartridgeRam(const byte controllerNumber, GameBoyCartridge* ramData) {
     if (controllerNumber > 3) {
         return TPAK_ERR_NO_SLOT;
     }

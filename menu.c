@@ -163,7 +163,7 @@ char addPlayer(RootState* state) {
 
     // But maintain a different copy of the save file. We don't want to have two instances messing with a single save file.
     // Non-player-1 save files will never be written back to the cartridge.
-    importCartridgeRam(0, &newPlayer->Cartridge.Ram);
+    importCartridgeRam(0, &newPlayer->Cartridge);
 
     resetPlayState(newPlayer);
 

@@ -333,7 +333,7 @@ void playLogic(RootState* state, const byte playerNumber) {
                 emulatorState->mem_EXTRAM,
                 state->Players[playerNumber].Cartridge.Ram.Size
             );
-            sByte result = exportCartridgeRam(playerNumber, &state->Players[playerNumber].Cartridge.Ram);
+            sByte result = exportCartridgeRam(playerNumber, &state->Players[playerNumber].Cartridge);
             if (result) {
                 logAndPause("saving to cartridge failed");
             }
