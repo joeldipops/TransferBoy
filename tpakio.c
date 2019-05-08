@@ -3,16 +3,6 @@
 #include <libdragon.h>
 #include <math.h>
 
-/******************
- * command 00 - joystick status, if a transferpak exists
- * command 03-8001 - set: transfer pak power - on / off (0x84 = on) (0xFE = off)
- * command 02-8001 - query: transfer pak power - on / off (0x84 = on)
- * command 02-B010 - query enable state-Data (0x89 / 0x84) mode 1/0 - (0x00) gb cart missing?
- * command 03-B010 - set access mode 0x00 0x01? for what?
- * command 03-A00C - set: bankswitching via data area - first byte-> banknumber - better fill all
- * command 02-CXXX to FXXX-GB read ROM in 32kbyte chunks - XXX bank-offset
- ******************/
-
 const byte BLOCK_SIZE = 32;
 const natural BANK_SIZE = 16 * 1024; // 16kB banks.
 const byte HEADER_SIZE = 80;
@@ -59,7 +49,7 @@ typedef enum {
 const natural ENABLE_GB_RAM_ADDRESS = 0x0000;
 const natural ENABLE_GB_RAM = 0x000A;
 
-const natural GB_ROM_BANK_ADDRESS = 0x2000;
+const natural GB_ROM_BANK_ADDRESS = 0x2100;
 const natural GB_RAM_BANK_ADDRESS = 0x4000;
 const natural GB_BANK_MODE_ADDRESS = 0x6000;
 const byte GB_ROM_BANK_MODE = 0;
@@ -223,27 +213,42 @@ sByte switchRamBank(const byte controllerNumber, const natural bank) {
  * @param bank Bank number to switch to. 
  * @returns Error code.
  */
-sByte switchBank(const byte controllerNumber, const natural bank) {
+sByte switchBank(const byte controllerNumber, const natural bank, const CartridgeType type) {
     if (bank == 0) {
         // Bank 0 is always ROM0
         setTpakValue(controllerNumber, TPAK_BANK_ADDRESS, ROM0);
     } else {
-        // Tpak needs to map to ROMX for the following.
-        setTpakValue(controllerNumber, TPAK_BANK_ADDRESS, ROMX);
+        if (type == MBC1) {
+            // Tpak needs to map to ROMX for the following.
+            setTpakValue(controllerNumber, TPAK_BANK_ADDRESS, ROMX);
+            if (bank >= 32) {
+                // Ensure we are in ROM bank mode.
+                setTpakValue(controllerNumber, mapAddress(GB_BANK_MODE_ADDRESS), GB_ROM_BANK_MODE);
+            }
 
-        if (bank >= 32) {
-            // Ensure we are in ROM bank mode.
-            setTpakValue(controllerNumber, mapAddress(GB_BANK_MODE_ADDRESS), GB_ROM_BANK_MODE);
+            // Set upper two bits of the bank number at this address.
+            setTpakValue(controllerNumber, mapAddress(GB_RAM_BANK_ADDRESS), (bank & 0x60) >> 5);            
         }
 
-        // Set upper two bits of the bank number at this address.
-        setTpakValue(controllerNumber, mapAddress(GB_RAM_BANK_ADDRESS), (bank & 0x60) >> 5);
+        // Ensure we are in ROM0
+        setTpakValue(controllerNumber, TPAK_BANK_ADDRESS, ROM0);          
 
-        // Switch back to ROM0
-        setTpakValue(controllerNumber, TPAK_BANK_ADDRESS, ROM0);
+        byte mask = 0;
+        switch (type) {
+            case MBC1: mask = 0x1F;
+                break;
+            case MBC2: mask = 0x0F;
+                break;
+            case MBC3: mask = 0x7F;
+                break;
+            case MBC5: mask = 0xFF;
+                break;
+            default:
+                break;
+        }
 
-        // And set lower five bits of the bank number.
-        setTpakValue(controllerNumber, mapAddress(GB_ROM_BANK_ADDRESS), bank & 0x1F);        
+        // And set lower bits of the bank number.
+        setTpakValue(controllerNumber, mapAddress(GB_ROM_BANK_ADDRESS), bank & mask);        
 
         // GB Bank should have switched now, so switch the TPAK bank so we can access it.
         setTpakValue(controllerNumber, TPAK_BANK_ADDRESS, ROMX);        
@@ -263,7 +268,7 @@ sByte switchBank(const byte controllerNumber, const natural bank) {
  */
 sByte getHeader(const byte controllerNumber, CartridgeHeader* header) {
     // Set tpak bank to 0 since the header is at 0x0100
-    switchBank(controllerNumber, 0);
+    switchBank(controllerNumber, 0, ROM_ONLY);
     
     // Header starts at 0x0100 and goes for 80 bytes (rounded up to 96)
     natural address = ROM_ADDRESS_OFFSET + 0x0100;
@@ -343,6 +348,40 @@ natural getRamBankSize(const CartridgeHeader* header) {
 }
 
 /**
+ * Given the specific type of a cartridge eg MBC1+RAM+BATTERY and returns the general MBC type eg MBC1.
+ * @param fullType A cartridge type.
+ * @returns The Memory Bank Controller type.
+ */
+CartridgeType getPrimaryType(const CartridgeType fullType) {
+    switch(fullType) {
+        case ROM_ONLY:
+            return ROM_ONLY;
+
+        case MBC1:
+        case MBC1_BATTERY:
+        case MBC1_RAM:
+            return MBC1;
+
+        case MBC3:
+        case MBC3_RAM:
+        case MBC3_RAM_BATTERY:
+        case MBC3_TIMER_BATTERY:
+        case MBC3_TIMER_RAM_BATTERY:
+            return MBC3;
+
+        case MBC5:
+        case MBC5_RAM:
+        case MBC5_RAM_BATTERY:
+        case MBC5_RUMBLE:
+        case MBC5_RUMBLE_RAM:
+        case MBC5_RUMBLE_RAM_BATTERY:
+            return MBC5;
+
+        default: return 0;
+    }
+}
+
+/**
  * Gets the complete ROM data from the cartridge a transfer pak.
  * @param controllerNumber T-Pak plugged in to this controller slot.
  * @param cartridge Structure to copy ROM to.
@@ -359,7 +398,7 @@ sByte importRom(const byte controllerNumber, GameBoyCartridge* cartridge) {
 
     // Loop through each bank
     for (natural bank = 0; bank < cartridge->RomBankCount; bank++) {
-        switchBank(controllerNumber, bank);
+        switchBank(controllerNumber, bank, cartridge->Type);
 
         // Read into memory 32bytes at a time.
         for (natural address = 0; address < BANK_SIZE; address += BLOCK_SIZE) {
@@ -374,11 +413,13 @@ sByte importRom(const byte controllerNumber, GameBoyCartridge* cartridge) {
  * Gets the complete ROM data from the cartridge in a transfer pak.
  * @param controllerNumber T-Pak plugged in to this controller slot.
  * @param cartridge Structure to copy RAM to.
- * @returns Error codes
- **  0 - Successful
- ** -1 - Error
+ * @returns Error code
  */
 sByte importCartridgeRam(const byte controllerNumber, GameBoyCartridge* cartridge) {
+    if (controllerNumber > 3) {
+        return TPAK_ERR_NO_SLOT;
+    }
+
     cartridge->Ram.Size = cartridge->RamBankSize * cartridge->RamBankCount;
     if (cartridge->Ram.Data) {
         free(cartridge->Ram.Data);
@@ -402,16 +443,24 @@ sByte importCartridgeRam(const byte controllerNumber, GameBoyCartridge* cartridg
  * Sets the cartridge RAM with the data in ramData.
  * @param controllerNumber T-Pak plugged in to this controller slot.
  * @param ramData RAM to copy in to the cartridge.
- * @returns Error codes
- **  0 - Successful
- ** -1 - Error
- ** -2 - Invalid controller slot (must be 0-3) 
+ * @returns Error code
  */
-sByte exportCartridgeRam(const byte controllerNumber, GameBoyCartridge* ramData) {
+sByte exportCartridgeRam(const byte controllerNumber, GameBoyCartridge* cartridge) {
     if (controllerNumber > 3) {
         return TPAK_ERR_NO_SLOT;
     }
-    return -1;
+
+    // Loop through each bank
+    for (byte bank = 0; bank < cartridge->RamBankCount; bank++) {
+        switchRamBank(controllerNumber, bank);
+
+        // Read into memory 32bytes at a time.
+        for (natural address = 0; address < cartridge->RamBankSize; address += BLOCK_SIZE) {
+            write_mempak_address(controllerNumber, mapAddress(SRAM_ADDRESS) + address, cartridge->Ram.Data + (bank * cartridge->RamBankSize) + address);
+        }
+    }
+
+    return TPAK_SUCCESS;
 }
 
 /**
@@ -457,6 +506,7 @@ sByte getCartridgeMetadata(const byte controllerNumber, GameBoyCartridge* cartri
     cartridge->RomBankCount = romBanks;
     cartridge->RamBankCount = ramBanks;
     cartridge->RamBankSize = (natural) ramBankSize;     
+    cartridge->Type = getPrimaryType(header.CartridgeType);
 
     memcpy(&cartridge->Header, &header, HEADER_SIZE);
 
