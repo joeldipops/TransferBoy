@@ -56,11 +56,18 @@ typedef enum {
     WRAM = 3
 } TpakBanks;
 
+const natural ENABLE_GB_RAM_ADDRESS = 0x0000;
+const natural ENABLE_GB_RAM = 0x000A;
+
 const natural GB_ROM_BANK_ADDRESS = 0x2000;
 const natural GB_RAM_BANK_ADDRESS = 0x4000;
+const natural GB_BANK_MODE_ADDRESS = 0x6000;
+const byte GB_ROM_BANK_MODE = 0;
+const byte GB_RAM_BANK_MODE = 1;
+
+const natural SRAM_ADDRESS = 0xA000;
 
 const natural ROM_ADDRESS_OFFSET = 0xC000;
-const natural RAM_BANK_ADDRESS = 0xE000;
 
 /**
  * Helper for when we just want to configure some single value, such as enabling the tpak, or switching banks.
@@ -138,7 +145,10 @@ sByte initialiseTPak(const byte controllerNumber) {
     read_mempak_address(controllerNumber, TPAK_MODE_ADDRESS, block);
     if (block[0] != TPAK_MODE_UNCHANGED_1) {
         return TPAK_ERR_UNKNOWN_BEHAVIOUR;
-    }    
+    }
+
+    // Enable Cartridge ram
+    setTpakValue(controllerNumber, mapAddress(ENABLE_GB_RAM_ADDRESS), ENABLE_GB_RAM);
 
     return TPAK_SUCCESS;
 }
@@ -181,28 +191,67 @@ bool checkRom(const natural expected, const ByteArray* data) {
     return expected == sum;
 }
 
+/**
+ * Switches what cartridge SRAM bank appears at 0xA000 - 0xBFFF of cart space
+ * and switches the TPAK to map that location.
+ * @param controllerNumber Controller slot tpak is plugged in to.
+ * @param bank Bank number to switch to. 
+ * @returns Error code.
+ */
+sByte switchRamBank(const byte controllerNumber, const natural bank) {
+    // Make sure we're in ROMX to access 0x4000 and 0x6000
+    setTpakValue(controllerNumber, TPAK_BANK_ADDRESS, ROMX);
+
+    // Switch to RAM mode except for 0 bank which is accesible in ROM mode.
+    if (bank > 0) {
+        setTpakValue(controllerNumber, mapAddress(GB_BANK_MODE_ADDRESS), GB_RAM_BANK_MODE);
+    }
+
+    // Set the bank
+    setTpakValue(controllerNumber, mapAddress(GB_RAM_BANK_ADDRESS), bank);
+
+    // Switch the TPAK bank so the SRAM location is available.
+    setTpakValue(controllerNumber, TPAK_BANK_ADDRESS, SRAM);
+
+    return 0;
+}
+
+/**
+ * Switches what cartridge ROM bank appears at 0x4000 - 0x7FFF of cart space
+ * and switches the TPAK to map that location.
+ * @param controllerNumber Controller slot tpak is plugged in to.
+ * @param bank Bank number to switch to. 
+ * @returns Error code.
+ */
 sByte switchBank(const byte controllerNumber, const natural bank) {
     if (bank == 0) {
         // Bank 0 is always ROM0
         setTpakValue(controllerNumber, TPAK_BANK_ADDRESS, ROM0);
-        return 0;
     } else {
-        // Set upper two bits of the bank number at this address.
-        // (Need to be in ROMX for this)
+        // Tpak needs to map to ROMX for the following.
         setTpakValue(controllerNumber, TPAK_BANK_ADDRESS, ROMX);
+
+        if (bank >= 32) {
+            // Ensure we are in ROM bank mode.
+            setTpakValue(controllerNumber, mapAddress(GB_BANK_MODE_ADDRESS), GB_ROM_BANK_MODE);
+        }
+
+        // Set upper two bits of the bank number at this address.
         setTpakValue(controllerNumber, mapAddress(GB_RAM_BANK_ADDRESS), (bank & 0x60) >> 5);
 
-        // And lower five bits at this other address.
-        // (which is in ROM0)
+        // Switch back to ROM0
         setTpakValue(controllerNumber, TPAK_BANK_ADDRESS, ROM0);
+
+        // And set lower five bits of the bank number.
         setTpakValue(controllerNumber, mapAddress(GB_ROM_BANK_ADDRESS), bank & 0x1F);        
 
         // GB Bank should have switched now, so switch the TPAK bank so we can access it.
         setTpakValue(controllerNumber, TPAK_BANK_ADDRESS, ROMX);        
     }
 
-    return -1;
+    return 0;
 }
+
 
 /**
  * Reads the gameboy header so we know what banks to switch etc.
@@ -337,14 +386,12 @@ sByte importCartridgeRam(const byte controllerNumber, GameBoyCartridge* cartridg
     cartridge->Ram.Data = calloc(cartridge->Ram.Size, 1);
 
     // Loop through each bank
-    for (natural bank = 0; bank < cartridge->RamBankCount; bank++) {
-        // Set bank
-        switchBank(controllerNumber, bank);
-
+    for (byte bank = 0; bank < cartridge->RamBankCount; bank++) {
+        switchRamBank(controllerNumber, bank);
 
         // Read into memory 32bytes at a time.
         for (natural address = 0; address < cartridge->RamBankSize; address += BLOCK_SIZE) {
-            //read_mempak_address(controllerNumber, RAM_ADDRESS_OFFSET + address, cartridge->Ram.Data + (bank * cartridge->RamBankSize) + address);
+            read_mempak_address(controllerNumber, mapAddress(SRAM_ADDRESS) + address, cartridge->Ram.Data + (bank * cartridge->RamBankSize) + address);
         }
     }
 
@@ -436,6 +483,11 @@ sByte importCartridge(const byte controllerNumber, GameBoyCartridge* cartridge) 
     if (!checkRom(cartridge->Header.GlobalChecksum, &cartridge->Rom)) 
     {
         return TPAK_ERR_CORRUPT_DATA;
+    }
+
+    result = importCartridgeRam(controllerNumber, cartridge);
+    if (result) {
+        return result;
     }
 
     return TPAK_SUCCESS;
