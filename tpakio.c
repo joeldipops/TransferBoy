@@ -12,18 +12,6 @@ const natural ENABLE_TPAK_ADDRESS = 0x8000;
 const byte ENABLE_TPAK = 0x84;
 const byte DISABLE_TPAK = 0xFE;
 
-// Likewise, address is 0xB010 including 5 bit CRC
-const natural TPAK_MODE_ADDRESS = 0xB000;
-// No-one in the homebrew community seems to have an explanation for what this mode
-// is for, but can be used to check that everything is working properly.
-const byte TPAK_MODE_SET_0 = 0x00;
-const byte TPAK_MODE_SET_1 = 0x01;
-
-const byte TPAK_MODE_UNCHANGED_0 = 0x80;
-const byte TPAK_MODE_CHANGED_0 = 0x84;
-const byte TPAK_MODE_UNCHANGED_1 = 0x89;
-const byte TPAK_MODE_CHANGED_1 = 0x8D;
-
 const byte TPAK_NO_CART_ERROR = 0x40;
 
 // The transfer pak has 4 16kB banks in its address space (0xC000 - 0xFFFF)
@@ -56,6 +44,18 @@ const byte GB_ROM_BANK_MODE = 0;
 const byte GB_RAM_BANK_MODE = 1;
 
 const natural SRAM_ADDRESS = 0xA000;
+
+// 0xB010 including 5 bit CRC?
+const natural TPAK_MODE_ADDRESS = 0xB000;
+// No-one in the homebrew community seems to have an explanation for what this mode
+// is for, but can be used to check that everything is working properly.
+const byte TPAK_MODE_SET_0 = 0x00;
+const byte TPAK_MODE_SET_1 = 0x01;
+
+const byte TPAK_MODE_UNCHANGED_0 = 0x80;
+const byte TPAK_MODE_CHANGED_0 = 0x84;
+const byte TPAK_MODE_UNCHANGED_1 = 0x89;
+const byte TPAK_MODE_CHANGED_1 = 0x8D;
 
 const natural ROM_ADDRESS_OFFSET = 0xC000;
 
@@ -420,6 +420,9 @@ sByte importCartridgeRam(const byte controllerNumber, GameBoyCartridge* cartridg
         return TPAK_ERR_NO_SLOT;
     }
 
+    // Ensure Tpak is switched on.
+    result = setTpakValue(controllerNumber, ENABLE_TPAK_ADDRESS, ENABLE_TPAK);
+
     cartridge->Ram.Size = cartridge->RamBankSize * cartridge->RamBankCount;
     if (cartridge->Ram.Data) {
         free(cartridge->Ram.Data);
@@ -450,6 +453,9 @@ sByte exportCartridgeRam(const byte controllerNumber, GameBoyCartridge* cartridg
         return TPAK_ERR_NO_SLOT;
     }
 
+    // Ensure Tpak is switched on.
+    result = setTpakValue(controllerNumber, ENABLE_TPAK_ADDRESS, ENABLE_TPAK);    
+
     // Loop through each bank
     for (byte bank = 0; bank < cartridge->RamBankCount; bank++) {
         switchRamBank(controllerNumber, bank);
@@ -459,6 +465,9 @@ sByte exportCartridgeRam(const byte controllerNumber, GameBoyCartridge* cartridg
             write_mempak_address(controllerNumber, mapAddress(SRAM_ADDRESS) + address, cartridge->Ram.Data + (bank * cartridge->RamBankSize) + address);
         }
     }
+
+    // Turn off the lights when we're done.
+    result = setTpakValue(controllerNumber, ENABLE_TPAK_ADDRESS, DISABLE_TPAK);        
 
     return TPAK_SUCCESS;
 }
@@ -539,6 +548,9 @@ sByte importCartridge(const byte controllerNumber, GameBoyCartridge* cartridge) 
     if (result) {
         return result;
     }
+
+    // Turn off the lights when we're done.
+    result = setTpakValue(controllerNumber, ENABLE_TPAK_ADDRESS, DISABLE_TPAK);
 
     return TPAK_SUCCESS;
 }
