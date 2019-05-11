@@ -20,21 +20,21 @@ I had a bit of trouble finding information on how to use the Transfer Pak over l
 Address|Description
 -------|---------------
 0x0000 | Echo of 0x8000 - 0x9FFF
-0x1000 | "
+0x1000 | ...
 0x2000 | Echo of 0xA000 - 0xAFFF
 0x3000 | Echo of 0xB000 - 0xBFFF
 0x4000 | Unused.  Reads are all 0x00
-0x5000 | "
-0x6000 | "
-0x7000 | "
+0x5000 | ...
+0x6000 | ...
+0x7000 | ...
 0x8000 | Power On/Off Switch
-0x9000 | "
+0x9000 | ...
 0xA000 | Bank Switch
 0xB000 | Status and Control
 0xC000 | Banked Cartridge Memory Access
-0xD000 | "
-0xE000 | "
-0xF000 | "
+0xD000 | ...
+0xE000 | ...
+0xF000 | ...
 
 On start up, immediately after enabling power to the Tpak, I found that the entire memory space looks like this:
 
