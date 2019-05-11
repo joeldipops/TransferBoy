@@ -4,12 +4,12 @@ I had a bit of trouble finding information on how to use the Transfer Pak over l
 
 ## Notes
 * These results were confirmed in the following environment:
-** A PAL N64 purchased in Australia - NUS-001(EUR)
-** Transfer Pak - NUS-019
-** Official Controller - NUS-005
-** Official Expansion Pak - NUS-007
-** An Everdrive 64 v2.5
-** A test ROM I wrote, built with libdragon.
+    * A PAL N64 purchased in Australia - NUS-001(EUR)
+    * Transfer Pak - NUS-019
+    * Official Controller - NUS-005
+    * Official Expansion Pak - NUS-007
+    * An Everdrive 64 v2.5
+    * A test ROM I wrote, built with libdragon.
 
 * Data is written to and read from the Transfer Pak in 32B blocks.  When we only care about a single byte, such as when switching banks, or checking the access mode, the block would contain that value repeated 32 times.  For simplicity, I'll just say "Reading from 0xB000 will return *0x84*" rather than "will return 0x8484848484848484848484848484848484848484848484848484848484848484"
 
@@ -19,14 +19,14 @@ I had a bit of trouble finding information on how to use the Transfer Pak over l
 
 On start up, after enabling power to the Tpak, I found that the entire memory space looks like this:
 
-0x0000 - 0x1FFF: 0x84 0x84 ...
-0x2000 - 0x2FFF: 0x03 0x03 ...
-0x3000 - 0x3FFF: 0x80 0x80 ...
-0x4000 - 0x7FFF: 0x00 0x00 ...
-0x8000 - 0x9FFF: 0x84 0x84 ...
-0xA000 - 0xAFFF: 0x00 0x00 ...
-0xB000 - 0xBFFF: 0x80 0x80 ...
-0xC000 - 0xFFFF: 0x00 0x00 ...
+* 0x0000 - 0x1FFF: 0x84 0x84 ...
+* 0x2000 - 0x2FFF: 0x03 0x03 ...
+* 0x3000 - 0x3FFF: 0x80 0x80 ...
+* 0x4000 - 0x7FFF: 0x00 0x00 ...
+* 0x8000 - 0x9FFF: 0x84 0x84 ...
+* 0xA000 - 0xAFFF: 0x00 0x00 ...
+* 0xB000 - 0xBFFF: 0x80 0x80 ...
+* 0xC000 - 0xFFFF: 0x00 0x00 ...
 
 ### 0x0000 - 0x7FFF *Controller Pak Data*
 
@@ -55,13 +55,13 @@ After enabling it, reading from 0x8000 will return 0x84.
 The gameboy has 64kB of address space but the Transfer Pak only maps it in 16kB chunks which can be accessed at addresses 0xC000 - 0xFFFF. Writing to 0xA000 will determine which chunk, or bank, is mapped there.
 
 **Values**
-* *0x00* 0x0000 - 0x3FFF The fixed "ROM0" section of cartridge ROM.  That is, where the cartridge header, interrupt and reset handlers, entry point, etc live.  For MBC carts, write-only addresses to switch between ROM banks will also be in this bank.
+* 0x00 *0x0000 - 0x3FFF* The fixed "ROM0" section of cartridge ROM.  That is, where the cartridge header, interrupt and reset handlers, entry point, etc live.  For MBC carts, write-only addresses to switch between ROM banks will also be in this bank.
 
-* *0x01* 0x4000 - 0x7FFF The switchable "ROMX" ROM address space.  You'll also need to access this bank for certain MBC operations such as RAM bank switching.
+* 0x01 *0x4000 - 0x7FFF* The switchable "ROMX" ROM address space.  You'll also need to access this bank for certain MBC operations such as RAM bank switching.
 
-* *0x02* 0x8000 - 0xBFFF Addresses for gameboy *Video Ram* (0x8000 - 0x9FFF) which will probably be irrelevant to the TPak and *External RAM* (0xA000 - 0xBFFF) which you *are* likely to be interested in, since it's where saved games are stored, and peripherals like the clocks in Pokemon, expose their values.  Writing to this space will update the save data stored on the cartridge.  Reading from anywhere in the VRAM space should just return 0xFF.
+* 0x02 *0x8000 - 0xBFFF* Addresses for gameboy *Video Ram* (0x8000 - 0x9FFF) which will probably be irrelevant to the TPak and *External RAM* (0xA000 - 0xBFFF) which you *are* likely to be interested in, since it's where saved games are stored, and peripherals like the clocks in Pokemon, expose their values.  Writing to this space will update the save data stored on the cartridge.  Reading from anywhere in the VRAM space should just return 0xFF.
 
-* *0x03* 0xC000 - 0xFFFF These addresses are used for various important things on an actual gameboy, none of which make much sense when using a TPak. Includes Work RAM, I/O registers and Object Attribute Memory.  Reading from any of these addresses should just return 0xFF
+* 0x03 *0xC000 - 0xFFFF* These addresses are used for various important things on an actual gameboy, none of which make much sense when using a TPak. Includes Work RAM, I/O registers and Object Attribute Memory.  Reading from any of these addresses should just return 0xFF
 
 Reading back from 0xA000 will return the currently set bank number\*.  If you set a bank other than 0-3, reading this address will return 0.
 
@@ -75,24 +75,26 @@ I believe that the data at this address are a bunch of status flags that can be 
 
 If you just want to be able to use the TPak, all you need to know is:
 
-a) That before you can read from the cartridge, you need to write 0x01 to 0xB000.
+1. That before you can read from the cartridge, you need to write 0x01 to 0xB000.
 
-b) These status codes mean the Tpak isn't working
+2. These status codes mean the Tpak isn't working
 * 0x40 - no cartridge detected
 * 0x88, 0x84, 0x80 - access to the cart is not enabled
 
-c) These mean you should be good to go
+3. These mean you should be good to go
 * 0x081, 0x8D, 0x89 - access to the cart is enabled
 
-**Bit 0** has been referred to in a few places as the "Access Mode" flag.  Writing 0x00 sets Access mode 0, and 0x01 sets access mode 1
+#### Bit 0
+has been referred to in a few places as the "Access Mode" flag.  Writing 0x00 sets Access mode 0, and 0x01 sets access mode 1
 
 *Values*
 * 0x00 - In Mode 0, all reads from Cartridge space (ie 0xC000 - 0xFFFF) are 0. *Todo - double check that writing is also disabled*
 * 0x01 - In Mode 1, The Cartridge can be read from and written to as intended.
 
-**Bit 1** in all my tests so far, has always been 0
+#### Bit 1
+In all my tests so far, this has always been 0
 
-**Bits 2 & 3**
+#### Bits 2 & 3
 These bits are used to detect if the cartridge has been reset. I gather that 'resetting' the cartridge involves setting the access mode to 0 and then to 1 again.  After a byte with these bits set has been read, they will be reset again.
 
 The cen64 source will set bit 2 if this is the first time reading from 0xB000 after bit 0 is flipped.  Otherwise it will be reset.  My tests show different behaviour.
@@ -114,15 +116,15 @@ Here's the pattern I observed:
 
 My current theory is that because I tried reading this immediately after updating the access mode, the cartridge was still going through the reset, and the bits hadn't been set yet, leading to messier behaviour.
 
-*Todo confirm this*
+*Todo: confirm this*
 
-**Bits 4 & 5**
+#### Bits 4 & 5
 I have never seen these bits as anything other than 0.
 
-**Bit 6**
-This bit is set if there is no Cartridge detected in the Transfer Pak, or reset otherwise.
+#### Bit 6
+This bit is set if there is no Cartridge detected in the Transfer Pak.
 
-**Bit 7**
+#### Bit 7
 This bit is set if power to the cartridge is enabled.
 
 ### 0xC000 - 0xFFFF *Cartridge Access*
