@@ -120,6 +120,7 @@ typedef struct {
     byte RamBankCount;
     natural RamBankSize;
     bool IsGbcSupported;
+    char* Title;
 } GameBoyCartridge;
 
 

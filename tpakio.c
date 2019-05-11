@@ -8,7 +8,7 @@ const natural BANK_SIZE = 16 * 1024; // 16kB banks.
 const byte HEADER_SIZE = 80;
 
 // According to the cen64 source, address is 0x8000 and the 1 is from a 5 bit cyclic redundancy check
-const natural ENABLE_TPAK_ADDRESS = 0x8000; 
+const natural ENABLE_TPAK_ADDRESS = 0x8000;  // 0x8001?
 const byte ENABLE_TPAK = 0x84;
 const byte DISABLE_TPAK = 0xFE;
 
@@ -45,13 +45,13 @@ const byte GB_RAM_BANK_MODE = 1;
 
 const natural SRAM_ADDRESS = 0xA000;
 
-// 0xB010 including 5 bit CRC?
-const natural TPAK_MODE_ADDRESS = 0xB000;
+const natural TPAK_MODE_ADDRESS = 0xB000; // 0xB010?
 // No-one in the homebrew community seems to have an explanation for what this mode
 // is for, but can be used to check that everything is working properly.
 const byte TPAK_MODE_SET_0 = 0x00;
 const byte TPAK_MODE_SET_1 = 0x01;
 
+const byte TPAK_MODE_UNKNOWN = 0x81;
 const byte TPAK_MODE_UNCHANGED_0 = 0x80;
 const byte TPAK_MODE_CHANGED_0 = 0x84;
 const byte TPAK_MODE_UNCHANGED_1 = 0x89;
@@ -92,6 +92,156 @@ natural mapAddress(const natural address) {
     return address + offset;
 }
 
+void printSegments(const byte controllerNumber) {
+    byte testBlock[64];
+    memset(testBlock, 0, 64);
+
+    read_mempak_address(controllerNumber, 0x0000, testBlock);
+    printSegmentToFrame("0x0000 0123456789abcdefABCDEF", testBlock, 1);
+
+    read_mempak_address(controllerNumber, 0x0020, testBlock);
+    printSegmentToFrame("0x0020 0123456789abcdefABCDEF", testBlock, 1);    
+
+    read_mempak_address(controllerNumber, 0x3FD0, testBlock);    
+    printSegmentToFrame("0x3FD0 0123456789abcdefABCDEF", testBlock, 1);       
+
+    read_mempak_address(controllerNumber, 0x4000, testBlock);    
+    printSegmentToFrame("0x4000 0123456789abcdefABCDEF", testBlock, 1);           
+
+    read_mempak_address(controllerNumber, 0x7FD0, testBlock);    
+    printSegmentToFrame("0x7FD0 0123456789abcdefABCDEF", testBlock, 1);   
+
+    read_mempak_address(controllerNumber, 0x8000, testBlock);    
+    printSegmentToFrame("0x8000 0123456789abcdefABCDEF", testBlock, 1);       
+
+    read_mempak_address(controllerNumber, 0x8020, testBlock);    
+    printSegmentToFrame("0x8020 0123456789abcdefABCDEF", testBlock, 1);       
+
+    read_mempak_address(controllerNumber, 0x8FD0, testBlock);    
+    printSegmentToFrame("0x8FD0 0123456789abcdefABCDEF", testBlock, 1);           
+
+    read_mempak_address(controllerNumber, 0x9000, testBlock);    
+    printSegmentToFrame("0x9000 0123456789abcdefABCDEF", testBlock, 1);               
+
+    read_mempak_address(controllerNumber, 0x9020, testBlock);    
+    printSegmentToFrame("0x9020 0123456789abcdefABCDEF", testBlock, 1);                   
+
+    read_mempak_address(controllerNumber, 0x9FD0, testBlock);    
+    printSegmentToFrame("0x9FD0 0123456789abcdefABCDEF", testBlock, 1);  
+
+    read_mempak_address(controllerNumber, 0xA000, testBlock);    
+    printSegmentToFrame("0xA000 0123456789abcdefABCDEF", testBlock, 1);               
+
+    read_mempak_address(controllerNumber, 0xA020, testBlock);    
+    printSegmentToFrame("0xA020 0123456789abcdefABCDEF", testBlock, 1);                   
+
+    read_mempak_address(controllerNumber, 0xAFD0, testBlock);    
+    printSegmentToFrame("0xAFD0 0123456789abcdefABCDEF", testBlock, 1);                 
+
+    read_mempak_address(controllerNumber, 0xB000, testBlock);    
+    printSegmentToFrame("0xB000 0123456789abcdefABCDEF", testBlock, 1);               
+
+    read_mempak_address(controllerNumber, 0xB020, testBlock);    
+    printSegmentToFrame("0xB020 0123456789abcdefABCDEF", testBlock, 1);                   
+
+    read_mempak_address(controllerNumber, 0xBFD0, testBlock);    
+    printSegmentToFrame("0xBFD0 0123456789abcdefABCDEF", testBlock, 1);                     
+
+    read_mempak_address(controllerNumber, 0xC000, testBlock);
+    printSegmentToFrame("ROMX 0xC000 0123456789abcdefABCDEF", testBlock, 1);
+
+    read_mempak_address(controllerNumber, 0xC020, testBlock);
+    printSegmentToFrame("ROMX 0xC100 0123456789abcdefABCDEF", testBlock, 1);    
+
+    read_mempak_address(controllerNumber, 0xEFD0, testBlock);    
+    printSegmentToFrame("ROMX 0xC150 0123456789abcdefABCDEF", testBlock, 1);      
+    
+    setTpakValue(controllerNumber, TPAK_BANK_ADDRESS, WRAM);
+
+    read_mempak_address(controllerNumber, 0xC000, testBlock);
+    printSegmentToFrame("WRAM 0xC000 0123456789abcdefABCDEF", testBlock, 1);
+
+    read_mempak_address(controllerNumber, 0xC020, testBlock);
+    printSegmentToFrame("WRAM 0xC120 0123456789abcdefABCDEF", testBlock, 1);    
+
+    read_mempak_address(controllerNumber, 0xEFD0, testBlock);    
+    printSegmentToFrame("WRAM 0xE880 0123456789abcdefABCDEF", testBlock, 1);    
+}
+
+void testEnableDisable() {
+    // assumes tpak has not been powered on yet
+    logAndPauseFrame(0, "BEFORE ENABLED");
+    printSegments(0);
+
+    // Is there any change with a disable?
+    setTpakValue(0, ENABLE_TPAK_ADDRESS, DISABLE_TPAK);
+    logAndPauseFrame(0, "EXPLICIT DISABLE");    
+    printSegments(0);
+
+    // Now turn the damn thing on
+    setTpakValue(0, ENABLE_TPAK_ADDRESS, ENABLE_TPAK);
+    logAndPauseFrame(0, "ENABLED");    
+    printSegments(0);    
+
+    // Off again.    
+    setTpakValue(0, ENABLE_TPAK_ADDRESS, DISABLE_TPAK);
+    logAndPauseFrame(0, "DISABLED");    
+    printSegments(0);        
+}
+
+void testMempakBanks() {
+    // Make sure we're switched on.
+    setTpakValue(0, ENABLE_TPAK_ADDRESS, ENABLE_TPAK);    
+
+    byte block[64];
+    memset(block, 0, 64);
+    byte lastBlock = 0xFF;
+    for (natural address = 0x0000; address < 0x8000; address += BLOCK_SIZE) {
+        read_mempak_address(0, address, block);
+        if (block[0] != lastBlock);
+        string caption;
+        sprintf(caption, "new value %02x at address %04x", block[0], address);
+        printSegmentToFrame(caption, block, 1);
+    }
+}
+
+void testBankChange() {
+    // Make sure we're switched on.
+    setTpakValue(0, ENABLE_TPAK_ADDRESS, ENABLE_TPAK);      
+
+    byte block[64];
+    memset(block, 0, 64);    
+    for (byte i = 0; i < 5; i++) {
+        setTpakValue(0, 0xA000, i);
+        read_mempak_address(0, 0xA000, block);
+        string caption; 
+        sprintf(caption, "bank=%d", i);
+        printSegmentToFrame(caption, block, 1);
+    }
+}
+
+void testModeChange() {
+    // Make sure we're switched on.
+    setTpakValue(0, ENABLE_TPAK_ADDRESS, ENABLE_TPAK);  
+
+    byte block[64];
+    memset(block, 0, 64); 
+    read_mempak_address(0, 0xB000, block);
+    printSegmentToFrame("Before setting any mode", block, 1);
+
+    setTpakValue(0, 0xB000, TPAK_MODE_SET_0);
+    read_mempak_address(0, 0xB000, block);
+    printSegmentToFrame("Mode 0 set, first pass. (expects 0x84)", block, 1);
+    read_mempak_address(0, 0xB000, block);
+    printSegmentToFrame("Mode 0 set, subsequent pass. (expects 0x80)", block, 1);    
+
+    setTpakValue(0, 0xB000, TPAK_MODE_SET_1);
+    read_mempak_address(0, 0xB000, block);
+    printSegmentToFrame("Mode 1 set, first pass. (expects 0x89)", block, 1);
+    read_mempak_address(0, 0xB000, block);
+    printSegmentToFrame("Mode 1 set, subsequent pass. (expects 0x8D)", block, 1);        
+}
+
 /**
  * Puts Tpak/Cartridge in to a state where it's ready to be read from.
  * @param controllerNumber controller slot the Tpak is plugged in to.
@@ -105,6 +255,7 @@ sByte initialiseTPak(const byte controllerNumber) {
     }
 
     byte block[BLOCK_SIZE];
+
     sByte result = 0;    
 
     // Wake up the transfer pak
@@ -128,13 +279,15 @@ sByte initialiseTPak(const byte controllerNumber) {
     }
 
     if (block[0] != TPAK_MODE_CHANGED_1) {
-        return TPAK_ERR_UNKNOWN_BEHAVIOUR;
+        printSegmentToFrame("Expecting 0x8D 0123456789abcdefABCDEF", block, 1);
+        //return TPAK_ERR_UNKNOWN_BEHAVIOUR;
     }
 
     memset(block, 0, BLOCK_SIZE);
     read_mempak_address(controllerNumber, TPAK_MODE_ADDRESS, block);
     if (block[0] != TPAK_MODE_UNCHANGED_1) {
-        return TPAK_ERR_UNKNOWN_BEHAVIOUR;
+        printSegmentToFrame("Expecting 0x89 0123456789abcdefABCDEF", block, 1);
+        //return TPAK_ERR_UNKNOWN_BEHAVIOUR;
     }
 
     // Enable Cartridge ram
@@ -421,7 +574,7 @@ sByte importCartridgeRam(const byte controllerNumber, GameBoyCartridge* cartridg
     }
 
     // Ensure Tpak is switched on.
-    result = setTpakValue(controllerNumber, ENABLE_TPAK_ADDRESS, ENABLE_TPAK);
+    setTpakValue(controllerNumber, ENABLE_TPAK_ADDRESS, ENABLE_TPAK);
 
     cartridge->Ram.Size = cartridge->RamBankSize * cartridge->RamBankCount;
     if (cartridge->Ram.Data) {
@@ -454,7 +607,7 @@ sByte exportCartridgeRam(const byte controllerNumber, GameBoyCartridge* cartridg
     }
 
     // Ensure Tpak is switched on.
-    result = setTpakValue(controllerNumber, ENABLE_TPAK_ADDRESS, ENABLE_TPAK);    
+    setTpakValue(controllerNumber, ENABLE_TPAK_ADDRESS, ENABLE_TPAK);    
 
     // Loop through each bank
     for (byte bank = 0; bank < cartridge->RamBankCount; bank++) {
@@ -467,7 +620,7 @@ sByte exportCartridgeRam(const byte controllerNumber, GameBoyCartridge* cartridg
     }
 
     // Turn off the lights when we're done.
-    result = setTpakValue(controllerNumber, ENABLE_TPAK_ADDRESS, DISABLE_TPAK);        
+    setTpakValue(controllerNumber, ENABLE_TPAK_ADDRESS, DISABLE_TPAK);        
 
     return TPAK_SUCCESS;
 }
@@ -517,6 +670,17 @@ sByte getCartridgeMetadata(const byte controllerNumber, GameBoyCartridge* cartri
     cartridge->RamBankSize = (natural) ramBankSize;     
     cartridge->Type = getPrimaryType(header.CartridgeType);
 
+    // TODO - Fix Broken
+    /*
+    if (!header.CGBTitle.GbcSupport) {
+        cartridge->Title = malloc(16);
+        memcpy(cartridge->Title, header.Title, 16);
+    } else {
+        cartridge->Title = malloc(11);
+        memcpy(cartridge->Title, header.CGBTitle.Title, 11);
+    } 
+    */       
+    
     memcpy(&cartridge->Header, &header, HEADER_SIZE);
 
     return TPAK_SUCCESS;

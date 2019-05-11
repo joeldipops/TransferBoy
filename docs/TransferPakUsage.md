@@ -13,14 +13,23 @@ I had a bit of trouble finding information on how to use the Transfer Pak over l
 
 When using a Controller Pak/Mempak the actual data stored on the Pak is read from/written to these 32kBs of address space. From what I can tell so far, The Transfer Pak does not use these addresses at all - perhaps there were plans for a combination Controller Pak/Transfer Pak or Controller Pak/Rumble Pak that never game to fruition, and they were reserved for that purpose.
 
+In my environment, I get different values the following sequence of bytes:
+52 20 32 47 44 39 03 03
+04 02 00 33 00 93 d1 2c
+00 00 00 00 70 07 00 00
+86 5b 01 01 c0 5b 01 02
+
+
 ### 0x8000 - 0x8FFF *On/Off Switch*
 
 Write to 0x8000 (or presumably any address in this range) to power the Transfer Pak on or off.
 
 **Values**
-* *0x80*
 * *0x84* enables Transfer Pak
 * *0xFE* disable Transfer Pak
+
+If you set one of the above values, it can be read back from the same address.  Writing other values will have no effect and reading will just return 0x00.
+
 
 ### 0xA000 - 0xAFFF *Address Bank Switch*
 
@@ -31,9 +40,12 @@ The gameboy has 64kB of address space but the Transfer Pak only maps it in 16kB 
 
 * *0x01* 0x4000 - 0x7FFF The switchable "ROMX" ROM address space.  You'll also need to access this bank for certain MBC operations such as RAM bank switching.
 
-* *0x02* 0x8000 - 0xBFFF Addresses for gameboy *Video Ram* (0x8000 - 0x9FFF) which will probably be irrelevant to the TPak and *External RAM* (0xA000 - 0xBFFF) which you are likely to be interested in because it's where saved games are stored and peripherals like the clocks in Pokemon expose their values.
+* *0x02* 0x8000 - 0xBFFF Addresses for gameboy *Video Ram* (0x8000 - 0x9FFF) which will probably be irrelevant to the TPak and *External RAM* (0xA000 - 0xBFFF) which you are likely to be interested in because it's where saved games are stored and peripherals like the clocks in Pokemon expose their values.  Reading from anywhere in VRAM should just return 0xFF
 
-* *0x03* 0xC000 - 0xFFFF These addresses are used for various important things on an actual gameboy, none of which make much sense when reading from a cartridge.  Includes Work RAM, I/O registers and Object Attribute Memory.
+* *0x03* 0xC000 - 0xFFFF These addresses are used for various important things on an actual gameboy, none of which make much sense when reading from a cartridge.  Includes Work RAM, I/O registers and Object Attribute Memory.  Reading any of these addresses should just return 0xFF
+
+If you read back from 0xA000, it will return the currently set bank number.
+Elsewhere I have read that this is not the case  and there's no way of reading the bank number back, but I have tested on my (PAL/Australian) N64, and that's the behaviour I get.
 
 ### 0xB000 - 0xBFFF *Cartridge detection and 'Access Mode' Switch*
 
@@ -46,7 +58,7 @@ The value set here is referred to as the "Access Mode" in a few places, and has 
 Here are the values involved
 
 * *0x00* Mode 0?
-After changing to ode 0, The first time you read from 0xB000, it will return *0x84*
+After changing to mode 0, The first time you read from 0xB000, it will return *0x84*
 Subsequent times, it will return *0x80*
 
 * *0x01* Mode 1? 
