@@ -17,6 +17,26 @@ I had a bit of trouble finding information on how to use the Transfer Pak over l
 
 ## Memory Map
 
+Address | Description
+----------------------
+0x0000  | Echo of 0x8000 - 0x9FFF
+0x1000  | .
+0x2000  | Echo of 0xA000 - 0xAFFF
+0x3000  | Echo of 0xB000 - 0xBFFF
+0x4000  | Unused.  Reads are all 0x00
+0x5000  | .
+0x6000  | .
+0x7000  | .
+0x8000  | Power On/Off Switch
+0x9000  | .
+0xA000  | Bank Switch
+0xB000  | Status and Control
+0XC000  | Banked Cartridge Memory Access
+0xD000  | .
+0xE000  | .
+0xF000  | .
+
+
 On start up, after enabling power to the Tpak, I found that the entire memory space looks like this:
 
 * 0x0000 - 0x1FFF: 0x84 0x84 ...
@@ -38,13 +58,13 @@ When read from a Transfer pak:
 * 0x3000 - 0x3FFF is probably an echo of 0xB000 -0xBFFF
 * 0x4000 - 0x7FFF is all zeroes
 
-### 0x8000 - 0x8FFF *On/Off Switch*
+### 0x8000 - 0x8FFF *Power On/Off Switch*
 
-Write to 0x8000 to power the Transfer Pak on or off.
+Write to 0x8000 to power the Transfer Pak and Game Boy Cartridge on or off.
 
 **Values**
-* *0x84* enable the Transfer Pak
-* *0xFE* disable the Transfer Pak
+* *0x84* enable the power
+* *0xFE* disable the power
 
 While the Transfer Pak is disabled, all addresses will return 0x00.
 
@@ -67,7 +87,7 @@ Reading back from 0xA000 will return the currently set bank number\*.  If you se
 
 \*Elsewhere, I have read that this is not the case and there's no way of reading the current bank number.  Having tested on a real n64, and I definitely get the bank number back.
 
-### 0xB000 - 0xBFFF *Transfer Pak Status*
+### 0xB000 - 0xBFFF *Transfer Pak Status and Control*
 
 This is a tricky one that I don't fully understand yet.  Information on what it's for and how it works is scarce, but here's what I've pulled together so far.
 
@@ -127,7 +147,7 @@ This bit is set if there is no Cartridge detected in the Transfer Pak.
 #### Bit 7
 This bit is set if power to the cartridge is enabled.
 
-### 0xC000 - 0xFFFF *Cartridge Access*
+### 0xC000 - 0xFFFF *Cartridge Memory Access*
 
 Here is where you can read from and write to the cartridge in the transfer pak, as long as you selected the appropriate 16kB bank by setting a value to 0xA000.
 
