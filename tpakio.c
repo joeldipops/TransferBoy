@@ -8,11 +8,9 @@ const natural BANK_SIZE = 16 * 1024; // 16kB banks.
 const byte HEADER_SIZE = 80;
 
 // According to the cen64 source, address is 0x8000 and the 1 is from a 5 bit cyclic redundancy check
-const natural ENABLE_TPAK_ADDRESS = 0x8000;  // 0x8001?
-const byte ENABLE_TPAK = 0x84;
-const byte DISABLE_TPAK = 0xFE;
-
-const byte TPAK_NO_CART_ERROR = 0x40;
+const natural CARTRIDGE_POWER_ADDRESS = 0x8000;  // 0x8001?
+const byte CARTRIDGE_POWER_ON = 0x84;
+const byte CARTRIDGE_POWER_OFF = 0xFE;
 
 // The transfer pak has 4 16kB banks in its address space (0xC000 - 0xFFFF)
 // for four chunks of the gameboy address space.
@@ -45,17 +43,16 @@ const byte GB_RAM_BANK_MODE = 1;
 
 const natural SRAM_ADDRESS = 0xA000;
 
-const natural TPAK_MODE_ADDRESS = 0xB000; // 0xB010?
-// No-one in the homebrew community seems to have an explanation for what this mode
-// is for, but can be used to check that everything is working properly.
-const byte TPAK_MODE_SET_0 = 0x00;
-const byte TPAK_MODE_SET_1 = 0x01;
+const natural TPAK_STATUS_ADDRESS = 0xB000; // 0xB010?
 
-const byte TPAK_MODE_UNKNOWN = 0x81;
-const byte TPAK_MODE_UNCHANGED_0 = 0x80;
-const byte TPAK_MODE_CHANGED_0 = 0x84;
-const byte TPAK_MODE_UNCHANGED_1 = 0x89;
-const byte TPAK_MODE_CHANGED_1 = 0x8D;
+#define OS_GBPAK_RSTB_DETECTION 0x04
+#define OS_GBPAK_RSTB_STATUS    0x08
+
+const byte TPAK_STATUS_ACCESS_ON = 0x01; // bit 0
+const byte TPAK_STATUS_RESET_DETECTED = 0x04; // bit 2
+const byte TPAK_STATUS_RESET_STATUS = 0x08; // bit 3
+const byte TPAK_STATUS_CARTRIDGE_ABSENT = 0x40; // bit 6
+const byte TPAK_STATUS_CARTRIDGE_POWERED = 0x80; // bit 7
 
 const natural ROM_ADDRESS_OFFSET = 0xC000;
 
@@ -92,6 +89,7 @@ natural mapAddress(const natural address) {
     return address + offset;
 }
 
+/*
 void printSegments(const byte controllerNumber) {
     byte testBlock[64];
     memset(testBlock, 0, 64);
@@ -170,38 +168,40 @@ void printSegments(const byte controllerNumber) {
 
 void testEnableDisable() {
     // assumes tpak has not been powered on yet
-    logAndPauseFrame(0, "BEFORE ENABLED");
+    logAndPauseFrame(1, "BEFORE ENABLED");
     printSegments(0);
 
     // Is there any change with a disable?
     setTpakValue(0, ENABLE_TPAK_ADDRESS, DISABLE_TPAK);
-    logAndPauseFrame(0, "EXPLICIT DISABLE");    
+    logAndPauseFrame(1, "EXPLICIT DISABLE");    
     printSegments(0);
 
     // Now turn the damn thing on
     setTpakValue(0, ENABLE_TPAK_ADDRESS, ENABLE_TPAK);
-    logAndPauseFrame(0, "ENABLED");    
+    logAndPauseFrame(1, "ENABLED");    
     printSegments(0);    
 
     // Off again.    
     setTpakValue(0, ENABLE_TPAK_ADDRESS, DISABLE_TPAK);
-    logAndPauseFrame(0, "DISABLED");    
+    logAndPauseFrame(1, "DISABLED");    
     printSegments(0);        
 }
 
-void testMempakBanks() {
+void testMemorySpace(const natural min, const natural max) {
     // Make sure we're switched on.
     setTpakValue(0, ENABLE_TPAK_ADDRESS, ENABLE_TPAK);    
 
     byte block[64];
     memset(block, 0, 64);
-    byte lastBlock = 0xFF;
-    for (natural address = 0x0000; address < 0x8000; address += BLOCK_SIZE) {
+    byte lastBlock = 0xFE;
+    for (uLong address = min; address < max; address += BLOCK_SIZE) {
         read_mempak_address(0, address, block);
-        if (block[0] != lastBlock);
-        string caption;
-        sprintf(caption, "new value %02x at address %04x", block[0], address);
-        printSegmentToFrame(caption, block, 1);
+        if (block[0] != lastBlock) {
+            string caption;
+            sprintf(caption, "new value %02x at address %04x", block[0], (natural) address);
+            printSegmentToFrame(caption, block, 1);
+            lastBlock = block[0];
+        }
     }
 }
 
@@ -228,19 +228,37 @@ void testModeChange() {
     memset(block, 0, 64); 
     read_mempak_address(0, 0xB000, block);
     printSegmentToFrame("Before setting any mode", block, 1);
+    testMemorySpace(0, 0xC020);
 
     setTpakValue(0, 0xB000, TPAK_MODE_SET_0);
     read_mempak_address(0, 0xB000, block);
     printSegmentToFrame("Mode 0 set, first pass. (expects 0x84)", block, 1);
+    testMemorySpace(0, 0xC020);    
+
     read_mempak_address(0, 0xB000, block);
     printSegmentToFrame("Mode 0 set, subsequent pass. (expects 0x80)", block, 1);    
+    testMemorySpace(0, 0xC020);        
 
     setTpakValue(0, 0xB000, TPAK_MODE_SET_1);
     read_mempak_address(0, 0xB000, block);
-    printSegmentToFrame("Mode 1 set, first pass. (expects 0x89)", block, 1);
+    printSegmentToFrame("Mode 1 set, first pass. (expects 0x8D)", block, 1);
+    testMemorySpace(0, 0xC020);    
+
     read_mempak_address(0, 0xB000, block);
-    printSegmentToFrame("Mode 1 set, subsequent pass. (expects 0x8D)", block, 1);        
+    printSegmentToFrame("Mode 1 set, subsequent pass. (expects 0x89)", block, 1);        
+    testMemorySpace(0, 0xC020);        
+
+    // Try again.
+    setTpakValue(0, 0xB000, TPAK_MODE_SET_0);
+    read_mempak_address(0, 0xB000, block);
+    printSegmentToFrame("Mode 0 set, first pass. (expects 0x84)", block, 1);
+    testMemorySpace(0, 0xC020);        
+
+    read_mempak_address(0, 0xB000, block);
+    printSegmentToFrame("Mode 0 set, subsequent pass. (expects 0x80)", block, 1);    
+    testMemorySpace(0, 0xC020);    
 }
+*/
 
 /**
  * Puts Tpak/Cartridge in to a state where it's ready to be read from.
@@ -258,36 +276,25 @@ sByte initialiseTPak(const byte controllerNumber) {
 
     sByte result = 0;    
 
-    // Wake up the transfer pak
-    result = setTpakValue(controllerNumber, ENABLE_TPAK_ADDRESS, ENABLE_TPAK);
+    // Wake up the transfer pak and send power to the cartridge.
+    result = setTpakValue(controllerNumber, CARTRIDGE_POWER_ADDRESS, CARTRIDGE_POWER_ON);
     if (result) {
         return TPAK_ERR_SYSTEM_ERROR;
     }
-    read_mempak_address(controllerNumber, ENABLE_TPAK_ADDRESS, block);
-    if (block[0] != 0x84) {
+
+    // Enable cartridge access.
+    setTpakValue(controllerNumber, TPAK_STATUS_ADDRESS, TPAK_STATUS_ACCESS_ON);
+
+    // Check there is a cartridge plugged in.
+    read_mempak_address(controllerNumber, TPAK_STATUS_ADDRESS, block);
+    if (block[0] & TPAK_STATUS_CARTRIDGE_ABSENT) {
         return TPAK_ERR_NO_TPAK;
     }
 
-    // And enable cart mode 1 (which doesn't do anything much according to the cen64 source.)
-    setTpakValue(controllerNumber, TPAK_MODE_ADDRESS, TPAK_MODE_SET_1);
-
-    // Do some sanity checks to make sure the tpak is responding as expected.
-    memset(block, 0, BLOCK_SIZE);
-    read_mempak_address(controllerNumber, TPAK_MODE_ADDRESS, block);
-    if (block[0] == TPAK_NO_CART_ERROR) {
-        return TPAK_ERR_NO_CARTRIDGE;
-    }
-
-    if (block[0] != TPAK_MODE_CHANGED_1) {
-        printSegmentToFrame("Expecting 0x8D 0123456789abcdefABCDEF", block, 1);
-        //return TPAK_ERR_UNKNOWN_BEHAVIOUR;
-    }
-
-    memset(block, 0, BLOCK_SIZE);
-    read_mempak_address(controllerNumber, TPAK_MODE_ADDRESS, block);
-    if (block[0] != TPAK_MODE_UNCHANGED_1) {
-        printSegmentToFrame("Expecting 0x89 0123456789abcdefABCDEF", block, 1);
-        //return TPAK_ERR_UNKNOWN_BEHAVIOUR;
+    // And that we have correctly set the access mode.
+    read_mempak_address(controllerNumber, TPAK_STATUS_ADDRESS, block);
+    if (!(block[0] & TPAK_STATUS_ACCESS_ON)) {
+        return TPAK_ERR_UNKNOWN_BEHAVIOUR;
     }
 
     // Enable Cartridge ram
@@ -573,8 +580,7 @@ sByte importCartridgeRam(const byte controllerNumber, GameBoyCartridge* cartridg
         return TPAK_ERR_NO_SLOT;
     }
 
-    // Ensure Tpak is switched on.
-    setTpakValue(controllerNumber, ENABLE_TPAK_ADDRESS, ENABLE_TPAK);
+    initialiseTPak(controllerNumber);
 
     cartridge->Ram.Size = cartridge->RamBankSize * cartridge->RamBankCount;
     if (cartridge->Ram.Data) {
@@ -606,8 +612,7 @@ sByte exportCartridgeRam(const byte controllerNumber, GameBoyCartridge* cartridg
         return TPAK_ERR_NO_SLOT;
     }
 
-    // Ensure Tpak is switched on.
-    setTpakValue(controllerNumber, ENABLE_TPAK_ADDRESS, ENABLE_TPAK);    
+    initialiseTPak(controllerNumber);
 
     // Loop through each bank
     for (byte bank = 0; bank < cartridge->RamBankCount; bank++) {
@@ -620,7 +625,7 @@ sByte exportCartridgeRam(const byte controllerNumber, GameBoyCartridge* cartridg
     }
 
     // Turn off the lights when we're done.
-    setTpakValue(controllerNumber, ENABLE_TPAK_ADDRESS, DISABLE_TPAK);        
+    setTpakValue(controllerNumber, CARTRIDGE_POWER_ADDRESS, CARTRIDGE_POWER_OFF);        
 
     return TPAK_SUCCESS;
 }
@@ -714,7 +719,7 @@ sByte importCartridge(const byte controllerNumber, GameBoyCartridge* cartridge) 
     }
 
     // Turn off the lights when we're done.
-    result = setTpakValue(controllerNumber, ENABLE_TPAK_ADDRESS, DISABLE_TPAK);
+    setTpakValue(controllerNumber, CARTRIDGE_POWER_ADDRESS, CARTRIDGE_POWER_OFF);
 
     return TPAK_SUCCESS;
 }
