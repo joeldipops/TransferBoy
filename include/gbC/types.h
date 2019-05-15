@@ -258,5 +258,39 @@ struct gb_state {
     struct emu_cpu_state *emu_cpu_state;
 };
 
+typedef union {
+    u64 n64Register;
+    u8 regs[8];
+    struct {
+        u16 BC, DE, HL, AF;
+    } reg16;
+    struct {
+        u8 B, C, D, E, H, L, A, F;
+    } reg8;
+    struct __attribute__((packed)) {
+        char padding[7];
+        u8 ZF:1;
+        u8 NF:1;
+        u8 HF:1;
+        u8 CF:1;
+        u8 pad1:1;
+        u8 pad2:1;
+        u8 pad3:1;
+        u8 pad4:1;
+    } flags;
+} GbRegisters;
+
+typedef union {
+    u32 n64Register;
+    struct {
+        u16 PC;
+        u16 SP;
+    };
+} PCSP;
+
+//register GbRegisters ByteRegisters asm ("$28");
+//register u32 WordRegisters asm ("$29");
+register u16 PC asm ("$20");
+
 
 #endif

@@ -267,7 +267,7 @@ void state_add_bios(struct gb_state *s, u8 *bios, size_t bios_size) {
     s->mem_BIOS = malloc(bios_size);
     memcpy(s->mem_BIOS, bios, bios_size);
     s->in_bios = 1;
-    s->pc = 0;
+    PC = 0;
 }
 
 /*

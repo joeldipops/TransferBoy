@@ -80,6 +80,7 @@ void initLogic(RootState* state, const byte playerNumber) {
             state->Players[playerNumber].Cartridge.SaveData.Size = 0x00;
             state->Players[playerNumber].Cartridge.IsSuperGbCart = true;            
         } else {
+
             readCartridge(playerNumber, &state->Players[playerNumber].Cartridge);
         }
         Rectangle screen = {};

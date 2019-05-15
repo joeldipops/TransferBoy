@@ -71,7 +71,7 @@ void mainLoop(RootState* state) {
     while (!allQuit) {
         allQuit = true;
 
-        // Read controller about once per frame.
+         // Read controller about once per frame.
         if (state->RequiresControllerRead || iterations > GB_LCD_FRAME_CLKS / 2) {
             controller_scan();
             state->KeysPressed = get_keys_pressed();
