@@ -280,17 +280,14 @@ typedef union {
     } flags;
 } GbRegisters;
 
+// Hack to show how you can put a 'struct' in a register.
 typedef union {
-    u32 n64Register;
-    struct {
-        u16 PC;
-        u16 SP;
-    };
-} PCSP;
+    u32 Reg16[2];
+    u64 pcspValue;
+} WordRegisters;
 
-//register GbRegisters ByteRegisters asm ("$28");
-//register u32 WordRegisters asm ("$29");
 register u16 PC asm ("$20");
+register u8 A asm ("$21");
 
 
 #endif
