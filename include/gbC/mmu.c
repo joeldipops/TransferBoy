@@ -63,8 +63,8 @@ static void mmu_hdma_start(struct gb_state *s, u8 lenmode) {
     u16 dst = ((s->io_hdma_dst_high << 8) | s->io_hdma_dst_low) & ~0xf;
     dst = (dst & 0x1fff) | 0x8000; /* Ignore upper 3 bits (always in VRAM) */
 
-    printf("HDMA @%.2x:%.4x %.4x -> %.4x, blocks=%.2x mode_hblank=%d\n",
-            s->mem_bank_rom, PC,  src, dst, blocks, mode_hblank);
+    //printf("HDMA @%.2x:%.4x %.4x -> %.4x, blocks=%.2x mode_hblank=%d\n",
+      //      s->mem_bank_rom, PC,  src, dst, blocks, mode_hblank);
 
     if (s->io_hdma_running && !mode_hblank) {
         /* Cancel ongoing H-Blank HDMA transfer */

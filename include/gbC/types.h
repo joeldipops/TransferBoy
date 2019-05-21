@@ -71,10 +71,10 @@ struct gb_state {
     union {
         u8 regs[8];
         struct {
-            u16 BC, DE, HL, AF;
+            u16 BC, DE, HL, QF;
         } reg16;
         struct {
-            u8 B, C, D, E, H, L, A, F;
+            u8 B, C, D, E, H, L, Q, F;
         } reg8;
         struct __attribute__((packed)) {
             char padding[7];
@@ -286,8 +286,10 @@ typedef union {
     u64 pcspValue;
 } WordRegisters;
 
-register u16 PC asm ("$20");
-register u8 A asm ("$21");
+register u64 PC asm ("$19");
+register u64 regA asm ("$20");
+//u64 PC;
+//u64 regA;
 
 
 #endif

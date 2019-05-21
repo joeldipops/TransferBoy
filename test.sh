@@ -21,3 +21,6 @@ make all
 
 # 2-Player Test ROM
 ~/Projects/tools/cen64/cen64 -multithread -controller num=1,tpak_rom=/home/joeldipops/Projects/tools/cen64/2player.gb ~/Projects/tools/cen64/pifdata.bin  ~/Projects/TransferBoy/transferboy64.z64
+
+# ops test
+#~/Projects/tools/cen64/cen64 -multithread -controller num=1,tpak_rom=/home/joeldipops/Projects/tools/cen64/atest.gb ~/Projects/tools/cen64/pifdata.bin  ~/Projects/TransferBoy/transferboy64.z64
