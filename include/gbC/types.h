@@ -288,8 +288,6 @@ typedef union {
     };
 } PCSP;
 
-//register GbRegisters ByteRegisters asm ("$28");
-//register u32 WordRegisters asm ("$29");
 register u16 PC asm ("$20");
 
 
