@@ -7,14 +7,13 @@ const byte BLOCK_SIZE = 32;
 const natural BANK_SIZE = 16 * 1024; // 16kB banks.
 const byte HEADER_SIZE = 80;
 
-// According to the cen64 source, address is 0x8000 and the 1 is from a 5 bit cyclic redundancy check
-const natural CARTRIDGE_POWER_ADDRESS = 0x8000;  // 0x8001?
+const natural CARTRIDGE_POWER_ADDRESS = 0x8000;
 const byte CARTRIDGE_POWER_ON = 0x84;
 const byte CARTRIDGE_POWER_OFF = 0xFE;
 
 // The transfer pak has 4 16kB banks in its address space (0xC000 - 0xFFFF)
 // for four chunks of the gameboy address space.
-const natural TPAK_BANK_ADDRESS = 0xA000; // 0xA00C?
+const natural TPAK_BANK_ADDRESS = 0xA000;
 
 // And the cartridge also has banks switchable at 0x4000-0x8000 of gb address space.
 // So to access mbc1 bank 2:
@@ -36,6 +35,7 @@ const natural ENABLE_GB_RAM_ADDRESS = 0x0000;
 const natural ENABLE_GB_RAM = 0x000A;
 
 const natural GB_ROM_BANK_ADDRESS = 0x2100;
+const natural GB_UPPER_ROM_BANK_ADDRESS = 0x3000;
 const natural GB_RAM_BANK_ADDRESS = 0x4000;
 const natural GB_BANK_MODE_ADDRESS = 0x6000;
 const byte GB_ROM_BANK_MODE = 0;
@@ -43,7 +43,7 @@ const byte GB_RAM_BANK_MODE = 1;
 
 const natural SRAM_ADDRESS = 0xA000;
 
-const natural TPAK_STATUS_ADDRESS = 0xB000; // 0xB010?
+const natural TPAK_STATUS_ADDRESS = 0xB000;
 
 #define OS_GBPAK_RSTB_DETECTION 0x04
 #define OS_GBPAK_RSTB_STATUS    0x08
@@ -89,177 +89,6 @@ natural mapAddress(const natural address) {
     return address + offset;
 }
 
-/*
-void printSegments(const byte controllerNumber) {
-    byte testBlock[64];
-    memset(testBlock, 0, 64);
-
-    read_mempak_address(controllerNumber, 0x0000, testBlock);
-    printSegmentToFrame("0x0000 0123456789abcdefABCDEF", testBlock, 1);
-
-    read_mempak_address(controllerNumber, 0x0020, testBlock);
-    printSegmentToFrame("0x0020 0123456789abcdefABCDEF", testBlock, 1);    
-
-    read_mempak_address(controllerNumber, 0x3FD0, testBlock);    
-    printSegmentToFrame("0x3FD0 0123456789abcdefABCDEF", testBlock, 1);       
-
-    read_mempak_address(controllerNumber, 0x4000, testBlock);    
-    printSegmentToFrame("0x4000 0123456789abcdefABCDEF", testBlock, 1);           
-
-    read_mempak_address(controllerNumber, 0x7FD0, testBlock);    
-    printSegmentToFrame("0x7FD0 0123456789abcdefABCDEF", testBlock, 1);   
-
-    read_mempak_address(controllerNumber, 0x8000, testBlock);    
-    printSegmentToFrame("0x8000 0123456789abcdefABCDEF", testBlock, 1);       
-
-    read_mempak_address(controllerNumber, 0x8020, testBlock);    
-    printSegmentToFrame("0x8020 0123456789abcdefABCDEF", testBlock, 1);       
-
-    read_mempak_address(controllerNumber, 0x8FD0, testBlock);    
-    printSegmentToFrame("0x8FD0 0123456789abcdefABCDEF", testBlock, 1);           
-
-    read_mempak_address(controllerNumber, 0x9000, testBlock);    
-    printSegmentToFrame("0x9000 0123456789abcdefABCDEF", testBlock, 1);               
-
-    read_mempak_address(controllerNumber, 0x9020, testBlock);    
-    printSegmentToFrame("0x9020 0123456789abcdefABCDEF", testBlock, 1);                   
-
-    read_mempak_address(controllerNumber, 0x9FD0, testBlock);    
-    printSegmentToFrame("0x9FD0 0123456789abcdefABCDEF", testBlock, 1);  
-
-    read_mempak_address(controllerNumber, 0xA000, testBlock);    
-    printSegmentToFrame("0xA000 0123456789abcdefABCDEF", testBlock, 1);               
-
-    read_mempak_address(controllerNumber, 0xA020, testBlock);    
-    printSegmentToFrame("0xA020 0123456789abcdefABCDEF", testBlock, 1);                   
-
-    read_mempak_address(controllerNumber, 0xAFD0, testBlock);    
-    printSegmentToFrame("0xAFD0 0123456789abcdefABCDEF", testBlock, 1);                 
-
-    read_mempak_address(controllerNumber, 0xB000, testBlock);    
-    printSegmentToFrame("0xB000 0123456789abcdefABCDEF", testBlock, 1);               
-
-    read_mempak_address(controllerNumber, 0xB020, testBlock);    
-    printSegmentToFrame("0xB020 0123456789abcdefABCDEF", testBlock, 1);                   
-
-    read_mempak_address(controllerNumber, 0xBFD0, testBlock);    
-    printSegmentToFrame("0xBFD0 0123456789abcdefABCDEF", testBlock, 1);                     
-
-    read_mempak_address(controllerNumber, 0xC000, testBlock);
-    printSegmentToFrame("ROMX 0xC000 0123456789abcdefABCDEF", testBlock, 1);
-
-    read_mempak_address(controllerNumber, 0xC020, testBlock);
-    printSegmentToFrame("ROMX 0xC100 0123456789abcdefABCDEF", testBlock, 1);    
-
-    read_mempak_address(controllerNumber, 0xEFD0, testBlock);    
-    printSegmentToFrame("ROMX 0xC150 0123456789abcdefABCDEF", testBlock, 1);      
-    
-    setTpakValue(controllerNumber, TPAK_BANK_ADDRESS, WRAM);
-
-    read_mempak_address(controllerNumber, 0xC000, testBlock);
-    printSegmentToFrame("WRAM 0xC000 0123456789abcdefABCDEF", testBlock, 1);
-
-    read_mempak_address(controllerNumber, 0xC020, testBlock);
-    printSegmentToFrame("WRAM 0xC120 0123456789abcdefABCDEF", testBlock, 1);    
-
-    read_mempak_address(controllerNumber, 0xEFD0, testBlock);    
-    printSegmentToFrame("WRAM 0xE880 0123456789abcdefABCDEF", testBlock, 1);    
-}
-
-void testEnableDisable() {
-    // assumes tpak has not been powered on yet
-    logAndPauseFrame(1, "BEFORE ENABLED");
-    printSegments(0);
-
-    // Is there any change with a disable?
-    setTpakValue(0, ENABLE_TPAK_ADDRESS, DISABLE_TPAK);
-    logAndPauseFrame(1, "EXPLICIT DISABLE");    
-    printSegments(0);
-
-    // Now turn the damn thing on
-    setTpakValue(0, ENABLE_TPAK_ADDRESS, ENABLE_TPAK);
-    logAndPauseFrame(1, "ENABLED");    
-    printSegments(0);    
-
-    // Off again.    
-    setTpakValue(0, ENABLE_TPAK_ADDRESS, DISABLE_TPAK);
-    logAndPauseFrame(1, "DISABLED");    
-    printSegments(0);        
-}
-
-void testMemorySpace(const natural min, const natural max) {
-    // Make sure we're switched on.
-    setTpakValue(0, ENABLE_TPAK_ADDRESS, ENABLE_TPAK);    
-
-    byte block[64];
-    memset(block, 0, 64);
-    byte lastBlock = 0xFE;
-    for (uLong address = min; address < max; address += BLOCK_SIZE) {
-        read_mempak_address(0, address, block);
-        if (block[0] != lastBlock) {
-            string caption;
-            sprintf(caption, "new value %02x at address %04x", block[0], (natural) address);
-            printSegmentToFrame(caption, block, 1);
-            lastBlock = block[0];
-        }
-    }
-}
-
-void testBankChange() {
-    // Make sure we're switched on.
-    setTpakValue(0, ENABLE_TPAK_ADDRESS, ENABLE_TPAK);      
-
-    byte block[64];
-    memset(block, 0, 64);    
-    for (byte i = 0; i < 5; i++) {
-        setTpakValue(0, 0xA000, i);
-        read_mempak_address(0, 0xA000, block);
-        string caption; 
-        sprintf(caption, "bank=%d", i);
-        printSegmentToFrame(caption, block, 1);
-    }
-}
-
-void testModeChange() {
-    // Make sure we're switched on.
-    setTpakValue(0, ENABLE_TPAK_ADDRESS, ENABLE_TPAK);  
-
-    byte block[64];
-    memset(block, 0, 64); 
-    read_mempak_address(0, 0xB000, block);
-    printSegmentToFrame("Before setting any mode", block, 1);
-    testMemorySpace(0, 0xC020);
-
-    setTpakValue(0, 0xB000, TPAK_MODE_SET_0);
-    read_mempak_address(0, 0xB000, block);
-    printSegmentToFrame("Mode 0 set, first pass. (expects 0x84)", block, 1);
-    testMemorySpace(0, 0xC020);    
-
-    read_mempak_address(0, 0xB000, block);
-    printSegmentToFrame("Mode 0 set, subsequent pass. (expects 0x80)", block, 1);    
-    testMemorySpace(0, 0xC020);        
-
-    setTpakValue(0, 0xB000, TPAK_MODE_SET_1);
-    read_mempak_address(0, 0xB000, block);
-    printSegmentToFrame("Mode 1 set, first pass. (expects 0x8D)", block, 1);
-    testMemorySpace(0, 0xC020);    
-
-    read_mempak_address(0, 0xB000, block);
-    printSegmentToFrame("Mode 1 set, subsequent pass. (expects 0x89)", block, 1);        
-    testMemorySpace(0, 0xC020);        
-
-    // Try again.
-    setTpakValue(0, 0xB000, TPAK_MODE_SET_0);
-    read_mempak_address(0, 0xB000, block);
-    printSegmentToFrame("Mode 0 set, first pass. (expects 0x84)", block, 1);
-    testMemorySpace(0, 0xC020);        
-
-    read_mempak_address(0, 0xB000, block);
-    printSegmentToFrame("Mode 0 set, subsequent pass. (expects 0x80)", block, 1);    
-    testMemorySpace(0, 0xC020);    
-}
-*/
-
 /**
  * Puts Tpak/Cartridge in to a state where it's ready to be read from.
  * @param controllerNumber controller slot the Tpak is plugged in to.
@@ -301,6 +130,23 @@ sByte initialiseTPak(const byte controllerNumber) {
     setTpakValue(controllerNumber, mapAddress(ENABLE_GB_RAM_ADDRESS), ENABLE_GB_RAM);
 
     return TPAK_SUCCESS;
+}
+
+/**
+ * Calculates the checksum of an address and assigns it to that address.
+ * @param address The address
+ * @returns The address OR'd with the checksum.
+ */
+natural writeCRC(natural address) {
+    byte values[] = { 0x15, 0x1F, 0x0B, 0x16, 0x19, 0x07, 0x0E, 0x1C, 0x0D, 0x1A, 0x01 };
+    address &= 0xFFE0;
+    byte checksum = 0;
+    for (byte i = 15; i > 4; i--) {
+        if ((address >> i) & 1) {
+            checksum ^= values[i - 5];
+        }
+    }
+    return address | checksum;
 }
 
 /**
@@ -348,12 +194,12 @@ bool checkRom(const natural expected, const ByteArray* data) {
  * @param bank Bank number to switch to. 
  * @returns Error code.
  */
-sByte switchRamBank(const byte controllerNumber, const natural bank) {
+sByte switchRamBank(const byte controllerNumber, const natural bank, const CartridgeType type) {
     // Make sure we're in ROMX to access 0x4000 and 0x6000
     setTpakValue(controllerNumber, TPAK_BANK_ADDRESS, ROMX);
 
     // Switch to RAM mode except for 0 bank which is accesible in ROM mode.
-    if (bank > 0) {
+    if (type == MBC1 && bank > 0) {
         setTpakValue(controllerNumber, mapAddress(GB_BANK_MODE_ADDRESS), GB_RAM_BANK_MODE);
     }
 
@@ -388,6 +234,9 @@ sByte switchBank(const byte controllerNumber, const natural bank, const Cartridg
 
             // Set upper two bits of the bank number at this address.
             setTpakValue(controllerNumber, mapAddress(GB_RAM_BANK_ADDRESS), (bank & 0x60) >> 5);            
+        } else if (type == MBC5) {
+            // The upper bit is set at 0x3000
+            setTpakValue(controllerNumber, mapAddress(GB_UPPER_ROM_BANK_ADDRESS), (bank & 0x0100) >> 8);
         }
 
         // Ensure we are in ROM0
@@ -590,7 +439,7 @@ sByte importCartridgeRam(const byte controllerNumber, GameBoyCartridge* cartridg
 
     // Loop through each bank
     for (byte bank = 0; bank < cartridge->RamBankCount; bank++) {
-        switchRamBank(controllerNumber, bank);
+        switchRamBank(controllerNumber, bank, cartridge->Type);
 
         // Read into memory 32bytes at a time.
         for (natural address = 0; address < cartridge->RamBankSize; address += BLOCK_SIZE) {
@@ -616,7 +465,7 @@ sByte exportCartridgeRam(const byte controllerNumber, GameBoyCartridge* cartridg
 
     // Loop through each bank
     for (byte bank = 0; bank < cartridge->RamBankCount; bank++) {
-        switchRamBank(controllerNumber, bank);
+        switchRamBank(controllerNumber, bank, cartridge->Type);
 
         // Read into memory 32bytes at a time.
         for (natural address = 0; address < cartridge->RamBankSize; address += BLOCK_SIZE) {

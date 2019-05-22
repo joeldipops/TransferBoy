@@ -10,14 +10,17 @@ cp ./assets/*.gb ./filesystem/
 make clean
 make all
 
-# Op codes test ROM
-#cen64 -multithread -controller num=1,tpak_rom=/home/joel/TransferBoy/asm/opTest.gb -eep4k ~/TransferBoy/log.eeprom ~/n64devutils/cen64/data/pifdata.bin  ~/TransferBoy/transferboy64.z64
+# rumble pak test
+#~/Projects/tools/cen64/cen64 -multithread -controller num=1,pak=rumble ~/Projects/tools/cen64/pifdata.bin  ~/Projects/TransferBoy/transferboy64.z64
 
-# utils routines test rom
-#cen64 -multithread -controller num=1,tpak_rom=~/TransferBoy/filesystem/routineTest.gb -eep4k ~/TransferBoy/log.eeprom ~/n64devutils/cen64/data/pifdata.bin  ~/TransferBoy/transferboy64.z64
+# controller pak test
+#~/Projects/tools/cen64/cen64 -multithread -controller num=1,mempak=/home/joeldipops/Projects/tools/cen64/mempak.sav ~/Projects/tools/cen64/pifdata.bin  ~/Projects/TransferBoy/transferboy64.z64
 
 # mbc1 + ram Test ROM
-~/Projects/tools/cen64/cen64 -multithread -controller num=1,tpak_rom=/home/joeldipops/Projects/tools/cen64/mbc1+ram.gb,tpak_save=/home/joeldipops/Projects/tools/cen64/mbc1+ram.sav ~/Projects/tools/cen64/pifdata.bin  ~/Projects/TransferBoy/transferboy64.z64
+#~/Projects/tools/cen64/cen64 -multithread -controller num=1,tpak_rom=/home/joeldipops/Projects/tools/cen64/mbc1+ram.gb,tpak_save=/home/joeldipops/Projects/tools/cen64/mbc1+ram.sav ~/Projects/tools/cen64/pifdata.bin  ~/Projects/TransferBoy/transferboy64.z64
+
+# mbc5 Test ROM
+~/Projects/tools/cen64/cen64 -multithread -controller num=1,tpak_rom=/home/joeldipops/Projects/tools/cen64/mbc5.gbc,tpak_save=/home/joeldipops/Projects/tools/cen64/mbc5.sav ~/Projects/tools/cen64/pifdata.bin  ~/Projects/TransferBoy/transferboy64.z64
 
 # mbc3 + ram Test ROM
 #~/Projects/tools/cen64/cen64 -multithread -controller num=1,tpak_rom=/home/joeldipops/Projects/tools/cen64/mbc3.gb,tpak_save=/home/joeldipops/Projects/tools/cen64/mbc3.sav ~/Projects/tools/cen64/pifdata.bin  ~/Projects/TransferBoy/transferboy64.z64
