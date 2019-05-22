@@ -15,6 +15,20 @@ I had a bit of trouble finding information on how to use the Transfer Pak over l
 
 * Memory Bank Controller I/O works the same way as in a Game Boy.  So to change to Rom bank 12, for exmaple, you'll need to write 0x0C to 0x2000 in *Game Boy* address space. To access 0x2000, the Transfer Pak bank should be 0x00 and you'll write to 0xE000 of *Transfer Pak* address space.  But then to read from ROM bank 12, you'll then need to switch the Transfer Pak bank to 0x01. Got that?
 
+## Memory Addresses and Checksum
+Although TPak addresses are presented as 16bit, the lower five bits are not part of the address but are instead reserved for a CRC Checksum.  This is why the device is read from and written to 32byte chunks because that's as precise as the address can get.  I've determined, however, that calculating the checksum is not actually necessary to do I/O with the Transfer Pak.  From https://github.com/sanni/cartreader/blob/master/Cart_Reader/N64.ino#L512 I can relate that the algorithm to calculate the crc is
+```
+for bits 15 -> 5
+    if the bit is set
+        xor the checksum with the corresponding value in the below table
+```        
+15|14|13|12|11|10|9|8|7|6|5
+--|-|-|-|-|-|-|-|-|-|-
+ 0x01|0x1A|0x0D|0x1C|0x0E|0x07|0x19|0x16|0x0B|0x1F|0x15
+
+Note I haven't tested this. I don't even know how to test at this stage since everything seems to work without it.
+
+
 ## Memory Map
 
 Address|Description
