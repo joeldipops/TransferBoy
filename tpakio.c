@@ -233,7 +233,7 @@ sByte switchBank(const byte controllerNumber, const natural bank, const Cartridg
             }
 
             // Set upper two bits of the bank number at this address.
-            setTpakValue(controllerNumber, mapAddress(GB_RAM_BANK_ADDRESS), (bank & 0x60) >> 5);            
+            setTpakValue(controllerNumber, mapAddress(GB_RAM_BANK_ADDRESS), (bank & 0x60) >> 5);  
         } else if (type == MBC5) {
             // The upper bit is set at 0x3000
             setTpakValue(controllerNumber, mapAddress(GB_UPPER_ROM_BANK_ADDRESS), (bank & 0x0100) >> 8);
@@ -327,10 +327,14 @@ sShort getNumberOfRomBanks(const CartridgeHeader* header) {
 
 /**
  * Determines the number of RAM banks from the Ram Size code in the cartridge header. 
- * @param header the header.
+ * @param cartridge the cartridge.
  * @returns Number of banks, or -1 if unknown code.
  */
-sByte getNumberOfRamBanks(const CartridgeHeader* header) {
+sByte getNumberOfRamBanks(const CartridgeHeader* header, const CartridgeType type) {
+    // MBC2s do have RAM, but it doesn't show up in the cartridge header.
+    if (type == MBC2) {
+        return 1;
+    }
     switch(header->RamSizeCode) {
         case 0: return 0;
         case 1: return 1;
@@ -371,6 +375,12 @@ CartridgeType getPrimaryType(const CartridgeType fullType) {
         case MBC1_RAM:
             return MBC1;
 
+        case MBC2:
+        case MBC2_BATTERY:
+        case MBC2_RAM:
+        case MBC2_RAM_BATTERY:
+            return MBC2;
+
         case MBC3:
         case MBC3_RAM:
         case MBC3_RAM_BATTERY:
@@ -386,7 +396,14 @@ CartridgeType getPrimaryType(const CartridgeType fullType) {
         case MBC5_RUMBLE_RAM_BATTERY:
             return MBC5;
 
-        default: return 0;
+        case HUC1_RAM_BATTERY:
+        case MMM01:
+        case MMM01_RAM:
+        case MMM01_RAM_BATTERY:
+        default:
+            return UNKNOWN_CARTRIDGE_TYPE;            
+
+
     }
 }
 
@@ -506,9 +523,14 @@ sByte getCartridgeMetadata(const byte controllerNumber, GameBoyCartridge* cartri
     }
 
     cartridge->IsGbcSupported = header.CGBTitle.GbcSupport == GBC_DMG_SUPPORTED || header.CGBTitle.GbcSupport == GBC_ONLY_SUPPORTED;        
+    cartridge->Type = getPrimaryType(header.CartridgeType);
+
+    if (cartridge->Type == UNKNOWN_CARTRIDGE_TYPE) {
+        return TPAK_ERR_UNSUPPORTED_CARTRIDGE;
+    }
 
     sShort romBanks = getNumberOfRomBanks(&header);
-    sByte ramBanks = getNumberOfRamBanks(&header);
+    sByte ramBanks = getNumberOfRamBanks(&header, cartridge->Type);
     sInt ramBankSize = getRamBankSize(&header); 
 
     if (romBanks * BANK_SIZE * 3 >= getMemoryLimit()) {
@@ -522,7 +544,6 @@ sByte getCartridgeMetadata(const byte controllerNumber, GameBoyCartridge* cartri
     cartridge->RomBankCount = romBanks;
     cartridge->RamBankCount = ramBanks;
     cartridge->RamBankSize = (natural) ramBankSize;     
-    cartridge->Type = getPrimaryType(header.CartridgeType);
 
     // TODO - Fix Broken
     /*

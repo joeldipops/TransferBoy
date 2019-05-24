@@ -28,6 +28,8 @@ typedef enum {
     TPAK_ERR_NO_CARTRIDGE,
     // Transfer pak isn't giving us the initialisation values we expect it to.
     TPAK_ERR_UNKNOWN_BEHAVIOUR,
+    // We haven't been able to implement how to read the banks of this memory bank controller yet.
+    TPAK_ERR_UNSUPPORTED_CARTRIDGE,
     // libdragon read_mempak_address returned an error code
     // todo - break these down into useful errors we can respond to.
     TPAK_ERR_SYSTEM_ERROR
@@ -42,6 +44,9 @@ typedef enum __attribute__ ((packed)) {
 
 // Must be packed into a single byte to fit in the header
 typedef enum __attribute__ ((packed)) {
+    // Change this if we do find a use for 0x04
+    UNKNOWN_CARTRIDGE_TYPE = 0x04,
+
     // 32kB ROM
     ROM_ONLY = 0x00,
 
@@ -78,9 +83,14 @@ typedef enum __attribute__ ((packed)) {
 
     // MBC6 - who knows?
     MBC6 = 0x20,
+    MBC6_RAM_BATTERY = 0x20,
 
     // MBC7 - max 8MB ROM or 256kB RAM and Accelerometer
-    MBC7_SENSOR_RUMBLE_RAM_BATTERY = 0x22    
+    MBC7_SENSOR_RUMBLE_RAM_BATTERY = 0x22,
+
+    HUC3 = 0xFE,
+    HUC1 = 0xFF,
+    HUC1_RAM_BATTERY = 0xFF
 } CartridgeType;
 
 typedef struct {
