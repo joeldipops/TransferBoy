@@ -1,9 +1,9 @@
 #include <stdio.h>
 #include "init.h"
-#include "tpakio.h"
 #include "screen.h"
 #include "play.h"
 #include "controller.h"
+#include "tpakio.h"
 #include <libdragon.h>
 #include "include/gbc_bundle.h"
 
@@ -16,34 +16,59 @@ typedef enum {
 static natural retries = 0;
 
 /**
+ * Test code to determine the memory map of anything plugged in to the n64 controller's accessory port.
+ */
+void mapControllerMemory() {
+    logAndPauseFrame(1, "Controller Pak Memory Map");
+    byte block[0x40];
+    memset(block, 0x00, 0x40);
+    byte lastByte = 0xFE;
+    for (uInt i = 0x0000; i < 0xFFFF; i+= 0x20) {
+        read_mempak_address(0, i, block);
+        if (block[0] != lastByte) {
+            string caption;
+            sprintf(caption, "address = %04x", (natural)i);
+            printSegmentToFrame(caption, block, 1);
+            lastByte = block[0];
+        }
+    }
+}
+
+/**
  * Waits for a Start Button pressed, then goes and loads a rom.
  * @param state program state.
  * @param playerNumber player in init mode.
  */
 void initLogic(RootState* state, const byte playerNumber) {
     if (state->Players[playerNumber].InitState == InitStart) {
-        if (!isTPakInserted(playerNumber)) {
-            state->Players[playerNumber].InitState = InitNoTpak;
-        } else if (!isCartridgeInserted(playerNumber)) {
-            state->Players[playerNumber].InitState = InitNoCartridge;
-        } else if (!isCartridgeSizeOk(playerNumber)) {
-            state->Players[playerNumber].InitState =  InitRequiresExpansionPak;
-        } else {
+        sByte result = getCartridgeMetadata(playerNumber, &state->Players[playerNumber].Cartridge);
+
+        if (!result) {
             state->Players[playerNumber].InitState = InitPending;
             state->RequiresRepaint = true;
+        } else {
+            //mapControllerMemory();
+            switch(result) {
+                case TPAK_ERR_NO_TPAK:
+                    state->Players[playerNumber].InitState = InitNoTpak;
+                    break;
+                case TPAK_ERR_NO_CARTRIDGE:
+                    state->Players[playerNumber].InitState = InitNoCartridge;                
+                    break;
+                case TPAK_ERR_INSUFFICIENT_MEMORY:
+                    state->Players[playerNumber].InitState = InitRequiresExpansionPak;
+                    break;
+                default:
+                    state->ErrorCode = result;
+                    state->Players[playerNumber].InitState = InitError;
+                    break;
+            }
         }
     }
 
     bool loadInternal = false;
 
     if (state->Players[playerNumber].InitState == InitPending) {
-        sByte result = getCartridgeMetaData(playerNumber, &state->Players[playerNumber].Cartridge);
-
-        if (result) {
-            state->ErrorCode = result;
-            state->Players[playerNumber].InitState = InitError;
-        }
-
         bool releasedButtons[N64_BUTTON_COUNT] = {};
         getPressedButtons(&state->KeysReleased, playerNumber, releasedButtons);
 
@@ -54,7 +79,6 @@ void initLogic(RootState* state, const byte playerNumber) {
         } else if (releasedButtons[B]) {
             state->RequiresControllerRead = true;
             state->Players[playerNumber].InitState = InitStart;
-            freeTPakIo();
             retries++;
         } else if (releasedButtons[CDown]) {
             // Load internal easter egg cartridge.
@@ -71,16 +95,21 @@ void initLogic(RootState* state, const byte playerNumber) {
         state->RequiresRepaint = true;
 
         if (loadInternal) {
-            strcpy(state->Players[0].Cartridge.Title, "Easter egg");
-            sInt result = loadInternalRom(&state->Players[0].Cartridge.RomData);
+            strcpy(state->Players[0].Cartridge.Header.Title, "Easter egg");
+            sInt result = loadInternalRom(&state->Players[0].Cartridge.Rom);
             if (result == -1) {
                 logAndPauseFrame(0, "Error loading internal ROM");
             }
 
-            state->Players[playerNumber].Cartridge.SaveData.Size = 0x00;
-            state->Players[playerNumber].Cartridge.IsSuperGbCart = true;            
+            state->Players[playerNumber].Cartridge.Ram.Size = 0x00;
+            state->Players[playerNumber].Cartridge.Header.IsSgbSupported = true;            
         } else {
-            readCartridge(playerNumber, &state->Players[playerNumber].Cartridge);
+            sByte result = importCartridge(playerNumber, &state->Players[playerNumber].Cartridge);
+            if (result) {
+                state->ErrorCode = result;
+                state->Players[playerNumber].InitState = InitError;
+                return;
+            }
         }
         Rectangle screen = {};
         getScreenPosition(state, playerNumber, &screen);
@@ -129,7 +158,7 @@ void initDraw(const RootState* state, const byte playerNumber) {
             ;
             string tmp = "";
             getText(TextLoadCartridgePrompt, tmp);
-            sprintf(text, tmp, &state->Players[playerNumber].Cartridge.Title);
+            sprintf(text, tmp, &state->Players[playerNumber].Cartridge.Header.Title);
 
             if (retries) {
                 sprintf(tmp, "%s Retries: %d", text, retries);

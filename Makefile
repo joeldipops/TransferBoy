@@ -2,12 +2,11 @@ N64_INST = /home/joeldipops/Projects/tools/n64inst
 ROOTDIR = $(N64_INST)
 GCCN64PREFIX = $(ROOTDIR)/bin/mips64-elf-
 CHKSUM64PATH = /home/joeldipops/Projects/tools/libdragon/tools/chksum64
-#MKDFSPATH = $(ROOTDIR)/bin/mkdfs
 MKDFSPATH = /home/joeldipops/Projects/tools/libdragon/tools/mkdfs/mkdfs
 HEADERPATH = $(ROOTDIR)/mips64-elf/lib
 N64TOOL = /home/joeldipops/Projects/tools/libdragon/tools/n64tool
 HEADERNAME = header
-LINK_FLAGS = -L$(ROOTDIR)/mips64-elf/lib -ldragon -lc -lm -ldragonsys -Tn64ld.x
+LINK_FLAGS = -L$(ROOTDIR)/mips64-elf/lib -ldragon -lm -lc -ldragonsys -Tn64ld.x
 PROG_NAME = transferboy64
 CFLAGS = -std=gnu99 -march=vr4300 -mtune=vr4300 -O2 -Wall -Werror -I$(CURDIR) -I$(ROOTDIR)/mips64-elf/include 
 ASFLAGS = -mtune=vr4300 -march=vr4300

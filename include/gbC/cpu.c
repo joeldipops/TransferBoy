@@ -726,6 +726,7 @@ static void cpu_do_instruction_linear(struct gb_state *s) {
 
 static void cpu_do_instruction(struct gb_state *s) {
     u8 op = getOpCodeFromROM(s, s->pc++);
+
     switch (op) {
         case 0x00: goto Ox00;
         case 0x01: goto Ox01;

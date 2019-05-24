@@ -1,77 +1,170 @@
-#ifndef TPAKIO_INLCUDED
+#ifndef TPAKIO_INCLUDED
 #define TPAKIO_INCLUDED
+
 #include "core.h"
 
-/**
- * Determines if the expansion pak is plugged in.
- * @return true if the N64 Memory Expansion Pak is available.
- */
-bool isExpansionPakInserted();
+/*********************************************************************************************
+ * Thanks to Saturnu's (translated) writeup from here:
+ * https://circuit-board.de/forum/index.php/Thread/13481-N64-Transfer-Pak-PIF-commands-Reverse-Engineering/
+ * *******************************************************************************************/
+
+typedef enum {
+    TPAK_SUCCESS = 0,
+    // Invalid controller slot (must be 0-3)    
+    TPAK_ERR_NO_SLOT = -127,
+    // Cartridge header contains invalid/unknown values.    
+    TPAK_ERR_INVALID_HEADER,
+    // Header failed checksum
+    TPAK_ERR_CORRUPT_HEADER,
+    // Cartridge failed global checksum
+    TPAK_ERR_CORRUPT_DATA,
+    // If we loaded this cart we'd probably run out of memory.  An expansion pak may help here.
+    TPAK_ERR_INSUFFICIENT_MEMORY,
+    // Controller not plugged in.    
+    TPAK_ERR_NO_CONTROLLER,
+    // Controller detected but no transfer pak.
+    TPAK_ERR_NO_TPAK,
+    // Transfer pak detected, but no cartridge.
+    TPAK_ERR_NO_CARTRIDGE,
+    // Transfer pak isn't giving us the initialisation values we expect it to.
+    TPAK_ERR_UNKNOWN_BEHAVIOUR,
+    // We haven't been able to implement how to read the banks of this memory bank controller yet.
+    TPAK_ERR_UNSUPPORTED_CARTRIDGE,
+    // libdragon read_mempak_address returned an error code
+    // todo - break these down into useful errors we can respond to.
+    TPAK_ERR_SYSTEM_ERROR
+} TpakError;
+
+// Must be packed into a single byte to fit in the header.
+typedef enum __attribute__ ((packed)) {
+    GBC_NOT_SUPPORTED = 0x00, 
+    GBC_DMG_SUPPORTED = 0x80,
+    GBC_ONLY_SUPPORTED = 0xC0 
+} GbcSupport;
+
+// Must be packed into a single byte to fit in the header
+typedef enum __attribute__ ((packed)) {
+    // Change this if we do find a use for 0x04
+    UNKNOWN_CARTRIDGE_TYPE = 0x04,
+
+    // 32kB ROM
+    ROM_ONLY = 0x00,
+
+    // MBC1 - max 2MB ROM and/or 32kB RAM)
+    MBC1 = 0x01,
+    MBC1_RAM = 0x02, 
+    MBC1_BATTERY = 0x03,
+    
+    // MBC2 - max 256kB ROM and 256B RAM
+    MBC2 = 0x05,
+    MBC2_BATTERY = 0x06,
+    MBC2_RAM = 0x08,
+    MBC2_RAM_BATTERY = 0x09,
+
+    // MMO1 - max 8MB ROM and 128kB RAM
+    MMM01 = 0x0B,
+    MMM01_RAM = 0x0C,
+    MMM01_RAM_BATTERY = 0x0D,
+
+    // MBC3 - max 2MB ROM and/or 32kB RAM and Timer
+    MBC3_TIMER_BATTERY = 0x0f,
+    MBC3_TIMER_RAM_BATTERY = 0x10,
+    MBC3 = 0x11,
+    MBC3_RAM = 0x012,
+    MBC3_RAM_BATTERY = 0x013,
+
+    // MBC5 - max 8MB ROM and/or 128kB RAM
+    MBC5 = 0x19,
+    MBC5_RAM = 0x1A,
+    MBC5_RAM_BATTERY = 0x1B,
+    MBC5_RUMBLE = 0x1C,
+    MBC5_RUMBLE_RAM = 0x1D,
+    MBC5_RUMBLE_RAM_BATTERY = 0x1E,
+
+    // MBC6 - who knows?
+    MBC6 = 0x20,
+    MBC6_RAM_BATTERY = 0x20,
+
+    // MBC7 - max 8MB ROM or 256kB RAM and Accelerometer
+    MBC7_SENSOR_RUMBLE_RAM_BATTERY = 0x22,
+
+    HUC3 = 0xFE,
+    HUC1 = 0xFF,
+    HUC1_RAM_BATTERY = 0xFF
+} CartridgeType;
+
+typedef struct {
+    byte entryScript[4];
+    byte logo[48];
+    union {
+        char Title[16];
+        struct {
+            char Title[15];
+            GbcSupport GbcSupport;
+        } OldCGBTitle;
+        struct {
+            char Title[11];
+            byte ManufacturerCode[4];
+            GbcSupport GbcSupport;            
+        } CGBTitle;
+    };
+    natural NewLicenseeCode;
+    bool IsSgbSupported;
+    CartridgeType CartridgeType;
+    byte RomSizeCode;
+    byte RamSizeCode;
+    byte Destination;
+    byte OldLicenseeCode;
+    byte VersionNumber;
+    byte HeaderChecksum;
+    natural GlobalChecksum;
+    byte overflow[16];
+} CartridgeHeader;
+
+typedef struct {
+    ByteArray Rom;
+    ByteArray Ram;
+    CartridgeHeader Header;
+    CartridgeType Type;
+    natural RomBankCount;
+    byte RamBankCount;
+    natural RamBankSize;
+    bool IsGbcSupported;
+    char* Title;
+} GameBoyCartridge;
 
 
 
 /**
- * GBC roms can be as big as 2MB, without an expansion pak, we only have 4MB to play with, and we certainly couldn't
- * emulate two 2MB roms at once without an expansion pak.
- * @param controllerNumber number of cartridge to check.
- * @return true if we have enough memory sitting around to load the ROM, false otherwise.
+ * Imports the entire cartridge in to RAM as CartridgeData
+ * @param controllerNumber get from T-Pak plugged in to this controller slot.
+ * @out catridge GB/GBC catridge rom/ram 
+ * @returns Error Code
  */
-bool isCartridgeSizeOk(const byte controllerNumber);
+sByte importCartridge(const byte controllerNumber, GameBoyCartridge* cartridge);
 
 /**
- * Determines if there is a transfer pak inserted in to the given controller.
- * @param controllerNumber The controller to check.
- * @return true if there is a transfer pak inserted.
+ * Imports a cartridge header from the TPAK as well as some derived metadata values.
+ * @param controllerNumber number of controller slot cartridge is plugged in to.
+ * @out cartridge metadata will be set on the object.
+ * @returns Error Code
  */
-bool isTPakInserted(const byte controllerNumber);
+sByte getCartridgeMetadata(const byte controllerNumber, GameBoyCartridge* cartridge);
 
 /**
- * Determines if there is a gameboy cartridge inserted in to a controller pak in the given controller.
- * @param controllerNumber The controller to check.
- * @return true if there is a readable cartridge inserted.
+ * Sets the cartridge RAM with the data in ramData.
+ * @param controllerNumber T-Pak plugged in to this controller slot.
+ * @param ramData RAM to copy in to the cartridge.
+ * @returns Error code
  */
-bool isCartridgeInserted(const byte controllerNumber);
+sByte exportCartridgeRam(const byte controllerNumber, GameBoyCartridge* cartridge);
 
 /**
- * Loads ROM from game cartridge in to memory.
- * @param controllerNumber identifies transfer pak to read from.
- * @out output Once loaded, ROM will be at this address.
+ * Gets the complete ROM data from the cartridge in a transfer pak.
+ * @param controllerNumber T-Pak plugged in to this controller slot.
+ * @param cartridge Structure to copy RAM to.
+ * @returns Error code
  */
-void loadRom(const byte controllerNumber, ByteArray* output);
-
-/**
- * Loads save RAM from game cartridge in to memory.
- * @param controllerNumber identifies transfer pak to read from.
- * @out output Once loaded, save data will be at this address.
- */
-void loadSave(const byte controllerNumber, ByteArray* output);
-
-/**
- * Writes save file back to the cartridge.
- * @param controllerNumber transfer pak to write to.
- * @param save Save data to write.
- */
-void persistSave(const byte controllerNumber, const ByteArray* save);
-
-/**
- * Reads a cartridge from a transfer pak dumps into a catridge data object.
- * @param controllerNumber The controller to read from.
- * @out result cartridge data goes here.
- */
-sByte readCartridge(const byte controllerNumber, CartridgeData* output);
-
-/**
- * Reads the meta data of a cartridge from the transfer pak
- * @param controllerNumber The controller to read from.
- * @out result The meta data goes here.
- * @return Error code
- * 0  - Success
- */
-sByte getCartridgeMetaData(const byte controllerNumber, CartridgeData* result);
-
-/**
- * Frees memory held by tpakio subsystem.
- */
-void freeTPakIo();
+sByte importCartridgeRam(const byte controllerNumber, GameBoyCartridge* cartridge);
 
 #endif

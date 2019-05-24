@@ -6,6 +6,9 @@
 		"language.conditioncode" : "upper"
 	},
 	"files.associations": {
-		"resources.h": "c"
+		"*.inc": "gbz80",
+		"resources.h": "c",
+		"tpakiointerface.h": "c",
+		"type_traits": "c"
 	}
 }
