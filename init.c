@@ -16,25 +16,6 @@ typedef enum {
 static natural retries = 0;
 
 /**
- * Test code to determine the memory map of anything plugged in to the n64 controller's accessory port.
- */
-void mapControllerMemory() {
-    logAndPauseFrame(1, "Controller Pak Memory Map");
-    byte block[0x40];
-    memset(block, 0x00, 0x40);
-    byte lastByte = 0xFE;
-    for (uInt i = 0x0000; i < 0xFFFF; i+= 0x20) {
-        read_mempak_address(0, i, block);
-        if (block[0] != lastByte) {
-            string caption;
-            sprintf(caption, "address = %04x", (natural)i);
-            printSegmentToFrame(caption, block, 1);
-            lastByte = block[0];
-        }
-    }
-}
-
-/**
  * Waits for a Start Button pressed, then goes and loads a rom.
  * @param state program state.
  * @param playerNumber player in init mode.
@@ -47,7 +28,6 @@ void initLogic(RootState* state, const byte playerNumber) {
             state->Players[playerNumber].InitState = InitPending;
             state->RequiresRepaint = true;
         } else {
-            //mapControllerMemory();
             switch(result) {
                 case TPAK_ERR_NO_TPAK:
                     state->Players[playerNumber].InitState = InitNoTpak;
