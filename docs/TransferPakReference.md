@@ -1,6 +1,6 @@
-# Transfer Pak Reference
+# Nintendo 64 Accessory Reference
 
-I had a bit of trouble finding information on how to use the Transfer Pak over libdragon, so I wanted to collect what I've learnt in one place so the next person that comes along can get something up and running a little faster than I can.  There will be incomplete and possibly erraneous information on here so forgive me if things don't work or don't make much sense.
+I had a bit of trouble finding information on how to use the Transfer Pak over libdragon, so I wanted to collect what I've learnt in one place so the next person that comes along can get something up and running a little faster than I can.  Having done that, I realised I wanted to broaden this to include the other 64 accesories I have lying around.  Since I'm just doing this in my spare time,  there *will* be incomplete and possibly erraneous information on here so forgive me if things don't work or don't make much sense.
 
 ## Notes
 * These results were confirmed in the following environment:
@@ -15,7 +15,33 @@ I had a bit of trouble finding information on how to use the Transfer Pak over l
 
 * Memory Bank Controller I/O works the same way as in a Game Boy.  So to change to Rom bank 12, for exmaple, you'll need to write 0x0C to 0x2000 in *Game Boy* address space. To access 0x2000, the Transfer Pak bank should be 0x00 and you'll write to 0xE000 of *Transfer Pak* address space.  But then to read from ROM bank 12, you'll then need to switch the Transfer Pak bank to 0x01. Got that?
 
-## Memory Addresses and Checksum
+## Memory Map
+
+Address|Transfer Pak                      | Rumble Pak       | Controller Pak
+-------|----------------------------------|------------------|-------------------
+0x0000 | Echo of 0x8000 - 0x9FFF | Ununsed (0x00 0x00 ...) | Controller Pak metadata (serial number, label)
+0x0100 | ... | ... | File system index table ('I-NODE area')
+0x0200 | ... | ... | Saved game metadata ('Game Note information area')
+0x0400 | ... | ... | Save data (123 * 256B 'Game Notes')
+0x1000 | ... | ... | ...
+0x2000 | Echo of 0xA000 - 0xAFFF | ... | ...
+0x3000 | Echo of 0xB000 - 0xBFFF | ... | ...
+0x4000 | Unused.  (0x00 0x00 ...) | ... | ...
+0x5000 | ... | ... | ...
+0x6000 | ... | ... | ...
+0x7000 | ... | ... | ...
+0x8000 | Power On/Off Switch | Identifies Rumble Pak (0x80 0x80 ...) | Unused (0x00 0x00 ...)
+0x9000 | ... | ... | ...
+0xA000 | Bank Switch | ... | ...
+0xB000 | Status and Control | ... | ...
+0xC000 | Banked Cartridge Memory Access | Rumble Control. Write only.  1 to start and 0 to stop. (0x00 0x00...) | ... 
+0xD000 | ... | Unused (0x00 0x00 ...) | ...
+0xE000 | ... | ... | ...
+0xF000 | ... | ... | ...
+
+## Transfer Pak
+
+### Memory Addresses and Checksum
 Although TPak addresses are presented as 16bit, the lower five bits are not part of the address but are instead reserved for a CRC Checksum.  This is why the device is read from and written to in 32byte chunks because that's as precise as the address can get.  I've determined that calculating the checksum is not actually necessary to do I/O with the Transfer Pak.  From https://github.com/sanni/cartreader/blob/master/Cart_Reader/N64.ino#L512 the algorithm to calculate the crc seems to be 
 
 ```
@@ -29,27 +55,6 @@ for bits 15 -> 5
 
 I haven't tested this yet...
 
-
-## Memory Map
-
-Address|Transfer Pak                      | Rumble Pak       | Controller Pak
--------|----------------------------------|------------------|-------------------
-0x0000 | Echo of 0x8000 - 0x9FFF | Ununsed (0x00 0x00 ...) | Save Data area
-0x1000 | ... | ... | ...
-0x2000 | Echo of 0xA000 - 0xAFFF | ... | ...
-0x3000 | Echo of 0xB000 - 0xBFFF | ... | ...
-0x4000 | Unused.  (0x00 0x00 ...) | ... | ...
-0x5000 | ... | ... | ...
-0x6000 | ... | ... | ...
-0x7000 | ... | ... | ...
-0x8000 | Power On/Off Switch | Identifies Rumble Pak (0x80 0x80 ...) | Unused (0x00 0x00 ...)
-0x9000 | ... | ... | ...
-0xA000 | Bank Switch | ... | ...
-0xB000 | Status and Control | ... | ...
-0xC000 | Banked Cartridge Memory Access | Rumble Control. Write only.  1 to start and 0 to stop. (0x00 0x00...) | ... 
-0xD000 | ... | ... | ...
-0xE000 | ... | ... | ...
-0xF000 | ... | ... | ...
 
 On start up, immediately after enabling power to the Tpak, I found that the entire memory space looks like this:
 
@@ -174,7 +179,7 @@ For examaple, if you want to read the cartridge header at 0x0100 of gameboy addr
 3) read a 32B block from 0xC120 for the game title and the manufacturer code
 4) read a 32B block from 0xC140 for the remainder of the the header.
 
-## An Example.
+### An Example.
 
 Let's assume that we have an MBC1 cartridge plugged into a transfer pak in controller slot 0, and we want to read something from a user's save file located at address 0xB000 of SRAM bank 2.
 
@@ -214,8 +219,15 @@ read_mempak_address(0, 0xD000, someSaveDatum); // 0xD000 = 0xB000 of cart space.
 ```
 
 ## The Controller Pak
-When I started writing this, I figured that the software in the controller pak would be at a similar level of complexity to the Transfer Pak, but it turns out there is no bank switching, control commands or anything like that. The first 32kB of address space is read-writeable memory, and the remaining 32kB is unused and returns 0x00.  Save data tends to follow a common pattern, and there may be some enforced structure on the pak which I'll explore when time permits.
-This *was* tested on an OEM Pak, so take all of this with a grain of doubt until I get my hands on an official one.
+Unlike the Transfer Pak, the Controller pak doesn't seem to have any command codes, status bits or the like. The first 32kB is read-writeable memory, and the second 32kB is unused.  While the *homebrew*\* developer is free to use this memory however they like, the data on the Pak should be formatted according to a specific convention if you want to prevent one game's data from corrupting another's.
+
+\* Back in the day, I assume Nintendo would have refused to license any software that didn't follow this convention to the letter.
+
+### Notes
+So far I've only got access to an OEM Pak, so take all of this with a grain of salt until I get my hands on an official one.
+
+### File System Structure
+TODO
 
 ## The Rumble Pak
 The rumble pak is pretty simple, but it never needed to be complex.  Read from 0x8000 and you get back 0x80 to determine what you're looking at is indeed a rumble pak.  Write 0x01 to 0xC000 to make the pak rumble, and 0x00 to stop it.
