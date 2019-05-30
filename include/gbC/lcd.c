@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "../../core.h"
+#include "../../config.h"
 #include "lcd.h"
 #include "hwdefs.h"
 

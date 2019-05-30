@@ -2,6 +2,7 @@
 
 #include "mmu.h"
 #include "hwdefs.h"
+#include "logger.h"
 
 #if 1
 #define MMU_DEBUG_W(fmt, ...) \

@@ -1,7 +1,10 @@
-#include "logger.h"
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include "config.h"
+#include "state.h"
+#include "logger.h"
 #include "core.h"
 #include "eeprom.h"
 #include <libdragon.h>

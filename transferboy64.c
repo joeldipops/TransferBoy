@@ -158,22 +158,3 @@ int main(void) {
     audio_close();
     return 0;
 }
-
-
-#include "core.c"
-#include "resources.c"
-#include "init.c"
-#include "play.c"
-#include "menu.c"
-#include "options.c"
-#include "logger.c"
-#include "text.c"
-#include "controller.c"
-#include "screen.c"
-#include "state.c"
-#include "eeprom.c"
-#include "link.c"
-#include "sound.c"
-#include "tpakio.c"
-#include "superGameboy.c"
-#include "include/gbc_bundle.c"

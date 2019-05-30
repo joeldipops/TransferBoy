@@ -1,17 +1,15 @@
 #include <stdio.h>
+#include <string.h>
 #include "init.h"
 #include "screen.h"
 #include "play.h"
 #include "controller.h"
 #include "tpakio.h"
+#include "resources.h"
+#include "logger.h"
+#include "text.h"
 #include <libdragon.h>
 #include "include/gbc_bundle.h"
-
-typedef enum {
-    InitStart = 0,
-    InitNoTpak, InitNoCartridge, InitRequiresExpansionPak,
-    InitPending, InitReady, InitLoading, InitLoaded, InitError
-} InitState;
 
 static natural retries = 0;
 

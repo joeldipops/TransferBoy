@@ -2,6 +2,7 @@
 #define STATE_INCLUDED
 
 #include "core.h"
+#include "include/gbc_bundle.h"
 #include "sgbDefs.h"
 #include "controller.h"
 #include "tpakio.h"

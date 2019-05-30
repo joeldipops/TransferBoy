@@ -1,5 +1,11 @@
-#include "core.h"
 #include "sound.h"
+
+#include <string.h>
+#include <stdlib.h>
+#include "core.h"
+#include "state.h"
+#include <math.h>
+
 
 static const byte WaveDuty[4][8] = {
     { 1, 0, 0, 0, 0, 0, 0, 0 },

@@ -1,5 +1,6 @@
 #ifndef LOGGER_INCLUDED
 #define LOGGER_INCLUDED
+#include "core.h"
 #include "include/gbc_bundle.h"
 
 /**

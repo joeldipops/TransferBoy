@@ -2,6 +2,7 @@
 #define LINK_INCLUDED
 
 #include "core.h"
+#include "state.h"
 #include "include/gbc_bundle.h"
 
 typedef struct {

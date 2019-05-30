@@ -1,7 +1,12 @@
+#include <stdio.h>
+#include <string.h>
+#include "screen.h"
 #include "core.h"
 #include "controller.h"
 #include "text.h"
 #include "options.h"
+#include "resources.h"
+
 
 static const N64Button RESERVED_BUTTONS[N64_BUTTON_COUNT] = {
     1,// NoButton

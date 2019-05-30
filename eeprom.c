@@ -1,4 +1,6 @@
 #include "eeprom.h"
+#include <string.h>
+#include <stdlib.h>
 #include <libdragon.h>
 
 static byte cursorPosition = 0;

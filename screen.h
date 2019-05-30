@@ -1,12 +1,13 @@
 #ifndef SCREEN_INCLUDED
 #define SCREEN_INCLUDED
 
+#include "core.h"
 #include "state.h"
 
-const unsigned short RESOLUTION_X = 640;
-const unsigned short RESOLUTION_Y = 480;\
+static const short RESOLUTION_X = 640;
+static const short RESOLUTION_Y = 480;
 
-const float TEXT_SCALE_FACTOR = 0.210 / 100.0;
+static const float TEXT_SCALE_FACTOR = 0.210 / 100.0;
 
 typedef struct {
     natural Top;
@@ -16,7 +17,7 @@ typedef struct {
 } Rectangle;
 
 // 16 bit colours are are 5 bits per colour and a transparency flag
-const uInt MONOCHROME_PALETTE[] = {
+static const uInt MONOCHROME_PALETTE[] = {
     0xffffffff, 0x4A534A53, 0x318D318D, 0x00010001
 };
 

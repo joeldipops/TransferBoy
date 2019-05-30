@@ -1,6 +1,9 @@
 #ifndef SOUND_INCLUDED
 #define SOUND_INCLUDED
 
+#include "core.h"
+#include "include/gbc_bundle.h"
+
 #define WAVEDATA_LENGTH 16
 
 typedef enum {

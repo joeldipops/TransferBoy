@@ -2,6 +2,9 @@
 #include "core.h"
 #include "screen.h"
 #include "text.h"
+#include "resources.h"
+#include "init.h"
+#include "play.h"
 
 #include <libdragon.h>
 

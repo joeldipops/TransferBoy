@@ -1,7 +1,11 @@
 #ifndef TPAKIO_INCLUDED
 #define TPAKIO_INCLUDED
 
+#include <stdlib.h>
+#include <string.h>
+
 #include "core.h"
+
 
 /*********************************************************************************************
  * Thanks to Saturnu's (translated) writeup from here:

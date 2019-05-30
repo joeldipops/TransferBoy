@@ -241,14 +241,14 @@ void cpu_timers_step(struct gb_state *s) {
 #define HF s->flags.HF
 #define NF s->flags.NF
 #define ZF s->flags.ZF
-#define A s->reg8.A
+#define a s->reg8.A
 #define F s->reg8.F
-#define B s->reg8.B
+#define b s->reg8.B
 #define C s->reg8.C
 #define D s->reg8.D
 #define E s->reg8.E
 #define H s->reg8.H
-#define L s->reg8.L
+#define l s->reg8.L
 #define AF s->reg16.AF
 #define BC s->reg16.BC
 #define DE s->reg16.DE
@@ -369,7 +369,7 @@ static void cpu_do_instruction_linear(struct gb_state *s) {
         *dst = IMM16;
         s->pc += 2;
     } else if (M(op, 0x02, 0xff)) { // LD (BC), A 
-        mmu_write(s, BC, A);
+        mmu_write(s, BC, a);
     } else if (M(op, 0x03, 0xcf)) { // INC reg16 
         u16 *reg = REG16(4);
         *reg += 1;
@@ -406,7 +406,7 @@ static void cpu_do_instruction_linear(struct gb_state *s) {
     } else if (M(op, 0x07, 0xff)) { // RLCA 
         u8 res = (A << 1) | (A >> 7);
         F = (A >> 7) ? FLAG_C : 0;
-        A = res;
+        a = res;
 
     } else if (M(op, 0x08, 0xff)) { // LD (imm16), SP 
         mmu_write16(s, IMM16, s->sp);
@@ -420,39 +420,39 @@ static void cpu_do_instruction_linear(struct gb_state *s) {
         CF = tmp > 0xffff;
         HL = tmp;
     } else if (M(op, 0x0a, 0xff)) { // LD A, (BC) 
-        A = mem(BC);
+        a = mem(BC);
     } else if (M(op, 0x0b, 0xcf)) { // DEC reg16 
         u16 *reg = REG16(4);
         *reg -= 1;
     } else if (M(op, 0x0f, 0xff)) { // RRCA 
         F = (A & 1) ? FLAG_C : 0;
-        A = (A >> 1) | ((A & 1) << 7);
+        a = (A >> 1) | ((A & 1) << 7);
     } else if (M(op, 0x10, 0xff)) { // STOP 
         //s->halt_for_interrupts = 1;
     } else if (M(op, 0x12, 0xff)) { // LD (DE), A 
-        mmu_write(s, DE, A);
+        mmu_write(s, DE, a);
     } else if (M(op, 0x17, 0xff)) { // RLA 
         u8 res = A << 1 | (CF ? 1 : 0);
         F = (A & (1 << 7)) ? FLAG_C : 0;
-        A = res;
+        a = res;
     } else if (M(op, 0x18, 0xff)) { // JR off8 
         s->pc += (s8)IMM8 + 1;
     } else if (M(op, 0x1a, 0xff)) { // LD A, (DE) 
-        A = mem(DE);
+        a = mem(DE);
     } else if (M(op, 0x1f, 0xff)) { // RRA 
         u8 res = (A >> 1) | (CF << 7);
         ZF = 0;
         NF = 0;
         HF = 0;
         CF = A & 0x1;
-        A = res;
+        a = res;
     } else if (M(op, 0x20, 0xe7)) { // JR cond, off8 
         u8 flag = (op >> 3) & 3;
         if (((F & flagmasks[flag]) ? 1 : 0) == (flag & 1))
             s->pc += (s8)IMM8;
         s->pc++;
     } else if (M(op, 0x22, 0xff)) { // LDI (HL), A 
-        mmu_write(s, HL, A);
+        mmu_write(s, HL, a);
         HL++;
     } else if (M(op, 0x27, 0xff)) { // DAA 
         // When adding/subtracting two numbers in BCD form, this instructions
@@ -483,24 +483,24 @@ static void cpu_do_instruction_linear(struct gb_state *s) {
             CF = 1;
         }
         A += NF ? -add : add;
-        ZF = A == 0;
+        ZF = a == 0;
         HF = 0;
     } else if (M(op, 0x2a, 0xff)) { // LDI A, (HL) 
-        A = mmu_read(s, HL);
+        a = mmu_read(s, HL);
         HL++;
     } else if (M(op, 0x2f, 0xff)) { // CPL 
-        A = ~A;
+        a = ~A;
         NF = 1;
         HF = 1;
     } else if (M(op, 0x32, 0xff)) { // LDD (HL), A 
-        mmu_write(s, HL, A);
+        mmu_write(s, HL, a);
         HL--;
     } else if (M(op, 0x37, 0xff)) { // SCF 
         NF = 0;
         HF = 0;
         CF = 1;
     } else if (M(op, 0x3a, 0xff)) { // LDD A, (HL) 
-        A = mmu_read(s, HL);
+        a = mmu_read(s, HL);
         HL--;
     } else if (M(op, 0x3f, 0xff)) { // CCF 
         CF = CF ? 0 : 1;
@@ -524,7 +524,7 @@ static void cpu_do_instruction_linear(struct gb_state *s) {
         NF = 0;
         HF = (A ^ srcval ^ res) & 0x10 ? 1 : 0;
         CF = res & 0x100 ? 1 : 0;
-        A = (u8)res;
+        a = (u8)res;
     } else if (M(op, 0x88, 0xf8)) { // ADC A, reg8 
         u8* src = REG8(0);
         u8 srcval = src ? *src : mem(HL);
@@ -533,7 +533,7 @@ static void cpu_do_instruction_linear(struct gb_state *s) {
         NF = 0;
         HF = (A ^ srcval ^ res) & 0x10 ? 1 : 0;
         CF = res & 0x100 ? 1 : 0;
-        A = (u8)res;
+        a = (u8)res;
 
     } else if (M(op, 0x90, 0xf8)) { // SUB reg8 
         u8 *reg = REG8(0);
@@ -543,7 +543,7 @@ static void cpu_do_instruction_linear(struct gb_state *s) {
         NF = 1;
         HF = ((s32)A & 0xf) - (val & 0xf) < 0;
         CF = A < val;
-        A = res;
+        a = res;
     } else if (M(op, 0x98, 0xf8)) { // SBC A, reg8 
         u8 *reg = REG8(0);
         u8 regval = reg ? *reg : mem(HL);
@@ -552,12 +552,12 @@ static void cpu_do_instruction_linear(struct gb_state *s) {
         NF = 1;
         HF = ((s32)A & 0xf) - (regval & 0xf) - CF < 0;
         CF = A < regval + CF;
-        A = res;
+        a = res;
     } else if (M(op, 0xa0, 0xf8)) { // AND reg8 
         u8 *reg = REG8(0);
         u8 val = reg ? *reg : mem(HL);
-        A = A & val;
-        ZF = A == 0;
+        a = A & val;
+        ZF = a == 0;
         NF = 0;
         HF = 1;
         CF = 0;
@@ -574,7 +574,7 @@ static void cpu_do_instruction_linear(struct gb_state *s) {
     } else if (M(op, 0xb8, 0xf8)) { // CP reg8 
         u8 *reg = REG8(0);
         u8 regval = reg ? *reg : mem(HL);
-        ZF = A == regval;
+        ZF = a == regval;
         NF = 1;
         HF = (A & 0xf) < (regval & 0xf);
         CF = A < regval;
@@ -614,7 +614,7 @@ static void cpu_do_instruction_linear(struct gb_state *s) {
         NF = 0;
         HF = (A ^ IMM8 ^ res) & 0x10 ? 1 : 0;
         CF = res & 0x100 ? 1 : 0;
-        A = (u8)res;
+        a = (u8)res;
         s->pc++;
     } else if (M(op, 0xc7, 0xc7)) { // RST imm8 
         mmu_push16(s, s->pc);
@@ -631,7 +631,7 @@ static void cpu_do_instruction_linear(struct gb_state *s) {
         NF = 0;
         HF = (A ^ IMM8 ^ res) & 0x10 ? 1 : 0;
         CF = res & 0x100 ? 1 : 0;
-        A = (u8)res;
+        a = (u8)res;
         s->pc++;
     } else if (M(op, 0xd6, 0xff)) { // SUB imm8 
         u8 res = A - IMM8;
@@ -639,7 +639,7 @@ static void cpu_do_instruction_linear(struct gb_state *s) {
         NF = 1;
         HF = ((s32)A & 0xf) - (IMM8 & 0xf) < 0;
         CF = A < IMM8;
-        A = res;
+        a = res;
         s->pc++;
     } else if (M(op, 0xd9, 0xff)) { // RETI 
         s->pc = mmu_pop16(s);
@@ -650,17 +650,17 @@ static void cpu_do_instruction_linear(struct gb_state *s) {
         NF = 1;
         HF = ((s32)A & 0xf) - (IMM8 & 0xf) - CF < 0;
         CF = A < IMM8 + CF;
-        A = res;
+        a = res;
         s->pc++;
     } else if (M(op, 0xe0, 0xff)) { // LD (0xff00 + imm8), A 
-        mmu_write(s, 0xff00 + IMM8, A);
+        mmu_write(s, 0xff00 + IMM8, a);
         s->pc++;
     } else if (M(op, 0xe2, 0xff)) { // LD (0xff00 + C), A 
-        mmu_write(s, 0xff00 + C, A);
+        mmu_write(s, 0xff00 + C, a);
     } else if (M(op, 0xe6, 0xff)) { // AND imm8 
-        A = A & IMM8;
+        a = A & IMM8;
         s->pc++;
-        ZF = A == 0;
+        ZF = a == 0;
         NF = 0;
         HF = 1;
         CF = 0;
@@ -676,7 +676,7 @@ static void cpu_do_instruction_linear(struct gb_state *s) {
     } else if (M(op, 0xe9, 0xff)) { // LD PC, HL (or JP (HL) ) 
         s->pc = HL;
     } else if (M(op, 0xea, 0xff)) { // LD (imm16), A 
-        mmu_write(s, IMM16, A);
+        mmu_write(s, IMM16, a);
         s->pc += 2;
     } else if (M(op, 0xcb, 0xff)) { // CB-prefixed extended instructions 
         return cpu_do_cb_instruction(s);
@@ -685,10 +685,10 @@ static void cpu_do_instruction_linear(struct gb_state *s) {
         s->pc++;
         F = A ? 0 : FLAG_Z;
     } else if (M(op, 0xf0, 0xff)) { // LD A, (0xff00 + imm8) 
-        A = mmu_read(s, 0xff00 + IMM8);
+        a = mmu_read(s, 0xff00 + IMM8);
         s->pc++;
     } else if (M(op, 0xf2, 0xff)) { // LD A, (0xff00 + C) 
-        A = mmu_read(s, 0xff00 + C);
+        a = mmu_read(s, 0xff00 + C);
     } else if (M(op, 0xf3, 0xff)) { // DI 
         s->interrupts_master_enabled = 0;
     } else if (M(op, 0xf6, 0xff)) { // OR imm8 
@@ -706,13 +706,13 @@ static void cpu_do_instruction_linear(struct gb_state *s) {
     } else if (M(op, 0xf9, 0xff)) { // LD SP, HL 
         s->sp = HL;
     } else if (M(op, 0xfa, 0xff)) { // LD A, (imm16) 
-        A = mmu_read(s, IMM16);
+        a = mmu_read(s, IMM16);
         s->pc += 2;
     } else if (M(op, 0xfb, 0xff)) { // EI 
         s->interrupts_master_enabled = 1;
     } else if (M(op, 0xfe, 0xff)) { // CP imm8 
         u8 n = IMM8;
-        ZF = A == n;
+        ZF = a == n;
         NF = 1;
         HF = (A & 0xf) < (n & 0xf);
         CF = A < n;
@@ -1122,19 +1122,19 @@ static void cpu_do_instruction(struct gb_state *s) {
         // LD A, n
         Ox0A: { // ld A, (BC)
             //logAndPause("ld A, (BC)");
-            A = mem(BC);
+            a = mem(BC);
             return;
         }
 
         Ox1A: { // ld A, (DE)
             //logAndPause("ld A, (DE)");
-            A = mem(DE);
+            a = mem(DE);
             return;
         }
 
         OxFA: { // ld A, (nn)
             //logAndPause("ld A, nn");
-            A = mmu_read(s, IMM16);
+            a = mmu_read(s, IMM16);
             s->pc += 2;
             return;
         }
@@ -1142,46 +1142,46 @@ static void cpu_do_instruction(struct gb_state *s) {
         // LD n, A
         Ox02: { // ld (BC), A
             //logAndPause("ld (BC), A");
-            mmu_write(s, BC, A);
+            mmu_write(s, BC, a);
             return;
         }
 
         Ox12: { // ld (DE), A
             //logAndPause("ld (DE), A");
-            mmu_write(s, DE, A);
+            mmu_write(s, DE, a);
             return;
         }
 
         OxEA: { // ld (nn), A
             //logAndPause("ld nn, A");
-            mmu_write(s, IMM16, A);
+            mmu_write(s, IMM16, a);
             s->pc += 2;
             return;
         }
 
         OxF2: { // ld A, (C)
            //logAndPause("ld A, (C)");
-           A = mmu_read(s, 0xff00 + C);
+           a = mmu_read(s, 0xff00 + C);
            return;
         }
 
         OxE2: { // ld (C), A
             //logAndPause("ld (C), A");
-            mmu_write(s, 0xff00 + C, A);
+            mmu_write(s, 0xff00 + C, a);
             return;
         }
 
         // LDD  - decrements HL after load
         Ox3A: { // ldd A, (HL)
             //logAndPause("ldd A, (HL)");
-            A = mmu_read(s, HL);
+            a = mmu_read(s, HL);
             HL--;
             return;
         }
 
         Ox32: { // ldd (HL), A
             //logAndPause("ldd (HL), A");
-            mmu_write(s, HL, A);
+            mmu_write(s, HL, a);
             HL--;
             return;
         }
@@ -1189,14 +1189,14 @@ static void cpu_do_instruction(struct gb_state *s) {
         // LDI - Increments after load
         Ox2A: { // ldi A, (HL)
             //logAndPause("ldi A, (HL)");
-            A = mmu_read(s, HL);
+            a = mmu_read(s, HL);
             HL++;
             return;
         }
 
         Ox22: { // ldi (HL), A
             //logAndPause("ldi (HL), A");
-            mmu_write(s, HL, A);
+            mmu_write(s, HL, a);
             HL++;
             return;
         }
@@ -1204,14 +1204,14 @@ static void cpu_do_instruction(struct gb_state *s) {
         // LDH
         OxE0: { // ldh (n), A
             //logAndPause("ldh (n), A");
-            mmu_write(s, 0xff00 + IMM8, A);
+            mmu_write(s, 0xff00 + IMM8, a);
             s->pc++;
             return;
         }
 
         OxF0: { // ldh A, (n)
             //logAndPause("ldh A, (n)");
-            A = mmu_read(s, 0xff00 + IMM8);
+            a = mmu_read(s, 0xff00 + IMM8);
             s->pc++;
             return;
         }
@@ -1291,23 +1291,23 @@ static void cpu_do_instruction(struct gb_state *s) {
             //logAndPause("add A, reg8");
             u8* src = REG8(0);
             u8 srcval = src ? *src : mem(HL);
-            u16 res = A + srcval;
+            u16 res = a + srcval;
             ZF = (u8)res == 0;
             NF = 0;
-            HF = (A ^ srcval ^ res) & 0x10 ? 1 : 0;
+            HF = (a ^ srcval ^ res) & 0x10 ? 1 : 0;
             CF = res & 0x100 ? 1 : 0;
-            A = (u8)res;
+            a = (u8)res;
             return;
         }
 
         OxC6: { // add A, n
             //logAndPause("add A, n");
-            u16 res = A + IMM8;
+            u16 res = a + IMM8;
             ZF = (u8)res == 0;
             NF = 0;
-            HF = (A ^ IMM8 ^ res) & 0x10 ? 1 : 0;
+            HF = (a ^ IMM8 ^ res) & 0x10 ? 1 : 0;
             CF = res & 0x100 ? 1 : 0;
-            A = (u8)res;
+            a = (u8)res;
             s->pc++;
             return;
         }
@@ -1324,23 +1324,23 @@ static void cpu_do_instruction(struct gb_state *s) {
             //logAndPause("adc A, reg8");
             u8* src = REG8(0);
             u8 srcval = src ? *src : mem(HL);
-            u16 res = A + srcval + CF;
+            u16 res = a + srcval + CF;
             ZF = (u8)res == 0;
             NF = 0;
-            HF = (A ^ srcval ^ res) & 0x10 ? 1 : 0;
+            HF = (a ^ srcval ^ res) & 0x10 ? 1 : 0;
             CF = res & 0x100 ? 1 : 0;
-            A = (u8)res;
+            a = (u8)res;
             return;
         }
 
         OxCE: { // adc A, n
             //logAndPause("adc A, n");
-            u16 res = A + IMM8 + CF;
+            u16 res = a + IMM8 + CF;
             ZF = (u8)res == 0;
             NF = 0;
-            HF = (A ^ IMM8 ^ res) & 0x10 ? 1 : 0;
+            HF = (a ^ IMM8 ^ res) & 0x10 ? 1 : 0;
             CF = res & 0x100 ? 1 : 0;
-            A = (u8)res;
+            a = (u8)res;
             s->pc++;
             return;
         }
@@ -1357,23 +1357,23 @@ static void cpu_do_instruction(struct gb_state *s) {
             //logAndPause("sub reg8");
             u8 *reg = REG8(0);
             u8 val = reg ? *reg : mem(HL);
-            u8 res = A - val;
+            u8 res = a - val;
             ZF = res == 0;
             NF = 1;
-            HF = ((s32)A & 0xf) - (val & 0xf) < 0;
-            CF = A < val;
-            A = res;
+            HF = ((s32)a & 0xf) - (val & 0xf) < 0;
+            CF = a < val;
+            a = res;
             return;
         }
 
         OxD6: { // sub n
             //logAndPause("sub n");
-            u8 res = A - IMM8;
+            u8 res = a - IMM8;
             ZF = res == 0;
             NF = 1;
-            HF = ((s32)A & 0xf) - (IMM8 & 0xf) < 0;
-            CF = A < IMM8;
-            A = res;
+            HF = ((s32)a & 0xf) - (IMM8 & 0xf) < 0;
+            CF = a < IMM8;
+            a = res;
             s->pc++;
             return;
         }
@@ -1390,23 +1390,23 @@ static void cpu_do_instruction(struct gb_state *s) {
             //logAndPause("sbc A, reg8");
             u8 *reg = REG8(0);
             u8 regval = reg ? *reg : mem(HL);
-            u8 res = A - regval - CF;
+            u8 res = a - regval - CF;
             ZF = res == 0;
             NF = 1;
-            HF = ((s32)A & 0xf) - (regval & 0xf) - CF < 0;
-            CF = A < regval + CF;
-            A = res;
+            HF = ((s32)a & 0xf) - (regval & 0xf) - CF < 0;
+            CF = a < regval + CF;
+            a = res;
             return;
         }
 
         OxDE: { // sbc A, n
             //logAndPause("sbc A, n");
-            u8 res = A - IMM8 - CF;
+            u8 res = a - IMM8 - CF;
             ZF = res == 0;
             NF = 1;
-            HF = ((s32)A & 0xf) - (IMM8 & 0xf) - CF < 0;
-            CF = A < IMM8 + CF;
-            A = res;
+            HF = ((s32)a & 0xf) - (IMM8 & 0xf) - CF < 0;
+            CF = a < IMM8 + CF;
+            a = res;
             s->pc++;
             return;
         }
@@ -1422,8 +1422,8 @@ static void cpu_do_instruction(struct gb_state *s) {
             //logAndPause("and reg8");
             u8 *reg = REG8(0);
             u8 val = reg ? *reg : mem(HL);
-            A = A & val;
-            ZF = A == 0;
+            a = a & val;
+            ZF = a == 0;
             NF = 0;
             HF = 1;
             CF = 0;
@@ -1432,9 +1432,9 @@ static void cpu_do_instruction(struct gb_state *s) {
 
         OxE6: { // and n
             //logAndPause("and n");
-            A = A & IMM8;
+            a = a & IMM8;
             s->pc++;
-            ZF = A == 0;
+            ZF = a == 0;
             NF = 0;
             HF = 1;
             CF = 0;
@@ -1453,15 +1453,15 @@ static void cpu_do_instruction(struct gb_state *s) {
             //logAndPause("or reg8");
             u8* src = REG8(0);
             u8 srcval = src ? *src : mem(HL);
-            A |= srcval;
-            F = A ? 0 : FLAG_Z;
+            a |= srcval;
+            F = a ? 0 : FLAG_Z;
             return;
         }
 
         OxF6: { // or n
             //logAndPause ("or n");
-            A |= IMM8;
-            F = A ? 0 : FLAG_Z;
+            a |= IMM8;
+            F = a ? 0 : FLAG_Z;
             s->pc++;
             return;
         }
@@ -1478,16 +1478,16 @@ static void cpu_do_instruction(struct gb_state *s) {
             //logAndPause("xor reg8");
             u8* src = REG8(0);
             u8 srcval = src ? *src : mem(HL);
-            A ^= srcval;
-            F = A ? 0 : FLAG_Z;
+            a ^= srcval;
+            F = a ? 0 : FLAG_Z;
             return;
         }
 
         OxEE: { // xor n
             //logAndPause("xor n");
-            A ^= IMM8;
+            a ^= IMM8;
             s->pc++;
-            F = A ? 0 : FLAG_Z;
+            F = a ? 0 : FLAG_Z;
             return;
         }
 
@@ -1504,10 +1504,10 @@ static void cpu_do_instruction(struct gb_state *s) {
             u8 *reg = REG8(0);
             u8 regval = reg ? *reg : mem(HL);
 
-            ZF = A == regval;
+            ZF = a == regval;
             NF = 1;
-            HF = (A & 0xf) < (regval & 0xf);
-            CF = A < regval;
+            HF = (a & 0xf) < (regval & 0xf);
+            CF = a < regval;
             return;
         }
 
@@ -1515,10 +1515,10 @@ static void cpu_do_instruction(struct gb_state *s) {
             //logAndPause("cp n");
             u8 n = IMM8;
 
-            ZF = A == n;
+            ZF = a == n;
             NF = 1;
-            HF = (A & 0xf) < (n & 0xf);
-            CF = A < n;
+            HF = (a & 0xf) < (n & 0xf);
+            CF = a < n;
             s->pc++;
             return;
         }
@@ -1645,21 +1645,21 @@ static void cpu_do_instruction(struct gb_state *s) {
             // NF and CF flags then.
             //logAndPause("daa");
             s8 add = 0;
-            if ((!NF && (A & 0xf) > 0x9) || HF)
+            if ((!NF && (a & 0xf) > 0x9) || HF)
                 add |= 0x6;
-            if ((!NF && A > 0x99) || CF) {
+            if ((!NF && a > 0x99) || CF) {
                 add |= 0x60;
                 CF = 1;
             }
-            A += NF ? -add : add;
-            ZF = A == 0;
+            a += NF ? -add : add;
+            ZF = a == 0;
             HF = 0;
             return;
         }
         Ox2F: { // cpl
             // flip all bits in A
             //logAndPause("cpl");
-            A = ~A;
+            a = ~a;
             NF = 1;
             HF = 1;
             return;
@@ -1682,35 +1682,35 @@ static void cpu_do_instruction(struct gb_state *s) {
         }
         Ox07: { // rlca - rotate a left - shift bit 7 to carry.
             //logAndPause("rlca");
-            u8 res = (A << 1) | (A >> 7);
-            F = (A >> 7) ? FLAG_C : 0;
-            A = res;
+            u8 res = (a << 1) | (a >> 7);
+            F = (a >> 7) ? FLAG_C : 0;
+            a = res;
             return;
         }
         Ox17: { // rla
             // rotate a left - don't know how this differs with rlca
             //logAndPause("rla");
-            u8 res = A << 1 | (CF ? 1 : 0);
-            F = (A & (1 << 7)) ? FLAG_C : 0;
-            A = res;
+            u8 res = a << 1 | (CF ? 1 : 0);
+            F = (a & (1 << 7)) ? FLAG_C : 0;
+            a = res;
             return;
         }
         Ox0F: { // rrca
             // rotate a right - shift bit 0 to carry
             //logAndPause("rrca");
-            F = (A & 1) ? FLAG_C : 0;
-            A = (A >> 1) | ((A & 1) << 7);
+            F = (a & 1) ? FLAG_C : 0;
+            a = (a >> 1) | ((a & 1) << 7);
             return;
         }
         Ox1F: { // rra
             // rotate a right - don't know how this differs with rrca
             //logAndPause("rra");
-            u8 res = (A >> 1) | (CF << 7);
+            u8 res = (a >> 1) | (CF << 7);
             ZF = 0;
             NF = 0;
             HF = 0;
-            CF = A & 0x1;
-            A = res;
+            CF = a & 0x1;
+            a = res;
             return;
         }
 
@@ -1853,6 +1853,7 @@ static void cpu_do_instruction(struct gb_state *s) {
         }    
 }
 
+/*
 static void cpu_do_instruction_tree(struct gb_state *s) {
     u8 op = getOpCodeFromROM(s, s->pc++);
 
@@ -2994,19 +2995,19 @@ static void cpu_do_instruction_tree(struct gb_state *s) {
         // LD A, n
         Ox0A: { // ld A, (BC)
             //logAndPause("ld A, (BC)");
-            A = mem(BC);
+            a = mem(BC);
             return;
         }
 
         Ox1A: { // ld A, (DE)
             //logAndPause("ld A, (DE)");
-            A = mem(DE);
+            a = mem(DE);
             return;
         }
 
         OxFA: { // ld A, (nn)
             //logAndPause("ld A, nn");
-            A = mmu_read(s, IMM16);
+            a = mmu_read(s, IMM16);
             s->pc += 2;
             return;
         }
@@ -3014,46 +3015,46 @@ static void cpu_do_instruction_tree(struct gb_state *s) {
         // LD n, A
         Ox02: { // ld (BC), A
             //logAndPause("ld (BC), A");
-            mmu_write(s, BC, A);
+            mmu_write(s, BC, a);
             return;
         }
 
         Ox12: { // ld (DE), A
             //logAndPause("ld (DE), A");
-            mmu_write(s, DE, A);
+            mmu_write(s, DE, a);
             return;
         }
 
         OxEA: { // ld (nn), A
             //logAndPause("ld nn, A");
-            mmu_write(s, IMM16, A);
+            mmu_write(s, IMM16, a);
             s->pc += 2;
             return;
         }
 
         OxF2: { // ld A, (C)
            //logAndPause("ld A, (C)");
-           A = mmu_read(s, 0xff00 + C);
+           a = mmu_read(s, 0xff00 + C);
            return;
         }
 
         OxE2: { // ld (C), A
             //logAndPause("ld (C), A");
-            mmu_write(s, 0xff00 + C, A);
+            mmu_write(s, 0xff00 + C, a);
             return;
         }
 
         // LDD  - decrements HL after load
         Ox3A: { // ldd A, (HL)
             //logAndPause("ldd A, (HL)");
-            A = mmu_read(s, HL);
+            a = mmu_read(s, HL);
             HL--;
             return;
         }
 
         Ox32: { // ldd (HL), A
             //logAndPause("ldd (HL), A");
-            mmu_write(s, HL, A);
+            mmu_write(s, HL, a);
             HL--;
             return;
         }
@@ -3061,14 +3062,14 @@ static void cpu_do_instruction_tree(struct gb_state *s) {
         // LDI - Increments after load
         Ox2A: { // ldi A, (HL)
             //logAndPause("ldi A, (HL)");
-            A = mmu_read(s, HL);
+            a = mmu_read(s, HL);
             HL++;
             return;
         }
 
         Ox22: { // ldi (HL), A
             //logAndPause("ldi (HL), A");
-            mmu_write(s, HL, A);
+            mmu_write(s, HL, a);
             HL++;
             return;
         }
@@ -3076,14 +3077,14 @@ static void cpu_do_instruction_tree(struct gb_state *s) {
         // LDH
         OxE0: { // ldh (n), A
             //logAndPause("ldh (n), A");
-            mmu_write(s, 0xff00 + IMM8, A);
+            mmu_write(s, 0xff00 + IMM8, a);
             s->pc++;
             return;
         }
 
         OxF0: { // ldh A, (n)
             //logAndPause("ldh A, (n)");
-            A = mmu_read(s, 0xff00 + IMM8);
+            a = mmu_read(s, 0xff00 + IMM8);
             s->pc++;
             return;
         }
@@ -3163,23 +3164,23 @@ static void cpu_do_instruction_tree(struct gb_state *s) {
             //logAndPause("add A, reg8");
             u8* src = REG8(0);
             u8 srcval = src ? *src : mem(HL);
-            u16 res = A + srcval;
+            u16 res = a + srcval;
             ZF = (u8)res == 0;
             NF = 0;
-            HF = (A ^ srcval ^ res) & 0x10 ? 1 : 0;
+            HF = (a ^ srcval ^ res) & 0x10 ? 1 : 0;
             CF = res & 0x100 ? 1 : 0;
-            A = (u8)res;
+            a = (u8)res;
             return;
         }
 
         OxC6: { // add A, n
             //logAndPause("add A, n");
-            u16 res = A + IMM8;
+            u16 res = a + IMM8;
             ZF = (u8)res == 0;
             NF = 0;
-            HF = (A ^ IMM8 ^ res) & 0x10 ? 1 : 0;
+            HF = (a ^ IMM8 ^ res) & 0x10 ? 1 : 0;
             CF = res & 0x100 ? 1 : 0;
-            A = (u8)res;
+            a = (u8)res;
             s->pc++;
             return;
         }
@@ -3196,23 +3197,23 @@ static void cpu_do_instruction_tree(struct gb_state *s) {
             //logAndPause("adc A, reg8");
             u8* src = REG8(0);
             u8 srcval = src ? *src : mem(HL);
-            u16 res = A + srcval + CF;
+            u16 res = a + srcval + CF;
             ZF = (u8)res == 0;
             NF = 0;
-            HF = (A ^ srcval ^ res) & 0x10 ? 1 : 0;
+            HF = (a ^ srcval ^ res) & 0x10 ? 1 : 0;
             CF = res & 0x100 ? 1 : 0;
-            A = (u8)res;
+            a = (u8)res;
             return;
         }
 
         OxCE: { // adc A, n
             //logAndPause("adc A, n");
-            u16 res = A + IMM8 + CF;
+            u16 res = a + IMM8 + CF;
             ZF = (u8)res == 0;
             NF = 0;
-            HF = (A ^ IMM8 ^ res) & 0x10 ? 1 : 0;
+            HF = (a ^ IMM8 ^ res) & 0x10 ? 1 : 0;
             CF = res & 0x100 ? 1 : 0;
-            A = (u8)res;
+            a = (u8)res;
             s->pc++;
             return;
         }
@@ -3229,23 +3230,23 @@ static void cpu_do_instruction_tree(struct gb_state *s) {
             //logAndPause("sub reg8");
             u8 *reg = REG8(0);
             u8 val = reg ? *reg : mem(HL);
-            u8 res = A - val;
+            u8 res = a - val;
             ZF = res == 0;
             NF = 1;
-            HF = ((s32)A & 0xf) - (val & 0xf) < 0;
-            CF = A < val;
-            A = res;
+            HF = ((s32)a & 0xf) - (val & 0xf) < 0;
+            CF = a < val;
+            a = res;
             return;
         }
 
         OxD6: { // sub n
             //logAndPause("sub n");
-            u8 res = A - IMM8;
+            u8 res = a - IMM8;
             ZF = res == 0;
             NF = 1;
-            HF = ((s32)A & 0xf) - (IMM8 & 0xf) < 0;
-            CF = A < IMM8;
-            A = res;
+            HF = ((s32)a & 0xf) - (IMM8 & 0xf) < 0;
+            CF = a < IMM8;
+            a = res;
             s->pc++;
             return;
         }
@@ -3262,23 +3263,23 @@ static void cpu_do_instruction_tree(struct gb_state *s) {
             //logAndPause("sbc A, reg8");
             u8 *reg = REG8(0);
             u8 regval = reg ? *reg : mem(HL);
-            u8 res = A - regval - CF;
+            u8 res = a - regval - CF;
             ZF = res == 0;
             NF = 1;
-            HF = ((s32)A & 0xf) - (regval & 0xf) - CF < 0;
-            CF = A < regval + CF;
-            A = res;
+            HF = ((s32)a & 0xf) - (regval & 0xf) - CF < 0;
+            CF = a < regval + CF;
+            a = res;
             return;
         }
 
         OxDE: { // sbc A, n
             //logAndPause("sbc A, n");
-            u8 res = A - IMM8 - CF;
+            u8 res = a - IMM8 - CF;
             ZF = res == 0;
             NF = 1;
-            HF = ((s32)A & 0xf) - (IMM8 & 0xf) - CF < 0;
-            CF = A < IMM8 + CF;
-            A = res;
+            HF = ((s32)a & 0xf) - (IMM8 & 0xf) - CF < 0;
+            CF = a < IMM8 + CF;
+            a = res;
             s->pc++;
             return;
         }
@@ -3294,8 +3295,8 @@ static void cpu_do_instruction_tree(struct gb_state *s) {
             //logAndPause("and reg8");
             u8 *reg = REG8(0);
             u8 val = reg ? *reg : mem(HL);
-            A = A & val;
-            ZF = A == 0;
+            a = a & val;
+            ZF = a == 0;
             NF = 0;
             HF = 1;
             CF = 0;
@@ -3304,9 +3305,9 @@ static void cpu_do_instruction_tree(struct gb_state *s) {
 
         OxE6: { // and n
             //logAndPause("and n");
-            A = A & IMM8;
+            a = a & IMM8;
             s->pc++;
-            ZF = A == 0;
+            ZF = a == 0;
             NF = 0;
             HF = 1;
             CF = 0;
@@ -3325,15 +3326,15 @@ static void cpu_do_instruction_tree(struct gb_state *s) {
             //logAndPause("or reg8");
             u8* src = REG8(0);
             u8 srcval = src ? *src : mem(HL);
-            A |= srcval;
-            F = A ? 0 : FLAG_Z;
+            a |= srcval;
+            F = a ? 0 : FLAG_Z;
             return;
         }
 
         OxF6: { // or n
             //logAndPause ("or n");
-            A |= IMM8;
-            F = A ? 0 : FLAG_Z;
+            a |= IMM8;
+            F = a ? 0 : FLAG_Z;
             s->pc++;
             return;
         }
@@ -3350,16 +3351,16 @@ static void cpu_do_instruction_tree(struct gb_state *s) {
             //logAndPause("xor reg8");
             u8* src = REG8(0);
             u8 srcval = src ? *src : mem(HL);
-            A ^= srcval;
-            F = A ? 0 : FLAG_Z;
+            a ^= srcval;
+            F = a ? 0 : FLAG_Z;
             return;
         }
 
         OxEE: { // xor n
             //logAndPause("xor n");
-            A ^= IMM8;
+            a ^= IMM8;
             s->pc++;
-            F = A ? 0 : FLAG_Z;
+            F = a ? 0 : FLAG_Z;
             return;
         }
 
@@ -3376,10 +3377,10 @@ static void cpu_do_instruction_tree(struct gb_state *s) {
             u8 *reg = REG8(0);
             u8 regval = reg ? *reg : mem(HL);
 
-            ZF = A == regval;
+            ZF = a == regval;
             NF = 1;
-            HF = (A & 0xf) < (regval & 0xf);
-            CF = A < regval;
+            HF = (a & 0xf) < (regval & 0xf);
+            CF = a < regval;
             return;
         }
 
@@ -3387,10 +3388,10 @@ static void cpu_do_instruction_tree(struct gb_state *s) {
             //logAndPause("cp n");
             u8 n = IMM8;
 
-            ZF = A == n;
+            ZF = a == n;
             NF = 1;
-            HF = (A & 0xf) < (n & 0xf);
-            CF = A < n;
+            HF = (a & 0xf) < (n & 0xf);
+            CF = a < n;
             s->pc++;
             return;
         }
@@ -3517,21 +3518,21 @@ static void cpu_do_instruction_tree(struct gb_state *s) {
             // NF and CF flags then.
             //logAndPause("daa");
             s8 add = 0;
-            if ((!NF && (A & 0xf) > 0x9) || HF)
+            if ((!NF && (a & 0xf) > 0x9) || HF)
                 add |= 0x6;
-            if ((!NF && A > 0x99) || CF) {
+            if ((!NF && a > 0x99) || CF) {
                 add |= 0x60;
                 CF = 1;
             }
-            A += NF ? -add : add;
-            ZF = A == 0;
+            a += NF ? -add : add;
+            ZF = a == 0;
             HF = 0;
             return;
         }
         Ox2F: { // cpl
             // flip all bits in A
             //logAndPause("cpl");
-            A = ~A;
+            a = ~a;
             NF = 1;
             HF = 1;
             return;
@@ -3554,35 +3555,35 @@ static void cpu_do_instruction_tree(struct gb_state *s) {
         }
         Ox07: { // rlca - rotate a left - shift bit 7 to carry.
             //logAndPause("rlca");
-            u8 res = (A << 1) | (A >> 7);
-            F = (A >> 7) ? FLAG_C : 0;
-            A = res;
+            u8 res = (a << 1) | (a >> 7);
+            F = (a >> 7) ? FLAG_C : 0;
+            a = res;
             return;
         }
         Ox17: { // rla
             // rotate a left - don't know how this differs with rlca
             //logAndPause("rla");
-            u8 res = A << 1 | (CF ? 1 : 0);
-            F = (A & (1 << 7)) ? FLAG_C : 0;
-            A = res;
+            u8 res = a << 1 | (CF ? 1 : 0);
+            F = (a & (1 << 7)) ? FLAG_C : 0;
+            a = res;
             return;
         }
         Ox0F: { // rrca
             // rotate a right - shift bit 0 to carry
             //logAndPause("rrca");
-            F = (A & 1) ? FLAG_C : 0;
-            A = (A >> 1) | ((A & 1) << 7);
+            F = (a & 1) ? FLAG_C : 0;
+            a = (a >> 1) | ((a & 1) << 7);
             return;
         }
         Ox1F: { // rra
             // rotate a right - don't know how this differs with rrca
             //logAndPause("rra");
-            u8 res = (A >> 1) | (CF << 7);
+            u8 res = (a >> 1) | (CF << 7);
             ZF = 0;
             NF = 0;
             HF = 0;
-            CF = A & 0x1;
-            A = res;
+            CF = a & 0x1;
+            a = res;
             return;
         }
 
@@ -3723,7 +3724,7 @@ static void cpu_do_instruction_tree(struct gb_state *s) {
             s->interrupts_master_enabled = 1;
             return;
         }
- }
+ }*/
 
  void cpu_step(struct gb_state *s) {
     u8 op;
@@ -3741,11 +3742,11 @@ static void cpu_do_instruction_tree(struct gb_state *s) {
     }
 
     if (!s->halt_for_interrupts) {
-        if (true) {
+        //if (true) {
             cpu_do_instruction(s);
-        } else {
-            cpu_do_instruction_tree(s);
-        }
+        //} else {
+          //  cpu_do_instruction_tree(s);
+        //}
     } else {
         if (!s->interrupts_enable)
             cpu_error("Waiting for interrupts while disabled, deadlock.\n");

@@ -1,8 +1,10 @@
 #include <stdio.h>
-
 #include <math.h>
 #include <stdlib.h>
+#include <string.h>
 #include "core.h"
+#include "logger.h"
+#include "config.h"
 #include "play.h"
 #include "controller.h"
 #include "screen.h"

@@ -5,7 +5,6 @@
 #include <libdragon.h>
 
 #define N64_BUTTON_COUNT 23
-const sByte STICK_DEADZONE = 42;
 
 typedef enum {
     NoButton  = 0,

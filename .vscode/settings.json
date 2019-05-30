@@ -9,6 +9,7 @@
 		"*.inc": "gbz80",
 		"resources.h": "c",
 		"tpakiointerface.h": "c",
-		"type_traits": "c"
+		"type_traits": "c",
+		"core.h": "c"
 	}
 }
