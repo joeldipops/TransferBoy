@@ -4,7 +4,7 @@
  * http://gameboy.mongenel.com/dmg/opcodes.html
  *
  * BIOS explanation:
- * https://realboyemulator.wordpress.com/2013/01/03/a-look-at-the-game-boy-bootstrap-let-the-fun-begin/
+ * https://realboyemulator.wordpress.com/2013/01/03/A-look-at-the-game-boy-bootstrap-let-the-fun-begin/
  */
 
 #include <string.h>
@@ -23,7 +23,7 @@
 static const u8 flagmasks[] = { FLAG_Z, FLAG_Z, FLAG_C, FLAG_C };
 
 static int cycles_per_instruction[] = {
-  /* 0   1   2   3   4   5   6   7   8   9   a   b   c   d   e   f       */
+  /* 0   1   2   3   4   5   6   7   8   9   A   b   c   d   e   f       */
      4, 12,  8,  8,  4,  4,  8,  4, 20,  8,  8,  8,  4,  4,  8,  4, /* 0 */
      4, 12,  8,  8,  4,  4,  8,  4, 12,  8,  8,  8,  4,  4,  8,  4, /* 1 */
      8, 12,  8,  8,  4,  4,  8,  4,  8,  8,  8,  8,  4,  4,  8,  4, /* 2 */
@@ -34,7 +34,7 @@ static int cycles_per_instruction[] = {
      8,  8,  8,  8,  8,  8,  4,  8,  4,  4,  4,  4,  4,  4,  8,  4, /* 7 */
      4,  4,  4,  4,  4,  4,  8,  4,  4,  4,  4,  4,  4,  4,  8,  4, /* 8 */
      4,  4,  4,  4,  4,  4,  8,  4,  4,  4,  4,  4,  4,  4,  8,  4, /* 9 */
-     4,  4,  4,  4,  4,  4,  8,  4,  4,  4,  4,  4,  4,  4,  8,  4, /* a */
+     4,  4,  4,  4,  4,  4,  8,  4,  4,  4,  4,  4,  4,  4,  8,  4, /* A */
      4,  4,  4,  4,  4,  4,  8,  4,  4,  4,  4,  4,  8,  4,  8,  4, /* b */
      8, 12, 12, 16, 12, 16,  8, 16,  8, 16, 12,  0, 12, 24,  8, 16, /* c */
      8, 12, 12,  4, 12, 16,  8, 16,  8, 16, 12,  4, 12,  4,  8, 16, /* d */
@@ -43,7 +43,7 @@ static int cycles_per_instruction[] = {
 };
 
 static int cycles_per_instruction_cb[] = {
-  /* 0   1   2   3   4   5   6   7   8   9   a   b   c   d   e   f       */
+  /* 0   1   2   3   4   5   6   7   8   9   A   b   c   d   e   f       */
      8,  8,  8,  8,  8,  8, 16,  8,  8,  8,  8,  8,  8,  8, 16,  8, /* 0 */
      8,  8,  8,  8,  8,  8, 16,  8,  8,  8,  8,  8,  8,  8, 16,  8, /* 1 */
      8,  8,  8,  8,  8,  8, 16,  8,  8,  8,  8,  8,  8,  8, 16,  8, /* 2 */
@@ -54,7 +54,7 @@ static int cycles_per_instruction_cb[] = {
      8,  8,  8,  8,  8,  8, 12,  8,  8,  8,  8,  8,  8,  8, 12,  8, /* 7 */
      8,  8,  8,  8,  8,  8, 16,  8,  8,  8,  8,  8,  8,  8, 16,  8, /* 8 */
      8,  8,  8,  8,  8,  8, 16,  8,  8,  8,  8,  8,  8,  8, 16,  8, /* 9 */
-     8,  8,  8,  8,  8,  8, 16,  8,  8,  8,  8,  8,  8,  8, 16,  8, /* a */
+     8,  8,  8,  8,  8,  8, 16,  8,  8,  8,  8,  8,  8,  8, 16,  8, /* A */
      8,  8,  8,  8,  8,  8, 16,  8,  8,  8,  8,  8,  8,  8, 16,  8, /* b */
      8,  8,  8,  8,  8,  8, 16,  8,  8,  8,  8,  8,  8,  8, 16,  8, /* c */
      8,  8,  8,  8,  8,  8, 16,  8,  8,  8,  8,  8,  8,  8, 16,  8, /* d */
@@ -244,12 +244,12 @@ void cpu_timers_step(struct gb_state *s) {
 #define ZF s->flags.ZF
 #define A s->reg8.A
 #define F s->reg8.F
-#define B s->reg8.B
+#define b s->reg8.B
 #define C s->reg8.C
 #define D s->reg8.D
 #define E s->reg8.E
 #define H s->reg8.H
-#define L s->reg8.L
+#define l s->reg8.L
 #define AF s->reg16.AF
 #define BC s->reg16.BC
 #define DE s->reg16.DE
@@ -1263,7 +1263,7 @@ static void cpu_do_instruction(struct gb_state *s) {
             // koenk adds:
             // When adding/subtracting two numbers in BCD form, this instructions
             // brings the results back to BCD form too. In BCD form the decimals 0-9
-            // are encoded in a fixed number of bits (4). E.g., Ox93 actually means
+            // are encoded in A fixed number of bits (4). E.g., Ox93 actually means
             // 93 decimal. Adding/subtracting such numbers takes them out of this
             // form since they can results in values where each digit is >9.
             // E.g., Ox9 + Ox1 = OxA, but should be Ox10. The important thing to
@@ -1276,7 +1276,7 @@ static void cpu_do_instruction(struct gb_state *s) {
             // should also add Ox6 (Ox12+Ox6=Ox18).
             // Similarly for the upper byte (CF, Ox90+Ox90=Ox120, +Ox60=Ox180).
 
-            // For subtractions (we know it was a subtraction by looking at the NF
+            // For subtractions (we know it was A subtraction by looking at the NF
             // flag) we simiarly need to *subtract* Ox06/Ox60/Ox66 to again skip the
             // unused 6 values in each byte. The GB does this by only looking at the
             // NF and CF flags then.
@@ -1317,7 +1317,7 @@ static void cpu_do_instruction(struct gb_state *s) {
             CF = 1;
             return;
         }
-        Ox07: { // rlca - rotate a left - shift bit 7 to carry.
+        Ox07: { // rlca - rotate A left - shift bit 7 to carry.
             //logAndPause("rlca");
             u8 res = (A << 1) | (A >> 7);
             F = (A >> 7) ? FLAG_C : 0;
@@ -1325,7 +1325,7 @@ static void cpu_do_instruction(struct gb_state *s) {
             return;
         }
         Ox17: { // rla
-            // rotate a left - don't know how this differs with rlca
+            // rotate A left - don't know how this differs with rlca
             //logAndPause("rla");
             u8 res = A << 1 | (CF ? 1 : 0);
             F = (A & (1 << 7)) ? FLAG_C : 0;
@@ -1333,14 +1333,14 @@ static void cpu_do_instruction(struct gb_state *s) {
             return;
         }
         Ox0F: { // rrca
-            // rotate a right - shift bit 0 to carry
+            // rotate A right - shift bit 0 to carry
             //logAndPause("rrca");
             F = (A & 1) ? FLAG_C : 0;
             A = (A >> 1) | ((A & 1) << 7);
             return;
         }
         Ox1F: { // rra
-            // rotate a right - don't know how this differs with rrca
+            // rotate A right - don't know how this differs with rrca
             //logAndPause("rra");
             u8 res = (A >> 1) | (CF << 7);
             ZF = 0;
@@ -1514,4 +1514,3 @@ void cpu_step(struct gb_state *s) {
             cpu_error("Waiting for interrupts while disabled, deadlock.\n");
     }
 }
-

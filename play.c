@@ -1,13 +1,14 @@
 #include <stdio.h>
-
 #include <math.h>
 #include <stdlib.h>
+#include <string.h>
 #include "core.h"
+#include "logger.h"
+#include "config.h"
 #include "play.h"
 #include "controller.h"
 #include "screen.h"
 #include "include/gbc_bundle.h"
-#include "tpakio.h"
 #include "link.h"
 #include "sound.h"
 #include "superGameboy.h"
@@ -75,7 +76,7 @@ void initialiseEmulator(GbState* state, const ByteArray* romData, const ByteArra
  * @param state The player to reset.
  */
 void resetPlayState(PlayerState* state) {
-    initialiseEmulator(&state->EmulationState, &state->Cartridge.RomData, &state->Cartridge.SaveData);
+    initialiseEmulator(&state->EmulationState, &state->Cartridge.Rom, &state->Cartridge.Ram);
     state->BuffersInitialised = 0;
     resetSGBState(&state->SGBState);
 }
@@ -273,7 +274,7 @@ void playLogic(RootState* state, const byte playerNumber) {
 
     emu_step(emulatorState);
 
-    if (IS_SGB_ENABLED && state->Players[playerNumber].Cartridge.IsSuperGbCart) {
+    if (IS_SGB_ENABLED && state->Players[playerNumber].Cartridge.Header.IsSgbSupported) {
         processSGBData(&state->Players[playerNumber]);
         performSGBFunctions(&state->Players[playerNumber]);
     }
@@ -289,7 +290,7 @@ void playLogic(RootState* state, const byte playerNumber) {
             state->Players[playerNumber].WasFrameSkipped = false;
         }
 
-        if (IS_SGB_ENABLED && state->Players[playerNumber].Cartridge.IsSuperGbCart) {
+        if (IS_SGB_ENABLED && state->Players[playerNumber].Cartridge.Header.IsSgbSupported) {
             applySGBPalettes(
                 &state->Players[playerNumber].SGBState, 
                 state->Players[playerNumber].EmulationState.emu_state->pixel_buffers[
@@ -327,13 +328,18 @@ void playLogic(RootState* state, const byte playerNumber) {
         input = 0;
 
         // Write save file back to the catridge if it has changed.
-        if (emulatorState->emu_state->extram_dirty && isCartridgeInserted(playerNumber)) {
+        if (emulatorState->emu_state->extram_dirty) {
+            
             memcpy(
-                state->Players[playerNumber].Cartridge.SaveData.Data,
+                state->Players[playerNumber].Cartridge.Ram.Data,
                 emulatorState->mem_EXTRAM,
-                state->Players[playerNumber].Cartridge.SaveData.Size
+                state->Players[playerNumber].Cartridge.Ram.Size
             );
-            persistSave(playerNumber, &state->Players[playerNumber].Cartridge.SaveData);
+            sByte result = exportCartridgeRam(playerNumber, &state->Players[playerNumber].Cartridge);
+            if (result) {
+                logAndPause("saving to cartridge failed");
+            }
+
             emulatorState->emu_state->extram_dirty = false;
         }
 
@@ -360,9 +366,9 @@ void playDraw(const RootState* state, const byte playerNumber) {
     getScreenPosition(state, playerNumber, &screen);
 
     PaletteType palette = GameboyPalette;
-    if (state->Players[playerNumber].Cartridge.IsGbcCart) {
+    if (state->Players[playerNumber].Cartridge.IsGbcSupported) {
         palette = GameboyColorPalette;
-    } else if (IS_SGB_ENABLED && state->Players[playerNumber].Cartridge.IsSuperGbCart) {
+    } else if (IS_SGB_ENABLED && state->Players[playerNumber].Cartridge.Header.IsSgbSupported) {
         palette = SuperGameboyPalette;
     }
 

@@ -1,5 +1,0 @@
-#include "gbC/cpu.c"
-#include "gbC/emu.c"
-#include "gbC/lcd.c"
-#include "gbC/mmu.c"
-#include "gbC/state.c"

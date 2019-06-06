@@ -2,6 +2,9 @@
 #include "core.h"
 #include "screen.h"
 #include "text.h"
+#include "resources.h"
+#include "init.h"
+#include "play.h"
 
 #include <libdragon.h>
 
@@ -109,8 +112,8 @@ void changeGame(RootState* state, const byte playerNumber) {
     // Dump Save RAM first, or nah?
 
     // Reset state and send back to init.
-    freeByteArray(&state->Players[playerNumber].Cartridge.RomData);
-    freeByteArray(&state->Players[playerNumber].Cartridge.SaveData);
+    freeByteArray(&state->Players[playerNumber].Cartridge.Rom);
+    freeByteArray(&state->Players[playerNumber].Cartridge.Ram);
 
     state->Players[playerNumber].MenuCursorRow = -1;
     state->Players[playerNumber].ActiveMode = Init;
@@ -156,15 +159,14 @@ char addPlayer(RootState* state) {
     const PlayerState* playerOne = &state->Players[0];
     generatePlayerState(newPlayer);
 
-    // Copy the most of the cartirdge data by reference.  It won't be changing.
-    newPlayer->Cartridge.IsGbcCart = playerOne->Cartridge.IsGbcCart;
-    newPlayer->Cartridge.IsSuperGbCart = playerOne->Cartridge.IsSuperGbCart;
-    newPlayer->Cartridge.RomData = playerOne->Cartridge.RomData;
-    strcpy(newPlayer->Cartridge.Title, playerOne->Cartridge.Title);
+    // Copy the most of the cartridge data by reference.  It won't be changing.
+    newPlayer->Cartridge.IsGbcSupported = playerOne->Cartridge.IsGbcSupported;
+    newPlayer->Cartridge.Header = playerOne->Cartridge.Header;
+    newPlayer->Cartridge.Rom = playerOne->Cartridge.Rom;
 
     // But maintain a different copy of the save file. We don't want to have two instances messing with a single save file.
     // Non-player-1 save files will never be written back to the cartridge.
-    loadSave(0, &newPlayer->Cartridge.SaveData);
+    importCartridgeRam(0, &newPlayer->Cartridge);
 
     resetPlayState(newPlayer);
 

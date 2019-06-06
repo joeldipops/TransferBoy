@@ -3,6 +3,7 @@
 #include "text.h"
 #include "resources.h"
 #include "screen.h"
+#include "logger.h"
 
 #include <libdragon.h>
 

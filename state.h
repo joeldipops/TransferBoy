@@ -2,18 +2,12 @@
 #define STATE_INCLUDED
 
 #include "core.h"
+#include "include/gbc_bundle.h"
 #include "sgbDefs.h"
 #include "controller.h"
+#include "tpakio.h"
 
 #define MAX_PLAYERS 2
-
-typedef struct {
-    ByteArray RomData;
-    ByteArray SaveData;
-    string Title;
-    bool IsGbcCart;
-    bool IsSuperGbCart;
-} CartridgeData;
 
 typedef struct {
     Mode ActiveMode;
@@ -22,7 +16,7 @@ typedef struct {
     N64Button SystemMenuButton;
     N64Button GbStartButton;
     N64Button GbSelectButton;
-    CartridgeData Cartridge;
+    GameBoyCartridge Cartridge;
     bool AudioEnabled;
     GbState EmulationState;
     SuperGameboyState SGBState;

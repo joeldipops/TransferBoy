@@ -1,8 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include "core.h"
 #include "text.h"
+#include "resources.h"
 #include "screen.h"
 
 #include <libdragon.h>

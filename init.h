@@ -3,6 +3,12 @@
 
 #include "state.h"
 
+typedef enum {
+    InitStart = 0,
+    InitNoTpak, InitNoCartridge, InitRequiresExpansionPak,
+    InitPending, InitReady, InitLoading, InitLoaded, InitError
+} InitState;
+
 /**
  * Waits for a Start Button pressed, then goes and loads a rom.
  * @param state program state.

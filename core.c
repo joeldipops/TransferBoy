@@ -1,6 +1,14 @@
 #include "core.h"
 
-static uLong totalEstimatedMemory = 0;
+#include <libdragon.h>
+#include <stdlib.h>
+#include <string.h>
+
+uLong totalEstimatedMemory = 0;
+uLong frameCount = 0;
+long long lastClock = 0;
+
+
 /**
  * Calculates the largest block of memory that can be allocated (give or take) at start up
  * to understand how much memory is available overall

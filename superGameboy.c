@@ -1,6 +1,8 @@
 #include "superGameboy.h"
 #include "sgbDefs.h"
 #include "state.h"
+#include "logger.h"
+#include "screen.h"
 
 static const byte SGB_PACKET_LENGTH = 16;
 static const byte HORIZONTAL_TILES = 20;

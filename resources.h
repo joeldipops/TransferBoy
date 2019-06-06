@@ -1,19 +1,22 @@
 #ifndef RESOURCES_INCLUDED
 #define RESOURCES_INCLUDED
 #include <libdragon.h>
+#include <stdlib.h>
+#include <string.h>
+#include "core.h"
 
-const byte GB_START_SPRITE = 0;
-const byte GB_SELECT_SPRITE = 1;
-const byte N64_START_SPRITE = 2;
-const byte MENU_SPRITE = 3;
-const byte N64_L_SPRITE = 4;
-const byte N64_R_SPRITE = 5;
-const byte N64_Z_SPRITE = 6;
-const byte N64_C_SPRITE = 7;
-const byte BLUE_BG_TEXTURE = 8;
-const byte CREAM_BG_TEXTURE = 9;
-const byte GB_BG_TEXTURE = 0x0A;
-const byte ERROR_SPRITE = 0x0B;
+static const byte GB_START_SPRITE = 0;
+static const byte GB_SELECT_SPRITE = 1;
+static const byte N64_START_SPRITE = 2;
+static const byte MENU_SPRITE = 3;
+static const byte N64_L_SPRITE = 4;
+static const byte N64_R_SPRITE = 5;
+static const byte N64_Z_SPRITE = 6;
+static const byte N64_C_SPRITE = 7;
+static const byte BLUE_BG_TEXTURE = 8;
+static const byte CREAM_BG_TEXTURE = 9;
+static const byte GB_BG_TEXTURE = 0x0A;
+static const byte ERROR_SPRITE = 0x0B;
 
 typedef enum {
     ROTATE_90 = '>',
@@ -52,7 +55,18 @@ sprite_t* getCharacterSheet();
  * Gets sprite sheet of icons and textures.
  * @return pointer to sprite sheet.
  */
-sprite_t* getSpriteSpreet();
+sprite_t* getSpriteSheet();
+
+
+
+/**
+ * Loads a ROM stored in the n64 filesystem rather than from the TPAK
+ * @out output data for the rom goes here.
+ * @returns success/error code
+ ** 0   loaded successfully
+ ** -1  file not found.
+ */
+sByte loadInternalRom(ByteArray* output);
 
 /**
  * Takes an existing sprite, transforms it, and stashes it in a cache for next time it's needed.

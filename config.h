@@ -2,10 +2,10 @@
 #define CONFIG_INCLUDED
 #include "core.h"
 
-char FRAMES_TO_SKIP = 0;
-const bool SHOW_FRAME_COUNT = true;
-const bool IS_LOGGING_ENABLED = false;
-const bool IS_AUDIO_ENABLED = false;
-const bool IS_SGB_ENABLED = true;
+static sByte FRAMES_TO_SKIP = 0;
+static const bool SHOW_FRAME_COUNT = true;
+static const bool IS_LOGGING_ENABLED = false;
+static const bool IS_AUDIO_ENABLED = false;
+static const bool IS_SGB_ENABLED = false;
 
 #endif

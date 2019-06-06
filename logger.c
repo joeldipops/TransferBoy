@@ -1,7 +1,10 @@
-#include "logger.h"
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include "config.h"
+#include "state.h"
+#include "logger.h"
 #include "core.h"
 #include "eeprom.h"
 #include <libdragon.h>
@@ -29,16 +32,17 @@ void printLog(const string text, display_context_t frame) {
     display_show(frame);
 }
 
-void printSegmentToFrame(const byte* start, const display_context_t frame) {
+/**
+ * Print the next 32 bytes of memory from a given address and wait for "start".
+ * @param caption Describes what memory is being displayed.
+ * @param start the starting memory address.
+ * @param frame display buffer to print to.
+ */
+void printSegmentToFrame(const string caption, const byte* start, const display_context_t frame) {
+    graphics_fill_screen(frame, GLOBAL_BACKGROUND_COLOUR);
+    graphics_draw_text(frame, 10, 10, caption);
+    
     string text = "";
-    sprintf(
-        text,
-        "%02x %02x %02x %02x %02x %02x %02x %02x  %02x %02x %02x %02x %02x %02x %02x %02x",
-        *start, *(start + 1), *(start + 2), *(start + 3), *(start + 4), *(start + 5), *(start + 6), *(start + 7),
-        *(start + 8), *(start + 9), *(start + 10), *(start + 11), *(start + 12), *(start + 13), *(start + 14), *(start + 15)
-    );
-    graphics_draw_text(frame, 10, 10, text);
-    start += 16;
     sprintf(
         text,
         "%02x %02x %02x %02x %02x %02x %02x %02x  %02x %02x %02x %02x %02x %02x %02x %02x",
@@ -62,19 +66,14 @@ void printSegmentToFrame(const byte* start, const display_context_t frame) {
         *(start + 8), *(start + 9), *(start + 10), *(start + 11), *(start + 12), *(start + 13), *(start + 14), *(start + 15)
     );
     graphics_draw_text(frame, 10, 40, text);
-}
-
-/**
- * Print the next 32 bytes of memory from a given address and wait for "start".
- * @param start the starting memory address.
- */
-void printSegment(const byte* start) {
-    display_context_t frame = null;
-    while(!(frame = display_lock()));
-
-    printSegmentToFrame(start, frame);
-
-    display_show(frame);
+    start += 16;
+    sprintf(
+        text,
+        "%02x %02x %02x %02x %02x %02x %02x %02x  %02x %02x %02x %02x %02x %02x %02x %02x",
+        *start, *(start + 1), *(start + 2), *(start + 3), *(start + 4), *(start + 5), *(start + 6), *(start + 7),
+        *(start + 8), *(start + 9), *(start + 10), *(start + 11), *(start + 12), *(start + 13), *(start + 14), *(start + 15)
+    );
+    graphics_draw_text(frame, 10, 50, text);
 
     bool isPaused = true;
     while(isPaused) {
@@ -83,9 +82,8 @@ void printSegment(const byte* start) {
         if (input.c[0].start) {
             isPaused = false;
         }
-    }
+    } 
 }
-
 
 
 /**

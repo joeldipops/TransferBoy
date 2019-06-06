@@ -1,5 +1,6 @@
 #ifndef LOGGER_INCLUDED
 #define LOGGER_INCLUDED
+#include "core.h"
 #include "include/gbc_bundle.h"
 
 /**
@@ -33,10 +34,10 @@ void logAndPauseFrame(display_context_t frame, const string text, ...);
 
 /**
  * Print the next 32 bytes of memory from a given address and wait for "start".
+ * @param caption Describes what memory is being displayed.
  * @param start the starting memory address.
+ * @param frame display buffer to print to.
  */
-void printSegment(const  byte* start);
-
-void printSegmentToFrame(const byte* start, const display_context_t frame);
+void printSegmentToFrame(const string caption, const byte* start, const display_context_t frame);
 
 #endif

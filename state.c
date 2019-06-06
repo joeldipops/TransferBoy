@@ -1,5 +1,7 @@
 #include "state.h"
 
+#include <string.h>
+
 /**
  * Sets up initial configuration for N64 - Gameboy button map.
  * @out buttonMap map of N64 to Gameboy buttons.

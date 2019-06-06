@@ -5,7 +5,6 @@
 #include "options.h"
 #include "logger.h"
 #include "text.h"
-#include "tpakio.h"
 #include "init.h"
 #include "controller.h"
 #include "state.h"
@@ -149,6 +148,7 @@ int main(void) {
     RootState state;
     generateState(&state);
     flushScreen(&state);
+
     mainLoop(&state);
 
     freeText();
@@ -158,23 +158,3 @@ int main(void) {
     audio_close();
     return 0;
 }
-
-
-#include "core.c"
-#include "resources.c"
-#include "init.c"
-#include "play.c"
-#include "menu.c"
-#include "options.c"
-#include "tpakio.c"
-#include "logger.c"
-#include "text.c"
-#include "controller.c"
-#include "screen.c"
-#include "state.c"
-#include "eeprom.c"
-#include "link.c"
-#include "sound.c"
-#include "superGameboy.c"
-#include "include/libgbpak.c"
-#include "include/gbc_bundle.c"

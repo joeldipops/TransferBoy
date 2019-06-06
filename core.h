@@ -2,9 +2,8 @@
 #define CORE_INCLUDED
 
 #define null 0
-typedef enum { false, true } bool;
+//typedef enum { false, true } bool;
 
-#include "include/gbc_bundle.h"
 #include <libdragon.h>
 
 typedef uint8_t byte;
@@ -18,11 +17,11 @@ typedef uint64_t uLong;
 
 typedef char string[128];
 
-natural GLOBAL_BACKGROUND_COLOUR = 0;
-natural GLOBAL_TEXT_COLOUR = 0;
-natural SELECTED_MENU_ITEM_COLOUR = 0;
-natural SELECTED_OPTIONS_ITEM_COLOUR = 0;
-uInt AUDIO_SAMPLE_RATE = 44100;
+natural GLOBAL_BACKGROUND_COLOUR;
+natural GLOBAL_TEXT_COLOUR;
+natural SELECTED_MENU_ITEM_COLOUR;
+natural SELECTED_OPTIONS_ITEM_COLOUR;
+static const uInt AUDIO_SAMPLE_RATE = 44100;
 
 typedef struct {
     uLong Size;
@@ -32,8 +31,8 @@ typedef struct {
 typedef enum { Quit, Init, Play, Menu, Options } Mode;
 typedef enum { BorderNone } Border;
 
-uLong frameCount = 0;
-long long lastClock = 0;
+uLong frameCount;
+long long lastClock;
 
 /**
  * Reads a number from a substring, stopping after a certain number of characters.

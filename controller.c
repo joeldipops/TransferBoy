@@ -1,4 +1,9 @@
+#include <string.h>
+#include "core.h"
 #include "controller.h"
+
+
+const sByte STICK_DEADZONE = 42;
 
 /**
  * Converts the libdragon controller_data structure in to an array indexed by button indicating which are pressed.
@@ -55,4 +60,3 @@ void getPressedButtons(const N64ControllerState* input, const byte controllerNum
     output[Left] = (output[StickLeft] || output[DLeft]) && !(output[StickRight] || output[DRight]);
     output[Right] = (output[StickRight] || output[DRight]) && !(output[StickLeft] || output[DLeft]);
 }
-
