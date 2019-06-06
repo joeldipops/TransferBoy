@@ -273,24 +273,6 @@ static void cpu_do_cb_instruction(struct gb_state *s) {
     }
 
     switch(op) {
-        case 0x07: { // rlc A
-            u8 res = (regA << 1) | (regA >> 7);
-            ZF = res == 0;
-            NF = 0;
-            HF = 0;
-            CF = regA >> 7;
-            regA = res;
-            return;
-        }
-        case 0x17: { // rl A
-            u8 res = (regA << 1) | (CF ? 1 : 0);
-            ZF = res == 0;
-            NF = 0;
-            HF = 0;
-            CF = regA >> 7;
-            regA = res;
-            return;
-        }
         case 0x27: // sla A
             CF = regA >> 7;
             regA = regA << 1;
@@ -301,24 +283,6 @@ static void cpu_do_cb_instruction(struct gb_state *s) {
         case 0x37: { // swap A
             u8 res = ((regA << 4) & 0xf0) | ((regA >> 4) & 0xf);
             F = res == 0 ? FLAG_Z : 0;
-            regA = res;
-            return;
-        }
-        case 0x0F: { // rrc A
-            u8 res = (regA >> 1) | ((regA & 1) << 7);
-            ZF = res == 0;
-            NF = 0;
-            HF = 0;
-            CF = regA & 1;
-            regA = res;
-            return;
-        }
-        case 0x1F: { // rr A
-            u8 res = (regA >> 1) | (CF << 7);
-            ZF = res == 0;
-            NF = 0;
-            HF = 0;
-            CF = regA & 0x1;
             regA = res;
             return;
         }
