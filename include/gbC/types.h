@@ -60,8 +60,7 @@ enum gb_type {
     GB_TYPE_CGB,
 };
 
-/* TODO split this up into module-managed components (cpu, mmu, ...) */
-struct gb_state {
+typedef struct {
 
     /*
      * CPU state (registers, interrupts, etc)
@@ -256,7 +255,7 @@ struct gb_state {
 
     struct emu_state *emu_state;
     struct emu_cpu_state *emu_cpu_state;
-};
+} GbState;
 
 
 #endif

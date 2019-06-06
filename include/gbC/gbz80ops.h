@@ -1,0 +1,85 @@
+#ifndef GBZ80OPS_INCLUDED
+#define GBZ80OPS_INCLUDED
+
+#include "types.h"
+
+void rlcR8(GbState* state);
+void rrcR8(GbState* state);
+void rlR8(GbState* state);
+void rlR8(GbState* state);
+void rrR8(GbState* state);
+void slaR8(GbState* state);
+void sraR8(GbState* state);
+void swapR8(GbState* state);
+void srlR8(GbState* state);
+void bitU3R8(GbState* state);
+void resU3R8(GbState* state);
+void setU3R8(GbState* state);
+void ext(GbState* state);
+void ldR8N8(GbState* state);
+void ldR8R8(GbState* state);
+void ldAaR16(GbState* state);
+void ldAaN16(GbState* state);
+void ldaR16A(GbState* state);
+void ldaN16A(GbState* state);
+void ldAaC(GbState* state);
+void ldaCA(GbState* state);
+void lddAaHL(GbState* state);
+void lddaHLA(GbState* state);
+void ldiaHLA(GbState* state);
+void ldiAaHL(GbState* state);
+void ldhAaN8(GbState* state);
+void ldhaN8A(GbState* state);
+void ldR16N16(GbState* state);
+void ldSPHL(GbState* state);
+void ldHLSPN8(GbState* state);
+void ldaR16SP(GbState* state);
+void pushR16(GbState* state);
+void popR16(GbState* state);
+void addAR8(GbState* state);
+void addAN8(GbState* state);
+void adcAR8(GbState* state);
+void adcAN8(GbState* state);
+void subAR8(GbState* state);
+void subAN8(GbState* state);
+void sbcAR8(GbState* state);
+void sbcAN8(GbState* state);
+void andAR8(GbState* state);
+void andAN8(GbState* state);
+void orAR8(GbState* state);
+void orAN8(GbState* state);
+void xorAR8(GbState* state);
+void xorAN8(GbState* state);
+void cpAR8(GbState* state);
+void cpAN8(GbState* state);
+void incR8(GbState* state);
+void decR8(GbState* state);
+void incR16(GbState* state);
+void decR16(GbState* state);
+void addHLR16(GbState* state);
+void addSPR8(GbState* state);
+void daa(GbState* state);
+void cpl(GbState* state);
+void ccf(GbState* state);
+void scf(GbState* state);
+void rlcA(GbState* state);
+void rlA(GbState* state);
+void rrcA(GbState* state);
+void rrA(GbState* state);
+void nop(GbState* state);
+void halt(GbState* state);
+void stop(GbState* state);
+void di(GbState* state);
+void ei(GbState* state);
+void jpN16(GbState* state);
+void jpCCN16(GbState* state);
+void jpaHL(GbState* state);
+void jrN8(GbState* state);
+void jrCCN8(GbState* state);
+void callN16(GbState* state);
+void callCCN16(GbState* state);
+void rstVec(GbState* state);
+void retCC(GbState* state);
+void reti(GbState* state);
+
+#endif

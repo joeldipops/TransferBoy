@@ -3,7 +3,7 @@
 
 #include "types.h"
 
-int lcd_init(struct gb_state *s);
-void lcd_step(struct gb_state *s);
+int lcd_init(GbState *s);
+void lcd_step(GbState *s);
 
 #endif

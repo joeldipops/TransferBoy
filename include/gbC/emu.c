@@ -16,7 +16,7 @@
         return 1; \
     } while (0)
 
-void emu_step(struct gb_state *s) {
+void emu_step(GbState *s) {
     cpu_step(s);
     lcd_step(s);
     mmu_step(s);
@@ -37,7 +37,7 @@ void emu_step(struct gb_state *s) {
     }
 }
 
-void emu_step_frame(struct gb_state *s) {
+void emu_step_frame(GbState *s) {
     do {
         emu_step(s);
     } while (!s->emu_state->lcd_entered_vblank);
@@ -47,7 +47,7 @@ void emu_step_frame(struct gb_state *s) {
 
 }
 
-void emu_process_inputs(struct gb_state *s, struct player_input *input) {
+void emu_process_inputs(GbState *s, struct player_input *input) {
     if (input->special_quit)
         s->emu_state->quit = 1;
 

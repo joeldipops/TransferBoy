@@ -19,7 +19,7 @@
  *  $FFFF       Interrupt Enable Flag
  */
 
-void mmu_step(struct gb_state *s);
+void mmu_step(GbState *s);
 
 /**
  * Optimises lookup of opcode of PC
@@ -27,15 +27,15 @@ void mmu_step(struct gb_state *s);
  * @param programCounter value of PC register.
  * @return opcode that PC is pointing to.
  */
-u8 getOpCodeFromROM(struct gb_state *s, const u16 programCounter);
+u8 getOpCodeFromROM(GbState *s, const u16 programCounter);
 
-u8 mmu_read(struct gb_state *s, u16 location);
-void mmu_write(struct gb_state *s, u16 location, u8 value);
+u8 mmu_read(GbState *s, u16 location);
+void mmu_write(GbState *s, u16 location, u8 value);
 
-u16 mmu_read16(struct gb_state *s, u16 location);
-void mmu_write16(struct gb_state *s, u16 location, u16 value);
-u16 mmu_pop16(struct gb_state *s);
-void mmu_push16(struct gb_state *s, u16 value);
+u16 mmu_read16(GbState *s, u16 location);
+void mmu_write16(GbState *s, u16 location, u16 value);
+u16 mmu_pop16(GbState *s);
+void mmu_push16(GbState *s, u16 value);
 
 
 #endif

@@ -8,7 +8,7 @@
 
 #define palette_get_gray(palette, colidx) (palette >> (colidx << 1)) & 0x3;
 
-static void lcd_render_current_line(struct gb_state *gb_state);
+static void lcd_render_current_line(GbState *gb_state);
 
 /**
  *
@@ -16,7 +16,7 @@ static void lcd_render_current_line(struct gb_state *gb_state);
  **  0 - Successful
  ** -1 - Out of memory.
  */
-int lcd_init(struct gb_state *s) {
+int lcd_init(GbState *s) {
     for (u8 i = 0; i < 4; i++) {
         s->emu_state->pixel_buffers[i] = calloc(sizeof(u16), GB_LCD_WIDTH * GB_LCD_HEIGHT);
         if (!s->emu_state->pixel_buffers[i]) {
@@ -29,7 +29,7 @@ int lcd_init(struct gb_state *s) {
     return 0;
 }
 
-void lcd_step(struct gb_state *s) {
+void lcd_step(GbState *s) {
     /* The LCD goes through several states.
      * 0 = H-Blank, 1 = V-Blank, 2 = reading OAM, 3 = line render
      * For the first 144 (visible) lines the hardware first reads the OAM
@@ -114,7 +114,7 @@ typedef struct {
     bool IsProcessed;
 } Pixel;
 
-static void lcd_render_current_line(struct gb_state *gb_state) {
+static void lcd_render_current_line(GbState *gb_state) {
     /*
      * Tile Data @ 8000-8FFF or 8800-97FF defines the pixels per Tile, which can
      * be used for the BG, window or sprite/object. 192 tiles max, 8x8px, 4

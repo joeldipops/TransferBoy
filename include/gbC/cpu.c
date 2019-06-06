@@ -68,7 +68,7 @@ struct emu_cpu_state {
     u16 *reg16s_lut[4];
 };
 
-void cpu_init_emu_cpu_state(struct gb_state *s) {
+void cpu_init_emu_cpu_state(GbState *s) {
     s->emu_cpu_state = calloc(1, sizeof(struct emu_cpu_state));
     s->emu_cpu_state->reg8_lut[0] = &s->reg8.B;
     s->emu_cpu_state->reg8_lut[1] = &s->reg8.C;
@@ -89,7 +89,7 @@ void cpu_init_emu_cpu_state(struct gb_state *s) {
 }
 
 /* Resets the CPU state (registers and such) to the state at bootup. */
-void cpu_reset_state(struct gb_state *s) {
+void cpu_reset_state(GbState *s) {
     s->reg16.AF = 0x01B0;
     s->reg16.BC = 0x0013;
     s->reg16.DE = 0x00D8;
@@ -191,7 +191,7 @@ void cpu_reset_state(struct gb_state *s) {
     memset(s->mem_RTC, 0, 0x05);
 }
 
-static void cpu_handle_interrupts(struct gb_state *s) {
+static void cpu_handle_interrupts(GbState *s) {
     u8 interrupts = s->interrupts_enable & s->interrupts_request;
 
     if (s->interrupts_master_enabled) {
@@ -213,7 +213,7 @@ static void cpu_handle_interrupts(struct gb_state *s) {
     }
 }
 
-void cpu_timers_step(struct gb_state *s) {
+void cpu_timers_step(GbState *s) {
     u32 freq = s->double_speed ? GB_FREQ : 2 * GB_FREQ;
     u32 div_cycles_per_tick = freq / GB_DIV_FREQ;
     s->io_timer_DIV_cycles += s->emu_state->last_op_cycles;
@@ -262,7 +262,7 @@ void cpu_timers_step(struct gb_state *s) {
 #define REG16S(bitpos) s->emu_cpu_state->reg16s_lut[((op >> bitpos) & 3)]
 #define FLAG(bitpos) ((op >> bitpos) & 3)
 
-static void cpu_do_cb_instruction(struct gb_state *s) {
+static void cpu_do_cb_instruction(GbState *s) {
     u8 op = mmu_read(s, s->pc++);
 
     u8 maskedF8 = op & 0xf8;
@@ -361,7 +361,7 @@ static void cpu_do_cb_instruction(struct gb_state *s) {
     }
 }
 /*
-static void cpu_do_instruction_linear(struct gb_state *s) {
+static void cpu_do_instruction_linear(struct GbState *s) {
     u8 op = mmu_read(s, s->pc++);
     if (M(op, 0x00, 0xff)) { // NOP 
     } else if (M(op, 0x01, 0xcf)) { // LD reg16, u16 
@@ -724,7 +724,7 @@ static void cpu_do_instruction_linear(struct gb_state *s) {
 }
 */
 
-static void cpu_do_instruction(struct gb_state *s) {
+static void cpu_do_instruction(GbState *s) {
     u8 op = getOpCodeFromROM(s, s->pc++);
 
     switch (op) {
@@ -1854,7 +1854,7 @@ static void cpu_do_instruction(struct gb_state *s) {
 }
 
 /*
-static void cpu_do_instruction_tree(struct gb_state *s) {
+static void cpu_do_instruction_tree(struct GbState *s) {
     u8 op = getOpCodeFromROM(s, s->pc++);
 
     if (op <= 0x7F) {
@@ -3726,7 +3726,7 @@ static void cpu_do_instruction_tree(struct gb_state *s) {
         }
  }*/
 
- void cpu_step(struct gb_state *s) {
+ void cpu_step(GbState *s) {
     u8 op;
 
     s->emu_state->last_op_cycles = 0;
