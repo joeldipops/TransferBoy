@@ -257,5 +257,11 @@ typedef struct {
     struct emu_cpu_state *emu_cpu_state;
 } GbState;
 
+struct emu_cpu_state {
+    // Lookup tables for the reg-index encoded in instructions to ptr to reg.
+    u8 *reg8_lut[9];
+    u16 *reg16_lut[4];
+    u16 *reg16s_lut[4];
+};
 
 #endif

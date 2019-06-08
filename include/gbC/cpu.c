@@ -64,11 +64,11 @@ static int cycles_per_instruction_cb[] = {
 
 typedef void (*gbz80Operation)(GbState*, byte);
 static gbz80Operation opTable[] = {
-//         0        1           2       3           4           5       6       7       8         9        A         B      C     D       E      F   
-/*   0 */ nop,      ldR16N16,   ldaR16A,incR16,     incR8,      decR8,  ldR8N8, rlcA,   ldaR16SP, addHLR16, ldAaR16, decR16, incR8, decR8, ldR8N8, rrcA,
-/*   1 */ stop,     ldR16N16,   ldaR16A,incR16,     incR8,      decR8,  ldR8N8, rlA,    jrR8,      addHLR16, ldAaR16, decR16, incR8, decR8, ldR8N8, rrA,
-/*   2 */ jrCCR8,   ldR16N16,   ldiaHLA,incR16,     incR8,      decR16, ldR8N8, daa,    jrCCR8, addHLR16, ldiAaHL, decR16, incR8, decR8, ldR8R8, cpl,
-/*   3 */ jrCCR8,   ldR16N16,   lddaHLA,incR16,     incR8,      decR8,  ldR8N8, scf,    jrCCR8, addHLR16, lddAaHL, decR16, incR8, decR8, ldhAaN8, ccf,
+//         0        1           2       3           4           5       6       7       8           9           A       B       C       D       E       F   
+/*   0 */ nop,      ldR16N16,   ldaBCA, incR16,     incR8,      decR8,  ldR8N8, rlcA,   ldaN16SP,   addHLR16,   ldAaBC, decR16, incR8,  decR8,  ldR8N8, rrcA,
+/*   1 */ stop,     ldR16N16,   ldaDEA, incR16,     incR8,      decR8,  ldR8N8, rlA,    jrN8,       addHLR16,   ldAaDE, decR16, incR8,  decR8,  ldR8N8, rrA,
+/*   2 */ jrCCN8,   ldR16N16,   ldiaHLA,incR16,     incR8,      decR16, ldR8N8, daa,    jrCCN8, addHLR16, ldiAaHL, decR16, incR8, decR8, ldR8R8, cpl,
+/*   3 */ jrCCN8,   ldR16N16,   lddaHLA,incR16,     incR8,      decR8,  ldR8N8, scf,    jrCCN8, addHLR16, lddAaHL, decR16, incR8, decR8, ldhAaN8, ccf,
 /*   4 */ ldR8R8,   ldR8R8,     ldR8R8, ldR8R8,     ldR8R8,     ldR8R8, ldR8R8, ldR8R8, ldR8R8, ldR8R8,   ldR8R8,  ldR8R8, ldR8R8, ldR8R8, ldR8R8, ldR8R8,
 /*   5 */ ldR8R8,   ldR8R8,     ldR8R8, ldR8R8,     ldR8R8,     ldR8R8, ldR8R8, ldR8R8, ldR8R8, ldR8R8,   ldR8R8,  ldR8R8, ldR8R8, ldR8R8, ldR8R8, ldR8R8,
 /*   6 */ ldR8R8,   ldR8R8,     ldR8R8, ldR8R8,     ldR8R8,     ldR8R8, ldR8R8, ldR8R8, ldR8R8, ldR8R8,   ldR8R8,  ldR8R8, ldR8R8, ldR8R8, ldR8R8, ldR8R8,
@@ -79,7 +79,7 @@ static gbz80Operation opTable[] = {
 /*   B */ orAR8,    orAR8,      orAR8,  orAR8,      orAR8,      orAR8,  orAR8,  orAR8,  cpAR8, cpAR8, cpAR8, cpAR8, cpAR8, cpAR8, cpAR8, cpAR8,
 /*   C */ retCC,    popR16,     jpCCN16,jpN16,      callCCN16,  pushR16,addAN8, rstVec, retCC, ret, jpCCN16, ext, callCCN16, callN16, adcAN8, rstVec,
 /*   D */ retCC,    popR16,     jpCCN16,undefined,  callCCN16,  pushR16,subAN8, rstVec, retCC,reti,jpCCN16,undefined,callCCN16,undefined,sbcAN8,rstVec,
-/*   E */ ldhaN8A,  popR16,     ldaCA,  undefined,  undefined,  pushR16,andAN8, rstVec, addSPR8,jpaHL,ldaN16A,undefined,undefined,undefined, xorAN8, rstVec,
+/*   E */ ldhaN8A,  popR16,     ldaCA,  undefined,  undefined,  pushR16,andAN8, rstVec, addSPN8,jpaHL,ldaN16A,undefined,undefined,undefined, xorAN8, rstVec,
 /*   F */ ldhAaN8,  popR16,     ldAaC,  di,         undefined,  pushR16,orAN8 , rstVec, ldHLSPN8, ldSPHL, ldAaN16, ei, undefined,undefined, cpAN8, rstVec 
 };
 
@@ -102,13 +102,14 @@ static gbz80Operation extendedOpTable[] = {
 /*   E */   setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,
 /*   F */   setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8
 };
-
+/*
 struct emu_cpu_state {
-    /* Lookup tables for the reg-index encoded in instructions to ptr to reg. */
+    // Lookup tables for the reg-index encoded in instructions to ptr to reg.
     u8 *reg8_lut[9];
     u16 *reg16_lut[4];
     u16 *reg16s_lut[4];
 };
+*/
 
 void cpu_init_emu_cpu_state(GbState *s) {
     s->emu_cpu_state = calloc(1, sizeof(struct emu_cpu_state));
@@ -304,7 +305,7 @@ void cpu_timers_step(GbState *s) {
 #define REG16S(bitpos) s->emu_cpu_state->reg16s_lut[((op >> bitpos) & 3)]
 #define FLAG(bitpos) ((op >> bitpos) & 3)
 
-static void cpu_do_cb_instruction(GbState *s) {
+void cpu_do_cb_instruction(GbState *s) {
     u8 op = mmu_read(s, s->pc++);
 
     u8 maskedF8 = op & 0xf8;
@@ -769,6 +770,8 @@ static void cpu_do_instruction_linear(struct GbState *s) {
 static void cpu_do_instruction(GbState *s) {
     u8 op = getOpCodeFromROM(s, s->pc++);
 
+    opTable[op](s,op);
+    /*
     switch (op) {
         case 0x00: goto Ox00;
         case 0x01: goto Ox01;
@@ -1042,6 +1045,8 @@ static void cpu_do_instruction(GbState *s) {
         case 0xFE: goto OxFE;
         case 0xFF: goto OxFF;                
     }
+    */
+    /*
     return;
 
         // unuseds
@@ -1161,7 +1166,7 @@ static void cpu_do_instruction(GbState *s) {
             return;
         }
 
-        // LD A, n
+        // LD A, [r16]
         Ox0A: { // ld A, (BC)
             //logAndPause("ld A, (BC)");
             a = mem(BC);
@@ -1893,6 +1898,8 @@ static void cpu_do_instruction(GbState *s) {
             s->interrupts_master_enabled = 1;
             return;
         }    
+
+*/
 }
 
 void cpu_step(GbState *s) {
