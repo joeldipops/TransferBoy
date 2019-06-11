@@ -73,7 +73,7 @@ void loadSprite(sprite_t* spriteSheet, const byte spriteCode, const mirror_t mir
  * Rerenders the background over both display buffers to cover whatever junk was there previously.
  * @param state program state
  */
-void flushScreen(const RootState* state) {
+void flushScreen(RootState* state) {
     // Background
     display_show(2);
     prepareRdpForSprite(1);

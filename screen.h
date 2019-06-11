@@ -25,7 +25,7 @@ static const uInt MONOCHROME_PALETTE[] = {
  * Resets all screen buffers to a known state.
  * @param state program state.
  */
-void flushScreen(const RootState* state);
+void flushScreen(RootState* state);
 
 /**
  * Gets the RDP module ready to render a new texture.

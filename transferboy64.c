@@ -65,7 +65,7 @@ void mainLoop(RootState* state) {
     state->RequiresControllerRead = true;
     uLong iterations = 0;
 
-    while(!(state->Frame = display_lock()));
+    while(!(state->Frame = display_lock())); 
 
     while (!allQuit) {
         allQuit = true;

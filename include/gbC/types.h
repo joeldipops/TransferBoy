@@ -31,8 +31,6 @@ struct emu_state {
     bool lcd_entered_vblank; /* Set at the beginning of every VBlank. */
     u8 current_buffer;
     u16* pixel_buffers[4];
-    u16 colour_count[256];
-    u8 colours_count;
 
     bool flush_extram; /* Flush battery-backed RAM when it's disabled. */
     bool extram_dirty; /* Write battery-backed RAM periodically when dirty. */
@@ -257,6 +255,9 @@ struct gb_state {
     struct emu_state *emu_state;
     struct emu_cpu_state *emu_cpu_state;
 };
+
+typedef struct gb_state GbState;
+typedef struct player_input GbController;
 
 
 #endif

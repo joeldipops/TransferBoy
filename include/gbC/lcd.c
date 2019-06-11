@@ -2,13 +2,15 @@
 #include <string.h>
 
 #include "../../core.h"
+#include "../../state.h"
 #include "../../config.h"
+#include "../../logger.h"
 #include "lcd.h"
 #include "hwdefs.h"
 
 #define palette_get_gray(palette, colidx) (palette >> (colidx << 1)) & 0x3;
 
-static void lcd_render_current_line(struct gb_state *gb_state);
+static void lcd_render_current_line(PlayerState* state);
 
 /**
  *
@@ -29,7 +31,7 @@ int lcd_init(struct gb_state *s) {
     return 0;
 }
 
-void lcd_step(struct gb_state *s) {
+void lcd_step(PlayerState* state) {
     /* The LCD goes through several states.
      * 0 = H-Blank, 1 = V-Blank, 2 = reading OAM, 3 = line render
      * For the first 144 (visible) lines the hardware first reads the OAM
@@ -42,6 +44,8 @@ void lcd_step(struct gb_state *s) {
      * H-Blank takes about 201-207 cycles. VBlank 4560 clks.
      * OAM reading takes about 77-83 and line rendering about 169-175 clks.
      */
+
+    GbState* s = &state->EmulationState;
 
     s->emu_state->lcd_entered_hblank = 0;
     s->emu_state->lcd_entered_vblank = 0;
@@ -93,7 +97,7 @@ void lcd_step(struct gb_state *s) {
     }
 
     if (s->emu_state->lcd_entered_hblank)
-        lcd_render_current_line(s);
+        lcd_render_current_line(state);
 }
 
 
@@ -114,7 +118,7 @@ typedef struct {
     bool IsProcessed;
 } Pixel;
 
-static void lcd_render_current_line(struct gb_state *gb_state) {
+static void lcd_render_current_line(PlayerState* state) {
     /*
      * Tile Data @ 8000-8FFF or 8800-97FF defines the pixels per Tile, which can
      * be used for the BG, window or sprite/object. 192 tiles max, 8x8px, 4
@@ -136,11 +140,13 @@ static void lcd_render_current_line(struct gb_state *gb_state) {
      *
      */
 
+    GbState* gb_state = &state->EmulationState;
+
     if (gb_state->io_lcd_LY >= GB_LCD_HEIGHT) { /* VBlank */
         return;
     }
 
-    if (FRAMES_TO_SKIP && ((frameCount + 1) % (FRAMES_TO_SKIP + 1))) {    
+    if (FRAMES_TO_SKIP && ((state->Meta.FrameCount + 1) % (FRAMES_TO_SKIP + 1))) {    
         return;
     }
 
