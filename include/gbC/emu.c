@@ -9,6 +9,7 @@
 #include "cpu.h"
 #include "mmu.h"
 #include "lcd.h"
+#include "../../state.h"
 
 #define emu_error(fmt, ...) \
     do { \
@@ -16,9 +17,10 @@
         return 1; \
     } while (0)
 
-void emu_step(GbState *s) {
+void emu_step(PlayerState* state) {
+    GbState* s = &state->EmulationState;
     cpu_step(s);
-    lcd_step(s);
+    lcd_step(state);
     mmu_step(s);
     cpu_timers_step(s);
 
@@ -37,13 +39,13 @@ void emu_step(GbState *s) {
     }
 }
 
-void emu_step_frame(GbState *s) {
+void emu_step_frame(PlayerState* state) {
     do {
-        emu_step(s);
-    } while (!s->emu_state->lcd_entered_vblank);
+        emu_step(state);
+    } while (!state->EmulationState.emu_state->lcd_entered_vblank);
 
-    /* Save periodically (once per frame) if dirty. */
-    s->emu_state->flush_extram = 1;
+    // Save periodically (once per frame) if dirty.
+    state->EmulationState.emu_state->flush_extram = 1;
 
 }
 

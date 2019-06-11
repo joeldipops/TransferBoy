@@ -10,6 +10,4 @@
 #include "gbC/state.h"
 #include "gbC/types.h"
 
-typedef struct player_input GbController;
-
 #endif

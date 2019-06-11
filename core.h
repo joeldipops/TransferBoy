@@ -31,9 +31,6 @@ typedef struct {
 typedef enum { Quit, Init, Play, Menu, Options } Mode;
 typedef enum { BorderNone } Border;
 
-uLong frameCount;
-long long lastClock;
-
 /**
  * Reads a number from a substring, stopping after a certain number of characters.
  * @param start pointer to the start of the number in the string.

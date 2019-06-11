@@ -170,7 +170,7 @@ char addPlayer(RootState* state) {
 
     resetPlayState(newPlayer);
 
-    flushScreen(state);
+    flushScreen(state);    
 
     newPlayer->ActiveMode = Play;
     state->PlayerCount++;
@@ -205,11 +205,9 @@ void executeMenuItem(RootState* state, const byte playerNumber, const byte x, co
     switch((items)position) {
         case Resume:
             resumePlay(&state->Players[playerNumber]);
-            flushScreen(state);
             break;
         case Reset:
             resetGame(state, playerNumber);
-            flushScreen(state);
             break;
         case Change:
             changeGame(state, playerNumber);

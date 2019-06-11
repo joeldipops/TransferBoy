@@ -78,6 +78,7 @@ void initialiseEmulator(GbState* state, const ByteArray* romData, const ByteArra
 void resetPlayState(PlayerState* state) {
     initialiseEmulator(&state->EmulationState, &state->Cartridge.Rom, &state->Cartridge.Ram);
     state->BuffersInitialised = 0;
+    state->Meta.FrameCount = 0;
     resetSGBState(&state->SGBState);
 }
 
@@ -127,6 +128,7 @@ void mapGbInputs(const char controllerNumber, const GbButton* buttonMap, const N
  */
 void renderPixels(
     const display_context_t frame,
+    const PlayerState* state,
     const natural** pixelBuffer,
     const byte bufferIndex,
     const PaletteType paletteType,
@@ -137,8 +139,8 @@ void renderPixels(
     const bool isInitialised
 ) {
     const natural* currentPixels = pixelBuffer[bufferIndex];
-
     const natural* lastPixels = 0;
+
     if (FRAMES_TO_SKIP) {
         switch(bufferIndex) {
             case 0: lastPixels = pixelBuffer[2]; break;
@@ -155,6 +157,7 @@ void renderPixels(
         }
     }
 
+    natural pixelSize = ceil(avgPixelSize);
     switch(paletteType) {
         case SuperGameboyPalette:
             ;
@@ -170,7 +173,7 @@ void renderPixels(
 
                         if (!isInitialised || lastPixels[index] != currentPixels[index]) {
                             // SGB Colours are already massaged.
-                            graphics_draw_box(frame, tx, ty, avgPixelSize, avgPixelSize, currentPixels[index]);
+                            graphics_draw_box(frame, tx, ty, pixelSize, pixelSize, currentPixels[index]);
                         }
                     }
                 }
@@ -187,7 +190,7 @@ void renderPixels(
                     natural tx = x * avgPixelSize + left;
 
                     if (!isInitialised || lastPixels[index] != currentPixels[index]) {
-                        graphics_draw_box(frame, tx, ty, avgPixelSize, avgPixelSize, MONOCHROME_PALETTE[currentPixels[index]]);
+                        graphics_draw_box(frame, tx, ty, pixelSize, pixelSize, MONOCHROME_PALETTE[currentPixels[index]]);
                     }
                 }
             }
@@ -200,26 +203,23 @@ void renderPixels(
                     natural tx = x * avgPixelSize + left;                    
 
                     if (!isInitialised || lastPixels[index] != currentPixels[index]) {                    
-                        graphics_draw_box(frame, tx, ty, avgPixelSize, avgPixelSize, massageColour(currentPixels[index]));
+                        graphics_draw_box(frame, tx, ty, pixelSize, pixelSize, massageColour(currentPixels[index]));
                     }
                 }
             }
             break;
         default:
             // black screen, oh well
-            graphics_draw_box(frame, left, top, GB_LCD_WIDTH * avgPixelSize, GB_LCD_HEIGHT * avgPixelSize, 0x00010001);            
+            graphics_draw_box(frame, left, top, GB_LCD_WIDTH * pixelSize, GB_LCD_HEIGHT * avgPixelSize, 0x00010001);            
             break;
     }
 
     if (SHOW_FRAME_COUNT) {
         string text = "";
 
-        long long thisClock = get_ticks_ms();
-        long diff = thisClock - lastClock;
+        long diff = state->Meta.NextClock - state->Meta.LastClock;
 
-        sprintf(text, "Frames: %lld FPS: %f", frameCount, ((FRAMES_TO_SKIP + 1) / (double)diff) * 1000);
-        //sprintf(text, "Frames: %lld Memory: %lld", frameCount, getCurrentMemory());        
-        lastClock = thisClock;
+        sprintf(text, "Frames: %lld FPS: %f", state->Meta.FrameCount, ((FRAMES_TO_SKIP + 1) / (double)diff) * 1000);
         graphics_set_color(GLOBAL_TEXT_COLOUR, 0x0);
         graphics_draw_box(frame, 0, 0, 680, 10, GLOBAL_BACKGROUND_COLOUR);
         graphics_draw_text(frame, 5, 0, text);
@@ -272,7 +272,7 @@ void playLogic(RootState* state, const byte playerNumber) {
         exchangeLinkData(states);
     }
 
-    emu_step(emulatorState);
+    emu_step(&state->Players[playerNumber]);
 
     if (IS_SGB_ENABLED && state->Players[playerNumber].Cartridge.Header.IsSgbSupported) {
         processSGBData(&state->Players[playerNumber]);
@@ -280,15 +280,19 @@ void playLogic(RootState* state, const byte playerNumber) {
     }
 
     if (emulatorState->emu_state->lcd_entered_vblank) {
-        frameCount++;
+        state->Players[playerNumber].Meta.FrameCount++;
 
-        if (FRAMES_TO_SKIP && (frameCount % (FRAMES_TO_SKIP + 1))) {
+                
+        if (FRAMES_TO_SKIP && (state->Players[playerNumber].Meta.FrameCount % (FRAMES_TO_SKIP + 1))) {
             playAfter(state, playerNumber);
             state->Players[playerNumber].WasFrameSkipped = true;
             return;
         } else {
             state->Players[playerNumber].WasFrameSkipped = false;
         }
+
+        state->Players[playerNumber].Meta.LastClock = state->Players[playerNumber].Meta.NextClock;
+        state->Players[playerNumber].Meta.NextClock = get_ticks_ms();
 
         if (IS_SGB_ENABLED && state->Players[playerNumber].Cartridge.Header.IsSgbSupported) {
             applySGBPalettes(
@@ -376,6 +380,7 @@ void playDraw(const RootState* state, const byte playerNumber) {
 
     renderPixels(
         state->Frame,
+        &state->Players[playerNumber],       
         (const short unsigned int **)state->Players[playerNumber].EmulationState.emu_state->pixel_buffers,
         state->Players[playerNumber].EmulationState.emu_state->current_buffer,
         palette,
@@ -393,11 +398,6 @@ void playDraw(const RootState* state, const byte playerNumber) {
  * @param playerNumber player in play mode.
  */
 void playAfter(RootState* state, const byte playerNumber) {
-    state->Players[playerNumber].EmulationState.emu_state->colours_count = 0;
-    for (uInt i = 0; i < 256; i++) {
-        state->Players[playerNumber].EmulationState.emu_state->colour_count[i] = 0;
-    }
-
     if (state->Players[playerNumber].EmulationState.emu_state->current_buffer == 3) {
         state->Players[playerNumber].EmulationState.emu_state->current_buffer = 0;
     } else {
