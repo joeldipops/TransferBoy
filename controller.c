@@ -12,12 +12,13 @@ const sByte STICK_DEADZONE = 42;
  * @out Array of pressed buttons.
  */
 void getPressedButtons(const N64ControllerState* input, const byte controllerNumber, bool* output) {
-    // A problem with the emulator (or my shitty code?) seems to mean that controller 2 always has every button pressed.
-    // Let's leave them idle for now
+    // A controller that's not plugged apparently always has every button pressed.
+    /*
     if (controllerNumber > 0) {
         memset(output, 0x00, N64_BUTTON_COUNT);
         return;
     }
+    */
 
     output[NoButton] = false;
     output[A] = true && input->c[controllerNumber].A;
