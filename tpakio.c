@@ -1,5 +1,6 @@
 #include "core.h"
 #include "tpakio.h"
+#include "config.h"
 #include <libdragon.h>
 #include <math.h>
 
@@ -518,7 +519,7 @@ sByte getCartridgeMetadata(const byte controllerNumber, GameBoyCartridge* cartri
         return result;
     }
 
-    if (!checkHeader(&header)) {
+    if (!checkHeader(&header) && VALIDATE_CHECKSUMS) {
         return TPAK_ERR_CORRUPT_HEADER;
     }
 
@@ -578,7 +579,7 @@ sByte importCartridge(const byte controllerNumber, GameBoyCartridge* cartridge) 
         return result;
     }
 
-    if (!checkRom(cartridge->Header.GlobalChecksum, &cartridge->Rom)) 
+    if (!checkRom(cartridge->Header.GlobalChecksum, &cartridge->Rom) && VALIDATE_CHECKSUMS) 
     {
         return TPAK_ERR_CORRUPT_DATA;
     }

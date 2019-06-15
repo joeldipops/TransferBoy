@@ -80,7 +80,9 @@ void initLogic(RootState* state, const byte playerNumber) {
             }
 
             state->Players[playerNumber].Cartridge.Ram.Size = 0x00;
-            state->Players[playerNumber].Cartridge.Header.IsSgbSupported = true;            
+            state->Players[playerNumber].Cartridge.Header.IsSgbSupported = true;   
+            state->Players[playerNumber].Cartridge.IsGbcSupported = false;
+
         } else {
             sByte result = importCartridge(playerNumber, &state->Players[playerNumber].Cartridge);
             if (result) {
