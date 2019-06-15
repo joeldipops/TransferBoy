@@ -18,15 +18,12 @@ static void lcd_render_current_line(PlayerState* state);
  **  0 - Successful
  ** -1 - Out of memory.
  */
-int lcd_init(GbState *s) {
-    for (u8 i = 0; i < 4; i++) {
-        s->emu_state->pixel_buffers[i] = calloc(sizeof(u16), GB_LCD_WIDTH * GB_LCD_HEIGHT);
-        if (!s->emu_state->pixel_buffers[i]) {
-            return -1;
-        }
+int lcd_init(GbState* s) {
+    s->emu_state->LastBuffer = calloc(sizeof(u16), GB_LCD_WIDTH * GB_LCD_HEIGHT);
+    s->emu_state->NextBuffer = calloc(sizeof(u16), GB_LCD_WIDTH * GB_LCD_HEIGHT);
+    if (!s->emu_state->LastBuffer || !s->emu_state->NextBuffer) {
+        return -1;
     }
-
-    s->emu_state->current_buffer = 0;
 
     return 0;
 }
@@ -349,9 +346,8 @@ static void lcd_render_current_line(PlayerState* state) {
     }
 
     natural lineValue = y * GB_LCD_WIDTH;
-    byte index = gb_state->emu_state->current_buffer;
     for (natural x = 0; x < GB_LCD_WIDTH; x++) {
         u16 colour = pixels[x].Colour;
-        gb_state->emu_state->pixel_buffers[index][x + lineValue] = colour;
+        gb_state->emu_state->NextBuffer[x + lineValue] = colour;
     }
 }

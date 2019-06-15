@@ -129,8 +129,8 @@ void mapGbInputs(const char controllerNumber, const GbButton* buttonMap, const N
 void renderPixels(
     const display_context_t frame,
     const PlayerState* state,
-    const natural** pixelBuffer,
-    const byte bufferIndex,
+    const natural* lastBuffer,
+    const natural* nextBuffer,
     const PaletteType paletteType,
     const float avgPixelSize,
     const natural left,
@@ -138,25 +138,6 @@ void renderPixels(
     const SuperGameboyState* sgbState,
     const bool isInitialised
 ) {
-    const natural* currentPixels = pixelBuffer[bufferIndex];
-    const natural* lastPixels = 0;
-
-    if (FRAMES_TO_SKIP) {
-        switch(bufferIndex) {
-            case 0: lastPixels = pixelBuffer[2]; break;
-            case 1: lastPixels = pixelBuffer[3]; break;
-            case 2: lastPixels = pixelBuffer[0]; break;
-            case 3: lastPixels = pixelBuffer[1]; break;
-        }
-    } else {
-        switch(bufferIndex) {
-            case 0: lastPixels = pixelBuffer[3]; break;
-            case 1: lastPixels = pixelBuffer[0]; break;
-            case 2: lastPixels = pixelBuffer[1]; break;
-            case 3: lastPixels = pixelBuffer[2]; break;
-        }
-    }
-
     natural pixelSize = ceil(avgPixelSize);
     switch(paletteType) {
         case SuperGameboyPalette:
@@ -171,9 +152,9 @@ void renderPixels(
                         natural index = x + y * GB_LCD_WIDTH;
                         natural tx = x * avgPixelSize + left;                        
 
-                        if (!isInitialised || lastPixels[index] != currentPixels[index]) {
+                        if (!isInitialised || lastBuffer[index] != nextBuffer[index]) {
                             // SGB Colours are already massaged.
-                            graphics_draw_box(frame, tx, ty, pixelSize, pixelSize, currentPixels[index]);
+                            graphics_draw_box(frame, tx, ty, pixelSize, pixelSize, nextBuffer[index]);
                         }
                     }
                 }
@@ -189,8 +170,8 @@ void renderPixels(
                     natural index = x + y * GB_LCD_WIDTH;
                     natural tx = x * avgPixelSize + left;
 
-                    if (!isInitialised || lastPixels[index] != currentPixels[index]) {
-                        graphics_draw_box(frame, tx, ty, pixelSize, pixelSize, MONOCHROME_PALETTE[currentPixels[index]]);
+                    if (!isInitialised || lastBuffer[index] != nextBuffer[index]) {
+                        graphics_draw_box(frame, tx, ty, pixelSize, pixelSize, MONOCHROME_PALETTE[nextBuffer[index]]);
                     }
                 }
             }
@@ -202,15 +183,15 @@ void renderPixels(
                     natural index = x + y * GB_LCD_WIDTH;
                     natural tx = x * avgPixelSize + left;                    
 
-                    if (!isInitialised || lastPixels[index] != currentPixels[index]) {                    
-                        graphics_draw_box(frame, tx, ty, pixelSize, pixelSize, massageColour(currentPixels[index]));
+                    if (!isInitialised || lastBuffer[index] != nextBuffer[index]) {                    
+                        graphics_draw_box(frame, tx, ty, pixelSize, pixelSize, massageColour(nextBuffer[index]));
                     }
                 }
             }
             break;
         default:
             // black screen, oh well
-            graphics_draw_box(frame, left, top, GB_LCD_WIDTH * pixelSize, GB_LCD_HEIGHT * avgPixelSize, 0x00010001);            
+            graphics_draw_box(frame, left, top, GB_LCD_WIDTH * pixelSize, GB_LCD_HEIGHT * pixelSize, 0x00010001);            
             break;
     }
 
@@ -281,10 +262,8 @@ void playLogic(RootState* state, const byte playerNumber) {
 
     if (emulatorState->emu_state->lcd_entered_vblank) {
         state->Players[playerNumber].Meta.FrameCount++;
-
                 
         if (FRAMES_TO_SKIP && (state->Players[playerNumber].Meta.FrameCount % (FRAMES_TO_SKIP + 1))) {
-            playAfter(state, playerNumber);
             state->Players[playerNumber].WasFrameSkipped = true;
             return;
         } else {
@@ -297,9 +276,7 @@ void playLogic(RootState* state, const byte playerNumber) {
         if (IS_SGB_ENABLED && state->Players[playerNumber].Cartridge.Header.IsSgbSupported) {
             applySGBPalettes(
                 &state->Players[playerNumber].SGBState, 
-                state->Players[playerNumber].EmulationState.emu_state->pixel_buffers[
-                    state->Players[playerNumber].EmulationState.emu_state->current_buffer
-                ]
+                state->Players[playerNumber].EmulationState.emu_state->NextBuffer
             );
         }
 
@@ -376,13 +353,13 @@ void playDraw(const RootState* state, const byte playerNumber) {
         palette = SuperGameboyPalette;
     }
 
-    bool isInitialised = state->Players[playerNumber].BuffersInitialised >= 4;
+    bool isInitialised = state->Players[playerNumber].BuffersInitialised >= 2;
 
     renderPixels(
         state->Frame,
         &state->Players[playerNumber],       
-        (const short unsigned int **)state->Players[playerNumber].EmulationState.emu_state->pixel_buffers,
-        state->Players[playerNumber].EmulationState.emu_state->current_buffer,
+        state->Players[playerNumber].EmulationState.emu_state->LastBuffer,
+        state->Players[playerNumber].EmulationState.emu_state->NextBuffer,
         palette,
         (float)screen.Height / (float)GB_LCD_HEIGHT,
         screen.Left,
@@ -398,13 +375,14 @@ void playDraw(const RootState* state, const byte playerNumber) {
  * @param playerNumber player in play mode.
  */
 void playAfter(RootState* state, const byte playerNumber) {
-    if (state->Players[playerNumber].EmulationState.emu_state->current_buffer == 3) {
-        state->Players[playerNumber].EmulationState.emu_state->current_buffer = 0;
-    } else {
-        state->Players[playerNumber].EmulationState.emu_state->current_buffer++;
-    }
+    // After each frame, NextBuffer becomes last buffer.
+    memcpy(
+        state->Players[playerNumber].EmulationState.emu_state->LastBuffer,
+        state->Players[playerNumber].EmulationState.emu_state->NextBuffer,
+        sizeof(u16) * GB_LCD_WIDTH * GB_LCD_HEIGHT
+    );
     
-    if (state->Players[playerNumber].BuffersInitialised < 4) {
+    if (state->Players[playerNumber].BuffersInitialised < 2) {
         state->Players[playerNumber].BuffersInitialised++;
     }
 }

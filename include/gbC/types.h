@@ -29,8 +29,8 @@ struct emu_state {
 
     bool lcd_entered_hblank; /* Set at the end of every HBlank. */
     bool lcd_entered_vblank; /* Set at the beginning of every VBlank. */
-    u8 current_buffer;
-    u16* pixel_buffers[4];
+    u16* LastBuffer;
+    u16* NextBuffer;
 
     bool flush_extram; /* Flush battery-backed RAM when it's disabled. */
     bool extram_dirty; /* Write battery-backed RAM periodically when dirty. */

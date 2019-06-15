@@ -40,4 +40,9 @@ void logAndPauseFrame(display_context_t frame, const string text, ...);
  */
 void printSegmentToFrame(const string caption, const byte* start, const display_context_t frame);
 
+/**
+ * Generic debug handler for the gameboy emulation
+ */
+void debug(GbState *s, string pnemonic);
+
 #endif
