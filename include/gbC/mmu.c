@@ -23,7 +23,7 @@
 
 #define mmu_error(fmt, ...) \
     do { \
-        logAndPause("MMU Error: " fmt "\n", ##__VA_ARGS__); \
+        /*logAndPause("MMU Error: " fmt "\n", ##__VA_ARGS__);*/ \
     } while (0)
 
 #define mmu_assert(cond) \
