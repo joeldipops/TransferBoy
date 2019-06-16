@@ -172,19 +172,27 @@ void ldR8N8(GbState* s, byte op) { // debug(s, "ldR8N8");
     u8* dst = REG8(3);
     u8 src = IMM8;
     s->pc++;
-    if (dst)
-        *dst = src;
-    else
-        mmu_write(s, HL, src);    
+    *dst = src;
+}
+void ldaHLN8(GbState* s, byte op) { // debug(s, "ldaHLN8");
+    u8 src = IMM8;
+    s->pc++;
+    mmu_write(s, HL, src);    
 }
 void ldR8R8(GbState* s, byte op) { // debug(s, "ldR8R8");
     u8* src = REG8(0);
     u8* dst = REG8(3);
-    u8 srcval = src ? *src : mem(HL);
-    if (dst)
-        *dst = srcval;
-    else
-        mmu_write(s, HL, srcval);    
+    u8 srcval = *src;
+    *dst = srcval;
+}
+void ldR8aHL(GbState* s, byte op) { // debug(s, "ldR8aHL");
+    u8* dst = REG8(3);
+    u8 srcval = mem(HL);
+    *dst = srcval;
+}
+void ldaHLR8(GbState* s, byte op) { // debug(s, "ldaHLR8");
+    u8* src = REG8(0);
+    mmu_write(s, HL, *src);    
 }
 
 void ldaBCA(GbState* s, byte op) { // debug(s, "ldaBCA");

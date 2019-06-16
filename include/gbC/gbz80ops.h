@@ -38,8 +38,14 @@ void setU3R8(GbState* state, byte op);
 void setU3aHL(GbState* state, byte op);
 
 void ext(GbState* state, byte op);
+
 void ldR8N8(GbState* state, byte op);
+void ldaHLN8(GbState* state, byte op);
+
 void ldR8R8(GbState* state, byte op);
+void ldaHLR8(GbState* state, byte op);
+void ldR8aHL(GbState* state, byte op);
+
 void ldAaBC(GbState* state, byte op);
 void ldAaDE(GbState* state, byte op);
 void ldAaN16(GbState* state, byte op);
@@ -60,24 +66,45 @@ void ldHLSPN8(GbState* state, byte op);
 void ldaN16SP(GbState* state, byte op);
 void pushR16(GbState* state, byte op);
 void popR16(GbState* state, byte op);
-void addAR8(GbState* state, byte op);
+
 void addAN8(GbState* state, byte op);
-void adcAR8(GbState* state, byte op);
+void addAR8(GbState* state, byte op);
+void addAaHL(GbState* state, byte op);
+
 void adcAN8(GbState* state, byte op);
-void subAR8(GbState* state, byte op);
+void adcAR8(GbState* state, byte op);
+void adcAaHL(GbState* state, byte op);
+
 void subAN8(GbState* state, byte op);
-void sbcAR8(GbState* state, byte op);
+void subAR8(GbState* state, byte op);
+void subAaHL(GbState* state, byte op);
+
 void sbcAN8(GbState* state, byte op);
-void andAR8(GbState* state, byte op);
+void sbcAR8(GbState* state, byte op);
+void sbcAaHL(GbState* state, byte op);
+
 void andAN8(GbState* state, byte op);
-void orAR8(GbState* state, byte op);
+void andAR8(GbState* state, byte op);
+void andAaHL(GbState* state, byte op);
+
 void orAN8(GbState* state, byte op);
-void xorAR8(GbState* state, byte op);
+void orAR8(GbState* state, byte op);
+void orAaHL(GbState* state, byte op);
+
 void xorAN8(GbState* state, byte op);
-void cpAR8(GbState* state, byte op);
+void xorAR8(GbState* state, byte op);
+void xorAaHL(GbState* state, byte op);
+
 void cpAN8(GbState* state, byte op);
+void cpAR8(GbState* state, byte op);
+void cpAaHL(GbState* state, byte op);
+
 void incR8(GbState* state, byte op);
+void incaHL(GbState* state, byte op);
+
 void decR8(GbState* state, byte op);
+void decaHL(GbState* state, byte op);
+
 void incR16(GbState* state, byte op);
 void decR16(GbState* state, byte op);
 void addHLR16(GbState* state, byte op);
@@ -112,23 +139,23 @@ void undefined(GbState* state, byte op);
 
 typedef void (*gbz80Operation)(GbState*, byte);
 static gbz80Operation opTable[] = {
-//        0         1           2           3           4           5           6       7       8           9           A           B           C           D           E       F   
-/*   0 */ nop,      ldR16N16,   ldaBCA,     incR16,     incR8,      decR8,      ldR8N8, rlcA,   ldaN16SP,   addHLR16,   ldAaBC,     decR16,     incR8,      decR8,      ldR8N8, rrcA,
-/*   1 */ stop,     ldR16N16,   ldaDEA,     incR16,     incR8,      decR8,      ldR8N8, rlA,    jrN8,       addHLR16,   ldAaDE,     decR16,     incR8,      decR8,      ldR8N8, rrA,
-/*   2 */ jrCCN8,   ldR16N16,   ldiaHLA,    incR16,     incR8,      decR8,      ldR8N8, daa,    jrCCN8,     addHLR16,   ldiAaHL,    decR16,     incR8,      decR8,      ldR8N8, cpl,
-/*   3 */ jrCCN8,   ldR16N16,   lddaHLA,    incR16,     incR8,      decR8,      ldR8N8, scf,    jrCCN8,     addHLR16,   lddAaHL,    decR16,     incR8,      decR8,      ldR8N8, ccf,
-/*   4 */ ldR8R8,   ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8, ldR8R8, ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8, ldR8R8,
-/*   5 */ ldR8R8,   ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8, ldR8R8, ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8, ldR8R8,
-/*   6 */ ldR8R8,   ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8, ldR8R8, ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8, ldR8R8,
-/*   7 */ ldR8R8,   ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     halt,   ldR8R8, ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8, ldR8R8,
-/*   8 */ addAR8,   addAR8,     addAR8,     addAR8,     addAR8,     addAR8,     addAR8, addAR8, adcAR8,     adcAR8,     adcAR8,     adcAR8,     adcAR8,     adcAR8,     adcAR8, adcAR8,
-/*   9 */ subAR8,   subAR8,     subAR8,     subAR8,     subAR8,     subAR8,     subAR8, subAR8, sbcAR8,     sbcAR8,     sbcAR8,     sbcAR8,     sbcAR8,     sbcAR8,     sbcAR8, sbcAR8,
-/*   A */ andAR8,   andAR8,     andAR8,     andAR8,     andAR8,     andAR8,     andAR8, andAR8, xorAR8,     xorAR8,     xorAR8,     xorAR8,     xorAR8,     xorAR8,     xorAR8, xorAR8,
-/*   B */ orAR8,    orAR8,      orAR8,      orAR8,      orAR8,      orAR8,      orAR8,  orAR8,  cpAR8,      cpAR8,      cpAR8,      cpAR8,      cpAR8,      cpAR8,      cpAR8,  cpAR8,
-/*   C */ retCC,    popR16,     jpCCN16,    jpN16,      callCCN16,  pushR16,    addAN8, rstVec, retCC,      ret,        jpCCN16,    ext,        callCCN16,  callN16,    adcAN8, rstVec,
-/*   D */ retCC,    popR16,     jpCCN16,    undefined,  callCCN16,  pushR16,    subAN8, rstVec, retCC,      reti,       jpCCN16,    undefined,  callCCN16,  undefined,  sbcAN8, rstVec,
-/*   E */ ldhaN8A,  popR16,     ldaCA,      undefined,  undefined,  pushR16,    andAN8, rstVec, addSPN8,    jpHL,       ldaN16A,    undefined,  undefined,  undefined,  xorAN8, rstVec,
-/*   F */ ldhAaN8,  popR16,     ldAaC,      di,         undefined,  pushR16,    orAN8 , rstVec, ldHLSPN8,   ldSPHL,     ldAaN16,    ei,         undefined,  undefined,  cpAN8,  rstVec 
+//        0         1           2           3           4           5           6           7           8           9           A           B           C           D           E           F   
+/*   0 */ nop,      ldR16N16,   ldaBCA,     incR16,     incR8,      decR8,      ldR8N8,     rlcA,       ldaN16SP,   addHLR16,   ldAaBC,     decR16,     incR8,      decR8,      ldR8N8,     rrcA,
+/*   1 */ stop,     ldR16N16,   ldaDEA,     incR16,     incR8,      decR8,      ldR8N8,     rlA,        jrN8,       addHLR16,   ldAaDE,     decR16,     incR8,      decR8,      ldR8N8,     rrA,
+/*   2 */ jrCCN8,   ldR16N16,   ldiaHLA,    incR16,     incR8,      decR8,      ldR8N8,     daa,        jrCCN8,     addHLR16,   ldiAaHL,    decR16,     incR8,      decR8,      ldR8N8,     cpl,
+/*   3 */ jrCCN8,   ldR16N16,   lddaHLA,    incR16,     incR8,      decR8,      ldaHLN8,    scf,        jrCCN8,     addHLR16,   lddAaHL,    decR16,     incR8,      decR8,      ldR8N8,     ccf,
+/*   4 */ ldR8R8,   ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8aHL,    ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8aHL,    ldR8R8,
+/*   5 */ ldR8R8,   ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8aHL,    ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8aHL,    ldR8R8,
+/*   6 */ ldR8R8,   ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8aHL,    ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8aHL,    ldR8R8,
+/*   7 */ ldaHLR8,  ldaHLR8,    ldaHLR8,    ldaHLR8,    ldaHLR8,    ldaHLR8,    halt,       ldaHLR8,    ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8aHL,    ldR8R8,
+/*   8 */ addAR8,   addAR8,     addAR8,     addAR8,     addAR8,     addAR8,     addAR8,     addAR8,     adcAR8,     adcAR8,     adcAR8,     adcAR8,     adcAR8,     adcAR8,     adcAR8,     adcAR8,
+/*   9 */ subAR8,   subAR8,     subAR8,     subAR8,     subAR8,     subAR8,     subAR8,     subAR8,     sbcAR8,     sbcAR8,     sbcAR8,     sbcAR8,     sbcAR8,     sbcAR8,     sbcAR8,     sbcAR8,
+/*   A */ andAR8,   andAR8,     andAR8,     andAR8,     andAR8,     andAR8,     andAR8,     andAR8,     xorAR8,     xorAR8,     xorAR8,     xorAR8,     xorAR8,     xorAR8,     xorAR8,     xorAR8,
+/*   B */ orAR8,    orAR8,      orAR8,      orAR8,      orAR8,      orAR8,      orAR8,      orAR8,      cpAR8,      cpAR8,      cpAR8,      cpAR8,      cpAR8,      cpAR8,      cpAR8,      cpAR8,
+/*   C */ retCC,    popR16,     jpCCN16,    jpN16,      callCCN16,  pushR16,    addAN8,     rstVec,     retCC,      ret,        jpCCN16,    ext,        callCCN16,  callN16,    adcAN8,     rstVec,
+/*   D */ retCC,    popR16,     jpCCN16,    undefined,  callCCN16,  pushR16,    subAN8,     rstVec,     retCC,      reti,       jpCCN16,    undefined,  callCCN16,  undefined,  sbcAN8,     rstVec,
+/*   E */ ldhaN8A,  popR16,     ldaCA,      undefined,  undefined,  pushR16,    andAN8,     rstVec,     addSPN8,    jpHL,       ldaN16A,    undefined,  undefined,  undefined,  xorAN8,     rstVec,
+/*   F */ ldhAaN8,  popR16,     ldAaC,      di,         undefined,  pushR16,    orAN8 ,     rstVec,     ldHLSPN8,   ldSPHL,     ldAaN16,    ei,         undefined,  undefined,  cpAN8,      rstVec 
 };
 
 static gbz80Operation extendedOpTable[] = {
