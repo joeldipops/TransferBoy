@@ -43,6 +43,8 @@ LD_OFILES += $(CURDIR)/obj/cpu.o
 LD_OFILES += $(CURDIR)/obj/emu.o
 LD_OFILES += $(CURDIR)/obj/lcd.o
 LD_OFILES += $(CURDIR)/obj/mmu.o
+LD_OFILES += $(CURDIR)/obj/c_gbz80ops.o
+LD_OFILES += $(CURDIR)/obj/s_gbz80ops.o
 LD_OFILES += $(CURDIR)/obj/gbc_state.o
 
 $(PROG_NAME)$(ROM_EXTENSION): $(PROG_NAME).elf transferboy64.dfs
@@ -68,6 +70,8 @@ $(PROG_NAME).elf :
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/tpakio.o $(CURDIR)/tpakio.c
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/superGameboy.o $(CURDIR)/superGameboy.c
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/controller.o $(CURDIR)/controller.c	
+	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/c_gbz80ops.o $(CURDIR)/include/gbC/gbz80ops.c	
+	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/s_gbz80ops.o $(CURDIR)/include/gbC/gbz80ops.S
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/cpu.o $(CURDIR)/include/gbC/cpu.c
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/emu.o $(CURDIR)/include/gbC/emu.c
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/lcd.o $(CURDIR)/include/gbC/lcd.c

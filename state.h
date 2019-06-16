@@ -2,12 +2,18 @@
 #define STATE_INCLUDED
 
 #include "core.h"
-#include "include/gbc_bundle.h"
 #include "sgbDefs.h"
 #include "controller.h"
 #include "tpakio.h"
+#include "include/gbC/types.h"
 
 #define MAX_PLAYERS 2
+
+typedef struct {
+    long long LastClock;
+    long long NextClock;
+    uLong FrameCount;
+} MetaState;
 
 typedef struct {
     Mode ActiveMode;
@@ -26,6 +32,7 @@ typedef struct {
     sByte MenuCursorColumn;
     bool WasFrameSkipped;
     byte BuffersInitialised;
+    MetaState Meta;
 } PlayerState;
 
 typedef struct {

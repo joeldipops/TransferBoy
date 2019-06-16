@@ -220,7 +220,7 @@ int rom_get_info(u8 *rom, size_t rom_size, struct rominfo *ret_rominfo) {
     return 0;
 }
 
-int state_new_from_rom(struct gb_state *s, u8 *rom, size_t rom_size) {
+int state_new_from_rom(GbState *s, u8 *rom, size_t rom_size) {
 
 
     struct rominfo rominfo;
@@ -262,7 +262,7 @@ int state_new_from_rom(struct gb_state *s, u8 *rom, size_t rom_size) {
  * Adds BIOS to the state - should be called only after creating fresh state
  * from rom. Overwrites some state (such as PC) to facilitate running of BIOS.
  */
-void state_add_bios(struct gb_state *s, u8 *bios, size_t bios_size) {
+void state_add_bios(GbState *s, u8 *bios, size_t bios_size) {
     assert(bios_size == 256);
     s->mem_BIOS = malloc(bios_size);
     memcpy(s->mem_BIOS, bios, bios_size);
@@ -274,17 +274,17 @@ void state_add_bios(struct gb_state *s, u8 *bios, size_t bios_size) {
  * Initialize the emulator state of the gameboy. This state belongs to the
  * emulator, not the state of the emulated hardware.
  */
-void init_emu_state(struct gb_state *s) {
+void init_emu_state(GbState *s) {
     s->emu_state = calloc(1, sizeof(struct emu_state));
     s->emu_state->dbg_breakpoint = 0xffff;
 }
 
 /*
  * Dump the current state of the gameboy into a buffer. This function allocates
- * a buffer large enough to hold `struct gb_state` and all the memory of the
+ * a buffer large enough to hold `GbState` and all the memory of the
  * gameboy (ROM, WRAM, EXT_RAM, VRAM).
  */
-int state_save(struct gb_state *s, u8 **ret_state_buf, size_t *ret_state_size) {
+int state_save(GbState *s, u8 **ret_state_buf, size_t *ret_state_size) {
     size_t rom_size = ROM_BANKSIZE * s->mem_num_banks_rom;
     size_t wram_size = WRAM_BANKSIZE * s->mem_num_banks_wram;
     size_t extram_size = EXTRAM_BANKSIZE * s->mem_num_banks_extram;
@@ -295,13 +295,13 @@ int state_save(struct gb_state *s, u8 **ret_state_buf, size_t *ret_state_size) {
         return 1;
     }
 
-    size_t state_size = sizeof(u32) + sizeof(struct gb_state) + rom_size +
+    size_t state_size = sizeof(u32) + sizeof(GbState) + rom_size +
         wram_size + extram_size + vram_size;
     u8 *state_buf = malloc(state_size);
 
     u32 *hdr = (u32*)state_buf;
-    hdr[0] = sizeof(struct gb_state);
-    struct gb_state *ts = (struct gb_state*)(&hdr[1]);
+    hdr[0] = sizeof(GbState);
+    GbState *ts = (GbState*)(&hdr[1]);
     *ts = *s;
     u8 *rom_start = (u8*)(ts + 1);
     u8 *wram_start = rom_start + rom_size;
@@ -330,19 +330,19 @@ int state_save(struct gb_state *s, u8 **ret_state_buf, size_t *ret_state_size) {
  * gb_state` that form the memory of the gameboy (ROM, WRAM, EXT_RAM, VRAM).
  */
  /*
-int state_load(struct gb_state *s, u8 *state_buf, size_t state_buf_size) {
+int state_load(GbState *s, u8 *state_buf, size_t state_buf_size) {
     assert(state_buf_size >= sizeof(u32));
     state_buf_size -= sizeof(u32);
     u32 *state_hdr = (u32*)state_buf;
     u32 state_size = state_hdr[0];
-    if (state_size != sizeof(struct gb_state))
+    if (state_size != sizeof(GbState))
         err("State header mismatch: file statesize is %u byte, program "
-            "statesize is %zu byte.\n", state_size, sizeof(struct gb_state));
+            "statesize is %zu byte.\n", state_size, sizeof(GbState));
 
-    assert(state_buf_size >= sizeof(struct gb_state));
-    state_buf_size -= sizeof(struct gb_state);
+    assert(state_buf_size >= sizeof(GbState));
+    state_buf_size -= sizeof(GbState);
 
-    struct gb_state *fs = (struct gb_state*)(&state_hdr[1]);
+    GbState *fs = (GbState*)(&state_hdr[1]);
     *s = *fs;
 
     size_t romsize = ROM_BANKSIZE * s->mem_num_banks_rom;
@@ -379,7 +379,7 @@ int state_load(struct gb_state *s, u8 *state_buf, size_t state_buf_size) {
 }
 */
 
-int state_save_extram(struct gb_state *s, u8 **ret_state_buf,
+int state_save_extram(GbState *s, u8 **ret_state_buf,
         size_t *ret_state_size) {   
     size_t extramsize = s->mem_num_banks_extram * EXTRAM_BANKSIZE;
     *ret_state_buf = malloc(extramsize);
@@ -388,7 +388,7 @@ int state_save_extram(struct gb_state *s, u8 **ret_state_buf,
     return 0;
 }
 
-int state_load_extram(struct gb_state *s, u8 *state_buf,
+int state_load_extram(GbState *s, u8 *state_buf,
         size_t state_buf_size) {
     size_t extramsize = s->mem_num_banks_extram * EXTRAM_BANKSIZE;
     if (state_buf_size != extramsize)

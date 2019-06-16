@@ -23,7 +23,7 @@
 
 #define mmu_error(fmt, ...) \
     do { \
-        logAndPause("MMU Error: " fmt "\n", ##__VA_ARGS__); \
+        /*logAndPause("MMU Error: " fmt "\n", ##__VA_ARGS__);*/ \
     } while (0)
 
 #define mmu_assert(cond) \
@@ -33,7 +33,7 @@
         } \
     } while (0)
 
-static void mmu_hdma_do(struct gb_state *s) {
+static void mmu_hdma_do(GbState *s) {
     // DMA one block (0x10 byte), should be called at start of H-Blank. */
     //mmu_assert(s->io_hdma_running);
     //mmu_assert((s->io_hdma_status & (1<<7)) == 0);
@@ -56,7 +56,7 @@ static void mmu_hdma_do(struct gb_state *s) {
     }
 }
 
-static void mmu_hdma_start(struct gb_state *s, u8 lenmode) {
+static void mmu_hdma_start(GbState *s, u8 lenmode) {
     u16 blocks = (lenmode & ~(1<<7)) + 1;
     u16 len = blocks * 0x10;
     u8 mode_hblank = (lenmode & (1<<7)) ? 1 : 0;
@@ -98,12 +98,12 @@ static void mmu_hdma_start(struct gb_state *s, u8 lenmode) {
     }
 }
 
-void mmu_step(struct gb_state *s) {
+void mmu_step(GbState *s) {
     if (s->emu_state->lcd_entered_hblank && s->io_hdma_running)
         mmu_hdma_do(s);
 }
 
-u8 mmu_register_read(struct gb_state* s, u16 location) {
+u8 mmu_register_read(GbState* s, u16 location) {
     u8 lowcation = location & 0x00FF;
     
     if (lowcation < 0x80) {
@@ -433,7 +433,7 @@ u8 mmu_register_read(struct gb_state* s, u16 location) {
  * @param location to write to
  * @param value to write.
  */
-void mmu_register_write(struct gb_state* s, u16 location, u8 value) {
+void mmu_register_write(GbState* s, u16 location, u8 value) {
     // assuming 8 bit compares are faster than 16bit?
     u8 lowcation = location & 0x00FF;
     
@@ -773,7 +773,7 @@ void mmu_register_write(struct gb_state* s, u16 location, u8 value) {
     }
 }
 
-void mmu_write_tree(struct gb_state *s, u16 location, u8 value) {
+void mmu_write_tree(GbState *s, u16 location, u8 value) {
     // Jump straight to IO registers.
     if (location >= 0xFF00 && location < 0xFF80) {
         return mmu_register_write(s, location, value);
@@ -934,7 +934,7 @@ void mmu_write_tree(struct gb_state *s, u16 location, u8 value) {
     }
 }
 
-void mmu_write(struct gb_state *s, u16 location, u8 value) {
+void mmu_write(GbState *s, u16 location, u8 value) {
     //MMU_DEBUG_W("Mem write (%x) %x: ", location, value);
     switch (location & 0xf000) {
     case 0x0000: // 0000 - 1FFF 
@@ -1386,7 +1386,7 @@ void mmu_write(struct gb_state *s, u16 location, u8 value) {
  * @param programCounter value of PC register.
  * @return opcode that PC is pointing to.
  */
-u8 getOpCodeFromROM(struct gb_state *s, const u16 programCounter) {
+u8 getOpCodeFromROM(GbState *s, const u16 programCounter) {
     if (programCounter < 0x4000) {
         // Fixed Bank
         return s->mem_ROM[programCounter];
@@ -1411,7 +1411,7 @@ u8 getOpCodeFromROM(struct gb_state *s, const u16 programCounter) {
  * At any rate I'll just leave the function on the ROM until I find some other ways of
  * improving fps
  */
-u8 mmu_read_tree(struct gb_state* s, u16 location) {
+u8 mmu_read_tree(GbState* s, u16 location) {
     // Jump straight to IO registers.
     if (location >= 0xFF00 && location < 0xFF80) {
         return mmu_register_read(s, location);
@@ -1517,7 +1517,7 @@ u8 mmu_read_tree(struct gb_state* s, u16 location) {
     }
 }
 
-u8 mmu_read(struct gb_state *s, u16 location) { //mmu_read_table
+u8 mmu_read(GbState *s, u16 location) { //mmu_read_table
     //MMU_DEBUG_R("Mem read (%x): ", location);
     if (s->in_bios && location < 0x100)
     {
@@ -1800,22 +1800,22 @@ u8 mmu_read(struct gb_state *s, u16 location) { //mmu_read_table
     return 0;
 }
 
-u16 mmu_read16(struct gb_state *s, u16 location) {
+u16 mmu_read16(GbState *s, u16 location) {
     return mmu_read(s, location) | ((u16)mmu_read(s, location + 1) << 8);
 }
 
-void mmu_write16(struct gb_state *s, u16 location, u16 value) {
+void mmu_write16(GbState *s, u16 location, u16 value) {
     mmu_write(s, location, value & 0xff);
     mmu_write(s, location + 1, value >> 8);
 }
 
-u16 mmu_pop16(struct gb_state *s) {
+u16 mmu_pop16(GbState *s) {
     u16 val = mmu_read16(s, s->sp);
     s->sp += 2;
     return val;
 }
 
-void mmu_push16(struct gb_state *s, u16 value) {
+void mmu_push16(GbState *s, u16 value) {
     s->sp -= 2;
     mmu_write16(s, s->sp, value);
 }

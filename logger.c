@@ -14,6 +14,31 @@
 const byte VERTICAL_MARGIN = 30;
 const byte HORIZONTAL_MARGIN = 30;
 
+static bool isBroken = false;
+
+void debug(GbState *s, string pnemonic) {
+    if (isBroken) {
+        printRegisters(s);
+        bool isPaused = true;
+        while(isPaused) {
+            controller_scan();
+            N64ControllerState input = get_keys_pressed();
+            if (!input.c[0].start) {
+                isPaused = false;
+            }
+        }
+        logAndPauseFrame(0, pnemonic);
+        isPaused = true;
+        while(isPaused) {
+            controller_scan();
+            N64ControllerState input = get_keys_pressed();
+            if (!input.c[0].start) {
+                isPaused = false;
+            }
+        }        
+    }
+}
+
 /**
  * Prints the pre-sprintf'd text to the display.
  * @private
@@ -24,7 +49,7 @@ void printLog(const string text, display_context_t frame) {
         while(!(frame = display_lock()));
     }
 
-    graphics_fill_screen(frame, GLOBAL_BACKGROUND_COLOUR);
+    graphics_draw_box(frame, 0, 0, 640, 40, GLOBAL_BACKGROUND_COLOUR);
     graphics_set_color(GLOBAL_TEXT_COLOUR, 0x0);
 
     graphics_draw_text(frame, HORIZONTAL_MARGIN, VERTICAL_MARGIN, text);
@@ -92,10 +117,6 @@ void printSegmentToFrame(const string caption, const byte* start, const display_
  * @param ... Parameters for the format string.
  */
 void logAndPause(const string text, ...) {
-    if (!IS_LOGGING_ENABLED) {
-        return;
-    }
-
     va_list args;
     va_start(args, text);
 
@@ -120,8 +141,9 @@ void logAndPause(const string text, ...) {
  * @param s The emulator state structure.
  */
 void printRegisters(GbState* s) {
-    logInfo(
-        "A=%02x F=%02x B=%02x C=%02x D=%02x E=%02x H=%02x L=%02x Z=%d N=%d HF=%d C=%d sp=%02x pc=%02x",
+    logAndPauseFrame(
+        0,
+        "A=%02x F=%02x B=%02x C=%02x D=%02x E=%02x H=%02x L=%02x Z=%d N=%d HF=%d C=%d sp=%04x pc=%04x",
         s->reg8.A, s->reg8.F, s->reg8.B, s->reg8.C,
         s->reg8.D, s->reg8.E, s->reg8.H, s->reg8.L,
         s->flags.ZF, s->flags.NF, s->flags.HF, s->flags.CF,

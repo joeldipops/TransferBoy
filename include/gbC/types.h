@@ -29,10 +29,8 @@ struct emu_state {
 
     bool lcd_entered_hblank; /* Set at the end of every HBlank. */
     bool lcd_entered_vblank; /* Set at the beginning of every VBlank. */
-    u8 current_buffer;
-    u16* pixel_buffers[4];
-    u16 colour_count[256];
-    u8 colours_count;
+    u16* LastBuffer;
+    u16* NextBuffer;
 
     bool flush_extram; /* Flush battery-backed RAM when it's disabled. */
     bool extram_dirty; /* Write battery-backed RAM periodically when dirty. */
@@ -60,8 +58,7 @@ enum gb_type {
     GB_TYPE_CGB,
 };
 
-/* TODO split this up into module-managed components (cpu, mmu, ...) */
-struct gb_state {
+typedef struct {
 
     /*
      * CPU state (registers, interrupts, etc)
@@ -256,6 +253,13 @@ struct gb_state {
 
     struct emu_state *emu_state;
     struct emu_cpu_state *emu_cpu_state;
+} GbState;
+
+struct emu_cpu_state {
+    // Lookup tables for the reg-index encoded in instructions to ptr to reg.
+    u8 *reg8_lut[9];
+    u16 *reg16_lut[4];
+    u16 *reg16s_lut[4];
 };
 
 typedef union {
@@ -289,6 +293,7 @@ typedef union {
 } PCSP;
 
 register u16 PC asm ("$20");
+typedef struct player_input GbController;
 
 
 #endif
