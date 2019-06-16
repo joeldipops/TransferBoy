@@ -306,7 +306,7 @@ void adcAR8(GbState* s, byte op) { // debug(s, "adcAR8");
     A = (u8)res;    
 }
 void adcAN8(GbState* s, byte op) { // debug(s, "adcAN8");
-        u16 res = A + IMM8 + CF;
+    u16 res = A + IMM8 + CF;
     ZF = (u8)res == 0;
     NF = 0;
     HF = (A ^ IMM8 ^ res) & 0x10 ? 1 : 0;
@@ -315,7 +315,7 @@ void adcAN8(GbState* s, byte op) { // debug(s, "adcAN8");
     s->pc++;
 }
 void subAR8(GbState* s, byte op) { // debug(s, "subAR8");
-        u8 *reg = REG8(0);
+    u8 *reg = REG8(0);
     u8 val = reg ? *reg : mem(HL);
     u8 res = A - val;
     ZF = res == 0;
@@ -392,7 +392,7 @@ void xorAN8(GbState* s, byte op) { // debug(s, "xorAN8");
     F = A ? 0 : FLAG_Z;    
 }
 void cpAR8(GbState* s, byte op) { // debug(s, "cpAR8");
-        u8 *reg = REG8(0);
+    u8 *reg = REG8(0);
     u8 regval = reg ? *reg : mem(HL);
 
     ZF = A == regval;
@@ -402,7 +402,6 @@ void cpAR8(GbState* s, byte op) { // debug(s, "cpAR8");
 }
 void cpAN8(GbState* s, byte op) { // debug(s, "cpAN8");
     u8 n = IMM8;
-
     ZF = A == n;
     NF = 1;
     HF = (A & 0xf) < (n & 0xf);
@@ -460,7 +459,7 @@ void addSPN8(GbState* s, byte op) { // debug(s, "addSPN8");
     s->pc++;
 }
 void daa(GbState* s, byte op) { // debug(s, "daa");
-        s8 add = 0;
+    s8 add = 0;
     if ((!NF && (A & 0xf) > 0x9) || HF)
         add |= 0x6;
     if ((!NF && A > 0x99) || CF) {
@@ -532,7 +531,7 @@ void jpCCN16(GbState* s, byte op) { // debug(s, "jpCCN16");
         s->pc += 2;
     return;    
 }
-void jpaHL(GbState* s, byte op) { // debug(s, "jpaHL");
+void jpHL(GbState* s, byte op) { // debug(s, "jpHL");
     s->pc = HL;    
 }
 void jrN8(GbState* s, byte op) { // debug(s, "jrN8");
@@ -581,4 +580,5 @@ void ret(GbState* s, byte op) { // debug(s, "ret");
  * An undefined op code should cause the cpu to hang.
  */
 void undefined(GbState* s, byte op) { // debug(s, "undefined");
- }
+    logAndPauseFrame(0, "UNDEFINED");
+}

@@ -97,7 +97,7 @@ void di(GbState* state, byte op);
 void ei(GbState* state, byte op);
 void jpN16(GbState* state, byte op);
 void jpCCN16(GbState* state, byte op);
-void jpaHL(GbState* state, byte op);
+void jpHL(GbState* state, byte op);
 void jrN8(GbState* state, byte op);
 void jrCCN8(GbState* state, byte op);
 void callN16(GbState* state, byte op);
@@ -127,7 +127,7 @@ static gbz80Operation opTable[] = {
 /*   B */ orAR8,    orAR8,      orAR8,      orAR8,      orAR8,      orAR8,      orAR8,  orAR8,  cpAR8,      cpAR8,      cpAR8,      cpAR8,      cpAR8,      cpAR8,      cpAR8,  cpAR8,
 /*   C */ retCC,    popR16,     jpCCN16,    jpN16,      callCCN16,  pushR16,    addAN8, rstVec, retCC,      ret,        jpCCN16,    ext,        callCCN16,  callN16,    adcAN8, rstVec,
 /*   D */ retCC,    popR16,     jpCCN16,    undefined,  callCCN16,  pushR16,    subAN8, rstVec, retCC,      reti,       jpCCN16,    undefined,  callCCN16,  undefined,  sbcAN8, rstVec,
-/*   E */ ldhaN8A,  popR16,     ldaCA,      undefined,  undefined,  pushR16,    andAN8, rstVec, addSPN8,    jpaHL,      ldaN16A,    undefined,  undefined,  undefined,  xorAN8, rstVec,
+/*   E */ ldhaN8A,  popR16,     ldaCA,      undefined,  undefined,  pushR16,    andAN8, rstVec, addSPN8,    jpHL,       ldaN16A,    undefined,  undefined,  undefined,  xorAN8, rstVec,
 /*   F */ ldhAaN8,  popR16,     ldAaC,      di,         undefined,  pushR16,    orAN8 , rstVec, ldHLSPN8,   ldSPHL,     ldAaN16,    ei,         undefined,  undefined,  cpAN8,  rstVec 
 };
 
