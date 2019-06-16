@@ -355,11 +355,6 @@ void cpu_do_cb_instruction(GbState *s) {
     }
 }
 
-static void cpu_do_instruction(GbState *s) {
-    u8 op = getOpCodeFromROM(s, s->pc++);
-    opTable[op](s, op);
-}
-
 void cpu_step(GbState *s) {
     u8 op;
 
@@ -371,16 +366,14 @@ void cpu_step(GbState *s) {
     
     s->emu_state->last_op_cycles = cycles_per_instruction[op];
     if (op == 0xcb) {
-        op = getOpCodeFromROM(s, s->pc + 1);
-        s->emu_state->last_op_cycles = cycles_per_instruction_cb[op];
+        u8 extOp = getOpCodeFromROM(s, s->pc + 1);
+        s->emu_state->last_op_cycles = cycles_per_instruction_cb[extOp];
     }
 
     if (!s->halt_for_interrupts) {
-        //if (true) {
-            cpu_do_instruction(s);
-        //} else {
-          //  cpu_do_instruction_tree(s);
-        //}
+        // Move PC forward, then go and run the operation.
+        s->pc++;        
+        opTable[op](s, op);        
     } else {
         if (!s->interrupts_enable)
             cpu_error("Waiting for interrupts while disabled, deadlock.\n");

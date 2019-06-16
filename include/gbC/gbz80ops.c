@@ -222,12 +222,12 @@ void ldaCA(GbState* s, byte op) { // debug(s, "ldaCA");
     mmu_write(s, 0xff00 + C, A);    
 }
 void lddAaHL(GbState* s, byte op) { // debug(s, "lddAaHL");
-    mmu_write(s, HL, A);
-    HL--;    
-}
-void lddaHLA(GbState* s, byte op) { // debug(s, "lddaHLA");
     A = mmu_read(s, HL);
     HL--;  
+}
+void lddaHLA(GbState* s, byte op) { // debug(s, "lddaHLA");
+    mmu_write(s, HL, A);
+    HL--;    
 }
 void ldiaHLA(GbState* s, byte op) { // debug(s, "ldiaHLA");
     mmu_write(s, HL, A);
@@ -512,7 +512,6 @@ void halt(GbState* s, byte op){
 }
 void stop(GbState* s, byte op) { // debug(s, "stop");
     // TODO
-    s->halt_for_interrupts = 1;     
 }
 void di(GbState* s, byte op) { // debug(s, "di");
     s->interrupts_master_enabled = 0;
