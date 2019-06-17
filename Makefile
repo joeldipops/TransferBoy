@@ -8,7 +8,7 @@ N64TOOL = /home/joeldipops/Projects/tools/libdragon/tools/n64tool
 HEADERNAME = header
 LINK_FLAGS = -L$(ROOTDIR)/mips64-elf/lib -ldragon -lm -lc -ldragonsys -Tn64ld.x
 PROG_NAME = transferboy64
-CFLAGS = -std=gnu99 -march=vr4300 -mtune=vr4300 -O2 -Wall -Wno-unused -Werror -I$(CURDIR) -I$(ROOTDIR)/mips64-elf/include 
+CFLAGS = -std=gnu99 -march=vr4300 -mtune=vr4300 -Os -Wall -Wno-unused -Werror -I$(CURDIR) -I$(ROOTDIR)/mips64-elf/include 
 ASFLAGS = -mtune=vr4300 -march=vr4300
 CC = $(GCCN64PREFIX)gcc
 AS = $(GCCN64PREFIX)as

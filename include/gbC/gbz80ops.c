@@ -284,16 +284,7 @@ void popR16(GbState* s, byte op) { // debug(s, "popR16");
     *dst = mmu_pop16(s);
     F = F & 0xf0;    
 }
-void addAR8(GbState* s, byte op) { // debug(s, "addAR8");
-    u8* src = REG8(0);
-    u8 srcval = src ? *src : mem(HL);
-    u16 res = A + srcval;
-    ZF = (u8)res == 0;
-    NF = 0;
-    HF = (A ^ srcval ^ res) & 0x10 ? 1 : 0;
-    CF = res & 0x100 ? 1 : 0;
-    A = (u8)res;    
-}
+
 void addAN8(GbState* s, byte op) { // debug(s, "addAN8");
     u16 res = A + IMM8;
     ZF = (u8)res == 0;
@@ -303,16 +294,25 @@ void addAN8(GbState* s, byte op) { // debug(s, "addAN8");
     A = (u8)res;
     s->pc++;
 }
-void adcAR8(GbState* s, byte op) { // debug(s, "adcAR8");
-    u8* src = REG8(0);
-    u8 srcval = src ? *src : mem(HL);
-    u16 res = A + srcval + CF;
+void addAR8(GbState* s, byte op) { // debug(s, "addAR8");
+    u8 srcval = *REG8(0);
+    u16 res = A + srcval;
     ZF = (u8)res == 0;
     NF = 0;
     HF = (A ^ srcval ^ res) & 0x10 ? 1 : 0;
     CF = res & 0x100 ? 1 : 0;
     A = (u8)res;    
 }
+void addAaHL(GbState* s, byte op) { // debug("s, "addAaHL"); 
+    u8 srcval = mem(HL);
+    u16 res = A + srcval;
+    ZF = (u8)res == 0;
+    NF = 0;
+    HF = (A ^ srcval ^ res) & 0x10 ? 1 : 0;
+    CF = res & 0x100 ? 1 : 0;
+    A = (u8)res;   
+}
+
 void adcAN8(GbState* s, byte op) { // debug(s, "adcAN8");
     u16 res = A + IMM8 + CF;
     ZF = (u8)res == 0;
@@ -322,16 +322,25 @@ void adcAN8(GbState* s, byte op) { // debug(s, "adcAN8");
     A = (u8)res;
     s->pc++;
 }
-void subAR8(GbState* s, byte op) { // debug(s, "subAR8");
-    u8 *reg = REG8(0);
-    u8 val = reg ? *reg : mem(HL);
-    u8 res = A - val;
-    ZF = res == 0;
-    NF = 1;
-    HF = ((s32)A & 0xf) - (val & 0xf) < 0;
-    CF = A < val;
-    A = res;
+void adcAR8(GbState* s, byte op) { // debug(s, "adcAR8");
+    u8 srcval = *REG8(0);
+    u16 res = A + srcval + CF;
+    ZF = (u8)res == 0;
+    NF = 0;
+    HF = (A ^ srcval ^ res) & 0x10 ? 1 : 0;
+    CF = res & 0x100 ? 1 : 0;
+    A = (u8)res;    
 }
+void adcAaHL(GbState* s, byte op) { // debug(s, "adcAaHL");
+    u8 srcval = mem(HL);
+    u16 res = A + srcval + CF;
+    ZF = (u8)res == 0;
+    NF = 0;
+    HF = (A ^ srcval ^ res) & 0x10 ? 1 : 0;
+    CF = res & 0x100 ? 1 : 0;
+    A = (u8)res; 
+}
+
 void subAN8(GbState* s, byte op) { // debug(s, "subAN8");
     u8 res = A - IMM8;
     ZF = res == 0;
@@ -341,16 +350,25 @@ void subAN8(GbState* s, byte op) { // debug(s, "subAN8");
     A = res;
     s->pc++;    
 }
-void sbcAR8(GbState* s, byte op) { // debug(s, "sbcAR8");
-    u8 *reg = REG8(0);
-    u8 regval = reg ? *reg : mem(HL);
-    u8 res = A - regval - CF;
+void subAR8(GbState* s, byte op) { // debug(s, "subAR8");
+    u8 val = *REG8(0);
+    u8 res = A - val;
     ZF = res == 0;
     NF = 1;
-    HF = ((s32)A & 0xf) - (regval & 0xf) - CF < 0;
-    CF = A < regval + CF;
-    A = res;    
+    HF = ((s32)A & 0xf) - (val & 0xf) < 0;
+    CF = A < val;
+    A = res;
 }
+void subAaHL(GbState* s, byte op) { // debug(s, "subAaHL");
+    u8 val = mem(HL);
+    u8 res = A - val;
+    ZF = res == 0;
+    NF = 1;
+    HF = ((s32)A & 0xf) - (val & 0xf) < 0;
+    CF = A < val;
+    A = res;
+}
+
 void sbcAN8(GbState* s, byte op) { // debug(s, "sbcAN8");
     u8 res = A - IMM8 - CF;
     ZF = res == 0;
@@ -360,15 +378,25 @@ void sbcAN8(GbState* s, byte op) { // debug(s, "sbcAN8");
     A = res;
     s->pc++;    
 }
-void andAR8(GbState* s, byte op) { // debug(s, "andAR8");
-    u8 *reg = REG8(0);
-    u8 val = reg ? *reg : mem(HL);
-    A = A & val;
-    ZF = A == 0;
-    NF = 0;
-    HF = 1;
-    CF = 0;    
+void sbcAR8(GbState* s, byte op) { // debug(s, "sbcAR8");
+    u8 regval = *REG8(0);
+    u8 res = A - regval - CF;
+    ZF = res == 0;
+    NF = 1;
+    HF = ((s32)A & 0xf) - (regval & 0xf) - CF < 0;
+    CF = A < regval + CF;
+    A = res;    
 }
+void sbcAaHL(GbState* s, byte op) { // debug(s, "sbcAaHL");
+    u8 regval = mem(HL);
+    u8 res = A - regval - CF;
+    ZF = res == 0;
+    NF = 1;
+    HF = ((s32)A & 0xf) - (regval & 0xf) - CF < 0;
+    CF = A < regval + CF;
+    A = res;    
+}
+
 void andAN8(GbState* s, byte op) { // debug(s, "andAN8");
     A = A & IMM8;
     s->pc++;
@@ -377,37 +405,55 @@ void andAN8(GbState* s, byte op) { // debug(s, "andAN8");
     HF = 1;
     CF = 0;    
 }
-void orAR8(GbState* s, byte op) { // debug(s, "orAR8");
-    u8* src = REG8(0);
-    u8 srcval = src ? *src : mem(HL);
-    A |= srcval;
-    F = A ? 0 : FLAG_Z;    
+void andAR8(GbState* s, byte op) { // debug(s, "andAR8");
+    u8 val = *REG8(0);
+    A = A & val;
+    ZF = A == 0;
+    NF = 0;
+    HF = 1;
+    CF = 0;    
 }
+void andAaHL(GbState* s, byte op) { // debug(s, "andAaHL");
+    u8 val = mem(HL);
+    A = A & val;
+    ZF = A == 0;
+    NF = 0;
+    HF = 1;
+    CF = 0;    
+}
+
 void orAN8(GbState* s, byte op) { // debug(s, "orAN8");
     A |= IMM8;
     F = A ? 0 : FLAG_Z;
     s->pc++;    
 }
-void xorAR8(GbState* s, byte op) { // debug(s, "xorAR8");
-    u8* src = REG8(0);
-    u8 srcval = src ? *src : mem(HL);
-    A ^= srcval;
-    F = A ? 0 : FLAG_Z; 
+void orAR8(GbState* s, byte op) { // debug(s, "orAR8");
+    u8 srcval = *REG8(0);
+    A |= srcval;
+    F = A ? 0 : FLAG_Z;    
 }
+void orAaHL(GbState* s, byte op) { // debug(s, "orAaHL");
+    u8 srcval = mem(HL);
+    A |= srcval;
+    F = A ? 0 : FLAG_Z;    
+}
+
 void xorAN8(GbState* s, byte op) { // debug(s, "xorAN8");
     A ^= IMM8;
     s->pc++;
     F = A ? 0 : FLAG_Z;    
 }
-void cpAR8(GbState* s, byte op) { // debug(s, "cpAR8");
-    u8 *reg = REG8(0);
-    u8 regval = reg ? *reg : mem(HL);
-
-    ZF = A == regval;
-    NF = 1;
-    HF = (A & 0xf) < (regval & 0xf);
-    CF = A < regval;
+void xorAR8(GbState* s, byte op) { // debug(s, "xorAR8");
+    u8 srcval = *REG8(0);
+    A ^= srcval;
+    F = A ? 0 : FLAG_Z; 
 }
+void xorAaHL(GbState* s, byte op) { // debug(s, "xorAaHL");
+    u8 srcval = mem(HL);
+    A ^= srcval;
+    F = A ? 0 : FLAG_Z; 
+}
+
 void cpAN8(GbState* s, byte op) { // debug(s, "cpAN8");
     u8 n = IMM8;
     ZF = A == n;
@@ -416,30 +462,57 @@ void cpAN8(GbState* s, byte op) { // debug(s, "cpAN8");
     CF = A < n;
     s->pc++;    
 }
+void cpAR8(GbState* s, byte op) { // debug(s, "cpAR8");
+    u8 regval = *REG8(0);
+    ZF = A == regval;
+    NF = 1;
+    HF = (A & 0xf) < (regval & 0xf);
+    CF = A < regval;
+}
+void cpAaHL(GbState* s, byte op) { // debug(s, "cpAaHL");
+    u8 regval = mem(HL);
+    ZF = A == regval;
+    NF = 1;
+    HF = (A & 0xf) < (regval & 0xf);
+    CF = A < regval;
+}
+
 void incR8(GbState* s, byte op) { // debug(s, "incR8");
     u8* reg = REG8(3);
-    u8 val = reg ? *reg : mem(HL);
+    u8 val = *reg;
     u8 res = val + 1;
     ZF = res == 0;
     NF = 0;
     HF = (val & 0xf) == 0xf;
-    if (reg)
-        *reg = res;
-    else
-        mmu_write(s, HL, res);    
+    *reg = res;
 }
+void incaHL(GbState* s, byte op) { // debug(s, "incaHL");
+    u8 val = mem(HL);
+    u8 res = val + 1;
+    ZF = res == 0;
+    NF = 0;
+    HF = (val & 0xf) == 0xf;
+    mmu_write(s, HL, res);    
+}
+
 void decR8(GbState* s, byte op) { // debug(s, "decR8");
     u8* reg = REG8(3);
-    u8 val = reg ? *reg : mem(HL);
+    u8 val = *reg;
     val--;
     NF = 1;
     ZF = val == 0;
     HF = (val & 0x0F) == 0x0F;
-    if (reg)
-        *reg = val;
-    else
-        mmu_write(s, HL, val);
+    *reg = val;
 }
+void decaHL(GbState* s, byte op) { // debug(s, "decaHL");
+    u8 val = mem(HL);
+    val--;
+    NF = 1;
+    ZF = val == 0;
+    HF = (val & 0x0F) == 0x0F;
+    mmu_write(s, HL, val);
+}
+
 void incR16(GbState* s, byte op) { // debug(s, "incR16");
     u16 *reg = REG16(4);
     *reg += 1;    
