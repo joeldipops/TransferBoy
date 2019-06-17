@@ -160,22 +160,22 @@ static gbz80Operation opTable[] = {
 
 static gbz80Operation extendedOpTable[] = {
 //          0       1       2       3       4       5       6       7       8       9       A       B       C       D       E       F   
-/*   0 */   rlcR8,  rlcR8,  rlcR8,  rlcR8,  rlcR8,  rlcR8,  rlcR8,  rlcR8,  rrcR8,  rrcR8,  rrcR8,  rrcR8,  rrcR8,  rrcR8,  rrcR8,  rrcR8,  
-/*   1 */   rlR8,   rlR8,   rlR8,   rlR8,   rlR8,   rlR8,   rlR8,   rlR8,   rrR8,   rrR8,   rrR8,   rrR8,   rrR8,   rrR8,   rrR8,   rrR8,     
-/*   2 */   slaR8,  slaR8,  slaR8,  slaR8,  slaR8,  slaR8,  slaR8,  slaR8,  sraR8,  sraR8,  sraR8,  sraR8,  sraR8,  sraR8,  sraR8,  sraR8,
-/*   3 */   swapR8, swapR8, swapR8, swapR8, swapR8, swapR8, swapR8, swapR8, srlR8,  srlR8,  srlR8,  srlR8,  srlR8,  srlR8,  srlR8,  srlR8,
-/*   4 */   bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,
-/*   5 */   bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,
-/*   6 */   bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,
-/*   7 */   bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,
-/*   8 */   resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,
-/*   9 */   resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,
-/*   A */   resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,
-/*   B */   resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,
-/*   C */   setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,
-/*   D */   setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,
-/*   E */   setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,
-/*   F */   setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8
+/*   0 */   rlcR8,  rlcR8,  rlcR8,  rlcR8,  rlcR8,  rlcR8,  rlcaHL, rlcR8,  rrcR8,  rrcR8,  rrcR8,  rrcR8,  rrcR8,  rrcR8,  rrcaHL,  rrcR8,  
+/*   1 */   rlR8,   rlR8,   rlR8,   rlR8,   rlR8,   rlR8,   rlaHL,  rlR8,   rrR8,   rrR8,   rrR8,   rrR8,   rrR8,   rrR8,   rraHL,   rrR8,     
+/*   2 */   slaR8,  slaR8,  slaR8,  slaR8,  slaR8,  slaR8,  slaaHL, slaR8,  sraR8,  sraR8,  sraR8,  sraR8,  sraR8,  sraR8,  sraaHL,  sraR8,
+/*   3 */   swapR8, swapR8, swapR8, swapR8, swapR8, swapR8, swapaHL,swapR8, srlR8,  srlR8,  srlR8,  srlR8,  srlR8,  srlR8,  srlaHL,  srlR8,
+/*   4 */   bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3aHL,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3aHL,bitU3R8,
+/*   5 */   bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3aHL,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3aHL,bitU3R8,
+/*   6 */   bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3aHL,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3aHL,bitU3R8,
+/*   7 */   bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3aHL,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3aHL,bitU3R8,
+/*   8 */   resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3aHL,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3aHL,resU3R8,
+/*   9 */   resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3aHL,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3aHL,resU3R8,
+/*   A */   resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3aHL,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3aHL,resU3R8,
+/*   B */   resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3aHL,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3aHL,resU3R8,
+/*   C */   setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3aHL,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3aHL,setU3R8,
+/*   D */   setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3aHL,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3aHL,setU3R8,
+/*   E */   setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3aHL,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3aHL,setU3R8,
+/*   F */   setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3aHL,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3aHL,setU3R8
 };
 
 #endif
