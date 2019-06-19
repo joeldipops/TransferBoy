@@ -4,20 +4,6 @@
 #include "core.h"
 #include "include/gbc_bundle.h"
 
-#define WAVEDATA_LENGTH 16
-
-typedef enum {
-    SoundConsecutive = 0,
-    SoundWait = 1
-} SoundTimingMode;
-
-typedef enum {
-    SoundMute = 0,
-    SoundNoShift = 1,
-    SoundHalfShift = 2,
-    SoundQuarterShift = 3
-} WavePatternShift;
-
 typedef natural Frequency;
 
 typedef struct {
