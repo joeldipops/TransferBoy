@@ -17,6 +17,14 @@
         return 1; \
     } while (0)
 
+/**
+ * Initialize the emulator state of the gameboy. This state belongs to the
+ * emulator, not the state of the emulated hardware.
+ */
+void emu_init(GbState *s) {
+    s->emu_state = calloc(1, sizeof(struct emu_state));
+}    
+
 void emu_step(PlayerState* state) {
     GbState* s = &state->EmulationState;
     cpu_step(s);
