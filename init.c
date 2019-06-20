@@ -23,22 +23,31 @@ void initLogic(RootState* state, const byte playerNumber) {
         sByte result = getCartridgeMetadata(playerNumber, &state->Players[playerNumber].Cartridge);
 
         if (!result) {
-            state->Players[playerNumber].InitState = InitPending;
+            state->Players[playerNumber].InitState = InitReady;
             state->RequiresRepaint = true;
         } else {
+            state->Players[playerNumber].InitState = InitError;
+            state->ErrorCode = result;
+
             switch(result) {
                 case TPAK_ERR_NO_TPAK:
-                    state->Players[playerNumber].InitState = InitNoTpak;
+                    getText(TextNoTpak, state->Players[playerNumber].ErrorMessage);
                     break;
                 case TPAK_ERR_NO_CARTRIDGE:
-                    state->Players[playerNumber].InitState = InitNoCartridge;                
+                    getText(TextNoCartridge, state->Players[playerNumber].ErrorMessage);             
+                    break;
+                case TPAK_ERR_CORRUPT_HEADER:
+                case TPAK_ERR_CORRUPT_DATA:
+                    getText(TextChecksumFailed, state->Players[playerNumber].ErrorMessage);
+                    break;
+                case TPAK_ERR_UNSUPPORTED_CARTRIDGE:
+                    getText(TextUnsupportedCartridge, state->Players[playerNumber].ErrorMessage);                
                     break;
                 case TPAK_ERR_INSUFFICIENT_MEMORY:
-                    state->Players[playerNumber].InitState = InitRequiresExpansionPak;
+                    getText(TextExpansionPakRequired, state->Players[playerNumber].ErrorMessage);
                     break;
                 default:
-                    state->ErrorCode = result;
-                    state->Players[playerNumber].InitState = InitError;
+                    sprintf(state->Players[playerNumber].ErrorMessage, "Loading Cartridge failed with error: %d", state->ErrorCode);
                     break;
             }
         }
@@ -46,18 +55,15 @@ void initLogic(RootState* state, const byte playerNumber) {
 
     bool loadInternal = false;
 
-    if (state->Players[playerNumber].InitState == InitPending) {
+    if (state->Players[playerNumber].InitState == InitError) {
         bool releasedButtons[N64_BUTTON_COUNT] = {};
         getPressedButtons(&state->KeysReleased, playerNumber, releasedButtons);
 
+        // Press A or Start to retry.
         if (releasedButtons[A] || releasedButtons[Start]) {
             state->RequiresControllerRead = true;
             state->RequiresRepaint = true;
-            state->Players[playerNumber].InitState = InitReady;
-        } else if (releasedButtons[B]) {
-            state->RequiresControllerRead = true;
             state->Players[playerNumber].InitState = InitStart;
-            retries++;
         } else if (releasedButtons[CDown]) {
             // Load internal easter egg cartridge.
             state->Players[playerNumber].InitState = InitLoading;
@@ -67,9 +73,7 @@ void initLogic(RootState* state, const byte playerNumber) {
         // Show the loading message.
         state->RequiresRepaint = true;
         state->Players[playerNumber].InitState = InitLoading;
-    }
-
-    if (state->Players[playerNumber].InitState == InitLoading) {
+    } else if (state->Players[playerNumber].InitState == InitLoading) {
         state->RequiresRepaint = true;
 
         if (loadInternal) {
@@ -82,18 +86,19 @@ void initLogic(RootState* state, const byte playerNumber) {
             state->Players[playerNumber].Cartridge.Ram.Size = 0x00;
             state->Players[playerNumber].Cartridge.Header.IsSgbSupported = true;   
             state->Players[playerNumber].Cartridge.IsGbcSupported = false;
-
         } else {
             sByte result = importCartridge(playerNumber, &state->Players[playerNumber].Cartridge);
             if (result) {
+                string tmp;
                 state->ErrorCode = result;
+                getText(TextChecksumFailed, tmp);                             
+                sprintf(state->Players[playerNumber].ErrorMessage, tmp, result);
                 state->Players[playerNumber].InitState = InitError;
                 return;
             }
         }
         Rectangle screen = {};
         getScreenPosition(state, playerNumber, &screen);
-
         resetPlayState(&state->Players[playerNumber]);
 
         state->Players[playerNumber].InitState = InitLoaded;
@@ -119,35 +124,22 @@ void initDraw(const RootState* state, const byte playerNumber) {
     natural textTop = screen.Top - TEXT_HEIGHT + (screen.Width / 2);
 
     string text = "";
+    string tmp = "";    
     switch (state->Players[playerNumber].InitState) {
         case InitStart: break;
         case InitLoaded: break;
         case InitReady:
+        case InitLoading:        
             getText(TextLoadingCartridge, text);
             break;
-        case InitNoTpak:
-            getText(TextNoTpak, text);
-            break;
-        case InitNoCartridge:
-            getText(TextNoCartridge, text);
-            break;
-        case InitRequiresExpansionPak:
-            getText(TextExpansionPakRequired, text);
-            break;
-        case InitPending:
-            ;
-            string tmp = "";
+        case InitError:
             getText(TextLoadCartridgePrompt, tmp);
-            sprintf(text, tmp, &state->Players[playerNumber].Cartridge.Header.Title);
+            sprintf(text, "%s %s", state->Players[playerNumber].ErrorMessage, tmp);
 
             if (retries) {
                 sprintf(tmp, "%s Retries: %d", text, retries);
                 strcpy(text, tmp);
-            }
-
-            break;
-        case InitError:
-            sprintf(text, "Loading Cartridge failed with error: %d", state->ErrorCode);
+            }            
             break;
         default:
             strcpy(text, "Unknown Error!!!");

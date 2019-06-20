@@ -33,6 +33,7 @@ typedef struct {
     bool WasFrameSkipped;
     byte BuffersInitialised;
     MetaState Meta;
+    string ErrorMessage;
 } PlayerState;
 
 typedef struct {

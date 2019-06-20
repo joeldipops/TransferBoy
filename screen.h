@@ -18,7 +18,7 @@ typedef struct {
 
 // 16 bit colours are are 5 bits per colour and a transparency flag
 static const uInt MONOCHROME_PALETTE[] = {
-    0xffffffff, 0xA528A528, 0x52955295, 0x00010001
+    0xffffffff, 0xA529A529, 0x52955295, 0x00010001
 };
 
 /**

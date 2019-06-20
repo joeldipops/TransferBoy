@@ -5,8 +5,7 @@
 
 typedef enum {
     InitStart = 0,
-    InitNoTpak, InitNoCartridge, InitRequiresExpansionPak,
-    InitPending, InitReady, InitLoading, InitLoaded, InitError
+    InitReady, InitLoading, InitLoaded, InitError
 } InitState;
 
 /**
