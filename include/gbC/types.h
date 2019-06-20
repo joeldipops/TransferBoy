@@ -89,7 +89,7 @@ typedef union {
         union {
             byte JoypadIo;
             struct {
-                byte unused0:2;
+                const byte unused0:2;
                 byte SelectFace:1;
                 byte SelectDPad:1;                
                 union {
@@ -115,11 +115,11 @@ typedef union {
             byte LinkControl;
             struct {
                 bool IsTransferToStart:1;
-                byte unused1:6;
+                const byte unused1:6;
                 bool IsClockExternal:1;
             };
         };
-        byte unused2;
+        const byte unused2;
         // DIV - Timer Clock
         byte TimerClock;
         // TIMA - Timer Counter
@@ -130,17 +130,17 @@ typedef union {
         union {
             byte TimerControl;
             struct {
-                byte unused3:5;
+                const byte unused3:5;
                 bool IsTimerStarted:1;
                 byte TimerFrequency:2;
             };
         };
-        byte unused4[14];
+        const byte unused4[14];
         // IF - Interrupt Flags
         union {
             byte InterruptFlags;
             struct {
-                byte unused5:3;
+                const byte unused5:3;
                 byte JoypadInterrupt:1;
                 byte LinkInterrupt:1;
                 byte TimerInterrupt:1;
@@ -152,7 +152,7 @@ typedef union {
         union {
             byte AudioChannel1Sweep;
             struct {
-                byte unused6:1;
+                const byte unused6:1;
                 byte AudioChannel1SweepTime:3;
                 bool AudioChannel1IsFrequencyDecrease:1;
                 byte AudioChannel1SweepShift:3;
@@ -183,11 +183,11 @@ typedef union {
             struct {
                 bool AudioChannel1IsSoundReset:1;
                 SoundTimingMode AudioChannel1TimingMode:1;
-                byte unused7:4;
+                const byte unused7:4;
                 byte AudioChannel1FrequencyHigh:3;                    
             };
         };
-        byte unused8; //reserved for channel 2 sweep
+        const byte unused8; //reserved for channel 2 sweep
         // NR21 - AudioChannel2PatternAndLength
         union {
             byte AudioChannel2PatternAndLength;
@@ -213,7 +213,7 @@ typedef union {
             struct {
                 bool AudioChannel2IsSoundReset:1;
                 SoundTimingMode AudioChannel2TimingMode:1;
-                byte unused9:3;
+                const byte unused9:3;
                 byte AudioChannel2FrequencyHigh:3;                    
             };
         };
@@ -222,7 +222,7 @@ typedef union {
             byte AudioChannel3Control;
             struct {
                 bool AudioChannel3IsOn:1;
-                byte unusedA:7;
+                const byte unusedA:7;
             };
         };
         // NR31 - AudioChannel3Length
@@ -231,9 +231,9 @@ typedef union {
         union {
             byte AudioChannel3Level;
             struct {
-                byte unusedB:1;
+                const byte unusedB:1;
                 WavePatternShift AudioChannel3WavePatternShift:2;
-                byte unusedC:5;
+                const byte unusedC:5;
             };
         };
         // NR33 - AudioChannel3Frequency
@@ -244,11 +244,11 @@ typedef union {
             struct {
                 bool AudioChannel3IsSoundReset:1;
                 SoundTimingMode AudioChannel3TimingMode:1;
-                byte unusedD:3;
+                const byte unusedD:3;
                 byte AudioChannel3FrequencyHigh:3;                    
             };
         };  
-        byte unusedE; // reserved for channel 4 sweep      
+        const byte unusedE; // reserved for channel 4 sweep      
         // NR41 - AudioChannel4Length
         byte AudioChannel4Length;
         // NR42 - AudioChannel4Envelope
@@ -275,7 +275,7 @@ typedef union {
             struct {
                 bool AudioChannel4IsSoundReset:1;
                 SoundTimingMode AudioChannel4TimingMode:1;
-                byte unusedF:6;
+                const const byte unusedF:6;
             };
         };
         // NR50 - Audio Speaker Control
@@ -314,7 +314,7 @@ typedef union {
                 bool IsChannel1Enabled:1;
             };
         };
-        byte unused10[10];
+        const byte unused10[10];
         byte SoundWaveData[WAVEDATA_LENGTH];       
         // LCDC - LCD Control
         union {
@@ -334,7 +334,7 @@ typedef union {
         union {
             byte LcdStatus;
             struct {
-                byte unused11:1;
+                const byte unused11:1;
                 bool InterruptOnLineLYC:1;
                 bool InterruptOnOamMode:1;
                 bool InterruptOnVBlank:1;
@@ -387,14 +387,14 @@ typedef union {
         byte WindowTop;
         // WX - Window X position
         byte WindowLeft;
-        byte unused12[52];
+        const byte unused12[52];
         // Actual HRAM
         byte Ram[127];
         // IE - Interrupt Switch
         union {
             byte InterruptSwitch;
             struct {
-                byte unused13:3;
+                const byte unused13:3;
                 bool IsJoypadInterruptEnabled:1;
                 bool IsLinkInterruptEnabled:1;
                 bool IsTimerInterruptEnabled:1;
