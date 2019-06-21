@@ -3,10 +3,9 @@
 #include <string.h>
 #include <assert.h>
 
-#include "../../logger.h"
 #include "state.h"
-
 #include "hwdefs.h"
+#include "../../logger.h"
 
 struct rominfo {
     enum gb_type gb_type;
@@ -20,14 +19,16 @@ struct rominfo {
     int num_vram_banks;
 };
 
+
 int rom_get_info(u8 *rom, size_t rom_size, struct rominfo *ret_rominfo) {
-    /* Cart info from header */
+    // Cart info from header
     if (
         ROMHDR_CARTTYPE >= rom_size ||
         ROMHDR_ROMSIZE >= rom_size ||
         ROMHDR_EXTRAMSIZE >= rom_size
     ) {
         logInfo("Given ROM too small to read header fields (%zu)", rom_size);
+        return -1;
     }
 
     u8 hdr_cart_type = rom[ROMHDR_CARTTYPE];
@@ -36,79 +37,83 @@ int rom_get_info(u8 *rom, size_t rom_size, struct rominfo *ret_rominfo) {
     u8 hdr_cgb_flag = rom[ROMHDR_CGBFLAG];
 
     enum gb_type rom_gb_type;
-    int mbc = 0; /* Memory Bank Controller */
+    int mbc = 0; // Memory Bank Controller
     int extram = 0;
     int battery = 0;
-    int rtc = 0; /* Real time clock */
+    int rtc = 0; // Real time clock
     int rom_banks = 0;
     int extram_banks = 0;
     int wram_banks = 0;
     int vram_banks = 0;
 
-    if (hdr_cgb_flag & 0x80)
+    if (hdr_cgb_flag & 0x80) {
         rom_gb_type = GB_TYPE_CGB;
-    else
+    } else {
         rom_gb_type = GB_TYPE_GB;
+    }
 
     switch (hdr_cart_type) {
-    case 0x00:                                              break;
-    case 0x01: mbc = 1;                                     break;
-    case 0x02: mbc = 1; extram = 1;                         break;
-    case 0x03: mbc = 1; extram = 1; battery = 1;            break;
-    case 0x05: mbc = 2;                                     break;
-    case 0x06: mbc = 2;             battery = 1;            break;
-    case 0x08:          extram = 1;                         break;
-    case 0x09:          extram = 1; battery = 1;            break;
-    case 0x0f: mbc = 3;             battery = 1; rtc = 1;   break;
-    case 0x10: mbc = 3; extram = 1; battery = 1; rtc = 1;   break;
-    case 0x11: mbc = 3;                                     break;
-    case 0x12: mbc = 3; extram = 1;                         break;
-    case 0x13: mbc = 3; extram = 1; battery = 1;            break;
-    case 0x15: mbc = 4;                                     break;
-    case 0x16: mbc = 4; extram = 1;                         break;
-    case 0x17: mbc = 4; extram = 1; battery = 1;            break;
-    case 0x19: mbc = 5;                                     break;
-    case 0x1a: mbc = 5; extram = 1;                         break;
-    case 0x1b: mbc = 5; extram = 1; battery = 1;            break;
-    case 0x1c: mbc = 5;                                     break; /* rumble */
-    case 0x1d: mbc = 5; extram = 1;                         break; /* rumble */
-    case 0x1e: mbc = 5; extram = 1; battery = 1;            break; /* rumble */
-    case 0x20: mbc = 6;                                     break;
-    /* MMM01 unsupported */
-    /* MBC7 Sensor not supported */
-    /* Camera not supported */
-    /* Bandai TAMA5 not supported */
-    /* HuCn not supported */
-    default:
-        logInfo("Unsupported cartridge type: %x", hdr_cart_type);
+        case 0x00:                                              break;
+        case 0x01: mbc = 1;                                     break;
+        case 0x02: mbc = 1; extram = 1;                         break;
+        case 0x03: mbc = 1; extram = 1; battery = 1;            break;
+        case 0x05: mbc = 2;                                     break;
+        case 0x06: mbc = 2;             battery = 1;            break;
+        case 0x08:          extram = 1;                         break;
+        case 0x09:          extram = 1; battery = 1;            break;
+        case 0x0f: mbc = 3;             battery = 1; rtc = 1;   break;
+        case 0x10: mbc = 3; extram = 1; battery = 1; rtc = 1;   break;
+        case 0x11: mbc = 3;                                     break;
+        case 0x12: mbc = 3; extram = 1;                         break;
+        case 0x13: mbc = 3; extram = 1; battery = 1;            break;
+        case 0x15: mbc = 4;                                     break;
+        case 0x16: mbc = 4; extram = 1;                         break;
+        case 0x17: mbc = 4; extram = 1; battery = 1;            break;
+        case 0x19: mbc = 5;                                     break;
+        case 0x1a: mbc = 5; extram = 1;                         break;
+        case 0x1b: mbc = 5; extram = 1; battery = 1;            break;
+        case 0x1c: mbc = 5;                                     break; /* rumble */
+        case 0x1d: mbc = 5; extram = 1;                         break; /* rumble */
+        case 0x1e: mbc = 5; extram = 1; battery = 1;            break; /* rumble */
+        case 0x20: mbc = 6;                                     break;
+        /* MMM01 unsupported */
+        /* MBC7 Sensor not supported */
+        /* Camera not supported */
+        /* Bandai TAMA5 not supported */
+        /* HuCn not supported */
+        default:
+            logInfo("Unsupported cartridge type: %x", hdr_cart_type);
+            return -1;
     }
 
     switch (hdr_rom_size) {
-    case 0x00: rom_banks = 2;   break; /* 16K */
-    case 0x01: rom_banks = 4;   break; /* 64K */
-    case 0x02: rom_banks = 8;   break; /* 128K */
-    case 0x03: rom_banks = 16;  break; /* 256K */
-    case 0x04: rom_banks = 32;  break; /* 512K */
-    case 0x05: rom_banks = 64;  break; /* 1M */
-    case 0x06: rom_banks = 128; break; /* 2M */
-    case 0x07: rom_banks = 256; break; /* 4M */
-    case 0x08: rom_banks = 512; break; /* 8M */
-    case 0x52: rom_banks = 72;  break; /* 1.1M */
-    case 0x53: rom_banks = 80;  break; /* 1.2M */
-    case 0x54: rom_banks = 96;  break; /* 1.5M */
-    default:
-        logInfo("Unsupported ROM size: %x", hdr_rom_size);
+        case 0x00: rom_banks = 2;   break; /* 16K */
+        case 0x01: rom_banks = 4;   break; /* 64K */
+        case 0x02: rom_banks = 8;   break; /* 128K */
+        case 0x03: rom_banks = 16;  break; /* 256K */
+        case 0x04: rom_banks = 32;  break; /* 512K */
+        case 0x05: rom_banks = 64;  break; /* 1M */
+        case 0x06: rom_banks = 128; break; /* 2M */
+        case 0x07: rom_banks = 256; break; /* 4M */
+        case 0x08: rom_banks = 512; break; /* 8M */
+        case 0x52: rom_banks = 72;  break; /* 1.1M */
+        case 0x53: rom_banks = 80;  break; /* 1.2M */
+        case 0x54: rom_banks = 96;  break; /* 1.5M */
+        default:
+            logInfo("Unsupported ROM size: %x", hdr_rom_size);
+            return -1;
     }
 
     switch (hdr_extram_size) {
-    case 0x00: extram_banks = 0;  break; /* None */
-    case 0x01: extram_banks = 1;  break; /* 2K */
-    case 0x02: extram_banks = 1;  break; /* 8K */
-    case 0x03: extram_banks = 4;  break; /* 32K */
-    case 0x04: extram_banks = 16; break; /* 128K */
-    case 0x05: extram_banks = 8;  break; /* 64KB */
-    default:
-        logInfo("Unsupported EXT_RAM size: %x", hdr_extram_size);
+        case 0x00: extram_banks = 0;  break; /* None */
+        case 0x01: extram_banks = 1;  break; /* 2K */
+        case 0x02: extram_banks = 1;  break; /* 8K */
+        case 0x03: extram_banks = 4;  break; /* 32K */
+        case 0x04: extram_banks = 16; break; /* 128K */
+        case 0x05: extram_banks = 8;  break; /* 64KB */
+        default:
+            logInfo("Unsupported EXT_RAM size: %x", hdr_extram_size);
+            return -1;
     }
 
     // Prevents my test ROM from running, but I think that's a problem with the test rom not this line.
@@ -123,6 +128,7 @@ int rom_get_info(u8 *rom, size_t rom_size, struct rominfo *ret_rominfo) {
         vram_banks = 2;
     } else {
         logInfo("Unsupported GB type: %d", rom_gb_type);
+        return -1;
     }
 
     ret_rominfo->mbc = mbc;
@@ -140,11 +146,16 @@ int rom_get_info(u8 *rom, size_t rom_size, struct rominfo *ret_rominfo) {
 
 int state_new_from_rom(GbState *s, u8 *rom, size_t rom_size) {
     struct rominfo rominfo;
-    if (rom_get_info(rom, rom_size, &rominfo))
+    if (rom_get_info(rom, rom_size, &rominfo)) {
         logInfo("Error retrieving rom info");
+        return -1;
+    }
 
-    if (rominfo.gb_type != GB_TYPE_GB && rominfo.gb_type != GB_TYPE_CGB)
+    if (rominfo.gb_type != GB_TYPE_GB && rominfo.gb_type != GB_TYPE_CGB) {
         logInfo("Unsupported GB type: %d", rominfo.gb_type);
+        return -1;
+    }
+
     s->gb_type = rominfo.gb_type;
 
     s->mbc = rominfo.mbc;
@@ -186,12 +197,12 @@ void state_add_bios(GbState *s, u8 *bios, size_t bios_size) {
     s->pc = 0;
 }
 
-int state_load_extram(GbState *s, u8 *state_buf,
-        size_t state_buf_size) {
+int state_load_extram(GbState *s, u8 *state_buf, size_t state_buf_size) {
     size_t extramsize = s->mem_num_banks_extram * EXTRAM_BANKSIZE;
-    if (state_buf_size != extramsize)
-        logInfo("Mismatch in size, save has size %zu, emulator %zu bytes",
-                state_buf_size, extramsize);
+    if (state_buf_size != extramsize) {
+        logInfo("Mismatch in size, save has size %zu, emulator %zu bytes", state_buf_size, extramsize);
+        return -1;
+    }
 
     memcpy(s->mem_EXTRAM, state_buf, state_buf_size);
     return 0;
