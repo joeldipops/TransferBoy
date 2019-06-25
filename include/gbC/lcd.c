@@ -50,47 +50,47 @@ void lcd_step(PlayerState* state) {
     s->io_lcd_mode_cycles_left -= s->emu_state->last_op_cycles;
 
     if (s->io_lcd_mode_cycles_left < 0) {
-        switch (s->io_lcd_STAT & 3) {
+        switch (s->LcdStatus & 3) {
         case 0: /* H-Blank */
-            if (s->io_lcd_LY == 143) { /* Go into V-Blank (1) */
-                s->io_lcd_STAT = (s->io_lcd_STAT & 0xfc) | 1;
+            if (s->CurrentLine == 143) { /* Go into V-Blank (1) */
+                s->LcdStatus = (s->LcdStatus & 0xfc) | 1;
                 s->io_lcd_mode_cycles_left = GB_LCD_MODE_1_CLKS;
-                s->interrupts_request |= 1 << 0;
+                s->InterruptFlags |= 1 << 0;
                 s->emu_state->lcd_entered_vblank = 1;
             } else { /* Back into OAM (2) */
-                s->io_lcd_STAT = (s->io_lcd_STAT & 0xfc) | 2;
+                s->LcdStatus = (s->LcdStatus & 0xfc) | 2;
                 s->io_lcd_mode_cycles_left = GB_LCD_MODE_2_CLKS;
             }
-            s->io_lcd_LY = (s->io_lcd_LY + 1) % (GB_LCD_LY_MAX + 1);
-            s->io_lcd_STAT = (s->io_lcd_STAT & 0xfb) | (s->io_lcd_LY == s->io_lcd_LYC);
+            s->CurrentLine = (s->CurrentLine + 1) % (GB_LCD_LY_MAX + 1);
+            s->LcdStatus = (s->LcdStatus & 0xfb) | (s->CurrentLine == s->NextInterruptLine);
 
             /* We incremented line, check LY=LYC and set interrupt if needed. */
-            if (s->io_lcd_STAT & (1 << 6) && s->io_lcd_LY == s->io_lcd_LYC)
-                s->interrupts_request |= 1 << 1;
+            if (s->LcdStatus & (1 << 6) && s->CurrentLine == s->NextInterruptLine)
+                s->InterruptFlags |= 1 << 1;
             break;
         case 1: /* VBlank, Back to OAM (2) */
-            s->io_lcd_STAT = (s->io_lcd_STAT & 0xfc) | 2;
+            s->LcdStatus = (s->LcdStatus & 0xfc) | 2;
             s->io_lcd_mode_cycles_left = GB_LCD_MODE_2_CLKS;
             break;
         case 2: /* OAM, onto line drawing (OAM+VRAM busy) (3) */
-            s->io_lcd_STAT = (s->io_lcd_STAT & 0xfc) | 3;
+            s->LcdStatus = (s->LcdStatus & 0xfc) | 3;
             s->io_lcd_mode_cycles_left = GB_LCD_MODE_3_CLKS;
             break;
         case 3: /* Line render (OAM+VRAM), let's H-Blank (0) */
-            s->io_lcd_STAT = (s->io_lcd_STAT & 0xfc) | 0;
+            s->LcdStatus = (s->LcdStatus & 0xfc) | 0;
             s->io_lcd_mode_cycles_left = GB_LCD_MODE_0_CLKS;
             s->emu_state->lcd_entered_hblank = 1;
             break;
         }
 
         /* We switched mode, trigger interrupt if requested. */
-        u8 newmode = s->io_lcd_STAT & 3;
-        if (s->io_lcd_STAT & (1 << 5) && newmode == 2) /* OAM (2) int */
-            s->interrupts_request |= 1 << 1;
-        if (s->io_lcd_STAT & (1 << 4) && newmode == 1) /* V-Blank (1) int */
-            s->interrupts_request |= 1 << 1;
-        if (s->io_lcd_STAT & (1 << 3) && newmode == 0) /* H-Blank (0) int */
-            s->interrupts_request |= 1 << 1;
+        u8 newmode = s->LcdStatus & 3;
+        if (s->LcdStatus & (1 << 5) && newmode == 2) /* OAM (2) int */
+            s->InterruptFlags |= 1 << 1;
+        if (s->LcdStatus & (1 << 4) && newmode == 1) /* V-Blank (1) int */
+            s->InterruptFlags |= 1 << 1;
+        if (s->LcdStatus & (1 << 3) && newmode == 0) /* H-Blank (0) int */
+            s->InterruptFlags |= 1 << 1;
     }
 
     if (s->emu_state->lcd_entered_hblank)
@@ -139,7 +139,7 @@ static void lcd_render_current_line(PlayerState* state) {
 
     GbState* gb_state = &state->EmulationState;
 
-    if (gb_state->io_lcd_LY >= GB_LCD_HEIGHT) { /* VBlank */
+    if (gb_state->CurrentLine >= GB_LCD_HEIGHT) { /* VBlank */
         return;
     }
 
@@ -147,19 +147,19 @@ static void lcd_render_current_line(PlayerState* state) {
         return;
     }
 
-    int y = gb_state->io_lcd_LY;
+    int y = gb_state->CurrentLine;
 
     Pixel pixels[GB_LCD_WIDTH] = {0};
 
     u8 use_col = gb_state->gb_type == GB_TYPE_CGB;
 
-    u8 winmap_high       = (gb_state->io_lcd_LCDC & (1<<6)) ? 1 : 0;
-    u8 win_enable        = (gb_state->io_lcd_LCDC & (1<<5)) ? 1 : 0;
-    u8 bgwin_tilemap_low = (gb_state->io_lcd_LCDC & (1<<4)) ? 1 : 0;
-    u8 bgmap_high        = (gb_state->io_lcd_LCDC & (1<<3)) ? 1 : 0;
-    u8 obj_8x16          = (gb_state->io_lcd_LCDC & (1<<2)) ? 1 : 0;
-    u8 obj_enable        = (gb_state->io_lcd_LCDC & (1<<1)) ? 1 : 0;
-    u8 bg_enable         = (gb_state->io_lcd_LCDC & (1<<0)) ? 1 : 0;
+    u8 winmap_high       = (gb_state->LcdControl & (1<<6)) ? 1 : 0;
+    u8 win_enable        = (gb_state->LcdControl & (1<<5)) ? 1 : 0;
+    u8 bgwin_tilemap_low = (gb_state->LcdControl & (1<<4)) ? 1 : 0;
+    u8 bgmap_high        = (gb_state->LcdControl & (1<<3)) ? 1 : 0;
+    u8 obj_8x16          = (gb_state->LcdControl & (1<<2)) ? 1 : 0;
+    u8 obj_enable        = (gb_state->LcdControl & (1<<1)) ? 1 : 0;
+    u8 bg_enable         = (gb_state->LcdControl & (1<<0)) ? 1 : 0;
     u8 bgwin_tilemap_unsigned = bgwin_tilemap_low;
 
     if (use_col)
@@ -176,14 +176,14 @@ static void lcd_render_current_line(PlayerState* state) {
     u8 *bgmap = &gb_state->mem_VRAM[bgmap_addr - vram_addr];
     u8 *winmap = &gb_state->mem_VRAM[winmap_addr - vram_addr];
 
-    u8 bg_scroll_x = gb_state->io_lcd_SCX;
-    u8 bg_scroll_y = gb_state->io_lcd_SCY;
-    u8 win_pos_x = gb_state->io_lcd_WX;
-    u8 win_pos_y = gb_state->io_lcd_WY;
+    u8 bg_scroll_x = gb_state->BackgroundScrollX;
+    u8 bg_scroll_y = gb_state->BackgroundScrollY;
+    u8 win_pos_x = gb_state->WindowLeft;
+    u8 win_pos_y = gb_state->WindowTop;
 
-    u8 bgwin_palette = gb_state->io_lcd_BGP;
-    u8 obj_palette1 = gb_state->io_lcd_OBP0;
-    u8 obj_palette2 = gb_state->io_lcd_OBP1;
+    u8 bgwin_palette = gb_state->BackgroundPalette;
+    u8 obj_palette1 = gb_state->SpritePalette0;
+    u8 obj_palette2 = gb_state->SpritePalette1;
 
     u8 obj_tile_height = obj_8x16 ? 16 : 8;
 

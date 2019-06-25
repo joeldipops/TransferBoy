@@ -82,328 +82,11 @@ typedef enum {
     SoundQuarterShift = 3
 } WavePatternShift;
 
-typedef union {
-    byte HRAM[0xff];
-    struct {
-        // P1 - JoypadIo
-        union {
-            byte JoypadIo;
-            struct {
-                const byte unused0:2;
-                byte SelectFace:1;
-                byte SelectDPad:1;                
-                union {
-                    struct {
-                        byte Down:1;
-                        byte Up:1;
-                        byte Left:1;
-                        byte Right:1;
-                    };
-                    struct {
-                        byte Start:1;
-                        byte Select:1;
-                        byte B:1;
-                        byte A:1;
-                    };
-                };
-            };
-        };
-        // SB - Link Data
-        byte LinkData;
-        // SC - Link Control
-        union {
-            byte LinkControl;
-            struct {
-                bool IsTransferToStart:1;
-                const byte unused1:6;
-                bool IsClockExternal:1;
-            };
-        };
-        const byte unused2;
-        // DIV - Timer Clock
-        byte TimerClock;
-        // TIMA - Timer Counter
-        byte TimerCounter;
-        // TMA - Timer Reset Value
-        byte TimerResetValue;
-        // TAC - Timer Control
-        union {
-            byte TimerControl;
-            struct {
-                const byte unused3:5;
-                bool IsTimerStarted:1;
-                byte TimerFrequency:2;
-            };
-        };
-        const byte unused4[14];
-        // IF - Interrupt Flags
-        union {
-            byte InterruptFlags;
-            struct {
-                const byte unused5:3;
-                byte JoypadInterrupt:1;
-                byte LinkInterrupt:1;
-                byte TimerInterrupt:1;
-                byte LcdInterrupt:1;
-                byte VBlankInterrupt:2;
-            };
-        };
-        // NR10 - AudioChannel1Sweep
-        union {
-            byte AudioChannel1Sweep;
-            struct {
-                const byte unused6:1;
-                byte AudioChannel1SweepTime:3;
-                bool AudioChannel1IsFrequencyDecrease:1;
-                byte AudioChannel1SweepShift:3;
-            };
-        };
-        // NR11 - AudioChannel1PatternAndLength
-        union {
-            byte AudioChannel1PatternAndLength;
-            struct {
-                byte AudioChannel1WavePatternDuty:2;
-                byte AudioChannel1SoundLength:6;
-            };
-        };
-        // NR12 - AudioChannel1Envelope
-        union {
-            byte AudioChannel1Envelope;
-            struct {
-                byte AudioChannel1InitialVolume:4;
-                bool AudioChannel1IsVolumeIncreasing:1;
-                byte AudioChannel1EnvelopeSteps:3;                
-            };
-        };
-        // NR13 - AudioChannel1Frequency
-        byte AudioChannel1FrequencyLow;
-        // NR14 - AudioChannel1Flags
-        union {
-            byte AudioChannel1Flags;
-            struct {
-                bool AudioChannel1IsSoundReset:1;
-                SoundTimingMode AudioChannel1TimingMode:1;
-                const byte unused7:4;
-                byte AudioChannel1FrequencyHigh:3;                    
-            };
-        };
-        const byte unused8; //reserved for channel 2 sweep
-        // NR21 - AudioChannel2PatternAndLength
-        union {
-            byte AudioChannel2PatternAndLength;
-            struct {
-                byte AudioChannel2WavePatternDuty:2;
-                byte AudioChannel2SoundLength:6;
-            };
-        };
-        // NR22 - AudioChannel2Envelope
-        union {
-            byte AudioChannel2Envelope;
-            struct {
-                byte AudioChannel2InitialVolume:4;
-                bool AudioChannel2IsVolumeIncreasing:1;
-                byte AudioChannel2EnvelopeSteps:3;                
-            };
-        };
-        // NR23 - AudioChannel1Frequency
-        byte AudioChannel2FrequencyLow;
-        // NR24 - AudioChannel2Flags
-        union {
-            byte AudioChannel2Flags;
-            struct {
-                bool AudioChannel2IsSoundReset:1;
-                SoundTimingMode AudioChannel2TimingMode:1;
-                const byte unused9:3;
-                byte AudioChannel2FrequencyHigh:3;                    
-            };
-        };
-        // NR30 - AudioChannel3Control
-        union {
-            byte AudioChannel3Control;
-            struct {
-                bool AudioChannel3IsOn:1;
-                const byte unusedA:7;
-            };
-        };
-        // NR31 - AudioChannel3Length
-        byte AudioChannel3Length;
-        // NR32 - AudioChannel3Level
-        union {
-            byte AudioChannel3Level;
-            struct {
-                const byte unusedB:1;
-                WavePatternShift AudioChannel3WavePatternShift:2;
-                const byte unusedC:5;
-            };
-        };
-        // NR33 - AudioChannel3Frequency
-        byte AudioChannel3FrequencyLow;
-        // NR34 - AudioChannel3Flags
-        union {
-            byte AudioChannel3Flags;
-            struct {
-                bool AudioChannel3IsSoundReset:1;
-                SoundTimingMode AudioChannel3TimingMode:1;
-                const byte unusedD:3;
-                byte AudioChannel3FrequencyHigh:3;                    
-            };
-        };  
-        const byte unusedE; // reserved for channel 4 sweep      
-        // NR41 - AudioChannel4Length
-        byte AudioChannel4Length;
-        // NR42 - AudioChannel4Envelope
-        union {
-            byte AudioChannel4Envelope;
-            struct {
-                byte AudioChannel4InitialVolume:4;
-                bool AudioChannel4IsVolumeIncreasing:1;
-                byte AudioChannel4EnvelopeSteps:3;                
-            };
-        };
-        // NR43 - AudioChannel4RNGParameters
-        union {
-            byte AudioChannel4RNGParameters;
-            struct {
-                byte NoiseRatioShift:4;
-                byte NoiseStepsCode: 1;
-                byte NoiseRatioFactor:3;                
-            };
-        };
-        // NR44 AudioChannel4Flags
-        union {
-            byte AudioChannel4Flags;
-            struct {
-                bool AudioChannel4IsSoundReset:1;
-                SoundTimingMode AudioChannel4TimingMode:1;
-                const const byte unusedF:6;
-            };
-        };
-        // NR50 - Audio Speaker Control
-        union {
-            byte AudioSpeakerControl;
-            struct {
-                bool IsLeftTerminalEnabled:1; // S02
-                byte LeftTerminalVolume:3;
-                bool IsRightTerminalEnabled:1; //S01
-                byte RightTerminalVolume:3;                
-            };
-        };
-        // NR51 - Audio Speaker Channels
-        union {
-            byte AudioSpeakerChannels;
-            struct {
-                bool IsChannel4OnLeftTerminal:1;
-                bool IsChannel3OnLeftTerminal:1;
-                bool IsChannel2OnLeftTerminal:1;
-                bool IsChannel1OnLeftTerminal:1;
-                bool IsChannel4OnRightTerminal:1;
-                bool IsChannel3OnRightTerminal:1;
-                bool IsChannel2OnRightTerminal:1;
-                bool IsChannel1OnRightTerminal:1;                
-            };
-        };
-        // NR52 - Audio Channel Switch
-        union {
-            byte AudioChannelSwitch;
-            struct {
-                bool IsSoundEnabled:1;
-                byte pad:3;
-                bool IsChannel4Enabled:1;
-                bool IsChannel3Enabled:1;
-                bool IsChannel2Enabled:1;
-                bool IsChannel1Enabled:1;
-            };
-        };
-        const byte unused10[10];
-        byte SoundWaveData[WAVEDATA_LENGTH];       
-        // LCDC - LCD Control
-        union {
-            byte LcdControl;
-            struct {
-                bool IsLcdOn:1;
-                TileMapAddress WindowMap:1;
-                bool IsWindowOn:1;
-                TileDataAddress TileData:1;
-                TileMapAddress BackgroundMap:1;
-                SpriteSize SpriteSize:1;
-                bool AreSpritesOn:1;
-                bool IsBackgroundOn:1;
-            };
-        };
-        // STAT - LCD Status
-        union {
-            byte LcdStatus;
-            struct {
-                const byte unused11:1;
-                bool InterruptOnLineLYC:1;
-                bool InterruptOnOamMode:1;
-                bool InterruptOnVBlank:1;
-                bool InterruptOnHBlank:1;
-                bool IsCurrentLineLYC:1;
-                LcdMode LcdMode:2;
-            };
-        };
-        // SCY - Background Scroll Y
-        byte BackgroundScrollY;
-        // SCX - Background Scroll X
-        byte BackgroundScrollX;
-        // LY - Currently Drawing Line
-        byte CurrentLine;
-        // LCY - Next Interrupt Line
-        byte NextInterruptLine;
-        // DMA - Dma Source
-        byte DmaSourceAddress;
-        // BGP - Background Palette
-        union {
-            byte BackgroundPalette;
-            struct {
-                PixelShade BgData3:2;
-                PixelShade BgData2:2;
-                PixelShade BgData1:2;
-                PixelShade BgData0:2;
-            };
-        };
-        // OBP0 - Sprite Palette 0
-        union {
-            byte SpritePalette0;
-            struct {
-                PixelShade Sprite0Data3:2;
-                PixelShade Sprite0Data2:2;
-                PixelShade Sprite0Data1:2;
-                PixelShade Sprite0Data0:2;
-            };
-        };      
-        // OBP1 - Sprite Palette 1
-        union {
-            byte SpritePalette1;
-            struct {
-                PixelShade Sprite1Data3:2;
-                PixelShade Sprite1Data2:2;
-                PixelShade Sprite1Data1:2;
-                PixelShade Sprite1Data0:2;
-            };
-        };    
-        // WY - Window Y position
-        byte WindowTop;
-        // WX - Window X position
-        byte WindowLeft;
-        const byte unused12[52];
-        // Actual HRAM
-        byte Ram[127];
-        // IE - Interrupt Switch
-        union {
-            byte InterruptSwitch;
-            struct {
-                const byte unused13:3;
-                bool IsJoypadInterruptEnabled:1;
-                bool IsLinkInterruptEnabled:1;
-                bool IsTimerInterruptEnabled:1;
-                bool IsLcdInterruptEnabled:1;
-                bool IsVBlankInterruptEnabled:1;
-            };
-        };
-    };
-} HRAM;
+typedef enum {
+    InfraredReadDisabled = 0,
+    // Values 1 & 2 are unused
+    InfraredReadEnabled = 3
+} GbcInfraredMode;
 
 /* State of the cpu part of the emulation, not of the hardware. */
 struct emu_cpu_state;
@@ -468,25 +151,417 @@ typedef struct {
     u16 sp;
     u16 pc;
 
+    union {
+        byte HRAM[0xff];
+        struct {
+            // FF00 - P1 - JoypadIo
+            union {
+                byte JoypadIo;
+                struct {
+                    const byte unused0:2;
+                    byte SelectFace:1;
+                    byte SelectDPad:1;                
+                    union {
+                        struct {
+                            byte Down:1;
+                            byte Up:1;
+                            byte Left:1;
+                            byte Right:1;
+                        };
+                        struct {
+                            byte Start:1;
+                            byte Select:1;
+                            byte B:1;
+                            byte A:1;
+                        };
+                    };
+                };
+            };
+            // FF01 - SB - Link Data
+            byte LinkData;
+            // FF02 - SC - Link Control
+            union {
+                byte LinkControl;
+                struct {
+                    bool IsTransferToStart:1;
+                    const byte unused1:6;
+                    bool IsClockExternal:1;
+                };
+            };
+            const byte unused2;
+            // FF04 - DIV - Timer Clock
+            byte TimerClock;
+            // FF05 - TIMA - Timer Counter
+            byte TimerCounter;
+            // FF06 - TMA - Timer Reset Value
+            byte TimerResetValue;
+            // FF07 - TAC - Timer Control
+            union {
+                byte TimerControl;
+                struct {
+                    const byte unused3:5;
+                    bool IsTimerStarted:1;
+                    byte TimerFrequency:2;
+                };
+            };
+            const byte unused4[14];
+            // FF0F - IF - Interrupt Flags
+            union {
+                byte InterruptFlags;
+                struct {
+                    const byte unused5:3;
+                    byte JoypadInterrupt:1;
+                    byte LinkInterrupt:1;
+                    byte TimerInterrupt:1;
+                    byte LcdInterrupt:1;
+                    byte VBlankInterrupt:2;
+                };
+            };
+            // FF10 - NR10 - AudioChannel1Sweep
+            union {
+                byte AudioChannel1Sweep;
+                struct {
+                    const byte unused6:1;
+                    byte AudioChannel1SweepTime:3;
+                    bool AudioChannel1IsFrequencyDecrease:1;
+                    byte AudioChannel1SweepShift:3;
+                };
+            };
+            // FF11 - NR11 - AudioChannel1PatternAndLength
+            union {
+                byte AudioChannel1PatternAndLength;
+                struct {
+                    byte AudioChannel1WavePatternDuty:2;
+                    byte AudioChannel1SoundLength:6;
+                };
+            };
+            // FF12 - NR12 - AudioChannel1Envelope
+            union {
+                byte AudioChannel1Envelope;
+                struct {
+                    byte AudioChannel1InitialVolume:4;
+                    bool AudioChannel1IsVolumeIncreasing:1;
+                    byte AudioChannel1EnvelopeSteps:3;                
+                };
+            };
+            // FF13 - NR13 - AudioChannel1Frequency
+            byte AudioChannel1FrequencyLow;
+            // FF14 - NR14 - AudioChannel1Flags
+            union {
+                byte AudioChannel1Flags;
+                struct {
+                    bool AudioChannel1IsSoundReset:1;
+                    SoundTimingMode AudioChannel1TimingMode:1;
+                    const byte unused7:4;
+                    byte AudioChannel1FrequencyHigh:3;                    
+                };
+            };
+            const byte unused8; //reserved for channel 2 sweep
+            // FF16 - NR21 - AudioChannel2PatternAndLength
+            union {
+                byte AudioChannel2PatternAndLength;
+                struct {
+                    byte AudioChannel2WavePatternDuty:2;
+                    byte AudioChannel2SoundLength:6;
+                };
+            };
+            // FF17 - NR22 - AudioChannel2Envelope
+            union {
+                byte AudioChannel2Envelope;
+                struct {
+                    byte AudioChannel2InitialVolume:4;
+                    bool AudioChannel2IsVolumeIncreasing:1;
+                    byte AudioChannel2EnvelopeSteps:3;                
+                };
+            };
+            // FF18 - NR23 - AudioChannel1Frequency
+            byte AudioChannel2FrequencyLow;
+            // FF19 - NR24 - AudioChannel2Flags
+            union {
+                byte AudioChannel2Flags;
+                struct {
+                    bool AudioChannel2IsSoundReset:1;
+                    SoundTimingMode AudioChannel2TimingMode:1;
+                    const byte unused9:3;
+                    byte AudioChannel2FrequencyHigh:3;                    
+                };
+            };
+            // FF1A - NR30 - AudioChannel3Control
+            union {
+                byte AudioChannel3Control;
+                struct {
+                    bool AudioChannel3IsOn:1;
+                    const byte unusedA:7;
+                };
+            };
+            // FF1B - NR31 - AudioChannel3Length
+            byte AudioChannel3Length;
+            // FF1C - NR32 - AudioChannel3Level
+            union {
+                byte AudioChannel3Level;
+                struct {
+                    const byte unusedB:1;
+                    WavePatternShift AudioChannel3WavePatternShift:2;
+                    const byte unusedC:5;
+                };
+            };
+            // FF1D - NR33 - AudioChannel3Frequency
+            byte AudioChannel3FrequencyLow;
+            // FF1E - NR34 - AudioChannel3Flags
+            union {
+                byte AudioChannel3Flags;
+                struct {
+                    bool AudioChannel3IsSoundReset:1;
+                    SoundTimingMode AudioChannel3TimingMode:1;
+                    const byte unusedD:3;
+                    byte AudioChannel3FrequencyHigh:3;                    
+                };
+            };  
+            const byte unusedE; // reserved for channel 4 sweep      
+            // FF20 - NR41 - AudioChannel4Length
+            byte AudioChannel4Length;
+            // FF21 - NR42 - AudioChannel4Envelope
+            union {
+                byte AudioChannel4Envelope;
+                struct {
+                    byte AudioChannel4InitialVolume:4;
+                    bool AudioChannel4IsVolumeIncreasing:1;
+                    byte AudioChannel4EnvelopeSteps:3;                
+                };
+            };
+            // FF22 - NR43 - AudioChannel4RNGParameters
+            union {
+                byte AudioChannel4RNGParameters;
+                struct {
+                    byte NoiseRatioShift:4;
+                    byte NoiseStepsCode: 1;
+                    byte NoiseRatioFactor:3;                
+                };
+            };
+            // FF23 - NR44 AudioChannel4Flags
+            union {
+                byte AudioChannel4Flags;
+                struct {
+                    bool AudioChannel4IsSoundReset:1;
+                    SoundTimingMode AudioChannel4TimingMode:1;
+                    const const byte unusedF:6;
+                };
+            };
+            // FF24 - NR50 - Audio Speaker Control
+            union {
+                byte AudioSpeakerControl;
+                struct {
+                    bool IsLeftTerminalEnabled:1; // S02
+                    byte LeftTerminalVolume:3;
+                    bool IsRightTerminalEnabled:1; //S01
+                    byte RightTerminalVolume:3;                
+                };
+            };
+            // FF25 - NR51 - Audio Speaker Channels
+            union {
+                byte AudioSpeakerChannels;
+                struct {
+                    bool IsChannel4OnLeftTerminal:1;
+                    bool IsChannel3OnLeftTerminal:1;
+                    bool IsChannel2OnLeftTerminal:1;
+                    bool IsChannel1OnLeftTerminal:1;
+                    bool IsChannel4OnRightTerminal:1;
+                    bool IsChannel3OnRightTerminal:1;
+                    bool IsChannel2OnRightTerminal:1;
+                    bool IsChannel1OnRightTerminal:1;                
+                };
+            };
+            // FF26 - NR52 - Audio Channel Switch
+            union {
+                byte AudioChannelSwitch;
+                struct {
+                    bool IsSoundEnabled:1;
+                    byte pad:3;
+                    bool IsChannel4Enabled:1;
+                    bool IsChannel3Enabled:1;
+                    bool IsChannel2Enabled:1;
+                    bool IsChannel1Enabled:1;
+                };
+            };
+            const byte unused10[10];
+            // FF30
+            byte SoundWaveData[WAVEDATA_LENGTH];       
+            // FF40 - LCDC - LCD Control
+            union {
+                byte LcdControl;
+                struct {
+                    bool IsLcdOn:1;
+                    TileMapAddress WindowMap:1;
+                    bool IsWindowOn:1;
+                    TileDataAddress TileData:1;
+                    TileMapAddress BackgroundMap:1;
+                    SpriteSize SpriteSize:1;
+                    bool AreSpritesOn:1;
+                    bool IsBackgroundOn:1;
+                };
+            };
+            // FF41 - STAT - LCD Status
+            union {
+                byte LcdStatus;
+                struct {
+                    const byte unused11:1;
+                    bool InterruptOnLineLYC:1;
+                    bool InterruptOnOamMode:1;
+                    bool InterruptOnVBlank:1;
+                    bool InterruptOnHBlank:1;
+                    bool IsCurrentLineLYC:1;
+                    LcdMode LcdMode:2;
+                };
+            };
+            // FF42 - SCY - Background Scroll Y
+            byte BackgroundScrollY;
+            // FF43 - SCX - Background Scroll X
+            byte BackgroundScrollX;
+            // FF44 - LY - Currently Drawing Line
+            byte CurrentLine;
+            // FF45 - LCY - Next Interrupt Line
+            byte NextInterruptLine;
+            // FF46 - DMA - Dma Source
+            byte DmaSourceAddress;
+            // FF47 - BGP - Background Palette
+            union {
+                byte BackgroundPalette;
+                struct {
+                    PixelShade BgData3:2;
+                    PixelShade BgData2:2;
+                    PixelShade BgData1:2;
+                    PixelShade BgData0:2;
+                };
+            };
+            // FF48 - OBP0 - Sprite Palette 0
+            union {
+                byte SpritePalette0;
+                struct {
+                    PixelShade Sprite0Data3:2;
+                    PixelShade Sprite0Data2:2;
+                    PixelShade Sprite0Data1:2;
+                    PixelShade Sprite0Data0:2;
+                };
+            };      
+            // FF49 - OBP1 - Sprite Palette 1
+            union {
+                byte SpritePalette1;
+                struct {
+                    PixelShade Sprite1Data3:2;
+                    PixelShade Sprite1Data2:2;
+                    PixelShade Sprite1Data1:2;
+                    PixelShade Sprite1Data0:2;
+                };
+            };    
+            // FF4A - WY - Window Y position
+            byte WindowTop;
+            // FF4B - WX - Window X position
+            byte WindowLeft;
+            
+            const byte unused12;
+            // FF4D - KEY1 - GBC Speed Switch
+            union {
+                byte GBCSpeedSwitch;
+                struct {
+                    bool IsInDoubleSpeedMode:1;
+                    byte unused13:6;
+                    bool IsSpeedSwitchPending:1;
+                };
+            };
+            const byte unused14;
+            // FF4F - VBK - VRAM Bank selector
+            byte GbcVramBank;
+            const byte unused15;
+            // FF51 HDMA1, HDMA2 - Big endian gbc hdma source address.
+            natural GbcHdmaSource;
+            // FF53 HDMA3, HDMA4 = Big endian gbc hdma destination address.
+            natural GbcHdmaDestination;
+            // FF55 - HDMA5 Gbc HDMA control
+            union {
+                byte GbcHdmaControl;
+                struct {
+                    bool IsDmaHBlankMode:1;
+                    byte DmaTransferLength:7;
+                };
+            };
+            // FF56 RP - Gbc Infrared Port
+            union {
+                byte GbcInfraredIo;
+                struct {
+                    GbcInfraredMode GbcInfraredMode:2;
+                    const byte unused16:4;
+                    bool IsInfraredReceiving:1;
+                    bool IsInfraredLedOn:1;
+                };
+            };
+            const byte unused17[18];
+            // FF68 - BGPI - Gbc Background Palette Index
+            // (Also known as BCPS)
+            union {
+                byte GbcBackgroundPaletteIndexRegister;
+                struct {
+                    bool IsBgIndexAutoIncremented:1;
+                    const byte unused18:1;
+                    byte GbcBackgroundPaletteIndex:6;
+                };
+            };
+            // FF69 - BGPD - Gbc Background Palette Data
+            // (Also known as BCPD)
+            byte GbcBackroundPaletteDataOut;
+            // FF6A - OBPI - Gbc Sprite Palette Index
+            // (Also known as OCPS)
+            union {
+                byte GbcSpritePaletteIndexRegister;
+                struct {
+                    bool IsSpriteIndexAutoIncremented:1;
+                    const byte unused19:1;
+                    byte GbcSpritePaletteIndex:6;
+                };
+            };
+            // FF6B - OBPD - Gbc Sprite Palette Data
+            // (Also known as OCPD)
+            byte GbcSpritePaletteDataOut;
+            const byte unused1A[5];
+            // FF70 - SVBK - Gbc WRAM Bank switch
+            union {
+                byte GbcRamBankSelectRegister;
+                struct {
+                    const byte unused1B:5;
+                    byte GbcRamBankSelector:3;
+                };
+            };
+            const byte unused1C[16];
+            // FF80 - Actual HRAM
+            byte HRam[127];
+            // FFFF - IE - Interrupt Switch
+            union {
+                byte InterruptSwitch;
+                struct {
+                    const byte unused1D:3;
+                    bool IsJoypadInterruptEnabled:1;
+                    bool IsLinkInterruptEnabled:1;
+                    bool IsTimerInterruptEnabled:1;
+                    bool IsLcdInterruptEnabled:1;
+                    bool IsVBlankInterruptEnabled:1;
+                };
+            };
+        };
+    };
+
+
+
     char in_bios:1; /* At start BIOS is temporarily mapped at 0000-0100. */
     char halt_for_interrupts:1; /* Don't run instructions until interrupt. */
     char double_speed:1; /* CGB: we can run at double CPU speed. */
 
     u8 interrupts_master_enabled:1;
-    u8 interrupts_enable; /* Bitmask of which interrupts are enabled. */
-    u8 interrupts_request; /* Bitmask of which interrupts are pending. */
-
 
     /*
      * I/O ports (and some additional variables to manage I/O)
      */
 
     int io_lcd_mode_cycles_left;
-    u8 io_lcd_SCX;  /* BG scroll X */
-    u8 io_lcd_SCY;  /* BG scroll Y */
-    u8 io_lcd_WX;   /* Window X */
-    u8 io_lcd_WY;   /* Window Y */
-    u8 io_lcd_LCDC; /* LCD Control bits:
+    /* LCD Control bits:
                         0: BG enable,
                         1: OBJ/sprites enable,
                         2: OBJ/sprites-size (8x8 or 8x16),
@@ -495,72 +570,37 @@ typedef struct {
                         5: Window enable,
                         6: Window tilemap (9800-9bff or 9c00-9fff),
                         7: LCD enable */
-    u8 io_lcd_STAT; /* LCD Status bits
+    /* LCD Status bits
                         0-1: Current mode,
                           2: Current LYC==LY status,
                           3: Trigger interrupt on entering mode 0,
                           4: Trigger interrupt on entering mode 1,
                           5: Trigger interrupt on entering mode 2,
                           6: Trigger interrupt on LY=LYC */
-    u8 io_lcd_LY;   /* Current LCD Y line */
-    u8 io_lcd_LYC;  /* LCD Y line compare  */
-
+    
     /* Palette data for both monochrome (non-CGB) and color (CGB) */
-    u8 io_lcd_BGP;  /* Background palette data (monochrome, non-CGB) */
-    u8 io_lcd_OBP0; /* Object palette 0 data (monochrome, non-CGB) */
-    u8 io_lcd_OBP1; /* Object palette 1 data (monochrome, non-CGB) */
-    u8 io_lcd_BGPI; /* Background palette index (color, CGB) */
     u8 io_lcd_BGPD[0x40]; /* Background palettes (color, CGB) */
-    u8 io_lcd_OBPI; /* Sprite palette index (color, CGB) */
     u8 io_lcd_OBPD[0x40]; /* Sprite/object palettes for CGB. */
 
-    u8 io_timer_DIV;
+    //u8 TimerClock;
     u32 io_timer_DIV_cycles;
-    u8 io_timer_TIMA;
+    //u8 TimerCounter;
     u32 io_timer_TIMA_cycles;
-    u8 io_timer_TMA;
-    u8 io_timer_TAC;
+    //u8 TimerCounter;
+    //u8 TimerControl;
 
-    u8 io_serial_data;
-    u8 io_serial_control;
+    //u8 io_serial_data;
+    //u8 LinkControl;
 
-    u8 io_infrared;
+    //u8 GbcInfraredIo;
 
     u8 io_buttons;
     u8 io_buttons_dirs;
     u8 io_buttons_buttons;
 
-    u8 io_sound_enabled;
-    u8 io_sound_out_terminal;
-    u8 io_sound_terminal_control;
-
-    u8 io_sound_channel1_sweep;
-    u8 io_sound_channel1_length_pattern;
-    u8 io_sound_channel1_envelope;
-    u8 io_sound_channel1_freq_lo;
-    u8 io_sound_channel1_freq_hi;
-
-    u8 io_sound_channel2_length_pattern;
-    u8 io_sound_channel2_envelope;
-    u8 io_sound_channel2_freq_lo;
-    u8 io_sound_channel2_freq_hi;
-
-    u8 io_sound_channel3_enabled;
-    u8 io_sound_channel3_length;
-    u8 io_sound_channel3_level;
-    u8 io_sound_channel3_freq_lo;
-    u8 io_sound_channel3_freq_hi;
-    u8 io_sound_channel3_ram[0x10];
-
-    u8 io_sound_channel4_length;
-    u8 io_sound_channel4_envelope;
-    u8 io_sound_channel4_poly;
-    u8 io_sound_channel4_consec_initial;
-
     /* CGB DMA transfers (HDMA) */
     u8 io_hdma_src_high, io_hdma_src_low;
     u8 io_hdma_dst_high, io_hdma_dst_low;
-    u8 io_hdma_status; /* (remaining) length in lower bits, high bit 1=done. */
     char io_hdma_running:1;
     u16 io_hdma_next_src, io_hdma_next_dst;
 
@@ -570,9 +610,11 @@ typedef struct {
      */
 
     int mem_bank_rom, mem_num_banks_rom;
-    int mem_bank_wram, mem_num_banks_wram;
+    // int GbcRamBankSelectRegister, mem_num_banks_wram;
+    int mem_num_banks_wram;
     int mem_bank_extram, mem_num_banks_extram;
-    int mem_bank_vram, mem_num_banks_vram;
+    // int GbcVramBank, mem_num_banks_vram;
+    int mem_num_banks_vram;
     u8 mem_mbc1_rombankupper; /* MBC1 - Upper bits ROM bank (if selected). */
     u8 mem_mbc1_extrambank; /* MBC1 - EXT_RAM bank (if selected). */
     u8 mem_mbc1_romram_select; /* MBC1 - Mode for above field (ROM/RAM). */
@@ -584,7 +626,6 @@ typedef struct {
     u8 *mem_EXTRAM; /* External (cartridge) RAM, optional, max 32K (banked) */
     u8 *mem_VRAM; /* Video RAM, 8K non-CGB, 16K CGB (banked) */
     u8 mem_OAM[0xa0]; /* Sprite/Object attributes */
-    u8 mem_HRAM[0x7f];
     u8 *mem_BIOS;
 
     u8 mem_latch_rtc;

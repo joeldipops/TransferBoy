@@ -33,7 +33,9 @@ sByte initText() {
     strcpy(_strings[TextNoCartridge], "Please insert a Game Boy cartridge.");
     strcpy(_strings[TextLoadingCartridge], "Loading cartridge, please wait...");
     strcpy(_strings[TextExpansionPakRequired], "This cartridge cannot be loaded without an Expansion Pak.");
-    strcpy(_strings[TextLoadCartridgePrompt], "Cartridge Name %%s. Press A to load or B to retry.");
+    strcpy(_strings[TextChecksumFailed], "The cartridge could not be read correctly. Error %d.");
+    strcpy(_strings[TextUnsupportedCartridge], "This cartridge is not yet supported");
+    strcpy(_strings[TextLoadCartridgePrompt], "Press A to retry.");
     strcpy(_strings[TextMenuResume], "Resume");
     strcpy(_strings[TextMenuReset], "Reset");
     strcpy(_strings[TextMenuChangeCart], "Switch");
@@ -70,7 +72,7 @@ void getText(const TextId textId, string output) {
     if (!textInitted) {
         initText();
     }
-    sprintf(output, _strings[textId]);
+    strcpy(output, _strings[textId]);
 }
 
 /**

@@ -46,6 +46,7 @@ LD_OFILES += $(CURDIR)/obj/mmu.o
 LD_OFILES += $(CURDIR)/obj/c_gbz80ops.o
 LD_OFILES += $(CURDIR)/obj/s_gbz80ops.o
 LD_OFILES += $(CURDIR)/obj/gbc_state.o
+LD_OFILES += $(CURDIR)/obj/polyfill.o
 
 $(PROG_NAME)$(ROM_EXTENSION): $(PROG_NAME).elf transferboy64.dfs
 	$(OBJCOPY) $(PROG_NAME).elf $(PROG_NAME).bin -O binary
@@ -54,6 +55,7 @@ $(PROG_NAME)$(ROM_EXTENSION): $(PROG_NAME).elf transferboy64.dfs
 	$(CHKSUM64PATH) $(PROG_NAME)$(ROM_EXTENSION)
 
 $(PROG_NAME).elf :
+	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/polyfill.o $(CURDIR)/polyfill.c
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/core.o $(CURDIR)/core.c
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/resources.o $(CURDIR)/resources.c
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/init.o $(CURDIR)/init.c

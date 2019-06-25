@@ -66,7 +66,7 @@ void initialiseEmulator(GbState* state, const ByteArray* romData, const ByteArra
     loadBios(state);
 
     state_load_extram(state, saveData->Data, saveData->Size);
-    init_emu_state(state);
+    emu_init(state);
     cpu_init_emu_cpu_state(state);
     lcd_init(state);
 }

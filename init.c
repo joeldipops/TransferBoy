@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 #include "init.h"
 #include "screen.h"
 #include "play.h"
@@ -11,7 +12,18 @@
 #include <libdragon.h>
 #include "include/gbc_bundle.h"
 
-static natural retries = 0;
+/**
+ * Gets screen and state ready for Playing GB software.
+ * @param state The play state.
+ * @param playerNumber identifies player that wants to move to play mode.
+ */
+static void preparePlayMode(RootState* state, byte playerNumber) {
+    Rectangle screen = {};
+    getScreenPosition(state, playerNumber, &screen);
+    resetPlayState(&state->Players[playerNumber]);
+    state->Players[playerNumber].InitState = InitLoaded;   
+    state->Players[playerNumber].ActiveMode = Play;      
+}
 
 /**
  * Waits for a Start Button pressed, then goes and loads a rom.
@@ -19,61 +31,58 @@ static natural retries = 0;
  * @param playerNumber player in init mode.
  */
 void initLogic(RootState* state, const byte playerNumber) {
+    if (state->Players[playerNumber].InitState == InitRestarting) {
+        state->Players[playerNumber].InitState = InitStart;
+        state->RequiresRepaint = true;
+    }
+
     if (state->Players[playerNumber].InitState == InitStart) {
         sByte result = getCartridgeMetadata(playerNumber, &state->Players[playerNumber].Cartridge);
 
         if (!result) {
-            state->Players[playerNumber].InitState = InitPending;
+            state->Players[playerNumber].InitState = InitReady;
             state->RequiresRepaint = true;
         } else {
+            state->Players[playerNumber].InitState = InitError;
+            state->ErrorCode = result;
+
             switch(result) {
                 case TPAK_ERR_NO_TPAK:
-                    state->Players[playerNumber].InitState = InitNoTpak;
+                    getText(TextNoTpak, state->Players[playerNumber].ErrorMessage);
                     break;
                 case TPAK_ERR_NO_CARTRIDGE:
-                    state->Players[playerNumber].InitState = InitNoCartridge;                
+                    getText(TextNoCartridge, state->Players[playerNumber].ErrorMessage);             
+                    break;
+                case TPAK_ERR_CORRUPT_HEADER:
+                case TPAK_ERR_CORRUPT_DATA:
+                    getText(TextChecksumFailed, state->Players[playerNumber].ErrorMessage);
+                    break;
+                case TPAK_ERR_UNSUPPORTED_CARTRIDGE:
+                    getText(TextUnsupportedCartridge, state->Players[playerNumber].ErrorMessage);                
                     break;
                 case TPAK_ERR_INSUFFICIENT_MEMORY:
-                    state->Players[playerNumber].InitState = InitRequiresExpansionPak;
+                    getText(TextExpansionPakRequired, state->Players[playerNumber].ErrorMessage);
                     break;
                 default:
-                    state->ErrorCode = result;
-                    state->Players[playerNumber].InitState = InitError;
+                    sprintf(state->Players[playerNumber].ErrorMessage, "Loading Cartridge failed with error: %d", state->ErrorCode);
                     break;
             }
         }
     }
 
-    bool loadInternal = false;
-
-    if (state->Players[playerNumber].InitState == InitPending) {
+    if (state->Players[playerNumber].InitState == InitError) {
         bool releasedButtons[N64_BUTTON_COUNT] = {};
         getPressedButtons(&state->KeysReleased, playerNumber, releasedButtons);
 
+        // Press A or Start to retry.
         if (releasedButtons[A] || releasedButtons[Start]) {
             state->RequiresControllerRead = true;
             state->RequiresRepaint = true;
-            state->Players[playerNumber].InitState = InitReady;
-        } else if (releasedButtons[B]) {
-            state->RequiresControllerRead = true;
-            state->Players[playerNumber].InitState = InitStart;
-            retries++;
+            state->Players[playerNumber].InitState = InitRestarting;
         } else if (releasedButtons[CDown]) {
             // Load internal easter egg cartridge.
-            state->Players[playerNumber].InitState = InitLoading;
-            loadInternal = true;
-        }
-    } else if (state->Players[playerNumber].InitState == InitReady) {
-        // Show the loading message.
-        state->RequiresRepaint = true;
-        state->Players[playerNumber].InitState = InitLoading;
-    }
-
-    if (state->Players[playerNumber].InitState == InitLoading) {
-        state->RequiresRepaint = true;
-
-        if (loadInternal) {
-            strcpy(state->Players[0].Cartridge.Header.Title, "Easter egg");
+            state->RequiresControllerRead = true;
+            state->RequiresRepaint = true;
             sInt result = loadInternalRom(&state->Players[0].Cartridge.Rom);
             if (result == -1) {
                 logAndPauseFrame(0, "Error loading internal ROM");
@@ -83,21 +92,26 @@ void initLogic(RootState* state, const byte playerNumber) {
             state->Players[playerNumber].Cartridge.Header.IsSgbSupported = true;   
             state->Players[playerNumber].Cartridge.IsGbcSupported = false;
 
-        } else {
-            sByte result = importCartridge(playerNumber, &state->Players[playerNumber].Cartridge);
-            if (result) {
-                state->ErrorCode = result;
-                state->Players[playerNumber].InitState = InitError;
-                return;
-            }
+            preparePlayMode(state, playerNumber);            
         }
-        Rectangle screen = {};
-        getScreenPosition(state, playerNumber, &screen);
+    } else if (state->Players[playerNumber].InitState == InitReady) {
+        // Show the loading message.
+        state->RequiresRepaint = true;
+        state->Players[playerNumber].InitState = InitLoading;
+    } else if (state->Players[playerNumber].InitState == InitLoading) {
+        state->RequiresRepaint = true;
 
-        resetPlayState(&state->Players[playerNumber]);
+        sByte result = importCartridge(playerNumber, &state->Players[playerNumber].Cartridge);
+        if (result) {
+            string tmp;
+            state->ErrorCode = result;
+            getText(TextChecksumFailed, tmp);                             
+            sprintf(state->Players[playerNumber].ErrorMessage, tmp, result);
+            state->Players[playerNumber].InitState = InitError;
+            return;
+        }
 
-        state->Players[playerNumber].InitState = InitLoaded;
-        state->Players[playerNumber].ActiveMode = Play;
+        preparePlayMode(state, playerNumber);
     }
 }
 
@@ -119,35 +133,18 @@ void initDraw(const RootState* state, const byte playerNumber) {
     natural textTop = screen.Top - TEXT_HEIGHT + (screen.Width / 2);
 
     string text = "";
+    string tmp = "";    
     switch (state->Players[playerNumber].InitState) {
         case InitStart: break;
         case InitLoaded: break;
         case InitReady:
+        case InitRestarting:
+        case InitLoading:        
             getText(TextLoadingCartridge, text);
             break;
-        case InitNoTpak:
-            getText(TextNoTpak, text);
-            break;
-        case InitNoCartridge:
-            getText(TextNoCartridge, text);
-            break;
-        case InitRequiresExpansionPak:
-            getText(TextExpansionPakRequired, text);
-            break;
-        case InitPending:
-            ;
-            string tmp = "";
-            getText(TextLoadCartridgePrompt, tmp);
-            sprintf(text, tmp, &state->Players[playerNumber].Cartridge.Header.Title);
-
-            if (retries) {
-                sprintf(tmp, "%s Retries: %d", text, retries);
-                strcpy(text, tmp);
-            }
-
-            break;
         case InitError:
-            sprintf(text, "Loading Cartridge failed with error: %d", state->ErrorCode);
+            getText(TextLoadCartridgePrompt, tmp);
+            sprintf(text, "%s %s", state->Players[playerNumber].ErrorMessage, tmp);
             break;
         default:
             strcpy(text, "Unknown Error!!!");
@@ -155,4 +152,11 @@ void initDraw(const RootState* state, const byte playerNumber) {
     }
 
     drawTextParagraph(state->Frame, text, screen.Left + TEXT_WIDTH, textTop, 0.8, screen.Width - TEXT_WIDTH);
+
+    // sleep just to give some indiciation that something has changed.
+    // otherwise it may happen too fast and we might not know for sure.
+    // that the t-pak was even retried.
+    if (state->Players[playerNumber].InitState == InitRestarting) {
+        sleep(1);
+    }
 }
