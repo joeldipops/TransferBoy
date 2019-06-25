@@ -20,35 +20,29 @@ typedef int64_t s64;
 #define FLAG_N 0x40
 #define FLAG_Z 0x80
 
-/* State of the emulator itself, not of the hardware. */
+// State of the emulator itself, not of the hardware.
 struct emu_state {
-    bool quit;
-    bool make_savestate;
-
-    bool audio_enable;
-    u8 *audio_sndbuf;
-
-    bool lcd_entered_hblank; /* Set at the end of every HBlank. */
-    bool lcd_entered_vblank; /* Set at the beginning of every VBlank. */
+    bool lcd_entered_hblank; // Set at the end of every HBlank.
+    bool lcd_entered_vblank; // Set at the beginning of every VBlank.
     u16* LastBuffer;
     u16* NextBuffer;
 
-    bool flush_extram; /* Flush battery-backed RAM when it's disabled. */
-    bool extram_dirty; /* Write battery-backed RAM periodically when dirty. */
+    bool extramDisabled; //Writing 0 to MBC 1 turns off access to external RAM 
+    bool extram_dirty; // Write battery-backed RAM periodically when dirty.
 
-    bool dbg_break_next;
-    bool dbg_print_disas;
-    bool dbg_print_mmu;
-    u16 dbg_breakpoint;
-
-    u32 last_op_cycles; /* The duration of the last intruction. Normally just
-                           the CPU executing the instruction, but the MMU could
-                           take longer in the case of some DMA ops. */
+    // The duration of the last intruction. Normally just
+    // the CPU executing the instruction, but the MMU could
+    // take longer in the case of some DMA ops.
+    u32 last_op_cycles; 
     u32 time_cycles;
     u32 time_seconds;
+};
 
-    char state_filename_out[1024];
-    char save_filename_out[1024];
+struct emu_cpu_state {
+    // Lookup tables for the reg-index encoded in instructions to ptr to reg.
+    u8 *reg8_lut[9];
+    u16 *reg16_lut[4];
+    u16 *reg16s_lut[4];
 };
 
 #define WAVEDATA_LENGTH 16
@@ -97,11 +91,10 @@ enum gb_type {
 };
 
 typedef struct {
-
     /*
      * CPU state (registers, interrupts, etc)
      */
-    /* Registers: allow access to 8-bit and 16-bit regs, and via array. */
+    // Registers: allow access to 8-bit and 16-bit regs, and via array.
     #if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
     union {
         u8 regs[8];
@@ -123,7 +116,6 @@ typedef struct {
             u8 pad4:1;
         } flags;
     };
-
     #else
     // Original Little Endian Setup
     union {
@@ -151,6 +143,26 @@ typedef struct {
     u16 sp;
     u16 pc;
 
+    // If used, mapped from $0000 of ROM space.
+    u8 *mem_BIOS;        
+
+    // Memory space
+    // $0000 - $7fff: Between 16K and 4M (banked)
+    u8 *mem_ROM;
+    // $8000 - $9fff: Video RAM, 8K non-CGB, 16K CGB (banked)
+    u8 *mem_VRAM; 
+    // $a000 - $bfff: External (cartridge) RAM, optional, max 32K (banked)
+    u8 *mem_EXTRAM; 
+    // $c000 - $dfff: Internal RAM (WRAM), 8K non-CGB, 32K CGB (banked)
+    u8 *mem_WRAM; 
+
+    // $e000 -fdff: unused
+    // $fe00 - fe9f: Sprite/Object attributes
+    u8 mem_OAM[0xa0]; 
+
+    // fea0 - feff: unused
+
+    // $ff00 - ff7f: IO registers and HRAM
     union {
         byte HRAM[0xff];
         struct {
@@ -548,115 +560,63 @@ typedef struct {
         };
     };
 
+    bool in_bios:1; // At start BIOS is temporarily mapped at 0000-0100.
+    bool halt_for_interrupts:1; // Don't run instructions until interrupt.
+    bool double_speed:1; // CGB: we can run at double CPU speed.
 
-
-    char in_bios:1; /* At start BIOS is temporarily mapped at 0000-0100. */
-    char halt_for_interrupts:1; /* Don't run instructions until interrupt. */
-    char double_speed:1; /* CGB: we can run at double CPU speed. */
-
-    u8 interrupts_master_enabled:1;
-
-    /*
-     * I/O ports (and some additional variables to manage I/O)
-     */
+    // As controlled by the di and ei instructions.
+    bool interrupts_master_enabled:1;
 
     int io_lcd_mode_cycles_left;
-    /* LCD Control bits:
-                        0: BG enable,
-                        1: OBJ/sprites enable,
-                        2: OBJ/sprites-size (8x8 or 8x16),
-                        3: BG tilemap (9800-9bff or 9c00-9fff),
-                        4: BG+Win tile data (8800-97FF+signed idx or 8000-8FFF),
-                        5: Window enable,
-                        6: Window tilemap (9800-9bff or 9c00-9fff),
-                        7: LCD enable */
-    /* LCD Status bits
-                        0-1: Current mode,
-                          2: Current LYC==LY status,
-                          3: Trigger interrupt on entering mode 0,
-                          4: Trigger interrupt on entering mode 1,
-                          5: Trigger interrupt on entering mode 2,
-                          6: Trigger interrupt on LY=LYC */
     
-    /* Palette data for both monochrome (non-CGB) and color (CGB) */
-    u8 io_lcd_BGPD[0x40]; /* Background palettes (color, CGB) */
-    u8 io_lcd_OBPD[0x40]; /* Sprite/object palettes for CGB. */
+    // Palette data for both monochrome (non-CGB) and color (CGB)
+    u8 io_lcd_BGPD[0x40]; // Background palettes (color, CGB)
+    u8 io_lcd_OBPD[0x40]; // Sprite/object palettes for CGB.
 
-    //u8 TimerClock;
     u32 io_timer_DIV_cycles;
-    //u8 TimerCounter;
     u32 io_timer_TIMA_cycles;
-    //u8 TimerCounter;
-    //u8 TimerControl;
 
-    //u8 io_serial_data;
-    //u8 LinkControl;
-
-    //u8 GbcInfraredIo;
-
-    u8 io_buttons;
     u8 io_buttons_dirs;
     u8 io_buttons_buttons;
 
-    /* CGB DMA transfers (HDMA) */
+    // CGB DMA transfers (HDMA)
     u8 io_hdma_src_high, io_hdma_src_low;
     u8 io_hdma_dst_high, io_hdma_dst_low;
-    char io_hdma_running:1;
+    bool io_hdma_running:1;
     u16 io_hdma_next_src, io_hdma_next_dst;
 
 
-    /*
-     * Memory (MMU) state
-     */
-
+    // memory bank controller supporting vars
     int mem_bank_rom, mem_num_banks_rom;
-    // int GbcRamBankSelectRegister, mem_num_banks_wram;
     int mem_num_banks_wram;
     int mem_bank_extram, mem_num_banks_extram;
-    // int GbcVramBank, mem_num_banks_vram;
     int mem_num_banks_vram;
-    u8 mem_mbc1_rombankupper; /* MBC1 - Upper bits ROM bank (if selected). */
-    u8 mem_mbc1_extrambank; /* MBC1 - EXT_RAM bank (if selected). */
-    u8 mem_mbc1_romram_select; /* MBC1 - Mode for above field (ROM/RAM). */
+    // MBC1 - Upper bits ROM bank (if selected).
+    u8 mem_mbc1_rombankupper; 
+    // MBC1 - EXT_RAM bank (if selected).
+    u8 mem_mbc1_extrambank; 
+    // MBC1 - Mode for above field (ROM/RAM).
+    u8 mem_mbc1_romram_select; 
     u8 mem_mbc3_extram_rtc_select;
     u8 mem_mbc5_extrambank;
 
-    u8 *mem_ROM; /* Between 16K and 4M (banked) */
-    u8 *mem_WRAM; /* Internal RAM (WRAM), 8K non-CGB, 32K CGB (banked) */
-    u8 *mem_EXTRAM; /* External (cartridge) RAM, optional, max 32K (banked) */
-    u8 *mem_VRAM; /* Video RAM, 8K non-CGB, 16K CGB (banked) */
-    u8 mem_OAM[0xa0]; /* Sprite/Object attributes */
-    u8 *mem_BIOS;
-
+    // Real time clock, select by extram banks 0x08-0x0c
     u8 mem_latch_rtc;
-    u8 mem_RTC[0x0c]; /* Real time clock, select by extram banks 0x08-0x0c */
+    u8 mem_RTC[0x0c]; 
 
 
-    /*
-     * Cartridge hardware (including memory bank controller)
-     */
-
+    // Cartridge hardware metadata
     enum gb_type gb_type;
     int mbc;
-    char has_extram;
-    char has_battery;
-    char has_rtc;
+    bool has_extram;
+    bool has_battery;
+    bool has_rtc;
 
 
-    /*
-     * Internal emulator state
-     */
-
+    // Internal emulator state
     struct emu_state *emu_state;
     struct emu_cpu_state *emu_cpu_state;
 } GbState;
-
-struct emu_cpu_state {
-    // Lookup tables for the reg-index encoded in instructions to ptr to reg.
-    u8 *reg8_lut[9];
-    u16 *reg16_lut[4];
-    u16 *reg16s_lut[4];
-};
 
 typedef struct player_input GbController;
 

@@ -133,7 +133,7 @@ void cpu_reset_state(GbState *s) {
 
     s->GbcInfraredIo = 0x00;
 
-    s->io_buttons = 0x00;
+    s->JoypadIo = 0x00;
     s->io_buttons_dirs = 0x0f;
     s->io_buttons_buttons = 0x0f;
 

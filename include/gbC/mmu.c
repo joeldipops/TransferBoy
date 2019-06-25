@@ -121,12 +121,12 @@ static inline u8 mmu_register_read(GbState* s, u16 location) {
                                 if (lowcation < 0x01) {
                                     // FF00: Joypad
                                     u8 rv = 0;
-                                    if ((s->io_buttons & (1 << 4)) == 0)
-                                        rv = (s->io_buttons & 0xf0) | (s->io_buttons_dirs & 0x0f);
-                                    else if ((s->io_buttons & (1 << 5)) == 0)
-                                        rv =  (s->io_buttons & 0xf0) | (s->io_buttons_buttons & 0x0f);
+                                    if ((s->JoypadIo & (1 << 4)) == 0)
+                                        rv = (s->JoypadIo & 0xf0) | (s->io_buttons_dirs & 0x0f);
+                                    else if ((s->JoypadIo & (1 << 5)) == 0)
+                                        rv =  (s->JoypadIo & 0xf0) | (s->io_buttons_buttons & 0x0f);
                                     else
-                                        rv = (s->io_buttons & 0xf0) | (s->io_buttons_buttons & 0x0f);
+                                        rv = (s->JoypadIo & 0xf0) | (s->io_buttons_buttons & 0x0f);
                                     return rv;
                                 } else {
                                     // FF01: Serial Link Data
@@ -451,7 +451,7 @@ static inline void mmu_register_write(GbState* s, u16 location, u8 value) {
                             if (lowcation < 0x02) {
                                 if (lowcation < 0x01) {
                                     // FF00: Joypad
-                                    s->io_buttons = value;
+                                    s->JoypadIo = value;
                                 } else {
                                     // FF01: Serial Link Data
                                     s->LinkData = value;
@@ -657,8 +657,9 @@ static inline void mmu_register_write(GbState* s, u16 location, u8 value) {
                                     // Normally this transfer takes ~160ms (during which only HRAM
                                     // is accessible) but it's okay to be instantaneous. Normally
                                     // roms loop for ~200 cycles or so to wait.  
-                                    for (unsigned i = 0; i < OAM_SIZE; i++)
+                                    for (unsigned i = 0; i < OAM_SIZE; i++) {
                                         s->mem_OAM[i] = mmu_read(s, (value << 8) + i);
+                                    }
                                 } else {
                                     // FF47: Background Palette'
                                     s->BackgroundPalette = value;
@@ -789,11 +790,13 @@ void mmu_write(GbState *s, u16 location, u8 value) {
         if (highcation < 0x40) {
             if (highcation < 0x20) {
                 // 0000 - 1FFF: Fixed ROM bank
-                // Dummy, we always have those enabled.
-                // Turning off the RAM could indicate that battery-backed data is done
-                // being written and could be flushed to disk.
-                if (value == 0)
-                    s->emu_state->flush_extram = 1;          
+
+                // TODO - Lots of MBC implications here.
+                if (value == 0) {
+                    s->emu_state->extramDisabled = true;          
+                } else if (value == 0x0A) {
+                    s->emu_state->extramDisabled = false;
+                }
             } else {
                 // 2000 - 3FFF: Switchable ROM bank
                 if (value == 0 && s->mbc != 5)
