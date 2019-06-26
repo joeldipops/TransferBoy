@@ -103,6 +103,96 @@ void mmu_step(GbState *s) {
         mmu_hdma_do(s);
 }
 
+// mmu_write special cases
+static void writeAudioChannelSwitch(GbState* s, byte offset, byte value) {
+    s->AudioChannelSwitch = (value & 0x80) | (s->AudioChannelSwitch & 0x7f);
+}
+
+static void writeLcdStatus(GbState* s, byte offset, byte value) {
+    s->LcdStatus = (value & ~7) | (s->LcdStatus & 7);
+}
+
+static void writeCurrentLine(GbState* s, byte offset, byte value) {
+    s->CurrentLine = 0x0;
+    s->LcdStatus = (s->LcdStatus & 0xfb) | ((s->CurrentLine == s->NextInterruptLine) << 2);
+}
+
+static void writeNextInterruptLine(GbState* s, byte offset, byte value) {
+    s->NextInterruptLine = value;
+    s->LcdStatus = (s->LcdStatus & 0xfb) | ((s->CurrentLine == s->NextInterruptLine) << 2);
+}
+
+static void writeDmaSource(GbState* s, byte offset, byte value) {
+    // FF46: Transfers memory to OAM for rendering
+   
+    // Normally this transfer takes ~160ms (during which only HRAM
+    // is accessible) but it's okay to be instantaneous. Normally
+    // roms loop for ~200 cycles or so to wait.  
+    for (unsigned i = 0; i < OAM_SIZE; i++) {
+        s->mem_OAM[i] = mmu_read(s, (value << 8) + i);
+    }
+}
+
+static void writeGbcVramBank(GbState* s, byte offset, byte value) {
+    s->GbcVramBank = value & 1;
+}
+
+static void writeBiosSwitch(GbState* s, byte offset, byte value) {
+    s->in_bios = 0;
+}
+
+static void writeGbcHdmaControl(GbState* s, byte offset, byte value) {
+    mmu_hdma_start(s, value);
+}
+
+static void writeGbcBackgroundPaletteData(GbState* s, byte offset, byte value) {
+    s->io_lcd_BGPD[s->GbcBackgroundPaletteIndexRegister & 0x3f] = value;
+    if (s->GbcBackgroundPaletteIndexRegister & (1 << 7)) {
+        s->GbcBackgroundPaletteIndexRegister = (((s->GbcBackgroundPaletteIndexRegister & 0x3f) + 1) & 0x3f) | (1 << 7);
+    }
+}
+
+static void writeGbcSpritePaletteData(GbState* s, byte offset, byte value) {
+    s->io_lcd_OBPD[s->GbcSpritePaletteIndexRegister & 0x3f] = value;
+    if (s->GbcSpritePaletteIndexRegister & (1 << 7)) {
+        s->GbcSpritePaletteIndexRegister = (((s->GbcSpritePaletteIndexRegister & 0x3f) + 1) & 0x3f) | (1 << 7);        
+    }
+ }
+
+static void writeGbcRamBankSelect(GbState* s, byte offset, byte value) {
+    if (value == 0) {
+        value = 1;
+    }
+    value &= s->mem_num_banks_wram - 1;
+    s->GbcRamBankSelectRegister = value;  
+}
+
+
+static void writeHram(GbState* s, byte offset, byte value) {
+    s->HRAM[offset] = value;
+}
+
+ typedef void (*mmuWriteOperation)(GbState*, byte, byte);
+ static mmuWriteOperation mmuWriteTable[] = {
+//        0         1         2         3         4         5         6         7         8         9         A         B         C         D         E         F   
+/*   0 */ writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,
+/*   1 */ writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,
+/*   2 */ writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeAudioChannelSwitch,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,
+/*   3 */ writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,
+/*   4 */ writeHram,writeLcdStatus,writeHram,writeHram,writeCurrentLine,writeNextInterruptLine,writeDmaSource,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeGbcVramBank,
+/*   5 */ writeBiosSwitch,writeHram,writeHram,writeHram,writeHram,writeGbcHdmaControl,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,
+/*   6 */ writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeGbcBackgroundPaletteData,writeHram,writeGbcSpritePaletteData,writeHram,writeHram,writeHram,writeHram,
+/*   7 */ writeGbcRamBankSelect,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,
+/*   8 */ writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,
+/*   9 */ writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,
+/*   A */ writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,
+/*   B */ writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,
+/*   C */ writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,
+/*   D */ writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,
+/*   E */ writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,
+/*   F */ writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram
+};                                                                  
+
 static inline u8 mmu_register_read(GbState* s, u16 location) {
     u8 lowcation = location & 0x00FF;
 
@@ -437,62 +527,7 @@ static inline void mmu_register_write(GbState* s, u16 location, u8 value) {
     // assuming 8 bit compares are faster than 16bit?
     u8 lowcation = location & 0x00FF;
 
-    // Special cases
-    if (lowcation == 0x26) {
-        // FF26 NR52
-        s->AudioChannelSwitch = (value & 0x80) | (s->AudioChannelSwitch & 0x7f);        
-    } else if (lowcation == 0x41) {
-        // FF41: STAT
-        s->LcdStatus = (value & ~7) | (s->LcdStatus & 7);
-    } else if (lowcation == 0x44) {
-        // FF44: LCD Line Y?
-        s->CurrentLine = 0x0;
-        s->LcdStatus = (s->LcdStatus & 0xfb) | ((s->CurrentLine == s->NextInterruptLine) << 2);
-    } else if (lowcation == 0x45) {
-        // FF45: LCD LYC - no idea what that means
-        s->NextInterruptLine = value;
-        s->LcdStatus = (s->LcdStatus & 0xfb) | ((s->CurrentLine == s->NextInterruptLine) << 2);
-    } else if (lowcation == 0x46) {
-        // FF46: Transfers memory to OAM for rendering
-   
-        // Normally this transfer takes ~160ms (during which only HRAM
-        // is accessible) but it's okay to be instantaneous. Normally
-        // roms loop for ~200 cycles or so to wait.  
-        for (unsigned i = 0; i < OAM_SIZE; i++) {
-            s->mem_OAM[i] = mmu_read(s, (value << 8) + i);
-        }
-    } else if (lowcation == 0x4f) {
-        // FF4F: VRAM bank flag
-        s->GbcVramBank = value & 1;
-    } else if (lowcation == 0x50) {
-        // FF50: bios enabled flag
-        s->in_bios = 0;
-    } else if (lowcation == 0x55) {
-        // FF55: hdma length & control
-        mmu_hdma_start(s, value);
-    } else if (lowcation == 0x69) {
-        // FF69: Background Palette data
-        s->io_lcd_BGPD[s->GbcBackgroundPaletteIndexRegister & 0x3f] = value;
-        if (s->GbcBackgroundPaletteIndexRegister & (1 << 7)) {
-            s->GbcBackgroundPaletteIndexRegister = (((s->GbcBackgroundPaletteIndexRegister & 0x3f) + 1) & 0x3f) | (1 << 7);
-        }
-    } else if (lowcation == 0x6B) {
-        //FF6B: Sprite palette data
-        s->io_lcd_OBPD[s->GbcSpritePaletteIndexRegister & 0x3f] = value;
-        if (s->GbcSpritePaletteIndexRegister & (1 << 7)) {
-            s->GbcSpritePaletteIndexRegister = (((s->GbcSpritePaletteIndexRegister & 0x3f) + 1) & 0x3f) | (1 << 7);        
-        }
-    } else if (lowcation == 0x70) {
-        // FF70: Change RAM bank
-        if (value == 0) {
-            value = 1;
-        }
-        value &= s->mem_num_banks_wram - 1;
-        s->GbcRamBankSelectRegister = value;    
-    } else {
-        //logAndPauseFrame(0, "%04x =? %04x", &s->HRAM[0xff], &s->InterruptSwitch);
-        s->HRAM[lowcation] = value;
-    }
+    mmuWriteTable[lowcation](s, lowcation, value);
 }
 
 void mmu_write(GbState *s, u16 location, u8 value) {
