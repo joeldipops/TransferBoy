@@ -13,12 +13,11 @@ const sByte STICK_DEADZONE = 42;
  */
 void getPressedButtons(const N64ControllerState* input, const byte controllerNumber, bool* output) {
     // A controller that's not plugged apparently always has every button pressed.
-    /*
+
     if (controllerNumber > 0) {
         memset(output, 0x00, N64_BUTTON_COUNT);
         return;
     }
-    */
 
     output[NoButton] = false;
     output[A] = true && input->c[controllerNumber].A;

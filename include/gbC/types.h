@@ -181,21 +181,22 @@ typedef struct {
                 struct __attribute__((packed)) {
                     byte unused0:2;
                     byte SelectFace:1;
-                    byte SelectDPad:1;                
-                    union __attribute__((packed)) {
-                        struct  __attribute__((packed)){
-                            byte Down:1;
-                            byte Up:1;
-                            byte Left:1;
-                            byte Right:1;
-                        };
-                        struct __attribute__((packed)) {
-                            byte Start:1;
-                            byte Select:1;
-                            byte B:1;
-                            byte A:1;
-                        };
-                    };
+                    byte SelectDPad:1;          
+                    byte unused01:4;
+                };      
+                struct __attribute__((packed)) {
+                    byte unused02:4;
+                    byte Down:1;
+                    byte Up:1;
+                    byte Left:1;
+                    byte Right:1;
+                };
+                struct __attribute__((packed)) {
+                    byte unused03:4;
+                    byte Start:1;
+                    byte Select:1;
+                    byte B:1;
+                    byte A:1;
                 };
             };
             // FF01 - SB - Link Data
@@ -204,9 +205,9 @@ typedef struct {
             union {
                 byte LinkControl;
                 struct __attribute__((packed)) {
-                    bool IsTransferToStart:1;
+                    bool IsLinkTransferAvailable:1;
                     const byte unused1:6;
-                    bool IsClockExternal:1;
+                    bool IsLinkClockExternal:1;
                 };
             };
             const byte unused2;
@@ -225,7 +226,7 @@ typedef struct {
                     byte TimerFrequency:2;
                 };
             };
-            const byte unused4[14];
+            const byte unused4[7];
             // FF0F - IF - Interrupt Flags
             union {
                 byte InterruptFlags;
@@ -404,7 +405,7 @@ typedef struct {
                     bool IsChannel1Enabled:1;
                 };
             };
-            const byte unused10[10];
+            const byte unused10[9];
             // FF30
             byte SoundWaveData[WAVEDATA_LENGTH];       
             // FF40 - LCDC - LCD Control
@@ -492,7 +493,8 @@ typedef struct {
             const byte unused14;
             // FF4F - VBK - VRAM Bank selector
             byte GbcVramBank;
-            const byte unused15;
+            // FF50 - ??? - Disable BIOS
+            byte BiosSwitch;
             // FF51 HDMA1, HDMA2 - Big endian gbc hdma source address.
             natural GbcHdmaSource;
             // FF53 HDMA3, HDMA4 = Big endian gbc hdma destination address.
@@ -515,7 +517,7 @@ typedef struct {
                     bool IsInfraredLedOn:1;
                 };
             };
-            const byte unused17[18];
+            const byte unused17[17];
             // FF68 - BGPI - Gbc Background Palette Index
             // (Also known as BCPS)
             union {
@@ -542,7 +544,7 @@ typedef struct {
             // FF6B - OBPD - Gbc Sprite Palette Data
             // (Also known as OCPD)
             byte GbcSpritePaletteDataOut;
-            const byte unused1A[5];
+            const byte unused1A[4];
             // FF70 - SVBK - Gbc WRAM Bank switch
             union {
                 byte GbcRamBankSelectRegister;
@@ -551,7 +553,7 @@ typedef struct {
                     byte GbcRamBankSelector:3;
                 };
             };
-            const byte unused1C[16];
+            const byte unused1C[15];
             // FF80 - Actual HRAM
             byte mem_HRAM[127];
             // FFFF - IE - Interrupt Switch

@@ -21,17 +21,14 @@ bool isRequestingTransfer(const RootState* state) {
     bool readyToSend = false;
 
     for (byte i = 0; i < state->PlayerCount; i++) {
-        SerialControl controlByte = {};
-        memset(&controlByte, state->Players[i].EmulationState.LinkControl, 1);
-
         // If a game isn't ready, don't do anything yet.
         // May be able to send even if this bit isn't set?
-        if (!state->Players[i].EmulationState.IsTransferToStart) {
+        if (!state->Players[i].EmulationState.IsLinkTransferAvailable) {
             return false;
         }
 
         // At least one game must be hosting the connection.
-        if (state->Players[i].EmulationState.IsClockExternal) {
+        if (state->Players[i].EmulationState.IsLinkClockExternal) {
             readyToSend = true;
         }
     }
@@ -48,16 +45,12 @@ void exchangeLinkData(GbState* states[2]) {
     states[0]->LinkData = states[1]->LinkData;
     states[1]->LinkData = datum;
 
-    SerialControl* ctrl1;
-    SerialControl* ctrl2;
-    ctrl1 = (SerialControl*)&states[0]->LinkControl;
-    ctrl2 = (SerialControl*)&states[1]->LinkControl;
-    ctrl1->isAvailable = false;
-    ctrl2->isAvailable = false;
+    states[0]->IsLinkTransferAvailable = false;
+    states[1]->IsLinkTransferAvailable = false;
 
     // Prepare the serial interrupt
-    states[0]->InterruptFlags = states[0]->InterruptFlags | SERIAL_INTERRUPT_MAP;
-    states[1]->InterruptFlags = states[1]->InterruptFlags | SERIAL_INTERRUPT_MAP;
+    states[0]->LinkInterrupt = true;
+    states[1]->LinkInterrupt = true;
 }
 
 
