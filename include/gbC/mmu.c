@@ -441,7 +441,63 @@ static inline u8 mmu_register_read(GbState* s, u16 location) {
 static inline void mmu_register_write(GbState* s, u16 location, u8 value) {
     // assuming 8 bit compares are faster than 16bit?
     u8 lowcation = location & 0x00FF;
-    
+
+    // Special cases
+    if (lowcation == 0x26) {
+        // FF26 NR52
+        s->AudioChannelSwitch = (value & 0x80) | (s->AudioChannelSwitch & 0x7f);        
+    } else if (lowcation == 0x41) {
+        // FF41: STAT
+        s->LcdStatus = (value & ~7) | (s->LcdStatus & 7);
+    } else if (lowcation == 0x44) {
+        // FF44: LCD Line Y?
+        s->CurrentLine = 0x0;
+        s->LcdStatus = (s->LcdStatus & 0xfb) | ((s->CurrentLine == s->NextInterruptLine) << 2);
+    } else if (lowcation == 0x45) {
+        // FF45: LCD LYC - no idea what that means
+        s->NextInterruptLine = value;
+        s->LcdStatus = (s->LcdStatus & 0xfb) | ((s->CurrentLine == s->NextInterruptLine) << 2);
+    } else if (lowcation == 0x46) {
+        // FF46: Transfers memory to OAM for rendering
+   
+        // Normally this transfer takes ~160ms (during which only HRAM
+        // is accessible) but it's okay to be instantaneous. Normally
+        // roms loop for ~200 cycles or so to wait.  
+        for (unsigned i = 0; i < OAM_SIZE; i++) {
+            s->mem_OAM[i] = mmu_read(s, (value << 8) + i);
+        }
+    } else if (lowcation == 0x4f) {
+        // FF4F: VRAM bank flag
+        s->GbcVramBank = value & 1;
+    } else if (lowcation == 0x50) {
+        // FF50: bios enabled flag
+        s->in_bios = 0;
+    } else if (lowcation == 0x55) {
+        // FF55: hdma length & control
+        mmu_hdma_start(s, value);
+    } else if (lowcation == 0x69) {
+        // FF69: Background Palette data
+        s->io_lcd_BGPD[s->GbcBackgroundPaletteIndexRegister & 0x3f] = value;
+        if (s->GbcBackgroundPaletteIndexRegister & (1 << 7)) {
+            s->GbcBackgroundPaletteIndexRegister = (((s->GbcBackgroundPaletteIndexRegister & 0x3f) + 1) & 0x3f) | (1 << 7);
+        }
+    } else if (lowcation == 0x6B) {
+        //FF6B: Sprite palette data
+        s->io_lcd_OBPD[s->GbcSpritePaletteIndexRegister & 0x3f] = value;
+        if (s->GbcSpritePaletteIndexRegister & (1 << 7)) {
+            s->GbcSpritePaletteIndexRegister = (((s->GbcSpritePaletteIndexRegister & 0x3f) + 1) & 0x3f) | (1 << 7);        
+        }
+    } else if (lowcation == 0x70) {
+        // FF70: Change RAM bank
+        if (value == 0) {
+            value = 1;
+        }
+        value &= s->mem_num_banks_wram - 1;
+        s->GbcRamBankSelectRegister = value;    
+    } else {
+        s->HRAM[lowcation] = value;
+    //}  
+        
     if (lowcation < 0x80) {
         if (lowcation < 0x40) {
             if (lowcation < 0x20) {
@@ -775,7 +831,7 @@ static inline void mmu_register_write(GbState* s, u16 location, u8 value) {
                     }
                 }   
             }
-        }
+        }}
     }
 }
 
@@ -930,7 +986,7 @@ void mmu_write(GbState *s, u16 location, u8 value) {
                         } else {
                             if (location < 0xFFFF) {
                                 // 0xFF80 - FFFE: Stack RAM
-                                s->HRam[location - 0xff80] = value;    
+                                s->mem_HRAM[location - 0xff80] = value;    
                             } else {
                                 s->InterruptSwitch = value;
                             }
@@ -1058,7 +1114,7 @@ u8 mmu_read(GbState* s, u16 location) {
                             if (location < 0xffff) {
                                 // FF80 - FFFE
                                 //MMU_DEBUG_R("HRAM  @%x (%x)", location - 0xff80, s->HRam[location - 0xff80]);
-                                return s->HRam[location - 0xff80];
+                                return s->mem_HRAM[location - 0xff80];
                             } else {
                                 // FFFF
                                 //MMU_DEBUG_R("Interrupt enable");

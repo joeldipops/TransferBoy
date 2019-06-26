@@ -47,29 +47,38 @@ struct emu_cpu_state {
 
 #define WAVEDATA_LENGTH 16
 
-typedef enum { VRAM_8800 = 0, VRAM_8000 = 1 } TileDataAddress;
-typedef enum { VRAM_9800 = 0, VRAM_9C00 = 1 } TileMapAddress;
-typedef enum { SPRITE_8x8 = 0, SPRITE_8x16 = 1} SpriteSize;
-typedef enum {
+typedef enum  __attribute__((packed)) { 
+    VRAM_8800 = 0, VRAM_8000 = 1
+} TileDataAddress;
+
+typedef enum  __attribute__((packed)) {
+    VRAM_9800 = 0, VRAM_9C00 = 1
+} TileMapAddress;
+
+typedef enum  __attribute__((packed)) {
+    SPRITE_8x8 = 0, SPRITE_8x16 = 1
+} SpriteSize;
+
+typedef enum __attribute__((packed)) {
     HBLANK = 0,
     VBLANK = 1,
     OAM_IN_USE = 2,
     VRAM_IN_USE = 3
 } LcdMode;
 
-typedef enum {
+typedef enum __attribute__((packed)) {
     DARKEST = 3,
     DARKER = 2,
     LIGHTER = 1,
     LIGHTEST = 0
 } PixelShade;
 
-typedef enum {
+typedef enum  __attribute__((packed)){
     SoundConsecutive = 0,
     SoundWait = 1
 } SoundTimingMode;
 
-typedef enum {
+typedef enum  __attribute__((packed)) {
     SoundMute = 0,
     SoundNoShift = 1,
     SoundHalfShift = 2,
@@ -163,24 +172,24 @@ typedef struct {
     // fea0 - feff: unused
 
     // $ff00 - ff7f: IO registers and HRAM
-    union {
-        byte HRAM[0xff];
-        struct {
+    union __attribute__((packed)){
+        byte HRAM[0x100];
+        struct __attribute__((packed)) {
             // FF00 - P1 - JoypadIo
-            union {
+            union __attribute__((packed)) {
                 byte JoypadIo;
-                struct {
-                    const byte unused0:2;
+                struct __attribute__((packed)) {
+                    byte unused0:2;
                     byte SelectFace:1;
                     byte SelectDPad:1;                
-                    union {
-                        struct {
+                    union __attribute__((packed)) {
+                        struct  __attribute__((packed)){
                             byte Down:1;
                             byte Up:1;
                             byte Left:1;
                             byte Right:1;
                         };
-                        struct {
+                        struct __attribute__((packed)) {
                             byte Start:1;
                             byte Select:1;
                             byte B:1;
@@ -194,7 +203,7 @@ typedef struct {
             // FF02 - SC - Link Control
             union {
                 byte LinkControl;
-                struct {
+                struct __attribute__((packed)) {
                     bool IsTransferToStart:1;
                     const byte unused1:6;
                     bool IsClockExternal:1;
@@ -210,7 +219,7 @@ typedef struct {
             // FF07 - TAC - Timer Control
             union {
                 byte TimerControl;
-                struct {
+                struct __attribute__((packed)) {
                     const byte unused3:5;
                     bool IsTimerStarted:1;
                     byte TimerFrequency:2;
@@ -220,19 +229,19 @@ typedef struct {
             // FF0F - IF - Interrupt Flags
             union {
                 byte InterruptFlags;
-                struct {
+                struct __attribute__((packed)) {
                     const byte unused5:3;
                     byte JoypadInterrupt:1;
                     byte LinkInterrupt:1;
                     byte TimerInterrupt:1;
                     byte LcdInterrupt:1;
-                    byte VBlankInterrupt:2;
+                    byte VBlankInterrupt:1;
                 };
             };
             // FF10 - NR10 - AudioChannel1Sweep
             union {
                 byte AudioChannel1Sweep;
-                struct {
+                struct __attribute__((packed)) {
                     const byte unused6:1;
                     byte AudioChannel1SweepTime:3;
                     bool AudioChannel1IsFrequencyDecrease:1;
@@ -242,7 +251,7 @@ typedef struct {
             // FF11 - NR11 - AudioChannel1PatternAndLength
             union {
                 byte AudioChannel1PatternAndLength;
-                struct {
+                struct __attribute__((packed)) {
                     byte AudioChannel1WavePatternDuty:2;
                     byte AudioChannel1SoundLength:6;
                 };
@@ -250,7 +259,7 @@ typedef struct {
             // FF12 - NR12 - AudioChannel1Envelope
             union {
                 byte AudioChannel1Envelope;
-                struct {
+                struct __attribute__((packed)) {
                     byte AudioChannel1InitialVolume:4;
                     bool AudioChannel1IsVolumeIncreasing:1;
                     byte AudioChannel1EnvelopeSteps:3;                
@@ -261,10 +270,10 @@ typedef struct {
             // FF14 - NR14 - AudioChannel1Flags
             union {
                 byte AudioChannel1Flags;
-                struct {
+                struct __attribute__((packed)) {
                     bool AudioChannel1IsSoundReset:1;
                     SoundTimingMode AudioChannel1TimingMode:1;
-                    const byte unused7:4;
+                    const byte unused7:3;
                     byte AudioChannel1FrequencyHigh:3;                    
                 };
             };
@@ -272,7 +281,7 @@ typedef struct {
             // FF16 - NR21 - AudioChannel2PatternAndLength
             union {
                 byte AudioChannel2PatternAndLength;
-                struct {
+                struct __attribute__((packed)) {
                     byte AudioChannel2WavePatternDuty:2;
                     byte AudioChannel2SoundLength:6;
                 };
@@ -280,7 +289,7 @@ typedef struct {
             // FF17 - NR22 - AudioChannel2Envelope
             union {
                 byte AudioChannel2Envelope;
-                struct {
+                struct __attribute__((packed)) {
                     byte AudioChannel2InitialVolume:4;
                     bool AudioChannel2IsVolumeIncreasing:1;
                     byte AudioChannel2EnvelopeSteps:3;                
@@ -291,7 +300,7 @@ typedef struct {
             // FF19 - NR24 - AudioChannel2Flags
             union {
                 byte AudioChannel2Flags;
-                struct {
+                struct __attribute__((packed)) {
                     bool AudioChannel2IsSoundReset:1;
                     SoundTimingMode AudioChannel2TimingMode:1;
                     const byte unused9:3;
@@ -301,7 +310,7 @@ typedef struct {
             // FF1A - NR30 - AudioChannel3Control
             union {
                 byte AudioChannel3Control;
-                struct {
+                struct __attribute__((packed)) {
                     bool AudioChannel3IsOn:1;
                     const byte unusedA:7;
                 };
@@ -311,7 +320,7 @@ typedef struct {
             // FF1C - NR32 - AudioChannel3Level
             union {
                 byte AudioChannel3Level;
-                struct {
+                struct __attribute__((packed)) {
                     const byte unusedB:1;
                     WavePatternShift AudioChannel3WavePatternShift:2;
                     const byte unusedC:5;
@@ -322,7 +331,7 @@ typedef struct {
             // FF1E - NR34 - AudioChannel3Flags
             union {
                 byte AudioChannel3Flags;
-                struct {
+                struct __attribute__((packed)) {
                     bool AudioChannel3IsSoundReset:1;
                     SoundTimingMode AudioChannel3TimingMode:1;
                     const byte unusedD:3;
@@ -335,7 +344,7 @@ typedef struct {
             // FF21 - NR42 - AudioChannel4Envelope
             union {
                 byte AudioChannel4Envelope;
-                struct {
+                struct __attribute__((packed)) {
                     byte AudioChannel4InitialVolume:4;
                     bool AudioChannel4IsVolumeIncreasing:1;
                     byte AudioChannel4EnvelopeSteps:3;                
@@ -344,7 +353,7 @@ typedef struct {
             // FF22 - NR43 - AudioChannel4RNGParameters
             union {
                 byte AudioChannel4RNGParameters;
-                struct {
+                struct __attribute__((packed)) {
                     byte NoiseRatioShift:4;
                     byte NoiseStepsCode: 1;
                     byte NoiseRatioFactor:3;                
@@ -353,7 +362,7 @@ typedef struct {
             // FF23 - NR44 AudioChannel4Flags
             union {
                 byte AudioChannel4Flags;
-                struct {
+                struct __attribute__((packed)) {
                     bool AudioChannel4IsSoundReset:1;
                     SoundTimingMode AudioChannel4TimingMode:1;
                     const const byte unusedF:6;
@@ -362,7 +371,7 @@ typedef struct {
             // FF24 - NR50 - Audio Speaker Control
             union {
                 byte AudioSpeakerControl;
-                struct {
+                struct __attribute__((packed)) {
                     bool IsLeftTerminalEnabled:1; // S02
                     byte LeftTerminalVolume:3;
                     bool IsRightTerminalEnabled:1; //S01
@@ -372,7 +381,7 @@ typedef struct {
             // FF25 - NR51 - Audio Speaker Channels
             union {
                 byte AudioSpeakerChannels;
-                struct {
+                struct __attribute__((packed)) {
                     bool IsChannel4OnLeftTerminal:1;
                     bool IsChannel3OnLeftTerminal:1;
                     bool IsChannel2OnLeftTerminal:1;
@@ -386,7 +395,7 @@ typedef struct {
             // FF26 - NR52 - Audio Channel Switch
             union {
                 byte AudioChannelSwitch;
-                struct {
+                struct __attribute__((packed)) {
                     bool IsSoundEnabled:1;
                     byte pad:3;
                     bool IsChannel4Enabled:1;
@@ -401,7 +410,7 @@ typedef struct {
             // FF40 - LCDC - LCD Control
             union {
                 byte LcdControl;
-                struct {
+                struct __attribute__((packed)) {
                     bool IsLcdOn:1;
                     TileMapAddress WindowMap:1;
                     bool IsWindowOn:1;
@@ -415,7 +424,7 @@ typedef struct {
             // FF41 - STAT - LCD Status
             union {
                 byte LcdStatus;
-                struct {
+                struct __attribute__((packed)) {
                     const byte unused11:1;
                     bool InterruptOnLineLYC:1;
                     bool InterruptOnOamMode:1;
@@ -438,7 +447,7 @@ typedef struct {
             // FF47 - BGP - Background Palette
             union {
                 byte BackgroundPalette;
-                struct {
+                struct __attribute__((packed)) {
                     PixelShade BgData3:2;
                     PixelShade BgData2:2;
                     PixelShade BgData1:2;
@@ -448,7 +457,7 @@ typedef struct {
             // FF48 - OBP0 - Sprite Palette 0
             union {
                 byte SpritePalette0;
-                struct {
+                struct __attribute__((packed)) {
                     PixelShade Sprite0Data3:2;
                     PixelShade Sprite0Data2:2;
                     PixelShade Sprite0Data1:2;
@@ -458,7 +467,7 @@ typedef struct {
             // FF49 - OBP1 - Sprite Palette 1
             union {
                 byte SpritePalette1;
-                struct {
+                struct __attribute__((packed)) {
                     PixelShade Sprite1Data3:2;
                     PixelShade Sprite1Data2:2;
                     PixelShade Sprite1Data1:2;
@@ -474,7 +483,7 @@ typedef struct {
             // FF4D - KEY1 - GBC Speed Switch
             union {
                 byte GBCSpeedSwitch;
-                struct {
+                struct __attribute__((packed)) {
                     bool IsInDoubleSpeedMode:1;
                     byte unused13:6;
                     bool IsSpeedSwitchPending:1;
@@ -491,7 +500,7 @@ typedef struct {
             // FF55 - HDMA5 Gbc HDMA control
             union {
                 byte GbcHdmaControl;
-                struct {
+                struct __attribute__((packed)) {
                     bool IsDmaHBlankMode:1;
                     byte DmaTransferLength:7;
                 };
@@ -499,7 +508,7 @@ typedef struct {
             // FF56 RP - Gbc Infrared Port
             union {
                 byte GbcInfraredIo;
-                struct {
+                struct __attribute__((packed)) {
                     GbcInfraredMode GbcInfraredMode:2;
                     const byte unused16:4;
                     bool IsInfraredReceiving:1;
@@ -511,7 +520,7 @@ typedef struct {
             // (Also known as BCPS)
             union {
                 byte GbcBackgroundPaletteIndexRegister;
-                struct {
+                struct __attribute__((packed)) {
                     bool IsBgIndexAutoIncremented:1;
                     const byte unused18:1;
                     byte GbcBackgroundPaletteIndex:6;
@@ -524,7 +533,7 @@ typedef struct {
             // (Also known as OCPS)
             union {
                 byte GbcSpritePaletteIndexRegister;
-                struct {
+                struct __attribute__((packed)) {
                     bool IsSpriteIndexAutoIncremented:1;
                     const byte unused19:1;
                     byte GbcSpritePaletteIndex:6;
@@ -537,18 +546,18 @@ typedef struct {
             // FF70 - SVBK - Gbc WRAM Bank switch
             union {
                 byte GbcRamBankSelectRegister;
-                struct {
+                struct __attribute__((packed)) {
                     const byte unused1B:5;
                     byte GbcRamBankSelector:3;
                 };
             };
             const byte unused1C[16];
             // FF80 - Actual HRAM
-            byte HRam[127];
+            byte mem_HRAM[127];
             // FFFF - IE - Interrupt Switch
             union {
                 byte InterruptSwitch;
-                struct {
+                struct __attribute__((packed)) {
                     const byte unused1D:3;
                     bool IsJoypadInterruptEnabled:1;
                     bool IsLinkInterruptEnabled:1;
