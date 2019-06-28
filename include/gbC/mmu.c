@@ -191,349 +191,67 @@ static void writeHram(GbState* s, byte offset, byte value) {
 /*   D */ writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,
 /*   E */ writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,
 /*   F */ writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram
-};                                                                  
+};
 
-static inline u8 mmu_register_read(GbState* s, u16 location) {
-    u8 lowcation = location & 0x00FF;
-
-    if (lowcation < 0x80) {
-        if (lowcation < 0x40) {
-            if (lowcation < 0x20) {
-                if (lowcation < 0x10) {
-                    if (lowcation < 0x08) {
-                        if (lowcation < 0x04) {
-                            if (lowcation < 0x02) {
-                                if (lowcation < 0x01) {
-                                    // FF00: Joypad
-                                    u8 rv = 0;
-                                    if ((s->JoypadIo & (1 << 4)) == 0)
-                                        rv = (s->JoypadIo & 0xf0) | (s->io_buttons_dirs & 0x0f);
-                                    else if ((s->JoypadIo & (1 << 5)) == 0)
-                                        rv =  (s->JoypadIo & 0xf0) | (s->io_buttons_buttons & 0x0f);
-                                    else
-                                        rv = (s->JoypadIo & 0xf0) | (s->io_buttons_buttons & 0x0f);
-                                    return rv;
-                                } else {
-                                    // FF01: Serial Link Data
-                                    return s->LinkData;
-                                }
-                            } else {
-                                if (lowcation < 0x03) {
-                                    // FF02: Serial Control  
-                                    return s->LinkControl; 
-                                } else {
-                                    ; // FF03: none
-                                }
-                            }
-                        } else {
-                            if (lowcation < 0x06) {
-                                if (lowcation < 0x05) {
-                                    // FF04: Timer Divider
-                                    return s->TimerClock;
-                                } else {
-                                    // FF05: Timer
-                                    return s->TimerCounter;
-                                }
-                            } else {
-                                if (lowcation < 0x07) {
-                                    // FF06: Timer Modulo
-                                    return s->TimerResetValue;
-                                } else {
-                                    // FF07: Timer Control
-                                    return s->TimerControl;
-                                }
-                            }
-                        }
-                    } else {
-                        if (lowcation == 0x0f) {
-                            // FF0F: Interrupt request
-                            return s->InterruptFlags;
-                        } else {
-                            ;
-                        }
-                    }
-                } else {
-                    if (lowcation < 0x18) {
-                        if (lowcation < 0x14) {
-                            if (lowcation < 0x12) {
-                                if (lowcation < 0x11) {
-                                    // FF10: channel 1 sweep
-                                    return s->AudioChannel1Sweep;
-                                } else {
-                                    // FF11: channel 1 length/pattern
-                                    return s->AudioChannel1PatternAndLength;
-                                }
-                            } else {
-                                if (lowcation < 0x13) {
-                                    // FF12: channel 1 envelope
-                                    return s->AudioChannel1Envelope;
-                                } else {
-                                    // FF13: channel frequency
-                                    return s->AudioChannel1FrequencyLow;
-                                }
-                            }
-                        } else {
-                            if (lowcation < 0x16) {
-                                if (lowcation < 0x15) {
-                                    // FF14: channel 1 frequency high bits and control
-                                    return s->AudioChannel1Flags;
-                                } else {
-                                    // FF15: unused channel 2 sweep 
-                                }
-                            } else {
-                                if (lowcation < 0x17) {
-                                    // FF16: channel 2 length and pattern
-                                    return s->AudioChannel2PatternAndLength;
-                                } else {
-                                    // FF17: channel 2 envelope
-                                    return s->AudioChannel2Envelope;
-                                }
-                            }
-                        }
-                    } else {
-                        if (lowcation < 0x1C) {
-                            if (lowcation < 0x1A) {
-                                if (lowcation < 0x19) {
-                                    // FF18: channel 2 frequency
-                                    return s->AudioChannel2FrequencyLow;
-                                } else {
-                                    // FF19: channel 2 high frequench and control
-                                    return s->AudioChannel2Flags;
-                                }
-                            } else {
-                                if (lowcation < 0x1B) {
-                                    // FF1A: channel 3 enable flag
-                                    return s->AudioChannel3Control;
-                                } else {
-                                    // FF1B: channel 3 length
-                                    return s->AudioChannel3Length;
-                                }
-                            }
-                        } else {
-                            if (lowcation < 0x1E) {
-                                if (lowcation < 0x1D) {
-                                    // FF1C: channel 3 level
-                                    return s->AudioChannel3Level;
-                                } else {
-                                    // FF1D: channel 3 frequency
-                                    return s->AudioChannel3FrequencyLow;
-                                }
-                            } else {
-                                if (lowcation < 0x1F) {
-                                    // FF1E channel 3 frequench high and control
-                                    return s->AudioChannel3Flags;
-                                } else {
-                                    // FF1F unused channel 4 sweep
-                                    ;
-                                }
-                            }
-                        }
-                    }
-                }
-            } else {
-                if (lowcation < 0x30) {
-                    if (lowcation < 0x28) {
-                        if (lowcation < 0x24) {
-                            if (lowcation < 0x22) {
-                                if (lowcation < 0x21) {
-                                    // FF20: channel 4 length
-                                    return s->AudioChannel4Length;
-                                } else {
-                                    // FF21: channel 4 envelope
-                                    return s->AudioChannel4Envelope;
-                                }
-                            } else {
-                                if (lowcation < 0x23) {
-                                    // FF22: channel 4 waveform
-                                    return s->AudioChannel4RNGParameters;
-                                } else {
-                                    // FF23: channel 4 flags
-                                    return s->AudioChannel4Flags;
-                                }
-                            }
-                        } else {
-                            if (lowcation < 0x26) {
-                                if (lowcation < 0x25) {
-                                    // FF24: sound channel control
-                                    return s->AudioSpeakerControl;
-                                } else {
-                                    // FF25: sound speaker control
-                                    return s->AudioSpeakerChannels;
-                                }
-                            } else {
-                                if (lowcation < 0x27) {
-                                    // FF26: Sound master switch
-                                    return s->AudioChannelSwitch;
-                                } else {
-                                    ; //unused
-                                }
-                            }
-                        }
-                    } else {
-                        // FF27 - FF2F: unused 
-                        ;
-                    }
-                } else {
-                    // FF30 - FF3f: channel 4 wave data
-                    return s->SoundWaveData[location-0xff30];
-                }
-            }
-        } else {
-            if (lowcation < 0x60) {
-                if (lowcation < 0x50) {
-                    if (lowcation < 0x48) {
-                        if (lowcation < 0x44) {
-                            if (lowcation < 0x42) {
-                                if (lowcation < 0x41) {
-                                    // FF40: LCD Control
-                                    return s->LcdControl;
-                                } else {
-                                    // FF41: LCD Status
-                                    return s->LcdStatus;
-                                }
-                            } else {
-                                if (lowcation < 0x43) {
-                                    // FF42: Background scroll Y
-                                    return s->BackgroundScrollY;
-                                } else {
-                                    // FF43: Background scroll X
-                                    return s->BackgroundScrollX; 
-                                }
-                            }
-                        } else {
-                            if (lowcation < 0x46) {
-                                if (lowcation < 0x45) {
-                                    // FF44: LCD Line Y?
-                                    return s->CurrentLine;
-                                } else {
-                                    // FF45: LCD LYC - no idea what that means
-                                    return s->NextInterruptLine;
-                                }
-                            } else {
-                                if (lowcation < 0x47) {
-                                    // FF46: Transfers memory to OAM for rendering
-                                    ;                                    
-                                } else {
-                                    // FF47: Background Palette'
-                                    return s->BackgroundPalette;
-                                }
-                            }
-                        }
-                    } else {
-                        if (lowcation < 0x4C) {
-                            if (lowcation < 0x4A) {
-                                if (lowcation < 0x49) {
-                                    // FF48: Sprite Palette 0
-                                    return s->SpritePalette0;
-                                } else {
-                                    // FF49: Sprite palette 1
-                                    return s->SpritePalette1;
-                                }
-                            } else {
-                                if (lowcation < 0x4B) {
-                                    // FF4A: Window Y position
-                                    return s->WindowTop;
-                                } else {
-                                    // FF4B: WIndow X position
-                                    return s->WindowLeft;
-                                }
-                            }
-                        } else {
-                            if (lowcation < 0x4E) {
-                                // FF4C: unused
-                                // FF4D: unused - "Key1: CGB speed"???
-                            } else {
-                                // FF4E: unused
-                                if (lowcation == 0x4F) {
-                                    // FF4F: VRAM bank flag
-                                    return s->GbcVramBank & 1;
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    if (lowcation < 0x58) {
-                        if (lowcation < 0x54) {
-                            if (lowcation < 0x52) {
-                                if (lowcation < 0x51) {
-                                } else {
-                                    // FF51: hdma source high byte
-                                }
-                            } else {
-                                if (lowcation < 0x53) {
-                                    // FF52: hdma source low byte
-                                } else {
-                                    // FF53: hdma destination high byte
-                                }
-                            }
-                        } else {
-                            if (lowcation < 0x56) {
-                                if (lowcation < 0x55) {
-                                    // FF54: hdma destination low byte
-                                } else {
-                                    // FF55: hdma length & control
-                                    return s->GbcHdmaControl;
-                                }
-                            } else {
-                                if (lowcation < 0x57) {
-                                    // FF56: GBC Infrared transfer
-                                    return s->GbcInfraredIo;
-                                }
-                            }
-                        }
-                    }
-                } 
-            } else {
-                if (lowcation < 0x70) { 
-                    if (lowcation < 0x68) {
-                        ; // unused
-                    } else {
-                        if (lowcation < 0x6C) {
-                            if (lowcation < 0x6A) {
-                                if (lowcation < 0x69) {
-                                    // FF68: Background palette index
-                                } else {
-                                    // FF69: Background Palette data
-                                    return s->io_lcd_BGPD[s->GbcBackgroundPaletteIndexRegister & 0x3f];
-                                }
-                            } else {
-                                if (lowcation < 0x6B) {
-                                } else {
-                                    //FF6B: Sprite palette data
-                                    return s->io_lcd_OBPD[s->GbcSpritePaletteIndexRegister & 0x3f];
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    if (lowcation == 0x70) {
-                        // FF70: Change RAM bank
-                        return s->GbcRamBankSelectRegister; 
-                    }
-                }   
-            }
-        }
-    }  
-    return 0x00;  
+static byte readHram(GbState* s, byte offset) {
+    return s->HRAM[offset];
 }
 
-/**
- * Writes to one of the IO registers
- * @param s gameboy state
- * @param location to write to
- * @param value to write.
- */
-static inline void mmu_register_write(GbState* s, u16 location, u8 value) {
-    // assuming 8 bit compares are faster than 16bit?
-    u8 lowcation = location & 0x00FF;
-
-    mmuWriteTable[lowcation](s, lowcation, value);
+static byte readJoypadIo(GbState* s, byte offset) {
+    // FF00: Joypad
+    u8 rv = 0;
+    if ((s->JoypadIo & (1 << 4)) == 0)
+        rv = (s->JoypadIo & 0xf0) | (s->io_buttons_dirs & 0x0f);
+    else if ((s->JoypadIo & (1 << 5)) == 0)
+        rv =  (s->JoypadIo & 0xf0) | (s->io_buttons_buttons & 0x0f);
+    else
+        rv = (s->JoypadIo & 0xf0) | (s->io_buttons_buttons & 0x0f);
+    return rv;    
 }
+
+// FF4F GbcVramBank
+static byte readGbcVramBank(GbState* s, byte offset) {
+    return s->GbcVramBank & 1;
+}
+
+// FF69 Background Palette data
+static byte readBackgroundPaletteData(GbState* s, byte offset) {
+    return s->io_lcd_BGPD[s->GbcBackgroundPaletteIndexRegister & 0x3f];    
+}
+
+// FF6B Sprite Palette data
+static byte readSpritePaletteData(GbState* s, byte offset) {
+    return s->io_lcd_OBPD[s->GbcSpritePaletteIndexRegister & 0x3f];
+}
+
+typedef byte (*mmuReadOperation)(GbState*, byte);
+static mmuReadOperation mmuReadTable[] = {
+//        0         1         2         3         4         5         6         7         8         9         A         B         C         D         E         F       
+/*   0 */ readJoypadIo, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, 
+/*   1 */ readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, 
+/*   2 */ readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, 
+/*   3 */ readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, 
+/*   4 */ readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readGbcVramBank, 
+/*   5 */ readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, 
+/*   6 */ readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readBackgroundPaletteData, readHram, readSpritePaletteData, readHram, readHram, readHram, readHram, 
+/*   7 */ readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, 
+/*   8 */ readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, 
+/*   9 */ readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, 
+/*   A */ readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, 
+/*   B */ readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, 
+/*   C */ readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, 
+/*   D */ readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, 
+/*   E */ readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, 
+/*   F */ readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, 
+};
 
 void mmu_write(GbState *s, u16 location, u8 value) {
     // Jump straight to IO registers.
     if (location >= 0xFF00 && location < 0xFF80) {
-        return mmu_register_write(s, location, value);
+        u8 lowcation = location & 0x00FF;
+
+        mmuWriteTable[lowcation](s, lowcation, value);
+        return;
     }
 
     u8 highcation = location >> 8;
@@ -675,16 +393,11 @@ void mmu_write(GbState *s, u16 location, u8 value) {
                             }
                         }
                     } else {
-                        if (location < 0xFF80) {
-                            //FF00 - FF7F: I/O Registers
-                            mmu_register_write(s, location, value);
+                        if (location < 0xFFFF) {
+                            // 0xFF80 - FFFE: Stack RAM
+                            s->mem_HRAM[location - 0xff80] = value;    
                         } else {
-                            if (location < 0xFFFF) {
-                                // 0xFF80 - FFFE: Stack RAM
-                                s->mem_HRAM[location - 0xff80] = value;    
-                            } else {
-                                s->InterruptSwitch = value;
-                            }
+                            s->InterruptSwitch = value;
                         }
                     }
                 }
@@ -720,7 +433,8 @@ u8 getOpCodeFromROM(GbState *s, const u16 programCounter) {
 u8 mmu_read(GbState* s, u16 location) {
     // Jump straight to IO registers.
     if (location >= 0xFF00 && location < 0xFF80) {
-        return mmu_register_read(s, location);
+        u8 lowcation = location & 0x00FF;
+        return mmuReadTable[lowcation](s, lowcation);
     }
 
     u8 highcation = location >> 8;
@@ -803,7 +517,8 @@ u8 mmu_read(GbState* s, u16 location) {
                                 // FEA0 - FEFF
                                 return 0;
                             } else {
-                                return mmu_register_read(s, location);
+                                // handled elsewhere
+                                return 0;
                             }
                         } else {
                             if (location < 0xffff) {
