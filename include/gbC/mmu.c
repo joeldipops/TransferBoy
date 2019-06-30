@@ -224,8 +224,8 @@ static byte readSpritePaletteData(GbState* s, byte offset) {
     return s->io_lcd_OBPD[s->GbcSpritePaletteIndexRegister & 0x3f];
 }
 
-typedef byte (*mmuReadOperation)(GbState*, byte);
-static mmuReadOperation mmuReadTable[] = {
+typedef byte (*mmuReadHramOperation)(GbState*, byte);
+static mmuReadHramOperation mmuReadHramTable[] = {
 //        0         1         2         3         4         5         6         7         8         9         A         B         C         D         E         F       
 /*   0 */ readJoypadIo, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, 
 /*   1 */ readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, 
@@ -430,112 +430,107 @@ u8 getOpCodeFromROM(GbState *s, const u16 programCounter) {
     }
 }
 
-u8 mmu_read(GbState* s, u16 location) {
-    // Jump straight to IO registers.
-    if (location >= 0xFF00 && location < 0xFF80) {
-        u8 lowcation = location & 0x00FF;
-        return mmuReadTable[lowcation](s, lowcation);
-    }
+static byte readHigh(GbState* s, u16 location) {
+    u8 lowcation = location & 0x00FF;
+    return mmuReadHramTable[lowcation](s, lowcation);
+}
 
-    u8 highcation = location >> 8;
-    if (s->in_bios && highcation < 0x01) {
+static byte readRom0(GbState* s, u16 location) {
+    if (s->in_bios && location < 0x01) {
         return s->mem_BIOS[location];
+    } else {
+        return s->mem_ROM[location];
+    }
+}
+
+static byte readRomX(GbState* s, u16 location) {
+    u8 bank = s->mem_bank_rom;
+    if (s->mbc == 1 && s->mem_mbc1_romram_select == 0) {
+        bank |= s->mem_mbc1_rombankupper << 5;
     }
 
-    if (highcation < 0x80) {
-        if (highcation < 0x40) {
-            return s->mem_ROM[location];
+    bank &= s->mem_num_banks_rom - 1;
+    return s->mem_ROM[bank * 0x4000 + (location - 0x4000)];
+}
+
+static byte readVram(GbState* s, u16 location) {
+    return s->mem_VRAM[s->GbcVramBank * VRAM_BANKSIZE + location - 0x8000];
+}
+
+static byte readSram(GbState* s, u16 location) {
+    if (s->mbc == 1) {
+        if (!s->has_extram) {
+            return 0xff;
+        } else if (s->mem_mbc1_romram_select == 1) { // RAM mode
+            return s->mem_EXTRAM[s->mem_mbc1_extrambank * EXTRAM_BANKSIZE + location - 0xa000];
         } else {
-            //MMU_DEBUG_R("ROM B%d, %4x", s->mem_bank_rom, s->mem_bank_rom * 0x4000 + (location - 0x4000));
-            u8 bank = s->mem_bank_rom;
-            if (s->mbc == 1 && s->mem_mbc1_romram_select == 0)
-                bank |= s->mem_mbc1_rombankupper << 5;
-            //mmu_assert(s->mem_num_banks_rom > 0);
-            //mmu_assert(bank > 0 || s->mbc == 5);
-            bank &= s->mem_num_banks_rom - 1;
-            return s->mem_ROM[bank * 0x4000 + (location - 0x4000)];
+            // ROM mode - we can only be bank 0
+            return s->mem_EXTRAM[location - 0xa000];
+        }
+    } else if (s->mbc == 3) {
+        if (s->mem_mbc3_extram_rtc_select < 0x04) {
+            return s->mem_EXTRAM[s->mem_mbc3_extram_rtc_select * EXTRAM_BANKSIZE + location - 0xa000];
+        } else if (s->mem_mbc3_extram_rtc_select >= 0x08 && s->mem_mbc3_extram_rtc_select <= 0x0c) {
+            return s->mem_RTC[s->mem_mbc3_extram_rtc_select];
+        } else {
+            // invalid.
+            return 0x00;
+        }
+    } else if (s->mbc == 5) {
+        if (!s->has_extram) {
+            return 0xff;
+        } else {
+            return s->mem_EXTRAM[s->mem_mbc5_extrambank * EXTRAM_BANKSIZE + location - 0xa000];
         }
     } else {
-        if (highcation < 0xC0) {
-            if (highcation < 0xA0) {
-                //MMU_DEBUG_R("VRAM");
-                return s->mem_VRAM[s->GbcVramBank * VRAM_BANKSIZE + location - 0x8000];
-            } else {
-                if (s->mbc == 1) {
-                    //MMU_DEBUG_R("EXTRAM (rom/ram: %d, B%d)", s->mem_mbc1_romram_select, s->mem_mbc1_extrambank);
-                    if (!s->has_extram)
-                        return 0xff;
-                    if (s->mem_mbc1_romram_select == 1) { // RAM mode
-                        //mmu_assert(s->mem_mbc1_extrambank < s->mem_num_banks_extram);
-                        return s->mem_EXTRAM[s->mem_mbc1_extrambank * EXTRAM_BANKSIZE + location - 0xa000];
-                    } else // ROM mode - we can only be bank 0
-                        return s->mem_EXTRAM[location - 0xa000];
-                } else if (s->mbc == 3) {
-                    //MMU_DEBUG_R("EXTRAM (sw)/RTC (B%d)", s->mem_mbc3_extram_rtc_select);
-                    if (s->mem_mbc3_extram_rtc_select < 0x04)
-                        return s->mem_EXTRAM[s->mem_mbc3_extram_rtc_select * EXTRAM_BANKSIZE + location - 0xa000];
-                    else if (s->mem_mbc3_extram_rtc_select >= 0x08 && s->mem_mbc3_extram_rtc_select <= 0x0c)
-                        return s->mem_RTC[s->mem_mbc3_extram_rtc_select];
-                    else
-                        mmu_error("Reading from extram/rtc with invalid selection (%d) @%x", s->mem_mbc3_extram_rtc_select, location);
-                } else if (s->mbc == 5) {
-                    //MMU_DEBUG_R("EXTRAM B%d", s->mem_mbc5_extrambank);
-                    if (!s->has_extram)
-                        return 0xff;
-                    //mmu_assert(s->mem_mbc5_extrambank < s->mem_num_banks_extram);
-                    return s->mem_EXTRAM[s->mem_mbc5_extrambank * EXTRAM_BANKSIZE + location - 0xa000];
-                } else
-                    mmu_error("Area not implemented for this MBC (mbc=%d, location=%.4x)\n", s->mbc, location);
-
-                return 0;
-            }
-        } else {
-            if (highcation < 0xE0) {
-                if (highcation < 0xD0) {
-                    //MMU_DEBUG_R("WRAM B0  @%x", (location - 0xc000));
-                    return s->mem_WRAM[location - 0xc000];
-                } else {
-                    //MMU_DEBUG_R("WRAM B%d @%x", s->GbcRamBankSelectRegister, location - 0xd000);
-                    return s->mem_WRAM[s->GbcRamBankSelectRegister * WRAM_BANKSIZE + location - 0xd000];
-                }
-            } else {
-                if (highcation < 0xF0) {
-                   return mmu_read(s, location - 0x2000); // TODO XXX 
-                    //mmu_error("Reading from ECHO (0xc000 - 0xddff) B0: %x", location);
-                } else {
-                    if (location < 0xfea0) {
-                        if (highcation < 0xfe) {
-                            return 0;
-                        } else {
-                            // FE00 - FE9F
-                            //MMU_DEBUG_R("Sprite attribute table (OAM)");
-                            return s->mem_OAM[location - 0xfe00];
-                        }
-                    } else {
-                        if (location < 0xff80) {
-                            if (highcation < 0xff) {
-                                // FEA0 - FEFF
-                                return 0;
-                            } else {
-                                // handled elsewhere
-                                return 0;
-                            }
-                        } else {
-                            if (location < 0xffff) {
-                                // FF80 - FFFE
-                                //MMU_DEBUG_R("HRAM  @%x (%x)", location - 0xff80, s->HRam[location - 0xff80]);
-                                return s->mem_HRAM[location - 0xff80];
-                            } else {
-                                // FFFF
-                                //MMU_DEBUG_R("Interrupt enable");
-                                return s->InterruptSwitch;
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        // unimplemented.
+        return 0;
     }
+}
+
+static byte readWram(GbState* s, u16 location) {
+    if (location < 0xD000) {
+        return s->mem_WRAM[location - 0xc000];
+    } else {
+        return s->mem_WRAM[s->GbcRamBankSelectRegister * WRAM_BANKSIZE + location - 0xd000];
+    }
+}
+
+static byte readEcho(GbState* s, u16 location) {
+    return readWram(s, location - 0x2000);
+}
+ 
+static byte readOAM(GbState* s, u16 location) {
+    if (location <= 0xFE9F) {
+        return s->mem_OAM[location - 0xfe00];
+    } else {
+        return 0;
+    }
+}
+
+typedef byte (*mmuReadOperation)(GbState*, u16);
+static mmuReadOperation mmuReadTable[] = {
+//        0         1         2         3         4         5         6         7         8         9         A         B         C         D         E         F       
+/*   0 */ readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0,
+/*   1 */ readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0,
+/*   2 */ readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, 
+/*   3 */ readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, 
+/*   4 */ readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX,
+/*   5 */ readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX,
+/*   6 */ readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX,
+/*   7 */ readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX,
+/*   8 */ readVram, readVram, readVram, readVram, readVram, readVram, readVram, readVram, readVram, readVram, readVram, readVram, readVram, readVram, readVram, readVram,
+/*   9 */ readVram, readVram, readVram, readVram, readVram, readVram, readVram, readVram, readVram, readVram, readVram, readVram, readVram, readVram, readVram, readVram,
+/*   A */ readSram, readSram, readSram, readSram, readSram, readSram, readSram, readSram, readSram, readSram, readSram, readSram, readSram, readSram, readSram, readSram,
+/*   B */ readSram, readSram, readSram, readSram, readSram, readSram, readSram, readSram, readSram, readSram, readSram, readSram, readSram, readSram, readSram, readSram,
+/*   C */ readWram, readWram, readWram, readWram, readWram, readWram, readWram, readWram, readWram, readWram, readWram, readWram, readWram, readWram, readWram, readWram, 
+/*   D */ readWram, readWram, readWram, readWram, readWram, readWram, readWram, readWram, readWram, readWram, readWram, readWram, readWram, readWram, readWram, readWram, 
+/*   E */ readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho,
+/*   F */ readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readOAM,  readHigh,
+};
+
+byte mmu_read(GbState* s, u16 location) {
+    return mmuReadTable[location >> 8](s, location);
 }
 
 u16 mmu_read16(GbState *s, u16 location) {
