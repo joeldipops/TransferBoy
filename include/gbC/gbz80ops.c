@@ -231,7 +231,7 @@ void setU3aHL(GbState* s, byte op) { // debug(s, "setU3aHL");
 }
 
 void ext(GbState* s, byte op) { // debug(s, "ext");
-    byte extOp = getOpCodeFromROM(s, s->pc++);
+    byte extOp = mmu_read(s, s->pc++);
     extendedOpTable[extOp](s, extOp);
 }
 

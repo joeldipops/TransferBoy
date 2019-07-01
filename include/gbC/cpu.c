@@ -240,11 +240,11 @@ void cpu_step(GbState *s) {
     cpu_handle_interrupts(s);
 
     if (!s->halt_for_interrupts) {    
-       op = getOpCodeFromROM(s, s->pc);
+       op = mmu_read(s, s->pc);
     
         s->emu_state->last_op_cycles = cycles_per_instruction[op];
         if (op == 0xcb) {
-            u8 extOp = getOpCodeFromROM(s, s->pc + 1);
+            u8 extOp = mmu_read(s, s->pc + 1);
             s->emu_state->last_op_cycles = cycles_per_instruction_cb[extOp];
         }
 
