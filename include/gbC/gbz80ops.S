@@ -3,4 +3,5 @@
 
 nop:
     nop
+    jr $ra
 
