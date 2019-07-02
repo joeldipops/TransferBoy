@@ -237,30 +237,18 @@ void cpu_step(GbState *s) {
     s->emu_state->last_op_cycles = 0;
 
     cpu_handle_interrupts(s);
-   
-    op = getOpCodeFromROM(s, s->pc);
-    
-    s->emu_state->last_op_cycles = cycles_per_instruction[op];
-    if (op == 0xcb) {
-        u8 extOp = getOpCodeFromROM(s, s->pc + 1);
-        s->emu_state->last_op_cycles = cycles_per_instruction_cb[extOp];
-    }
 
-    if (!s->halt_for_interrupts) {
+    if (!s->halt_for_interrupts) {    
+       op = mmu_read(s, s->pc);
+    
+        s->emu_state->last_op_cycles = cycles_per_instruction[op];
+        if (op == 0xcb) {
+            u8 extOp = mmu_read(s, s->pc + 1);
+            s->emu_state->last_op_cycles = cycles_per_instruction_cb[extOp];
+        }
+
         // Move PC forward, then go and run the operation.
         s->pc++;        
         opTable[op](s, op);        
-    } else {
-        if (!s->InterruptSwitch)
-            cpu_error("Waiting for interrupts while disabled, deadlock.\n");
     }
-    /*
-    // Commented out to save a few instructions per cycle.
-    if (s->pc >= 0x8000 && s->pc < 0xa000)
-        cpu_error("PC in VRAM: %.4x\n", s->pc);
-    else if (s->pc >= 0xa000 && s->pc < 0xc000)
-        cpu_error("PC in external RAM: %.4x\n", s->pc);
-    else if (s->pc >= 0xe000 && s->pc < 0xff80)
-        cpu_error("PC in ECHO/OAM/IO/unusable: %.4x\n", s->pc);
-    */
 }
