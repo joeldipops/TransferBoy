@@ -176,7 +176,7 @@ For examaple, if you want to read the cartridge header at 0x0100 of gameboy addr
 
 ## An Example.
 
-Let's assume that we have an MBC1 cartridge plugged into a transfer pak in controller slot 0, and we want to read something from a user's save file located at address 0xB000 of SRAM bank 2.
+Let's assume that we have an MBC1 cartridge plugged into a transfer pak in controller slot 0, and we want to read something from a user's save file located at address 0xB000 of the second SRAM bank.
 
 ```
 void write_value_to_tpak(u16 address, u8 value) {
@@ -194,7 +194,7 @@ write_value_to_tpak(0xB000, 0x01);
 // Ensure bank 0 is selected
 write_value_to_tpak(0xA000, 0x00);
 
-// Enable RAM by writing to 0x000 of cartridge space
+// Enable RAM by writing to 0x0000 of cartridge space
 write_value_to_tpak(0xC000, 0x0A);
 
 // Switch to bank 1 - we need to select "RAM" mode and set a different bank
