@@ -36,8 +36,8 @@
 static void mmu_hdma_do(GbState *s) {
     // DMA one block (0x10 byte), should be called at start of H-Blank. */
     //mmu_assert(s->io_hdma_running);
-    //mmu_assert((s->io_hdma_status & (1<<7)) == 0);
-    //mmu_assert((s->io_lcd_STAT & 3) == 0);
+    //mmu_assert((s->GbcHdmaControl & (1<<7)) == 0);
+    //mmu_assert((s->LcdStatus & 3) == 0);
 
     for (int i = 0; i < 0x10; i++) {
         u8 dat = mmu_read(s, s->io_hdma_next_src++);
@@ -49,8 +49,8 @@ static void mmu_hdma_do(GbState *s) {
         clks *= 2;
     s->emu_state->last_op_cycles += clks;
 
-    s->io_hdma_status--;
-    if (s->io_hdma_status == 0xff) {
+    s->GbcHdmaControl--;
+    if (s->GbcHdmaControl == 0xff) {
         /* Underflow meant we copied the last block and are done. */
         s->io_hdma_running = 0;
     }
@@ -70,7 +70,7 @@ static void mmu_hdma_start(GbState *s, u8 lenmode) {
     if (s->io_hdma_running && !mode_hblank) {
         /* Cancel ongoing H-Blank HDMA transfer */
         s->io_hdma_running = 0;
-        s->io_hdma_status = 0xff; /* done */
+        s->GbcHdmaControl = 0xff; /* done */
         return;
     }
 
@@ -82,7 +82,7 @@ static void mmu_hdma_start(GbState *s, u8 lenmode) {
         for (u16 i = 0; i < len; i++)
             mmu_write(s, dst++, mmu_read(s, src++));
 
-        s->io_hdma_status = 0xff; /* done */
+        s->GbcHdmaControl = 0xff; /* done */
         u32 clks = blocks * GB_HDMA_BLOCK_CLKS;
         if (s->double_speed)
             clks *= 2;
@@ -91,9 +91,9 @@ static void mmu_hdma_start(GbState *s, u8 lenmode) {
         s->io_hdma_running = 1;
         s->io_hdma_next_src = src;
         s->io_hdma_next_dst = dst;
-        s->io_hdma_status = blocks - 1;
+        s->GbcHdmaControl = blocks - 1;
 
-        if ((s->io_lcd_STAT & 3) == 0) /* H-Blank */
+        if ((s->LcdStatus & 3) == 0) /* H-Blank */
             mmu_hdma_do(s);
     }
 }
@@ -105,7 +105,7 @@ void mmu_step(GbState *s) {
 
 static inline u8 mmu_register_read(GbState* s, u16 location) {
     u8 lowcation = location & 0x00FF;
-    
+
     if (lowcation < 0x80) {
         if (lowcation < 0x40) {
             if (lowcation < 0x20) {
@@ -116,21 +116,21 @@ static inline u8 mmu_register_read(GbState* s, u16 location) {
                                 if (lowcation < 0x01) {
                                     // FF00: Joypad
                                     u8 rv = 0;
-                                    if ((s->io_buttons & (1 << 4)) == 0)
-                                        rv = (s->io_buttons & 0xf0) | (s->io_buttons_dirs & 0x0f);
-                                    else if ((s->io_buttons & (1 << 5)) == 0)
-                                        rv =  (s->io_buttons & 0xf0) | (s->io_buttons_buttons & 0x0f);
+                                    if ((s->JoypadIo & (1 << 4)) == 0)
+                                        rv = (s->JoypadIo & 0xf0) | (s->io_buttons_dirs & 0x0f);
+                                    else if ((s->JoypadIo & (1 << 5)) == 0)
+                                        rv =  (s->JoypadIo & 0xf0) | (s->io_buttons_buttons & 0x0f);
                                     else
-                                        rv = (s->io_buttons & 0xf0) | (s->io_buttons_buttons & 0x0f);
+                                        rv = (s->JoypadIo & 0xf0) | (s->io_buttons_buttons & 0x0f);
                                     return rv;
                                 } else {
                                     // FF01: Serial Link Data
-                                    return s->io_serial_data;
+                                    return s->LinkData;
                                 }
                             } else {
                                 if (lowcation < 0x03) {
                                     // FF02: Serial Control  
-                                    return s->io_serial_control; 
+                                    return s->LinkControl; 
                                 } else {
                                     ; // FF03: none
                                 }
@@ -139,25 +139,25 @@ static inline u8 mmu_register_read(GbState* s, u16 location) {
                             if (lowcation < 0x06) {
                                 if (lowcation < 0x05) {
                                     // FF04: Timer Divider
-                                    return s->io_timer_DIV;
+                                    return s->TimerClock;
                                 } else {
                                     // FF05: Timer
-                                    return s->io_timer_TIMA;
+                                    return s->TimerCounter;
                                 }
                             } else {
                                 if (lowcation < 0x07) {
                                     // FF06: Timer Modulo
-                                    return s->io_timer_TMA;
+                                    return s->TimerResetValue;
                                 } else {
                                     // FF07: Timer Control
-                                    return s->io_timer_TAC;
+                                    return s->TimerControl;
                                 }
                             }
                         }
                     } else {
                         if (lowcation == 0x0f) {
                             // FF0F: Interrupt request
-                            return s->interrupts_request;
+                            return s->InterruptFlags;
                         } else {
                             ;
                         }
@@ -168,35 +168,35 @@ static inline u8 mmu_register_read(GbState* s, u16 location) {
                             if (lowcation < 0x12) {
                                 if (lowcation < 0x11) {
                                     // FF10: channel 1 sweep
-                                    return s->io_sound_channel1_sweep;
+                                    return s->AudioChannel1Sweep;
                                 } else {
                                     // FF11: channel 1 length/pattern
-                                    return s->io_sound_channel1_length_pattern;
+                                    return s->AudioChannel1PatternAndLength;
                                 }
                             } else {
                                 if (lowcation < 0x13) {
                                     // FF12: channel 1 envelope
-                                    return s->io_sound_channel1_envelope;
+                                    return s->AudioChannel1Envelope;
                                 } else {
-                                    // FF13: channel frequence
-                                    return s->io_sound_channel1_freq_lo;
+                                    // FF13: channel frequency
+                                    return s->AudioChannel1FrequencyLow;
                                 }
                             }
                         } else {
                             if (lowcation < 0x16) {
                                 if (lowcation < 0x15) {
                                     // FF14: channel 1 frequency high bits and control
-                                    return s->io_sound_channel1_freq_hi;
+                                    return s->AudioChannel1Flags;
                                 } else {
                                     // FF15: unused channel 2 sweep 
                                 }
                             } else {
                                 if (lowcation < 0x17) {
                                     // FF16: channel 2 length and pattern
-                                    return s->io_sound_channel2_length_pattern;
+                                    return s->AudioChannel2PatternAndLength;
                                 } else {
                                     // FF17: channel 2 envelope
-                                    return s->io_sound_channel2_envelope;
+                                    return s->AudioChannel2Envelope;
                                 }
                             }
                         }
@@ -205,33 +205,33 @@ static inline u8 mmu_register_read(GbState* s, u16 location) {
                             if (lowcation < 0x1A) {
                                 if (lowcation < 0x19) {
                                     // FF18: channel 2 frequency
-                                    return s->io_sound_channel2_freq_lo;
+                                    return s->AudioChannel2FrequencyLow;
                                 } else {
                                     // FF19: channel 2 high frequench and control
-                                    return s->io_sound_channel2_freq_hi;
+                                    return s->AudioChannel2Flags;
                                 }
                             } else {
                                 if (lowcation < 0x1B) {
                                     // FF1A: channel 3 enable flag
-                                    return s->io_sound_channel3_enabled;
+                                    return s->AudioChannel3Control;
                                 } else {
                                     // FF1B: channel 3 length
-                                    return s->io_sound_channel3_length;
+                                    return s->AudioChannel3Length;
                                 }
                             }
                         } else {
                             if (lowcation < 0x1E) {
                                 if (lowcation < 0x1D) {
                                     // FF1C: channel 3 level
-                                    return s->io_sound_channel3_level;
+                                    return s->AudioChannel3Level;
                                 } else {
                                     // FF1D: channel 3 frequency
-                                    return s->io_sound_channel3_freq_lo;
+                                    return s->AudioChannel3FrequencyLow;
                                 }
                             } else {
                                 if (lowcation < 0x1F) {
                                     // FF1E channel 3 frequench high and control
-                                    return s->io_sound_channel3_freq_hi;
+                                    return s->AudioChannel3Flags;
                                 } else {
                                     // FF1F unused channel 4 sweep
                                     ;
@@ -247,33 +247,33 @@ static inline u8 mmu_register_read(GbState* s, u16 location) {
                             if (lowcation < 0x22) {
                                 if (lowcation < 0x21) {
                                     // FF20: channel 4 length
-                                    return s->io_sound_channel4_length;
+                                    return s->AudioChannel4Length;
                                 } else {
                                     // FF21: channel 4 envelope
-                                    return s->io_sound_channel4_envelope;
+                                    return s->AudioChannel4Envelope;
                                 }
                             } else {
                                 if (lowcation < 0x23) {
                                     // FF22: channel 4 waveform
-                                    return s->io_sound_channel4_poly;
+                                    return s->AudioChannel4RNGParameters;
                                 } else {
                                     // FF23: channel 4 flags
-                                    return s->io_sound_channel4_consec_initial;
+                                    return s->AudioChannel4Flags;
                                 }
                             }
                         } else {
                             if (lowcation < 0x26) {
                                 if (lowcation < 0x25) {
                                     // FF24: sound channel control
-                                    return s->io_sound_terminal_control;
+                                    return s->AudioSpeakerControl;
                                 } else {
                                     // FF25: sound speaker control
-                                    return s->io_sound_out_terminal;
+                                    return s->AudioSpeakerChannels;
                                 }
                             } else {
                                 if (lowcation < 0x27) {
                                     // FF26: Sound master switch
-                                    return s->io_sound_enabled;
+                                    return s->AudioChannelSwitch;
                                 } else {
                                     ; //unused
                                 }
@@ -285,7 +285,7 @@ static inline u8 mmu_register_read(GbState* s, u16 location) {
                     }
                 } else {
                     // FF30 - FF3f: channel 4 wave data
-                    return s->io_sound_channel3_ram[location-0xff30];
+                    return s->SoundWaveData[location-0xff30];
                 }
             }
         } else {
@@ -296,28 +296,28 @@ static inline u8 mmu_register_read(GbState* s, u16 location) {
                             if (lowcation < 0x42) {
                                 if (lowcation < 0x41) {
                                     // FF40: LCD Control
-                                    return s->io_lcd_LCDC;
+                                    return s->LcdControl;
                                 } else {
                                     // FF41: LCD Status
-                                    return s->io_lcd_STAT;
+                                    return s->LcdStatus;
                                 }
                             } else {
                                 if (lowcation < 0x43) {
                                     // FF42: Background scroll Y
-                                    return s->io_lcd_SCY;
+                                    return s->BackgroundScrollY;
                                 } else {
                                     // FF43: Background scroll X
-                                    return s->io_lcd_SCX; 
+                                    return s->BackgroundScrollX; 
                                 }
                             }
                         } else {
                             if (lowcation < 0x46) {
                                 if (lowcation < 0x45) {
                                     // FF44: LCD Line Y?
-                                    return s->io_lcd_LY;
+                                    return s->CurrentLine;
                                 } else {
                                     // FF45: LCD LYC - no idea what that means
-                                    return s->io_lcd_LYC;
+                                    return s->NextInterruptLine;
                                 }
                             } else {
                                 if (lowcation < 0x47) {
@@ -325,7 +325,7 @@ static inline u8 mmu_register_read(GbState* s, u16 location) {
                                     ;                                    
                                 } else {
                                     // FF47: Background Palette'
-                                    return s->io_lcd_BGP;
+                                    return s->BackgroundPalette;
                                 }
                             }
                         }
@@ -334,18 +334,18 @@ static inline u8 mmu_register_read(GbState* s, u16 location) {
                             if (lowcation < 0x4A) {
                                 if (lowcation < 0x49) {
                                     // FF48: Sprite Palette 0
-                                    return s->io_lcd_OBP0;
+                                    return s->SpritePalette0;
                                 } else {
-                                    //FF49: Sprite palette 2
-                                    return s->io_lcd_OBP1;
+                                    // FF49: Sprite palette 1
+                                    return s->SpritePalette1;
                                 }
                             } else {
                                 if (lowcation < 0x4B) {
                                     // FF4A: Window Y position
-                                    return s->io_lcd_WY;
+                                    return s->WindowTop;
                                 } else {
                                     // FF4B: WIndow X position
-                                    return s->io_lcd_WX;
+                                    return s->WindowLeft;
                                 }
                             }
                         } else {
@@ -356,7 +356,7 @@ static inline u8 mmu_register_read(GbState* s, u16 location) {
                                 // FF4E: unused
                                 if (lowcation == 0x4F) {
                                     // FF4F: VRAM bank flag
-                                    return s->mem_bank_vram & 1;
+                                    return s->GbcVramBank & 1;
                                 }
                             }
                         }
@@ -382,12 +382,12 @@ static inline u8 mmu_register_read(GbState* s, u16 location) {
                                     // FF54: hdma destination low byte
                                 } else {
                                     // FF55: hdma length & control
-                                    return s->io_hdma_status;
+                                    return s->GbcHdmaControl;
                                 }
                             } else {
                                 if (lowcation < 0x57) {
                                     // FF56: GBC Infrared transfer
-                                    return s->io_infrared;
+                                    return s->GbcInfraredIo;
                                 }
                             }
                         }
@@ -404,13 +404,13 @@ static inline u8 mmu_register_read(GbState* s, u16 location) {
                                     // FF68: Background palette index
                                 } else {
                                     // FF69: Background Palette data
-                                    return s->io_lcd_BGPD[s->io_lcd_BGPI & 0x3f];
+                                    return s->io_lcd_BGPD[s->GbcBackgroundPaletteIndexRegister & 0x3f];
                                 }
                             } else {
                                 if (lowcation < 0x6B) {
                                 } else {
                                     //FF6B: Sprite palette data
-                                    return s->io_lcd_OBPD[s->io_lcd_OBPI & 0x3f];
+                                    return s->io_lcd_OBPD[s->GbcSpritePaletteIndexRegister & 0x3f];
                                 }
                             }
                         }
@@ -418,7 +418,7 @@ static inline u8 mmu_register_read(GbState* s, u16 location) {
                 } else {
                     if (lowcation == 0x70) {
                         // FF70: Change RAM bank
-                        return s->mem_bank_wram; 
+                        return s->GbcRamBankSelectRegister; 
                     }
                 }   
             }
@@ -436,340 +436,62 @@ static inline u8 mmu_register_read(GbState* s, u16 location) {
 static inline void mmu_register_write(GbState* s, u16 location, u8 value) {
     // assuming 8 bit compares are faster than 16bit?
     u8 lowcation = location & 0x00FF;
-    
-    if (lowcation < 0x80) {
-        if (lowcation < 0x40) {
-            if (lowcation < 0x20) {
-                if (lowcation < 0x10) {
-                    if (lowcation < 0x08) {
-                        if (lowcation < 0x04) {
-                            if (lowcation < 0x02) {
-                                if (lowcation < 0x01) {
-                                    // FF00: Joypad
-                                    s->io_buttons = value;
-                                } else {
-                                    // FF01: Serial Link Data
-                                    s->io_serial_data = value;
-                                }
-                            } else {
-                                if (lowcation < 0x03) {
-                                    // FF02: Serial Control  
-                                    s->io_serial_control = value; 
-                                } else {
-                                    ; // FF03: none
-                                }
-                            }
-                        } else {
-                            if (lowcation < 0x06) {
-                                if (lowcation < 0x05) {
-                                    // FF04: Timer Divider
-                                    s->io_timer_DIV = 0x00;
-                                } else {
-                                    // FF05: Timer
-                                    s->io_timer_TIMA = value;
-                                }
-                            } else {
-                                if (lowcation < 0x07) {
-                                    // FF06: Timer Modulo
-                                    s->io_timer_TMA = value;
-                                } else {
-                                    // FF07: Timer Control
-                                    s->io_timer_TAC = value;
-                                }
-                            }
-                        }
-                    } else {
-                        if (lowcation == 0x0f) {
-                            // FF0F: Interrupt request
-                            s->interrupts_request = value;
-                        } else {
-                            ;
-                        }
-                    }
-                } else {
-                    if (lowcation < 0x18) {
-                        if (lowcation < 0x14) {
-                            if (lowcation < 0x12) {
-                                if (lowcation < 0x11) {
-                                    // FF10: channel 1 sweep
-                                    s->io_sound_channel1_sweep = value;
-                                } else {
-                                    // FF11: channel 1 length/pattern
-                                    s->io_sound_channel1_length_pattern = value;
-                                }
-                            } else {
-                                if (lowcation < 0x13) {
-                                    // FF12: channel 1 envelope
-                                    s->io_sound_channel1_envelope = value;
-                                } else {
-                                    // FF13: channel frequence
-                                    s->io_sound_channel1_freq_lo = value;
-                                }
-                            }
-                        } else {
-                            if (lowcation < 0x16) {
-                                if (lowcation < 0x15) {
-                                    // FF14: channel 1 frequency high bits and control
-                                    s->io_sound_channel1_freq_hi = value;
-                                } else {
-                                    // FF15: unused channel 2 sweep 
-                                }
-                            } else {
-                                if (lowcation < 0x17) {
-                                    // FF16: channel 2 length and pattern
-                                    s->io_sound_channel2_length_pattern = value;
-                                } else {
-                                    // FF17: channel 2 envelope
-                                    s->io_sound_channel2_envelope = value;
-                                }
-                            }
-                        }
-                    } else {
-                        if (lowcation < 0x1C) {
-                            if (lowcation < 0x1A) {
-                                if (lowcation < 0x19) {
-                                    // FF18: channel 2 frequency
-                                    s->io_sound_channel2_freq_lo = value;
-                                } else {
-                                    // FF19: channel 2 high frequench and control
-                                    s->io_sound_channel2_freq_hi = value;
-                                }
-                            } else {
-                                if (lowcation < 0x1B) {
-                                    // FF1A: channel 3 enable flag
-                                    s->io_sound_channel3_enabled = value;
-                                } else {
-                                    // FF1B: channel 3 length
-                                    s->io_sound_channel3_length = value;
-                                }
-                            }
-                        } else {
-                            if (lowcation < 0x1E) {
-                                if (lowcation < 0x1D) {
-                                    // FF1C: channel 3 level
-                                    s->io_sound_channel3_level = value;
-                                } else {
-                                    // FF1D: channel 3 frequency
-                                    s->io_sound_channel3_freq_lo = value;
-                                }
-                            } else {
-                                if (lowcation < 0x1F) {
-                                    // FF1E channel 3 frequench high and control
-                                    s->io_sound_channel3_freq_hi = value;
-                                } else {
-                                    // FF1F unused channel 4 sweep
-                                    ;
-                                }
-                            }
-                        }
-                    }
-                }
-            } else {
-                if (lowcation < 0x30) {
-                    if (lowcation < 0x28) {
-                        if (lowcation < 0x24) {
-                            if (lowcation < 0x22) {
-                                if (lowcation < 0x21) {
-                                    // FF20: channel 4 length
-                                    s->io_sound_channel4_length = value;
-                                } else {
-                                    // FF21: channel 4 envelope
-                                    s->io_sound_channel4_envelope = value;
-                                }
-                            } else {
-                                if (lowcation < 0x23) {
-                                    // FF22: channel 4 waveform
-                                    s->io_sound_channel4_poly = value;
-                                } else {
-                                    // FF23: channel 4 flags
-                                    s->io_sound_channel4_consec_initial = value;
-                                }
-                            }
-                        } else {
-                            if (lowcation < 0x26) {
-                                if (lowcation < 0x25) {
-                                    // FF24: sound channel control
-                                    s->io_sound_terminal_control = value;
-                                } else {
-                                    // FF25: sound speaker control
-                                    s->io_sound_out_terminal = value;
-                                }
-                            } else {
-                                if (lowcation < 0x27) {
-                                    // FF26: Sound master switch
-                                    s->io_sound_enabled = (value & 0x80) | (s->io_sound_enabled & 0x7f);
-                                } else {
-                                    ; //unused
-                                }
-                            }
-                        }
-                    } else {
-                        // FF27 - FF2F: unused 
-                        ;
-                    }
-                } else {
-                    // FF30 - FF3f: channel 4 wave data
-                    s->io_sound_channel3_ram[lowcation-0x30] = value;
-                }
-            }
-        } else {
-            if (lowcation < 0x60) {
-                if (lowcation < 0x50) {
-                    if (lowcation < 0x48) {
-                        if (lowcation < 0x44) {
-                            if (lowcation < 0x42) {
-                                if (lowcation < 0x41) {
-                                    // FF40: LCD Control
-                                    s->io_lcd_LCDC = value;
-                                } else {
-                                    // FF41: LCD Status
-                                    s->io_lcd_STAT = (value & ~7) | (s->io_lcd_STAT & 7);
-                                }
-                            } else {
-                                if (lowcation < 0x43) {
-                                    // FF42: Background scroll Y
-                                    s->io_lcd_SCY = value;
-                                } else {
-                                    // FF43: Background scroll X
-                                    s->io_lcd_SCX = value; 
-                                }
-                            }
-                        } else {
-                            if (lowcation < 0x46) {
-                                if (lowcation < 0x45) {
-                                    // FF44: LCD Line Y?
-                                    s->io_lcd_LY = 0x0;
-                                    s->io_lcd_STAT = (s->io_lcd_STAT & 0xfb) | ((s->io_lcd_LY == s->io_lcd_LYC) << 2);
-                                } else {
-                                    // FF45: LCD LYC - no idea what that means
-                                    s->io_lcd_LYC = value;
-                                    s->io_lcd_STAT = (s->io_lcd_STAT & 0xfb) | ((s->io_lcd_LY == s->io_lcd_LYC) << 2);
-                                }
-                            } else {
-                                if (lowcation < 0x47) {
-                                    // FF46: Transfers memory to OAM for rendering
-                                    
-                                    // Normally this transfer takes ~160ms (during which only HRAM
-                                    // is accessible) but it's okay to be instantaneous. Normally
-                                    // roms loop for ~200 cycles or so to wait.  
-                                    for (unsigned i = 0; i < OAM_SIZE; i++)
-                                        s->mem_OAM[i] = mmu_read(s, (value << 8) + i);
-                                } else {
-                                    // FF47: Background Palette'
-                                    s->io_lcd_BGP = value;
-                                }
-                            }
-                        }
-                    } else {
-                        if (lowcation < 0x4C) {
-                            if (lowcation < 0x4A) {
-                                if (lowcation < 0x49) {
-                                    // FF48: Sprite Palette 0
-                                    s->io_lcd_OBP0 = value;
-                                } else {
-                                    //FF49: Sprite palette 2
-                                    s->io_lcd_OBP1 = value;
-                                }
-                            } else {
-                                if (lowcation < 0x4B) {
-                                    // FF4A: Window Y position
-                                    s->io_lcd_WY = value;
-                                } else {
-                                    // FF4B: WIndow X position
-                                    s->io_lcd_WX = value;
-                                }
-                            }
-                        } else {
-                            if (lowcation < 0x4E) {
-                                // FF4C: unused
-                                // FF4D: unused - "Key1: CGB speed"???
-                            } else {
-                                // FF4E: unused
-                                if (lowcation == 0x4F) {
-                                    // FF4F: VRAM bank flag
-                                    s->mem_bank_vram = value & 1;
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    if (lowcation < 0x58) {
-                        if (lowcation < 0x54) {
-                            if (lowcation < 0x52) {
-                                if (lowcation < 0x51) {
-                                    // FF50: bios enabled flag
-                                    s->in_bios = 0; 
-                                } else {
-                                    // FF51: hdma source high byte
-                                    s->io_hdma_src_high = value;
-                                }
-                            } else {
-                                if (lowcation < 0x53) {
-                                    // FF52: hdma source low byte
-                                    s->io_hdma_src_low = value;
-                                } else {
-                                    // FF53: hdma destination high byte
-                                    s->io_hdma_dst_high = value;
-                                }
-                            }
-                        } else {
-                            if (lowcation < 0x56) {
-                                if (lowcation < 0x55) {
-                                    // FF54: hdma destination low byte
-                                    s->io_hdma_dst_low = value;
-                                } else {
-                                    // FF55: hdma length & control
-                                    mmu_hdma_start(s, value);
-                                }
-                            } else {
-                                if (lowcation < 0x57) {
-                                    // FF56: GBC Infrared transfer
-                                    s->io_infrared = value;
-                                }
-                            }
-                        }
-                    }
-                } 
-            } else {
-                if (lowcation < 0x70) { 
-                    if (lowcation < 0x68) {
-                        ; // unused
-                    } else {
-                        if (lowcation < 0x6C) {
-                            if (lowcation < 0x6A) {
-                                if (lowcation < 0x69) {
-                                    // FF68: Background palette index
-                                    s->io_lcd_BGPI = value;
-                                } else {
-                                    // FF69: Background Palette data
-                                    s->io_lcd_BGPD[s->io_lcd_BGPI & 0x3f] = value;
-                                    if (s->io_lcd_BGPI & (1 << 7))
-                                        s->io_lcd_BGPI = (((s->io_lcd_BGPI & 0x3f) + 1) & 0x3f) | (1 << 7);
-                                }
-                            } else {
-                                if (lowcation < 0x6B) {
-                                    // FF6A: Sprite palette index
-                                    s->io_lcd_OBPI = value;
-                                } else {
-                                    //FF6B: Sprite palette data
-                                    s->io_lcd_OBPD[s->io_lcd_OBPI & 0x3f] = value;
-                                    if (s->io_lcd_OBPI & (1 << 7))
-                                        s->io_lcd_OBPI = (((s->io_lcd_OBPI & 0x3f) + 1) & 0x3f) | (1 << 7);
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    if (lowcation == 0x70) {
-                        // FF70: Change RAM bank
-                        if (value == 0)
-                            value = 1;
-                        value &= s->mem_num_banks_wram - 1;
-                        s->mem_bank_wram = value;    
-                    }
-                }   
-            }
+
+    // Special cases
+    if (lowcation == 0x26) {
+        // FF26 NR52
+        s->AudioChannelSwitch = (value & 0x80) | (s->AudioChannelSwitch & 0x7f);        
+    } else if (lowcation == 0x41) {
+        // FF41: STAT
+        s->LcdStatus = (value & ~7) | (s->LcdStatus & 7);
+    } else if (lowcation == 0x44) {
+        // FF44: LCD Line Y?
+        s->CurrentLine = 0x0;
+        s->LcdStatus = (s->LcdStatus & 0xfb) | ((s->CurrentLine == s->NextInterruptLine) << 2);
+    } else if (lowcation == 0x45) {
+        // FF45: LCD LYC - no idea what that means
+        s->NextInterruptLine = value;
+        s->LcdStatus = (s->LcdStatus & 0xfb) | ((s->CurrentLine == s->NextInterruptLine) << 2);
+    } else if (lowcation == 0x46) {
+        // FF46: Transfers memory to OAM for rendering
+   
+        // Normally this transfer takes ~160ms (during which only HRAM
+        // is accessible) but it's okay to be instantaneous. Normally
+        // roms loop for ~200 cycles or so to wait.  
+        for (unsigned i = 0; i < OAM_SIZE; i++) {
+            s->mem_OAM[i] = mmu_read(s, (value << 8) + i);
         }
+    } else if (lowcation == 0x4f) {
+        // FF4F: VRAM bank flag
+        s->GbcVramBank = value & 1;
+    } else if (lowcation == 0x50) {
+        // FF50: bios enabled flag
+        s->in_bios = 0;
+    } else if (lowcation == 0x55) {
+        // FF55: hdma length & control
+        mmu_hdma_start(s, value);
+    } else if (lowcation == 0x69) {
+        // FF69: Background Palette data
+        s->io_lcd_BGPD[s->GbcBackgroundPaletteIndexRegister & 0x3f] = value;
+        if (s->GbcBackgroundPaletteIndexRegister & (1 << 7)) {
+            s->GbcBackgroundPaletteIndexRegister = (((s->GbcBackgroundPaletteIndexRegister & 0x3f) + 1) & 0x3f) | (1 << 7);
+        }
+    } else if (lowcation == 0x6B) {
+        //FF6B: Sprite palette data
+        s->io_lcd_OBPD[s->GbcSpritePaletteIndexRegister & 0x3f] = value;
+        if (s->GbcSpritePaletteIndexRegister & (1 << 7)) {
+            s->GbcSpritePaletteIndexRegister = (((s->GbcSpritePaletteIndexRegister & 0x3f) + 1) & 0x3f) | (1 << 7);        
+        }
+    } else if (lowcation == 0x70) {
+        // FF70: Change RAM bank
+        if (value == 0) {
+            value = 1;
+        }
+        value &= s->mem_num_banks_wram - 1;
+        s->GbcRamBankSelectRegister = value;    
+    } else {
+        //logAndPauseFrame(0, "%04x =? %04x", &s->HRAM[0xff], &s->InterruptSwitch);
+        s->HRAM[lowcation] = value;
     }
 }
 
@@ -784,11 +506,13 @@ void mmu_write(GbState *s, u16 location, u8 value) {
         if (highcation < 0x40) {
             if (highcation < 0x20) {
                 // 0000 - 1FFF: Fixed ROM bank
-                // Dummy, we always have those enabled.
-                // Turning off the RAM could indicate that battery-backed data is done
-                // being written and could be flushed to disk.
-                if (value == 0)
-                    s->emu_state->flush_extram = 1;          
+
+                // TODO - Lots of MBC implications here.
+                if (value == 0) {
+                    s->emu_state->extramDisabled = true;          
+                } else if (value == 0x0A) {
+                    s->emu_state->extramDisabled = false;
+                }
             } else {
                 // 2000 - 3FFF: Switchable ROM bank
                 if (value == 0 && s->mbc != 5)
@@ -840,7 +564,7 @@ void mmu_write(GbState *s, u16 location, u8 value) {
             } else {
                                 //0x6000 - 0x7FFF: More switchable ROM
                 if (s->mbc == 1) {      
-                    s       ->mem_mbc1_romram_select = value & 0x1;
+                    s->mem_mbc1_romram_select = value & 0x1;
                 } else if (s->has_rtc) { // MBC3 only
                     if (s->mem_latch_rtc == 0x01 && value == 0x01) {
                         // TODO... actually latch something?
@@ -859,7 +583,7 @@ void mmu_write(GbState *s, u16 location, u8 value) {
         if (highcation < 0xC0) {
             if (highcation < 0xA0) {
                 // 0x8000 - 0x9FFF: VRAM
-                s->mem_VRAM[s->mem_bank_vram * VRAM_BANKSIZE + location - 0x8000] = value;
+                s->mem_VRAM[s->GbcVramBank * VRAM_BANKSIZE + location - 0x8000] = value;
             } else {
                 // 0xA000 -0xBFFF: Cartridge RAM
                 if (s->mbc == 1) {
@@ -895,7 +619,7 @@ void mmu_write(GbState *s, u16 location, u8 value) {
                     s->mem_WRAM[location - 0xc000] = value;
                 } else {
                     // 0xD000 - 0xDFFF: Switchable RAM
-                    s->mem_WRAM[s->mem_bank_wram * WRAM_BANKSIZE + location - 0xd000] = value; 
+                    s->mem_WRAM[s->GbcRamBankSelectRegister * WRAM_BANKSIZE + location - 0xd000] = value; 
                 }
             } else { 
                 if (highcation < 0xF0) {
@@ -924,7 +648,7 @@ void mmu_write(GbState *s, u16 location, u8 value) {
                                 // 0xFF80 - FFFE: Stack RAM
                                 s->mem_HRAM[location - 0xff80] = value;    
                             } else {
-                                s->interrupts_enable = value;
+                                s->InterruptSwitch = value;
                             }
                         }
                     }
@@ -986,7 +710,7 @@ u8 mmu_read(GbState* s, u16 location) {
         if (highcation < 0xC0) {
             if (highcation < 0xA0) {
                 //MMU_DEBUG_R("VRAM");
-                return s->mem_VRAM[s->mem_bank_vram * VRAM_BANKSIZE + location - 0x8000];
+                return s->mem_VRAM[s->GbcVramBank * VRAM_BANKSIZE + location - 0x8000];
             } else {
                 if (s->mbc == 1) {
                     //MMU_DEBUG_R("EXTRAM (rom/ram: %d, B%d)", s->mem_mbc1_romram_select, s->mem_mbc1_extrambank);
@@ -1022,8 +746,8 @@ u8 mmu_read(GbState* s, u16 location) {
                     //MMU_DEBUG_R("WRAM B0  @%x", (location - 0xc000));
                     return s->mem_WRAM[location - 0xc000];
                 } else {
-                    //MMU_DEBUG_R("WRAM B%d @%x", s->mem_bank_wram, location - 0xd000);
-                    return s->mem_WRAM[s->mem_bank_wram * WRAM_BANKSIZE + location - 0xd000];
+                    //MMU_DEBUG_R("WRAM B%d @%x", s->GbcRamBankSelectRegister, location - 0xd000);
+                    return s->mem_WRAM[s->GbcRamBankSelectRegister * WRAM_BANKSIZE + location - 0xd000];
                 }
             } else {
                 if (highcation < 0xF0) {
@@ -1049,12 +773,12 @@ u8 mmu_read(GbState* s, u16 location) {
                         } else {
                             if (location < 0xffff) {
                                 // FF80 - FFFE
-                                //MMU_DEBUG_R("HRAM  @%x (%x)", location - 0xff80, s->mem_HRAM[location - 0xff80]);
+                                //MMU_DEBUG_R("HRAM  @%x (%x)", location - 0xff80, s->HRam[location - 0xff80]);
                                 return s->mem_HRAM[location - 0xff80];
                             } else {
                                 // FFFF
                                 //MMU_DEBUG_R("Interrupt enable");
-                                return s->interrupts_enable;
+                                return s->InterruptSwitch;
                             }
                         }
                     }

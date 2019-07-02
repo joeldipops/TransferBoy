@@ -11,7 +11,6 @@
  */
 void emu_init(GbState *s);
 void emu_step(PlayerState* state);
-void emu_step_frame(PlayerState* state);
 void emu_process_inputs(GbState *s, struct player_input *input_state);
 
 #endif

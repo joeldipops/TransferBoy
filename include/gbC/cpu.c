@@ -101,74 +101,74 @@ void cpu_reset_state(GbState *s) {
 
     s->halt_for_interrupts = 0;
     s->interrupts_master_enabled = 1;
-    s->interrupts_enable  = 0x0;
-    s->interrupts_request = 0x0;
+    s->InterruptSwitch  = 0x0;
+    s->InterruptFlags = 0x0;
 
     s->io_lcd_mode_cycles_left = 0;
-    s->io_lcd_SCX  = 0x00;
-    s->io_lcd_SCY  = 0x00;
-    s->io_lcd_WX   = 0x00;
-    s->io_lcd_WY   = 0x00;
-    s->io_lcd_LCDC = 0x91;
-    s->io_lcd_STAT = 0x00;
-    s->io_lcd_LY   = 0x00;
-    s->io_lcd_LYC  = 0x00;
-    s->io_lcd_BGP  = 0xfc;
-    s->io_lcd_OBP0 = 0xff;
-    s->io_lcd_OBP1 = 0xff;
-    s->io_lcd_BGPI = 0x00;
-    s->io_lcd_OBPI = 0x00;
+    s->BackgroundScrollX  = 0x00;
+    s->BackgroundScrollY  = 0x00;
+    s->WindowLeft   = 0x00;
+    s->WindowTop   = 0x00;
+    s->LcdControl = 0x91;
+    s->LcdStatus = 0x00;
+    s->CurrentLine   = 0x00;
+    s->NextInterruptLine  = 0x00;
+    s->BackgroundPalette  = 0xfc;
+    s->SpritePalette0 = 0xff;
+    s->SpritePalette1 = 0xff;
+    s->GbcBackgroundPaletteIndexRegister = 0x00;
+    s->GbcSpritePaletteIndexRegister = 0x00;
     memset(s->io_lcd_BGPD, 0, sizeof(s->io_lcd_BGPD));
     memset(s->io_lcd_OBPD, 0, sizeof(s->io_lcd_OBPD));
 
     s->io_timer_DIV_cycles = 0x00;
-    s->io_timer_DIV  = 0x00;
+    s->TimerClock  = 0x00;
     s->io_timer_TIMA_cycles = 0x00;
-    s->io_timer_TIMA = 0x00;
-    s->io_timer_TMA  = 0x00;
-    s->io_timer_TAC  = 0x00;
+    s->TimerCounter = 0x00;
+    s->TimerResetValue = 0x00;
+    s->TimerControl = 0x00;
 
-    s->io_serial_data    = 0x00;
-    s->io_serial_control = 0x00;
+    s->LinkData = 0x00;
+    s->LinkControl = 0x00;
 
-    s->io_infrared = 0x00;
+    s->GbcInfraredIo = 0x00;
 
-    s->io_buttons = 0x00;
+    s->JoypadIo = 0x00;
     s->io_buttons_dirs = 0x0f;
     s->io_buttons_buttons = 0x0f;
 
-    s->io_sound_enabled = 0xf1;
-    s->io_sound_out_terminal = 0xf3;
-    s->io_sound_terminal_control = 0x77;
+    s->AudioChannelSwitch = 0xf1;
+    s->AudioSpeakerChannels = 0xf3;
+    s->AudioSpeakerControl = 0x77;
 
-    s->io_sound_channel1_sweep = 0x80;
-    s->io_sound_channel1_length_pattern = 0xbf;
-    s->io_sound_channel1_envelope = 0xf3;
-    s->io_sound_channel1_freq_lo = 0x00;
-    s->io_sound_channel1_freq_hi = 0xbf;
+    s->AudioChannel1Sweep = 0x80;
+    s->AudioChannel1PatternAndLength = 0xbf;
+    s->AudioChannel1Envelope = 0xf3;
+    s->AudioChannel1FrequencyLow = 0x00;
+    s->AudioChannel1Flags = 0xbf;
 
-    s->io_sound_channel2_length_pattern = 0x3f;
-    s->io_sound_channel2_envelope = 0x00;
-    s->io_sound_channel2_freq_lo = 0x00;
-    s->io_sound_channel2_freq_hi = 0xbf;
+    s->AudioChannel2PatternAndLength = 0x3f;
+    s->AudioChannel2Envelope = 0x00;
+    s->AudioChannel2FrequencyLow = 0x00;
+    s->AudioChannel2Flags = 0xbf;
 
-    s->io_sound_channel3_enabled = 0x7f;
-    s->io_sound_channel3_length = 0xff;
-    s->io_sound_channel3_level = 0x9f;
-    s->io_sound_channel3_freq_lo = 0x00;
-    s->io_sound_channel3_freq_hi = 0xbf;
-    memset(s->io_sound_channel3_ram, 0, sizeof(s->io_sound_channel3_ram));
+    s->AudioChannel3Control = 0x7f;
+    s->AudioChannel3Length = 0xff;
+    s->AudioChannel3Level = 0x9f;
+    s->AudioChannel3FrequencyLow = 0x00;
+    s->AudioChannel3Flags = 0xbf;
+    memset(s->SoundWaveData, 0, sizeof(s->SoundWaveData));
 
-    s->io_sound_channel4_length = 0xff;
-    s->io_sound_channel4_envelope = 0x00;
-    s->io_sound_channel4_poly = 0x00;
-    s->io_sound_channel4_consec_initial = 0xbf;
+    s->AudioChannel4Length = 0xff;
+    s->AudioChannel4Envelope = 0x00;
+    s->AudioChannel4RNGParameters = 0x00;
+    s->AudioChannel4Flags = 0xbf;
 
 
     s->mem_bank_rom = 1;
-    s->mem_bank_wram = 1;
+    s->GbcRamBankSelectRegister = 1;
     s->mem_bank_extram = 0;
-    s->mem_bank_vram = 0;
+    s->GbcVramBank = 0;
 
     s->mem_mbc1_extrambank = 0;
     s->mem_mbc1_rombankupper = 0;
@@ -186,13 +186,13 @@ void cpu_reset_state(GbState *s) {
 }
 
 static void cpu_handle_interrupts(GbState *s) {
-    u8 interrupts = s->interrupts_enable & s->interrupts_request;
+    u8 interrupts = s->InterruptSwitch & s->InterruptFlags;
 
     if (s->interrupts_master_enabled) {
         for (int i = 0; i < 5; i++) {
             if (interrupts & (1 << i)) {
                 s->interrupts_master_enabled = 0;
-                s->interrupts_request ^= 1 << i;
+                s->InterruptFlags ^= 1 << i;
 
                 mmu_push16(s, s->pc);
 
@@ -213,19 +213,19 @@ void cpu_timers_step(GbState *s) {
     s->io_timer_DIV_cycles += s->emu_state->last_op_cycles;
     if (s->io_timer_DIV_cycles >= div_cycles_per_tick) {
         s->io_timer_DIV_cycles %= div_cycles_per_tick;
-        s->io_timer_DIV++;
+        s->TimerClock++;
     }
 
-    if (s->io_timer_TAC & (1<<2)) { /* Timer enable */
+    if (s->TimerControl & (1<<2)) { /* Timer enable */
         s->io_timer_TIMA_cycles += s->emu_state->last_op_cycles;
-        u32 timer_hz = GB_TIMA_FREQS[s->io_timer_TAC & 0x3];
+        u32 timer_hz = GB_TIMA_FREQS[s->TimerControl & 0x3];
         u32 timer_cycles_per_tick = freq / timer_hz;
         if (s->io_timer_TIMA_cycles >= timer_cycles_per_tick) {
             s->io_timer_TIMA_cycles %= timer_cycles_per_tick;
-            s->io_timer_TIMA++;
-            if (s->io_timer_TIMA == 0) {
-                s->io_timer_TIMA = s->io_timer_TMA;
-                s->interrupts_request |= 1 << 2;
+            s->TimerCounter++;
+            if (s->TimerCounter == 0) {
+                s->TimerCounter = s->TimerCounter;
+                s->InterruptFlags |= 1 << 2;
             }
         }
     }
@@ -251,7 +251,7 @@ void cpu_step(GbState *s) {
         s->pc++;        
         opTable[op](s, op);        
     } else {
-        if (!s->interrupts_enable)
+        if (!s->InterruptSwitch)
             cpu_error("Waiting for interrupts while disabled, deadlock.\n");
     }
     /*

@@ -8,7 +8,9 @@ N64TOOL = /home/joeldipops/Projects/tools/libdragon/tools/n64tool
 HEADERNAME = header
 LINK_FLAGS = -L$(ROOTDIR)/mips64-elf/lib -ldragon -lm -lc -ldragonsys -Tn64ld.x
 PROG_NAME = transferboy64
-CFLAGS = -std=gnu99 -march=vr4300 -mtune=vr4300 -Os -Wall -Wno-unused -Werror -I$(CURDIR) -I$(ROOTDIR)/mips64-elf/include 
+#O3FLAGS = -fgcse-after-reload -finline-functions -fipa-cp-clone -floop-interchange -floop-unroll-and-jam -fpredictive-commoning -fsplit-paths -ftree-loop-distribute-patterns -ftree-loop-distribution -ftree-loop-vectorize -ftree-partial-pre -ftree-slp-vectorize -funswitch-loops -fvect-cost-model -fversion-loops-for-strides
+OPTIMISATION_FLAGS = -Os -falign-functions -freorder-blocks-algorithm=stc -falign-loops -falign-labels -falign-jumps -fipa-cp-clone -finline-functions -fpeel-loops -ftree-loop-distribute-patterns -ftree-loop-distribution -ftree-partial-pre -funswitch-loops -fvect-cost-model
+CFLAGS = -std=gnu99 -march=vr4300 -mtune=vr4300 $(OPTIMISATION_FLAGS) -Wall -Wno-unused -Werror -I$(CURDIR) -I$(ROOTDIR)/mips64-elf/include 
 ASFLAGS = -mtune=vr4300 -march=vr4300
 CC = $(GCCN64PREFIX)gcc
 AS = $(GCCN64PREFIX)as

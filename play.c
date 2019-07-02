@@ -240,11 +240,6 @@ void playAudio(const GbState* state) {
 void playLogic(RootState* state, const byte playerNumber) {
     GbState* emulatorState = &state->Players[playerNumber].EmulationState;
 
-    if (emulatorState->emu_state->quit) {
-        state->Players[playerNumber].ActiveMode = Quit;
-        return;
-    }
-
     if (state->PlayerCount == 2 && isRequestingTransfer(state)) {
         GbState* states[2] = {
             &state->Players[0].EmulationState,

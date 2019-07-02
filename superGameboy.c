@@ -578,7 +578,7 @@ void performSGBFunctions(PlayerState* state) {
     // Increment the joypad register for multiplayer
     if (state->SGBState.PlayersMode > 0) {
         // Check if controller ID is being requested
-        if ((state->EmulationState.io_buttons & 0x30) == 0x30) {
+        if ((state->EmulationState.JoypadIo & 0x30) == 0x30) {
             if (!state->SGBState.JoypadRequestResolved) {
                 if (state->SGBState.CurrentController < 3) {
                     state->SGBState.CurrentController++;
@@ -586,7 +586,7 @@ void performSGBFunctions(PlayerState* state) {
                     state->SGBState.CurrentController = 0;
                 }
 
-                state->EmulationState.io_buttons = state->EmulationState.io_buttons | JOYPAD_IDS[state->SGBState.CurrentController];
+                state->EmulationState.JoypadIo = state->EmulationState.JoypadIo | JOYPAD_IDS[state->SGBState.CurrentController];
                 state->SGBState.JoypadRequestResolved = true;
             }
         } else {
@@ -602,7 +602,7 @@ void performSGBFunctions(PlayerState* state) {
 void processSGBData(PlayerState* state) {
     SuperGameboyState* sgb = &state->SGBState;
 
-    byte bits = (state->EmulationState.io_buttons & 0x30) >> 4;
+    byte bits = (state->EmulationState.JoypadIo & 0x30) >> 4;
 
     // 0x00 Ends the transfer
     // 0x03 Starts the transfer and confirms that the last bit should be added to the buffer.

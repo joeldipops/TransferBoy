@@ -216,10 +216,12 @@ void prepareSoundBuffer(const GbSoundControl* control, const GbSoundChannel* cha
  * @out result The sound control data.
  */
 void getSoundControl(const GbState* gbState, GbSoundControl* result) {
+    /*
     result->BufferLength = audio_get_buffer_length();
     result->Bytes.Volume = gbState->io_sound_terminal_control;
     result->Bytes.StereoControl = gbState->io_sound_out_terminal;
-    result->Bytes.ChannelControl = gbState->io_sound_enabled;
+    result->Bytes.ChannelControl = gbState->AudioChannelSwitch;
+    */
 }
 
 /**
@@ -229,38 +231,40 @@ void getSoundControl(const GbState* gbState, GbSoundControl* result) {
  * @out result The channel data.
  */
 void getSoundChannel(const GbState* gbState, const byte channelNumber, GbSoundChannel* result) {
+    /*
     result->ChannelNumber = channelNumber;
     switch(channelNumber) {
         case 1:
-            result->Bytes.SweepRegister = gbState->io_sound_channel1_sweep;
-            result->Bytes.SoundLength = gbState->io_sound_channel1_length_pattern;
-            result->Bytes.Envelope = gbState->io_sound_channel1_envelope;
-            result->Bytes.Frequency1 = gbState->io_sound_channel1_freq_lo;
-            result->Bytes.FrequencyAndTiming = gbState->io_sound_channel1_freq_hi;
+            result->Bytes.SweepRegister = gbState->AudioChannel1Sweep;
+            result->Bytes.SoundLength = gbState->AudioChannel1PatternAndLength;
+            result->Bytes.Envelope = gbState->AudioChannel1Envelope;
+            result->Bytes.Frequency1 = gbState->AudioChannel1Frequency;
+            result->Bytes.FrequencyAndTiming = gbState->AudioChannel1Flags;
             break;
         case 2:
             result->Bytes.SweepRegister = 0;
-            result->Bytes.SoundLength = gbState->io_sound_channel2_length_pattern;
-            result->Bytes.Envelope = gbState->io_sound_channel2_envelope;
-            result->Bytes.Frequency1 = gbState->io_sound_channel2_freq_lo;
-            result->Bytes.FrequencyAndTiming = gbState->io_sound_channel2_freq_hi;
+            result->Bytes.SoundLength = gbState->AudioChannel2PatternAndLength;
+            result->Bytes.Envelope = gbState->AudioChannel2Envelope;
+            result->Bytes.Frequency1 = gbState->AudioChannel2FrequencyLow;
+            result->Bytes.FrequencyAndTiming = gbState->AudioChannel2Flags;
             break;
         case 3:
-            result->Bytes.SweepRegister = gbState->io_sound_channel3_enabled;
-            result->Bytes.SoundLength = gbState->io_sound_channel3_length;
-            result->Bytes.Envelope = gbState->io_sound_channel3_level;
-            result->Bytes.Frequency1 = gbState->io_sound_channel3_freq_lo;
-            result->Bytes.FrequencyAndTiming = gbState->io_sound_channel3_freq_hi;
+            result->Bytes.SweepRegister = gbState->AudioChannel3Control;
+            result->Bytes.SoundLength = gbState->AudioChannel3Length;
+            result->Bytes.Envelope = gbState->AudioChannel3Level;
+            result->Bytes.Frequency1 = gbState->AudioChannel3FrequencyLow;
+            result->Bytes.FrequencyAndTiming = gbState->AudioChannel3Flags;
 
-            memcpy(result->WaveData, gbState->io_sound_channel3_ram, sizeof(gbState->io_sound_channel3_ram));
+            memcpy(result->WaveData, gbState->SoundWaveData, sizeof(gbState->SoundWaveData));
             break;
         case 4:
             result->Bytes.SweepRegister = 0;
-            result->Bytes.SoundLength = gbState->io_sound_channel4_length;
+            result->Bytes.SoundLength = gbState->AudioChannel4Length;
             result->Bytes.Envelope = 0;
-            result->Bytes.Frequency1 = gbState->io_sound_channel4_poly;
-            result->Bytes.FrequencyAndTiming = gbState->io_sound_channel4_consec_initial;
+            result->Bytes.Frequency1 = gbState->AudioChannel4RNGParameters;
+            result->Bytes.FrequencyAndTiming = gbState->AudioChannel4Flags;
             break;
         default: return;
     }
+    */
 }
