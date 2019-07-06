@@ -284,12 +284,22 @@ void menuLogic(RootState* state, const byte playerNumber) {
         if (playerState->MenuCursorColumn > 0) {
             playerState->MenuCursorColumn--;
         } else {
-            playerState->MenuCursorColumn = MAX_COLUMN_COUNT - 1;
+            // Don't move the cursor if there are no rows next door.            
+            if (playerState->MenuLayout[MAX_COLUMN_COUNT - 1]) {
+                playerState->MenuCursorColumn = MAX_COLUMN_COUNT - 1;
+            } else {
+                return;
+            }
         }
         playerState->MenuCursorRow = getNewRow(playerState->MenuLayout[column], playerState->MenuLayout[(byte)playerState->MenuCursorColumn], playerState->MenuCursorRow);
     } else if (pressedButtons[Right]) {
         if (playerState->MenuCursorColumn < MAX_COLUMN_COUNT - 1) {
-            playerState->MenuCursorColumn++;
+            // Don't move the cursor if there are no rows next door.
+            if (playerState->MenuLayout[column + 1]) {
+                playerState->MenuCursorColumn++;
+            } else {
+                return;
+            }
         } else {
             playerState->MenuCursorColumn = 0;
         }
