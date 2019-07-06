@@ -1,4 +1,5 @@
 #include <math.h>
+#include <stdio.h>
 #include "core.h"
 #include "screen.h"
 #include "text.h"
@@ -8,8 +9,8 @@
 
 #include <libdragon.h>
 
-#define COLUMN_COUNT 2
-static byte columns[COLUMN_COUNT] = {4, 2 };
+#define MAX_COLUMN_COUNT 2
+#define MAX_ROW_COUNT 4
 
 /**
  * Draws a menu item.
@@ -17,6 +18,7 @@ static byte columns[COLUMN_COUNT] = {4, 2 };
  * @param label identifies the label of the menu item.
  * @param position Ordinal position of the menu item.
  * @param drawCursor If true, add the cursor to the menu item.
+ * @param disabled If true, label will be drawn in a muted colour.
  * @param screen The size/position of the gameboy screen.
  * @private
  */
@@ -27,6 +29,7 @@ static void drawMenuItem(
     const byte x,
     const byte y,
     const bool drawCursor,
+    const bool disabled,
     const Rectangle* screen
 ) {
     const natural xOffset = screen->Width / 2;
@@ -44,6 +47,13 @@ static void drawMenuItem(
 
     string text = "";
     getText(label, text);
+
+    if (disabled) {
+        string tmp;
+        sprintf(tmp, "~%s", text);
+        strcpy(text, tmp);
+    }
+
     drawText(frame, text, left, top, scale);
 
     if (drawCursor) {
@@ -193,7 +203,7 @@ void executeMenuItem(RootState* state, const byte playerNumber, const byte x, co
     byte position = 0;
     bool done = false;
     for(byte col = 0; col <= x && !done; col++) {
-        for(byte row = 0; row < columns[col] && !done; row++) {
+        for(byte row = 0; row < state->Players[playerNumber].MenuLayout[col] && !done; row++) {
             if (col == x && row == y) {
                 done = true;
             } else {
@@ -233,6 +243,15 @@ void executeMenuItem(RootState* state, const byte playerNumber, const byte x, co
 void menuLogic(RootState* state, const byte playerNumber) {
     PlayerState* playerState = &state->Players[playerNumber];
 
+    playerState->MenuLayout[0] = 4;
+
+    // If next controller not plugged in, disable add player & add game options.
+    if (!state->KeysPressed.gc[playerNumber + 1].start) {        
+        playerState->MenuLayout[1] = 0;
+    } else {
+        playerState->MenuLayout[1] = 2;        
+    }
+
     bool pressedButtons[N64_BUTTON_COUNT] = {};
     getPressedButtons(&state->KeysReleased, playerNumber, pressedButtons);
 
@@ -251,10 +270,10 @@ void menuLogic(RootState* state, const byte playerNumber) {
         if (playerState->MenuCursorRow > 0) {
             playerState->MenuCursorRow--;
         } else {
-            playerState->MenuCursorRow = columns[column] - 1;
+            playerState->MenuCursorRow = playerState->MenuLayout[column] - 1;
         }
     } else if (pressedButtons[Down]) {
-        if (playerState->MenuCursorRow < columns[column] - 1) {
+        if (playerState->MenuCursorRow < playerState->MenuLayout[column] - 1) {
             playerState->MenuCursorRow++;
         } else {
             playerState->MenuCursorRow = 0;
@@ -265,16 +284,16 @@ void menuLogic(RootState* state, const byte playerNumber) {
         if (playerState->MenuCursorColumn > 0) {
             playerState->MenuCursorColumn--;
         } else {
-            playerState->MenuCursorColumn = COLUMN_COUNT - 1;
+            playerState->MenuCursorColumn = MAX_COLUMN_COUNT - 1;
         }
-        playerState->MenuCursorRow = getNewRow(columns[column], columns[(byte)playerState->MenuCursorColumn], playerState->MenuCursorRow);
+        playerState->MenuCursorRow = getNewRow(playerState->MenuLayout[column], playerState->MenuLayout[(byte)playerState->MenuCursorColumn], playerState->MenuCursorRow);
     } else if (pressedButtons[Right]) {
-        if (playerState->MenuCursorColumn < COLUMN_COUNT - 1) {
+        if (playerState->MenuCursorColumn < MAX_COLUMN_COUNT - 1) {
             playerState->MenuCursorColumn++;
         } else {
             playerState->MenuCursorColumn = 0;
         }
-        playerState->MenuCursorRow = getNewRow(columns[column], columns[(byte)playerState->MenuCursorColumn], playerState->MenuCursorRow);
+        playerState->MenuCursorRow = getNewRow(playerState->MenuLayout[column], playerState->MenuLayout[(byte)playerState->MenuCursorColumn], playerState->MenuCursorRow);
 
     // BACK, SELECT ETC,
     } else if (pressedButtons[B] || menuPressed) {
@@ -316,7 +335,7 @@ void menuDraw(RootState* state, const byte playerNumber) {
         return;
     }
 
-    TextId labels[6] = {
+    TextId labels[MAX_COLUMN_COUNT * MAX_ROW_COUNT] = {
         TextMenuResume,
         TextMenuReset,
         TextMenuChangeCart,
@@ -327,8 +346,8 @@ void menuDraw(RootState* state, const byte playerNumber) {
 
     // Draw menu items in order.
     byte position = 0;
-    for(byte x = 0; x < COLUMN_COUNT; x++) {
-        for(byte y = 0; y < columns[x]; y++) {
+    for(byte x = 0; x < MAX_COLUMN_COUNT; x++) {
+        for(byte y = 0; y < MAX_ROW_COUNT; y++) {
             drawMenuItem(
                 state->Frame,
                 playerNumber,
@@ -336,6 +355,7 @@ void menuDraw(RootState* state, const byte playerNumber) {
                 x,
                 y,
                 state->Players[playerNumber].MenuCursorRow == y && state->Players[playerNumber].MenuCursorColumn == x,
+                y >= state->Players[playerNumber].MenuLayout[x],
                 &screen
             );
             position++;

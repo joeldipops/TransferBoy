@@ -17,7 +17,7 @@ typedef struct {
     byte Position;
 } SpriteLookup;
 
-#define TRANSFORM_CACHE_SIZE 8
+#define TRANSFORM_CACHE_SIZE 127
 static SpriteLookup _transformCache[TRANSFORM_CACHE_SIZE] = {};
 
 /**
