@@ -84,7 +84,7 @@ void getText(const TextId textId, string output) {
  * @param scale Scale the sprite.
  * @private
  */
-void drawSprite(const byte spriteCode, sprite_t* spriteSheet, const natural x, const natural y, const float scale) {
+static void drawSprite(const byte spriteCode, sprite_t* spriteSheet, const natural x, const natural y, const float scale) {
     rdp_sync(SYNC_PIPE);
     rdp_load_texture_stride(0, 1, MIRROR_DISABLED, spriteSheet, spriteCode);
     rdp_draw_sprite_scaled(0, x, y, scale, scale);
@@ -100,7 +100,7 @@ void drawSprite(const byte spriteCode, sprite_t* spriteSheet, const natural x, c
  * @param scale size of the image
  * @private
  */
-void drawCharacter(const char character, const natural x, const natural y, const float scale) {
+static void drawCharacter(const char character, const natural x, const natural y, const float scale) {
     // Avoid printing any control characters, we don't at this point know what
     // wackiness will ensue.
     if (character <= 0x20) {
@@ -126,7 +126,7 @@ void drawCharacter(const char character, const natural x, const natural y, const
  *** -2 badly formatted token.
  * @private
  */
-sShort drawImage(const string text, const byte textIndex, const byte length, const natural x, const natural y, const float scale) {
+static sShort drawImage(const string text, const byte textIndex, const byte length, const natural x, const natural y, const float scale) {
     byte i = textIndex;
     char transformation = text[i+1];
     if (length <= i + 2) {
@@ -171,7 +171,7 @@ sShort drawImage(const string text, const byte textIndex, const byte length, con
  ** -1  token is not complete.
  * @private
  */
-sByte drawTextLine(const string text, const natural x, const natural y, const float scale) {
+static sByte drawTextLine(const string text, const natural x, const natural y, const float scale) {
     byte length = strlen(text);
     natural left = x;
     for (byte i = 0; i < length; i++) {

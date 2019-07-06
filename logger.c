@@ -44,7 +44,7 @@ void debug(GbState *s, string pnemonic) {
  * @private
  * @param text The text ready to be displayed.
  */
-void printLog(const string text, display_context_t frame) {
+static void printLog(const string text, display_context_t frame) {
     if (!frame) {
         while(!(frame = display_lock()));
     }

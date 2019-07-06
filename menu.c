@@ -20,7 +20,7 @@ static byte columns[COLUMN_COUNT] = {4, 2 };
  * @param screen The size/position of the gameboy screen.
  * @private
  */
-void drawMenuItem(
+static void drawMenuItem(
     const display_context_t frame,
     const byte playerNumber,
     const TextId label,
@@ -60,7 +60,7 @@ void drawMenuItem(
  * @return New position in the new column.
  * @private
  */
-byte getNewRow(const float oldRowCount, const float newRowCount, const float currentRow) {
+static byte getNewRow(const float oldRowCount, const float newRowCount, const float currentRow) {
     float ratio = oldRowCount / newRowCount;
 
     if (oldRowCount > newRowCount) {
@@ -76,7 +76,7 @@ byte getNewRow(const float oldRowCount, const float newRowCount, const float cur
  * @param playerState state of the given player.
  * @private
  */
-void resumePlay(PlayerState* playerState) {
+static void resumePlay(PlayerState* playerState) {
     playerState->MenuCursorRow = -1;
     playerState->BuffersInitialised = 0;    
     playerState->ActiveMode = Play;
@@ -87,7 +87,7 @@ void resumePlay(PlayerState* playerState) {
  * @param playerState state of the player going to the options menu.
  * @private
  */
-void showOptionsMenu(PlayerState* playerState) {
+static void showOptionsMenu(PlayerState* playerState) {
     playerState->MenuCursorRow = -1;
     playerState->ActiveMode = Options;
 }
@@ -127,7 +127,7 @@ void changeGame(RootState* state, const byte playerNumber) {
  * @return error code
  * @private
  */
-char addGame(RootState* state) {
+static char addGame(RootState* state) {
     if (state->PlayerCount >= MAX_PLAYERS) {
         // No more players supported.
         return -2;
@@ -146,7 +146,7 @@ char addGame(RootState* state) {
  * @return error code.
  * @private
  */
-char addPlayer(RootState* state) {
+static char addPlayer(RootState* state) {
     if (state->PlayerCount < 1) {
          // Can't copy from 1 if there is no 1
         return -1;

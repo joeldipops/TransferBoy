@@ -19,7 +19,7 @@
  * Sets oft-use colours since we can't assign graphics_make_color to a constant.
  * @private
  */
-void setGlobalConstants() {
+static void setGlobalConstants() {
     GLOBAL_BACKGROUND_COLOUR = graphics_make_color(220, 220, 150, 255);
     GLOBAL_TEXT_COLOUR = graphics_make_color(255, 0, 0, 255);
     SELECTED_MENU_ITEM_COLOUR = graphics_make_color(0x28, 0x6E, 0x31, 255);

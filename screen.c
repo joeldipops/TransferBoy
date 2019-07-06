@@ -37,7 +37,7 @@ const natural PLAYER_2_SCREEN_HEIGHT = 240;
  * @param frame identifies the frame to draw on.
  * @private
  */
-void hudDraw(const RootState* state, const display_context_t frame) {
+static void hudDraw(const RootState* state, const display_context_t frame) {
     string text = "";
     getText(TextSplash, text);
     drawText(frame, text, 170, 10, 1);
@@ -142,6 +142,37 @@ void getScreenPosition(const RootState* state, const byte playerNumber, Rectangl
     } else {
         logAndPause("Unimplemented getScreenPosition");
     }
+}
+
+/**
+ * Fade/Brighten a colour by a given amount.
+ * @param colour The 16bit colour
+ * @param fadeAmount This amount will be added to each component.
+ * @returns The new faded colour.
+ */
+u16 fadeColour(const natural colour, const byte fadeAmount) {
+    byte red = colour >> 11;
+    byte green = (colour >> 6) & 0x1F;
+    byte blue = (colour >> 1) & 0x1F;
+    byte t = colour & 1;
+
+    // Find how much space we have to fade.
+    byte room[3] = {
+        0x1F - red,
+        0x1F - green,
+        0x1F - blue
+    };
+
+    byte factor = fadeAmount;
+    for (byte i = 0; i < 3; i++) {
+        factor = factor < room[i] ? factor : room[i];
+    }
+
+    red = red + factor;
+    green = green + factor;
+    blue = blue + factor;
+
+    return (red << 11) | (green << 6) | (blue << 1) | t;
 }
 
 /**
