@@ -1,6 +1,9 @@
 #include <libdragon.h>
 #include "resources.h"
+#include "screen.h"
 #include <math.h>
+
+static const byte FADE_FACTOR = 0x07;
 
 static sprite_t* _textMap = 0;
 static sprite_t* _spriteSheet = 0;
@@ -193,6 +196,33 @@ sprite_t* transformSprite(const sprite_t* sheet, const byte spriteCode, const Tr
     natural destColumn = 0;
 
     switch(transformation) {
+        case FADE:
+            for (natural row = y * spriteHeight; row < y * spriteHeight + spriteHeight; row++) {
+                for (natural column = x * spriteWidth; column < x * spriteWidth + spriteWidth; column++) {
+                    switch(sheet->bitdepth) {
+                        case 2: ;
+                            natural colour = source[(row * sheet->width + column) * sheet->bitdepth] << 8 | source[(row * sheet->width + column) * sheet->bitdepth + 1]; 
+                            colour = fadeColour(colour, FADE_FACTOR);
+
+                            data[index] = colour >> 8;
+                            data[index + 1] = colour & 0xFF;
+
+                            break;
+
+                        default: 
+                            // Not implemented, so perform straight copy.
+                            memcpy(
+                                data + index,
+                                source + (row * sheet->width + column) * sheet->bitdepth,
+                                sheet->bitdepth
+                            );                        
+                            break;
+                    }
+
+                    index += sheet->bitdepth;                    
+                }
+            }
+            break;
         case ROTATE_90:
             destRow = spriteHeight * sheet->bitdepth - sheet->bitdepth;
             for (natural sourceRow = y * spriteHeight; sourceRow < y * spriteHeight + spriteHeight; sourceRow++) {

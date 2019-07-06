@@ -23,7 +23,8 @@ typedef enum {
     ROTATE_180 = 'v',
     ROTATE_270 = '<',
     FLIP_HORIZONTAL = 'W',
-    FLIP_VERTICAL = 'V'
+    FLIP_VERTICAL = 'V',
+    FADE = '~'
 } Transformation;
 
 

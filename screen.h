@@ -65,4 +65,12 @@ void getScreenPosition(const RootState* state, const byte playerNumber, Rectangl
  */
 uInt massageColour(const natural colour);
 
+/**
+ * Fade/Brighten a colour by a given amount.
+ * @param colour The 16bit colour
+ * @param fadeAmount This amount will be added to each component.
+ * @returns The new faded colour.
+ */
+u16 fadeColour(const natural colour, const byte fadeAmount);
+
 #endif
