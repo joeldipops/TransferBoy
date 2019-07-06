@@ -28,7 +28,7 @@ static SpriteLookup _transformCache[TRANSFORM_CACHE_SIZE] = {};
  * @return pointer to sprite in the cache, or null if not in the cache.
  * @private
  */
-sprite_t* getFromCache(const byte sheetIndex, const byte spriteCode, const Transformation transformation) {
+static sprite_t* getFromCache(const byte sheetIndex, const byte spriteCode, const Transformation transformation) {
     sprite_t* result = null;
     sByte oldPosition = -1;
     for (byte i = 0; i < TRANSFORM_CACHE_SIZE; i++) {
@@ -60,7 +60,7 @@ sprite_t* getFromCache(const byte sheetIndex, const byte spriteCode, const Trans
  * @param lookup The sprite along with information used to index/identify it.
  * @private
  */
-void cacheSprite(SpriteLookup* lookup) {
+static void cacheSprite(SpriteLookup* lookup) {
     byte cacheTop = 0;
 
     // Find any slot with position 0

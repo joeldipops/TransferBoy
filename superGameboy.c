@@ -408,7 +408,7 @@ sByte attr_blk(PlayerState* state) {
  ** -1 Unknown command 
  * @private
  */
-int executeSgbCommand(PlayerState* state) {
+static int executeSgbCommand(PlayerState* state) {
     switch(state->SGBState.CurrentCommand) {
         case SGBSetPalette01:
             pal01(state);
@@ -466,7 +466,7 @@ int executeSgbCommand(PlayerState* state) {
  * @param state The sgb data we're juggling.
  * @private
  */
-void pushBit(SuperGameboyState* state) {
+static void pushBit(SuperGameboyState* state) {
     // Super Gameboy transfers 1 bit at a time, controlled by the  two 'out' bits in the
     // Joypad In/Out register.
     // Packetes are 16 bytes long + 1 final "stop" bit.

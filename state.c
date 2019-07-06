@@ -7,7 +7,7 @@
  * @out buttonMap map of N64 to Gameboy buttons.
  * @private
  */
-void initialiseButtonMap(GbButton* map) {
+static void initialiseButtonMap(GbButton* map) {
     GbButton buttons[N64_BUTTON_COUNT];
     memset(buttons, 0x00, sizeof(GbButton) * N64_BUTTON_COUNT);
     buttons[NoButton] = GbNoButton;

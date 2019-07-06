@@ -90,7 +90,7 @@ void resetPlayState(PlayerState* state) {
  * @out gbInput struct of gb buttons to fill in.
  * @private
  */
-void mapGbInputs(const char controllerNumber, const GbButton* buttonMap, const N64ControllerState* n64Input, bool* pressedButtons, GbController* gbInput) {
+static void mapGbInputs(const char controllerNumber, const GbButton* buttonMap, const N64ControllerState* n64Input, bool* pressedButtons, GbController* gbInput) {
     getPressedButtons(n64Input, controllerNumber, pressedButtons);
 
     for (byte i = 0; i < N64_BUTTON_COUNT; i++) {
@@ -126,7 +126,7 @@ void mapGbInputs(const char controllerNumber, const GbButton* buttonMap, const N
  *        drawn once as a background
  * @private
  */
-void renderPixels(
+static void renderPixels(
     const display_context_t frame,
     const PlayerState* state,
     const natural* lastBuffer,

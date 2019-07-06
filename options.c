@@ -39,7 +39,7 @@ static const N64Button RESERVED_BUTTONS[N64_BUTTON_COUNT] = {
  * @param playerState state of the given player.
  * @private
  */
-void resumePlayFromOptions(PlayerState* playerState) {
+static void resumePlayFromOptions(PlayerState* playerState) {
     playerState->MenuCursorRow = -1;
     playerState->OptionsCursorRow = -1;
     playerState->ActiveMode = Play;
@@ -50,7 +50,7 @@ void resumePlayFromOptions(PlayerState* playerState) {
  * @param playerState state of the player.
  * @private
  */
-void showMainMenu(PlayerState* playerState) {
+static void showMainMenu(PlayerState* playerState) {
     playerState->MenuCursorRow = 0;
     playerState->OptionsCursorRow = -1;
     playerState->ActiveMode = Menu;
@@ -99,7 +99,7 @@ N64Button selectNextButton(const N64Button currentButton, const bool isMovingLef
  ** -1  unknown option requested.
  * @private
  */
-sByte selectOption(PlayerState* playerState, const OptionType option, const bool isMovingLeft) {
+static sByte selectOption(PlayerState* playerState, const OptionType option, const bool isMovingLeft) {
     switch(option) {
         case OptionsAudio:
             playerState->AudioEnabled = !playerState->AudioEnabled;
@@ -125,7 +125,7 @@ sByte selectOption(PlayerState* playerState, const OptionType option, const bool
  * @param playerState state of player to update.
  * @private
  */
-void confirmOptions(PlayerState* playerState) {
+static void confirmOptions(PlayerState* playerState) {
     setButtonToMap(playerState, GbSystemMenu, playerState->SystemMenuButton);
     setButtonToMap(playerState, GbStart, playerState->GbStartButton);
     setButtonToMap(playerState, GbSelect, playerState->GbSelectButton);
@@ -190,7 +190,7 @@ void optionsLogic(RootState* state, byte playerNumber) {
  * @param row option will be drawn in this row.
  * @private
  */
-void drawOptionRow(const RootState* state, const byte playerNumber, const string text, const Rectangle* screen, const byte row) {
+static void drawOptionRow(const RootState* state, const byte playerNumber, const string text, const Rectangle* screen, const byte row) {
     const float scale = (float) screen->Width * TEXT_SCALE_FACTOR;
     const natural menuItemOffset = 32;
 
@@ -218,7 +218,7 @@ void drawOptionRow(const RootState* state, const byte playerNumber, const string
  * @param row option will be drawn in this row.
  * @private
  */
-void drawAudioOption(const RootState* state, const byte playerNumber, const Rectangle* screen, const byte row) {
+static void drawAudioOption(const RootState* state, const byte playerNumber, const Rectangle* screen, const byte row) {
     string text = "";
     if (state->Players[playerNumber].AudioEnabled) {
         getText(TextAudioOn, text);
@@ -238,7 +238,7 @@ void drawAudioOption(const RootState* state, const byte playerNumber, const Rect
  * @param row option will be drawn in this row.
  * @private
  */
-void drawButtonMapOption(const RootState* state, const byte playerNumber, const GbButton button, const Rectangle* screen, const byte row) {
+static void drawButtonMapOption(const RootState* state, const byte playerNumber, const GbButton button, const Rectangle* screen, const byte row) {
     byte gbButtonSprite = 0;
     N64Button n64Button = 0;
     switch(button) {
@@ -313,7 +313,7 @@ void drawButtonMapOption(const RootState* state, const byte playerNumber, const 
  * @param row option will be drawn in this row.
  * @private
  */
-sByte drawOption(const RootState* state, const byte playerNumber, const OptionType option, const Rectangle* screen, const byte row) {
+static sByte drawOption(const RootState* state, const byte playerNumber, const OptionType option, const Rectangle* screen, const byte row) {
     switch (option) {
         case OptionsAudio:
             drawAudioOption(state, playerNumber, screen, row);

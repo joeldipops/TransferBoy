@@ -37,7 +37,7 @@ const natural PLAYER_2_SCREEN_HEIGHT = 240;
  * @param frame identifies the frame to draw on.
  * @private
  */
-void hudDraw(const RootState* state, const display_context_t frame) {
+static void hudDraw(const RootState* state, const display_context_t frame) {
     string text = "";
     getText(TextSplash, text);
     drawText(frame, text, 170, 10, 1);
