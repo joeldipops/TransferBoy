@@ -42,7 +42,7 @@ sByte initText() {
     strcpy(_strings[TextMenuOptions], "Options");
     strcpy(_strings[TextMenuAddPlayer], "Add Player");
     strcpy(_strings[TextMenuAddGame], "Add Game");
-    strcpy(_strings[TextSplash], "~TRANSFER BOY~");
+    strcpy(_strings[TextSplash], "\\~TRANSFER BOY~");
     strcpy(_strings[TextAudioOff], "Audio : Off");
     strcpy(_strings[TextAudioOn], "Audio : On");
 
@@ -90,7 +90,32 @@ static void drawSprite(const byte spriteCode, sprite_t* spriteSheet, const natur
     rdp_draw_sprite_scaled(0, x, y, scale, scale);
 }
 
+/**
+ * Draws a text character from the sprite sheet at a given location with the given transformation.
+ * @param character the ASCII character to draw
+ * @param x The x co-ordinate to draw at.
+ * @param y The y co-ordinate to draw at.
+ * @param scale size of the image
+ * @param transformation Flip/Fade/Shift etc the character.
+ * @private
+ */
+static void drawTransformedCharacter(const char character, const natural x, const natural y, const float scale, const Transformation transformation) {
+    // Avoid printing any control characters, we don't at this point know what
+    // wackiness will ensue.
+    if (character <= 0x20) {
+        return;
+    }
 
+    sprite_t* sheet = getCharacterSheet();    
+
+    byte offset = character - 0x20;
+    if (transformation) {
+        sheet = transformSprite(sheet, offset, transformation);
+        offset = 0;
+    }
+
+    drawSprite(offset, sheet, x, y, scale);        
+}
 
 /**
  * Draws a text character from the sprite sheet at a given location.
@@ -101,14 +126,7 @@ static void drawSprite(const byte spriteCode, sprite_t* spriteSheet, const natur
  * @private
  */
 static void drawCharacter(const char character, const natural x, const natural y, const float scale) {
-    // Avoid printing any control characters, we don't at this point know what
-    // wackiness will ensue.
-    if (character <= 0x20) {
-        return;
-    }
-
-    byte offset = character - 0x20;
-    drawSprite(offset, getCharacterSheet(), x, y, scale);
+    drawTransformedCharacter(character, x, y, scale, 0);
 }
 
 /**
@@ -174,7 +192,17 @@ static sShort drawImage(const string text, const byte textIndex, const byte leng
 static sByte drawTextLine(const string text, const natural x, const natural y, const float scale) {
     byte length = strlen(text);
     natural left = x;
-    for (byte i = 0; i < length; i++) {
+    Transformation transform = 0;
+
+    byte i = 0;
+
+    // If the first character is a ~, fade the whole line.
+    if (text[0] == '~') {
+        transform = FADE;
+        i++;
+    }
+
+    for (; i < length; i++) {
         // $ token means draw a sprite instead of a text character.
         if (text[i] == '$') {
             sByte result = drawImage(text, i, length, left, y, scale);
@@ -190,7 +218,7 @@ static sByte drawTextLine(const string text, const natural x, const natural y, c
         if (text[i] == '\\') {
             i++;
         }
-        drawCharacter(text[i], left, y, scale);
+        drawTransformedCharacter(text[i], left, y, scale, transform);
         left += CHARACTER_SIZE * scale;
     }
     return 0;

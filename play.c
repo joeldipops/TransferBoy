@@ -200,7 +200,7 @@ static void renderPixels(
 
         long diff = state->Meta.NextClock - state->Meta.LastClock;
 
-        sprintf(text, "Frames: %lld FPS: %f", state->Meta.FrameCount, ((FRAMES_TO_SKIP + 1) / (double)diff) * 1000);
+        sprintf(text, "Memory: %lld FPS: %f", getCurrentMemory(), ((FRAMES_TO_SKIP + 1) / (double)diff) * 1000);
         graphics_set_color(GLOBAL_TEXT_COLOUR, 0x0);
         graphics_draw_box(frame, 0, 450, 680, 10, GLOBAL_BACKGROUND_COLOUR);
         graphics_draw_text(frame, 5, 450, text);
