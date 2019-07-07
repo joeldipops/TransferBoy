@@ -43,6 +43,7 @@ typedef struct {
     bool RequiresRepaint:1;
     bool RequiresControllerRead:1;
     byte PlayerCount:4;
+    natural ControllersPresent;
     N64ControllerState KeysPressed;
     N64ControllerState KeysReleased;
     float PixelSize;

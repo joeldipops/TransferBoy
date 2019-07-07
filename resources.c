@@ -3,7 +3,7 @@
 #include "screen.h"
 #include <math.h>
 
-static const byte FADE_FACTOR = 0x07;
+static const byte FADE_FACTOR = 0x0A;
 
 static sprite_t* _textMap = 0;
 static sprite_t* _spriteSheet = 0;

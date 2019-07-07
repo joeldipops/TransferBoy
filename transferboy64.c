@@ -73,6 +73,14 @@ void mainLoop(RootState* state) {
         // Read controller about once per frame.
         if (state->RequiresControllerRead || iterations > GB_LCD_FRAME_CLKS / 2) {
             controller_scan();
+            natural previous = state->ControllersPresent;
+            state->ControllersPresent = get_controllers_present();
+            
+            // If a new controller is plugged in, we may need to indicate that.
+            if (previous != state->ControllersPresent) {
+                state->RequiresRepaint = true;
+            }
+
             state->KeysPressed = get_keys_pressed();
             state->KeysReleased = get_keys_up();
             state->RequiresControllerRead = false;
