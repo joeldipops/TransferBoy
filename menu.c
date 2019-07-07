@@ -246,7 +246,7 @@ void menuLogic(RootState* state, const byte playerNumber) {
     playerState->MenuLayout[0] = 4;
 
     // If next controller not plugged in, disable add player & add game options.
-    if (!state->KeysPressed.gc[playerNumber + 1].start) {        
+    if (playerNumber > 0 || !(state->ControllersPresent & (CONTROLLER_2_INSERTED))) {        
         playerState->MenuLayout[1] = 0;
     } else {
         playerState->MenuLayout[1] = 2;        
