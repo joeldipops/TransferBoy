@@ -29,7 +29,7 @@ static void setGlobalConstants() {
 /**
  * Inititalises all required libdragon subsystems.
  */
-void initialiseSubsystems() {
+static void initialiseSubsystems() {
     getMemoryLimit();
     init_interrupts();
     timer_init();
@@ -47,7 +47,7 @@ void initialiseSubsystems() {
  * Sets up initial state object that will be used throughout the program.
  * @out state the state object.
  */
-void generateState(RootState* state) {
+static void generateState(RootState* state) {
     state->PlayerCount = 1;
     generatePlayerState(&state->Players[0]);
 }
@@ -59,7 +59,7 @@ void generateState(RootState* state) {
  * phase 3 paint the screen if required.
  * todo - audio.
  */
-void mainLoop(RootState* state) {
+static void mainLoop(RootState* state) {
     bool allQuit = false;
     state->RequiresRepaint = true;
     state->RequiresControllerRead = true;

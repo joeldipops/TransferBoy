@@ -65,7 +65,7 @@ const natural ROM_ADDRESS_OFFSET = 0xC000;
  * @param value New value to set.
  * @returns Error Code from write_mempak_address.
  */
-sByte setTpakValue(const byte controllerNumber, const natural address, const byte value) {
+static sByte setTpakValue(const byte controllerNumber, const natural address, const byte value) {
     byte block[BLOCK_SIZE];
     memset(block, value, BLOCK_SIZE);
     return write_mempak_address(controllerNumber, address, block);
@@ -76,7 +76,7 @@ sByte setTpakValue(const byte controllerNumber, const natural address, const byt
  * @param address An address in gameboy memory space.
  * @returns The corresponding tpak memory space address.
  */
-natural mapAddress(const natural address) {
+static natural mapAddress(const natural address) {
     natural offset = ROM_ADDRESS_OFFSET;
     if (address < 0x4000) {
         return address + offset;
@@ -95,7 +95,7 @@ natural mapAddress(const natural address) {
  * @param controllerNumber controller slot the Tpak is plugged in to.
  * @returns Error Code
  */
-sByte initialiseTPak(const byte controllerNumber) {
+static sByte initialiseTPak(const byte controllerNumber) {
     int accessory = identify_accessory(controllerNumber);
 
     if (accessory != ACCESSORY_MEMPAK) {
@@ -138,7 +138,7 @@ sByte initialiseTPak(const byte controllerNumber) {
  * @param address The address
  * @returns The address OR'd with the checksum.
  */
-natural writeCRC(natural address) {
+static natural writeCRC(natural address) {
     byte values[] = { 0x15, 0x1F, 0x0B, 0x16, 0x19, 0x07, 0x0E, 0x1C, 0x0D, 0x1A, 0x01 };
     address &= 0xFFE0;
     byte checksum = 0;
@@ -155,7 +155,7 @@ natural writeCRC(natural address) {
  * @param header The header to check.
  * @returns true if checksum passes, false otherwise.
  */
-bool checkHeader(const CartridgeHeader* header) {
+static bool checkHeader(const CartridgeHeader* header) {
     byte sum = 0;
     byte* data = (byte*) header;
 
@@ -175,7 +175,7 @@ bool checkHeader(const CartridgeHeader* header) {
  * @param data The data to check.
  * @returns true if values match, false otherwise.
  */
-bool checkRom(const natural expected, const ByteArray* data) {
+static bool checkRom(const natural expected, const ByteArray* data) {
     natural sum = 0;
     for (uLong i = 0; i < data->Size; i++) {
         sum += data->Data[i];
@@ -195,7 +195,7 @@ bool checkRom(const natural expected, const ByteArray* data) {
  * @param bank Bank number to switch to. 
  * @returns Error code.
  */
-sByte switchRamBank(const byte controllerNumber, const natural bank, const CartridgeType type) {
+static sByte switchRamBank(const byte controllerNumber, const natural bank, const CartridgeType type) {
     // Make sure we're in ROMX to access 0x4000 and 0x6000
     setTpakValue(controllerNumber, TPAK_BANK_ADDRESS, ROMX);
 
@@ -220,7 +220,7 @@ sByte switchRamBank(const byte controllerNumber, const natural bank, const Cartr
  * @param bank Bank number to switch to. 
  * @returns Error code.
  */
-sByte switchBank(const byte controllerNumber, const natural bank, const CartridgeType type) {
+static sByte switchBank(const byte controllerNumber, const natural bank, const CartridgeType type) {
     if (bank == 0) {
         // Bank 0 is always ROM0
         setTpakValue(controllerNumber, TPAK_BANK_ADDRESS, ROM0);
@@ -276,7 +276,7 @@ sByte switchBank(const byte controllerNumber, const natural bank, const Cartridg
  * @returns ErrorCode
  ** 0 - Successful
  */
-sByte getHeader(const byte controllerNumber, CartridgeHeader* header) {
+static sByte getHeader(const byte controllerNumber, CartridgeHeader* header) {
     // Set tpak bank to 0 since the header is at 0x0100
     switchBank(controllerNumber, 0, ROM_ONLY);
     
@@ -312,7 +312,7 @@ sByte getHeader(const byte controllerNumber, CartridgeHeader* header) {
  ** 04h - 128 KBytes (16 banks of 8KBytes each)
  ** 05h - 64 KBytes (8 banks of 8KBytes each)
  */
-sShort getNumberOfRomBanks(const CartridgeHeader* header) {
+static sShort getNumberOfRomBanks(const CartridgeHeader* header) {
     if (header->RomSizeCode <= 8) {
         return pow(2, header->RomSizeCode + 1);
     } else {
@@ -331,7 +331,7 @@ sShort getNumberOfRomBanks(const CartridgeHeader* header) {
  * @param cartridge the cartridge.
  * @returns Number of banks, or -1 if unknown code.
  */
-sByte getNumberOfRamBanks(const CartridgeHeader* header, const CartridgeType type) {
+static sByte getNumberOfRamBanks(const CartridgeHeader* header, const CartridgeType type) {
     // MBC2s do have RAM, but it doesn't show up in the cartridge header.
     if (type == MBC2) {
         return 1;
@@ -353,7 +353,7 @@ sByte getNumberOfRamBanks(const CartridgeHeader* header, const CartridgeType typ
  * @param header the header.
  * @returns the size of each ram bank.
  */
-natural getRamBankSize(const CartridgeHeader* header) {
+static natural getRamBankSize(const CartridgeHeader* header) {
     switch(header->RamSizeCode) {
         case 0: return 0;
         case 1: return 2 * 1024;
@@ -366,7 +366,7 @@ natural getRamBankSize(const CartridgeHeader* header) {
  * @param fullType A cartridge type.
  * @returns The Memory Bank Controller type.
  */
-CartridgeType getPrimaryType(const CartridgeType fullType) {
+static CartridgeType getPrimaryType(const CartridgeType fullType) {
     switch(fullType) {
         case ROM_ONLY:
             return ROM_ONLY;
@@ -416,7 +416,7 @@ CartridgeType getPrimaryType(const CartridgeType fullType) {
  ** 0  - Successful
  ** -1 - Error
  */
-sByte importRom(const byte controllerNumber, GameBoyCartridge* cartridge) {
+static sByte importRom(const byte controllerNumber, GameBoyCartridge* cartridge) {
     cartridge->Rom.Size = BANK_SIZE * cartridge->RomBankCount;
     if (cartridge->Rom.Data) {
         free(cartridge->Rom.Data);

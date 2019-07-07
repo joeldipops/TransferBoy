@@ -22,7 +22,7 @@ typedef enum {GameboyPalette, SuperGameboyPalette, GameboyColorPalette } Palette
  * @param state state to copy the bios to.
  * @return 0 if load successful, non-zero for errors.
  */
-sByte loadBios(GbState* state) {
+static sByte loadBios(GbState* state) {
     sByte result = 0;
     byte* biosFile = null;
 
@@ -57,7 +57,7 @@ sByte loadBios(GbState* state) {
  * @param romData ROM loaded from cartridge.
  * @param saveData Save file RAM loaded from cartridge.
  */
-void initialiseEmulator(GbState* state, const ByteArray* romData, const ByteArray* saveData) {
+static void initialiseEmulator(GbState* state, const ByteArray* romData, const ByteArray* saveData) {
     memset(state, 0, sizeof(GbState));
 
     state_new_from_rom(state, romData->Data, romData->Size);
