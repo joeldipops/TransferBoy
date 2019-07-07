@@ -234,19 +234,17 @@ void cpu_timers_step(GbState *s) {
 void cpu_step(GbState *s) {
     u8 op;
 
-    s->emu_state->last_op_cycles = 0;
-
     cpu_handle_interrupts(s);
 
-    if (!s->halt_for_interrupts) {    
-       op = mmu_read(s, s->pc);
+    op = mmu_read(s, s->pc);
     
-        s->emu_state->last_op_cycles = cycles_per_instruction[op];
-        if (op == 0xcb) {
-            u8 extOp = mmu_read(s, s->pc + 1);
-            s->emu_state->last_op_cycles = cycles_per_instruction_cb[extOp];
-        }
+    s->emu_state->last_op_cycles = cycles_per_instruction[op];
+    if (op == 0xcb) {
+        u8 extOp = mmu_read(s, s->pc + 1);
+        s->emu_state->last_op_cycles = cycles_per_instruction_cb[extOp];
+    }
 
+    if (!s->halt_for_interrupts) {
         // Move PC forward, then go and run the operation.
         s->pc++;        
         opTable[op](s, op);        
