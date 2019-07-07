@@ -107,7 +107,7 @@ static void showOptionsMenu(PlayerState* playerState) {
  * @param state Program state.
  * @param playerNumber player that wants to reset.
  */
-void resetGame(RootState* state, const byte playerNumber) {
+static  void resetGame(RootState* state, const byte playerNumber) {
     resetPlayState(&state->Players[playerNumber]);
 
     state->Players[playerNumber].ActiveMode = Play;
@@ -118,7 +118,7 @@ void resetGame(RootState* state, const byte playerNumber) {
  * @param state Program state.
  * @param playerNumber Player that wants to change cartridge.
  */
-void changeGame(RootState* state, const byte playerNumber) {
+static void changeGame(RootState* state, const byte playerNumber) {
     // Dump Save RAM first, or nah?
 
     // Reset state and send back to init.
@@ -197,7 +197,7 @@ static char addPlayer(RootState* state) {
  * @param x column of selected item.
  * @param y row of selected item.
  */
-void executeMenuItem(RootState* state, const byte playerNumber, const byte x, const byte y) {
+static void executeMenuItem(RootState* state, const byte playerNumber, const byte x, const byte y) {
     typedef enum { Resume, Reset, Change, Options, AddPlayer, AddGame } items;
 
     byte position = 0;
@@ -246,8 +246,10 @@ void menuLogic(RootState* state, const byte playerNumber) {
     playerState->MenuLayout[0] = 4;
 
     // If next controller not plugged in, disable add player & add game options.
-    if (playerNumber > 0 || !(state->ControllersPresent & (CONTROLLER_2_INSERTED))) {        
+    if (state->PlayerCount > 1 || !(state->ControllersPresent & (CONTROLLER_2_INSERTED))) {        
         playerState->MenuLayout[1] = 0;
+        // Can't be in the second column if there is no second column.
+        playerState->MenuCursorColumn = 0;
     } else {
         playerState->MenuLayout[1] = 2;        
     }
