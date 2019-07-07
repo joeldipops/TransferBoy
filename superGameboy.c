@@ -15,7 +15,7 @@ static const byte VERTICAL_TILES = 18;
  * This command is used to signal that the SBG is connect, we of course want to signal that it is.
  * @param state Program state including supergameboy request data.
  */
-void mlt_req(PlayerState* state) {
+static void mlt_req(PlayerState* state) {
     state->SGBState.PlayersMode = state->SGBState.Buffer[1];
     state->SGBState.CurrentController = 0;
 }
@@ -29,7 +29,7 @@ void mlt_req(PlayerState* state) {
  ** 0  Success.
  ** -1 Data received in incorrect format.
  */
-sByte palpq(PlayerState* state, const byte p, const byte q) {
+static sByte palpq(PlayerState* state, const byte p, const byte q) {
     if (state->SGBState.NumberOfPackets != 1) {
         return -1;
     }
@@ -60,7 +60,7 @@ sByte palpq(PlayerState* state, const byte p, const byte q) {
  * Set the colours of palettes 0 and 1
  * @param state Program state including supergameboy request data.
  */
-void pal01(PlayerState* state) {
+static void pal01(PlayerState* state) {
     palpq(state, 0, 1);
 }
 
@@ -68,7 +68,7 @@ void pal01(PlayerState* state) {
  * Set the colours of palettes 2 and 3
  * @param state Program state including supergameboy request data.
  */
-void pal23(PlayerState* state) {
+static void pal23(PlayerState* state) {
     palpq(state, 2, 3);
 }
 
@@ -76,7 +76,7 @@ void pal23(PlayerState* state) {
  * Set the colours of palettes 0 and 3
  * @param state Program state including supergameboy request data.
  */
-void pal03(PlayerState* state) {
+static void pal03(PlayerState* state) {
     palpq(state, 0, 3);
 }
 
@@ -84,7 +84,7 @@ void pal03(PlayerState* state) {
  * Set the colours of palettes 1 and 2
  * @param state Program state including supergameboy request data.
  */
-void pal12(PlayerState* state) {
+static void pal12(PlayerState* state) {
     palpq(state, 1, 2);
 }
 
@@ -97,7 +97,7 @@ void pal12(PlayerState* state) {
  ** -1 - Incorrect number of packets
  ** -2 - Invalid value.
  */
-sByte mask_en(PlayerState* state) {
+static sByte mask_en(PlayerState* state) {
     if (state->SGBState.NumberOfPackets != 1) {
         return -1;
     }
@@ -116,7 +116,7 @@ sByte mask_en(PlayerState* state) {
  * These are mainly used to draw borders, but can be used to overlay and colourise the screen as well.
  * @param state Program state including supergameboy request data.
  */
-sByte chr_trn(PlayerState* state) {
+static sByte chr_trn(PlayerState* state) {
     //natural index = 0;
     // There are 256 characters in total, but we can only transfer one at a time,
     // So this bit determines whether it's the first or second 128.
@@ -145,7 +145,7 @@ sByte chr_trn(PlayerState* state) {
  ** 0  Success
  ** -1 Not Implemented
  */
-sByte pct_trn(PlayerState* state) {
+static sByte pct_trn(PlayerState* state) {
     // TODO, need to read the data from the gameboy MMU, not the lcd_pixbuf
     return -1;
 }
@@ -156,7 +156,7 @@ sByte pct_trn(PlayerState* state) {
  ** 0  - Success
  ** -1 - Too many bytes
  */
-sByte data_snd(PlayerState* state) {
+static sByte data_snd(PlayerState* state) {
     natural address = (state->SGBState.Buffer[2] << 8) | state->SGBState.Buffer[1];
     byte bank = state->SGBState.Buffer[3];
     byte byteCount = state->SGBState.Buffer[4];
@@ -202,7 +202,7 @@ sByte data_snd(PlayerState* state) {
  * Sets the palette priority.
  * @param state Program state including supergameboy request data.
  */
-void pal_pri(PlayerState* state) {
+static void pal_pri(PlayerState* state) {
     // On actual hardware 0 means use custom palette,
     // 1 the palette set in code.
     // We'll just use the grey-scale palette when priority is off.
@@ -215,7 +215,7 @@ void pal_pri(PlayerState* state) {
  * 0  - Success
  * -1 - Too many tiles in sequence.
  */
-sByte attr_chr(PlayerState* state) {
+static sByte attr_chr(PlayerState* state) {
     byte startX = state->SGBState.Buffer[1] & 0x1F;
     byte startY = state->SGBState.Buffer[2] & 0x1F;
 
@@ -280,7 +280,7 @@ sByte attr_chr(PlayerState* state) {
  * One of the sections is a line one sprite wide/high.
  * @param state Program state including supergameboy request data.
  */
-void attr_div(PlayerState* state) {
+static void attr_div(PlayerState* state) {
     // Gonna assume if you have an attr_div, it overwrites whatever else you had.
     enum { Vertical, Horizontal } axis = (state->SGBState.Buffer[1] & 0x40) >> 6;
     byte linePaletteId = (state->SGBState.Buffer[1] & 0x30) >> 4;
@@ -310,7 +310,7 @@ void attr_div(PlayerState* state) {
  * Sets palettes to vertical or horizontal lines of tiles.
  * @param state Program state including supergameboy request data.
  */
-void attr_lin(PlayerState* state) {
+static void attr_lin(PlayerState* state) {
     byte lineCount = state->SGBState.Buffer[1];
 
     enum { Vertical, Horizontal } axis = 0;
@@ -342,7 +342,7 @@ void attr_lin(PlayerState* state) {
  ** 0  - Success
  ** -1 - Invalid number of blocks.
  */
-sByte attr_blk(PlayerState* state) {
+static sByte attr_blk(PlayerState* state) {
     byte blockCount = state->SGBState.Buffer[1] & 0x1F;
 
     if (blockCount > 0x12) {
@@ -516,7 +516,7 @@ static void pushBit(SuperGameboyState* state) {
  * Gets SuperGameboy system ready to accept data again.
  * @param state The state to reset.
  */
-void resetSGBTransfer(SuperGameboyState* state) {
+static void resetSGBTransfer(SuperGameboyState* state) {
     state->BitBuffer = 0;
     state->BitPointer = 0;
     state->AwaitingStopBit = false;

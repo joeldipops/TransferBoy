@@ -105,7 +105,7 @@ struct __attribute__((__packed__)) OAMentry {
     u8 flags;
 };
 
-u16 palette_get_col(u8 *palettedata, u8 palidx, u8 colidx) {
+static u16 palette_get_col(u8 *palettedata, u8 palidx, u8 colidx) {
     u8 idx = palidx * 8 + colidx * 2;
     return palettedata[idx] | (palettedata[idx + 1] << 8);
 }

@@ -20,7 +20,7 @@ struct rominfo {
 };
 
 
-int rom_get_info(u8 *rom, size_t rom_size, struct rominfo *ret_rominfo) {
+static int rom_get_info(u8 *rom, size_t rom_size, struct rominfo *ret_rominfo) {
     // Cart info from header
     if (
         ROMHDR_CARTTYPE >= rom_size ||

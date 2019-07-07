@@ -62,7 +62,7 @@ static void showMainMenu(PlayerState* playerState) {
  * @param true to select a button with a lower id, false otherwise.
  * @return The next available button.
  */
-N64Button selectNextButton(const N64Button currentButton, const bool isMovingLeft) {
+static N64Button selectNextButton(const N64Button currentButton, const bool isMovingLeft) {
     byte result = (byte) currentButton;
     byte max = N64_BUTTON_COUNT - 1;
 
