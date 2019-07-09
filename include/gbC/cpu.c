@@ -92,7 +92,8 @@ void cpu_reset_state(GbState *s) {
     s->sp = 0xFFFE;
     s->pc = 0x0100;
 
-    if (s->gb_type == GB_TYPE_CGB) {
+    // Use GBC mode if compatible.
+    if (s->Cartridge->IsGbcSupported) {
         s->reg16.AF = 0x1180;
         s->reg16.BC = 0x0000;
         s->reg16.DE = 0xff56;
@@ -174,12 +175,6 @@ void cpu_reset_state(GbState *s) {
     s->mem_mbc1_rombankupper = 0;
     s->mem_mbc1_romram_select = 0;
     s->mem_mbc3_extram_rtc_select = 0;
-
-    memset(s->mem_WRAM, 0, s->mem_num_banks_wram * WRAM_BANKSIZE);
-    memset(s->mem_EXTRAM, 0, s->mem_num_banks_extram * EXTRAM_BANKSIZE);
-    memset(s->mem_VRAM, 0, s->mem_num_banks_vram * VRAM_BANKSIZE);
-    memset(s->mem_OAM, 0, 0xa0);
-    memset(s->mem_HRAM, 0, 0x7f);
 
     s->mem_latch_rtc = 0x01;
     memset(s->mem_RTC, 0, 0x05);

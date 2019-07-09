@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "../../core.h"
+#include "../../tpakio.h"
 
 typedef uint8_t  u8;
 typedef uint16_t u16;
@@ -99,6 +100,8 @@ enum gb_type {
     GB_TYPE_CGB,
 };
 
+#define BIOS_SIZE 0x100
+
 typedef struct {
     /*
      * CPU state (registers, interrupts, etc)
@@ -151,23 +154,33 @@ typedef struct {
 
     u16 sp;
     u16 pc;
+    
+    // Tracks All ROM & SRAM banks
+    GameBoyCartridge* Cartridge;
 
-    // If used, mapped from $0000 of ROM space.
-    u8 *mem_BIOS;        
+    // Optionally can be mapped from $0000 of ROM space.
+    byte BIOS[BIOS_SIZE];
 
-    // Memory space
-    // $0000 - $7fff: Between 16K and 4M (banked)
-    u8 *mem_ROM;
     // $8000 - $9fff: Video RAM, 8K non-CGB, 16K CGB (banked)
-    u8 *mem_VRAM; 
-    // $a000 - $bfff: External (cartridge) RAM, optional, max 32K (banked)
-    u8 *mem_EXTRAM; 
+    byte* VramBanks; 
     // $c000 - $dfff: Internal RAM (WRAM), 8K non-CGB, 32K CGB (banked)
-    u8 *mem_WRAM; 
+    byte* WramBanks; 
 
-    // $e000 -fdff: unused
+
+    union {
+        byte Memory[0xE000];
+        struct {
+            byte ROM0[0x4000];
+            byte ROMX[0x4000];
+            byte VRAM[0x2000];
+            byte SRAM[0x2000];
+            byte WRAM0[0x1000];
+            byte WRAMX[0x1000];
+        };
+    };
+
     // $fe00 - fe9f: Sprite/Object attributes
-    u8 mem_OAM[0xa0]; 
+    byte OAM[0xA0];
 
     // fea0 - feff: unused
 
@@ -598,10 +611,10 @@ typedef struct {
 
 
     // memory bank controller supporting vars
-    int mem_bank_rom, mem_num_banks_rom;
-    int mem_num_banks_wram;
+    int mem_bank_rom;
+    byte WramBankCount;
     int mem_bank_extram, mem_num_banks_extram;
-    int mem_num_banks_vram;
+    byte VramBankCount;
     // MBC1 - Upper bits ROM bank (if selected).
     u8 mem_mbc1_rombankupper; 
     // MBC1 - EXT_RAM bank (if selected).
@@ -615,14 +628,11 @@ typedef struct {
     u8 mem_latch_rtc;
     u8 mem_RTC[0x0c]; 
 
-
     // Cartridge hardware metadata
-    enum gb_type gb_type;
-    int mbc;
-    bool has_extram;
-    bool has_battery;
-    bool has_rtc;
-
+    byte mbc;
+    bool hasSram;
+    bool hasBattery;
+    bool hasRtc;
 
     // Internal emulator state
     struct emu_state *emu_state;

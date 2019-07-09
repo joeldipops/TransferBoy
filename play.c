@@ -39,7 +39,7 @@ static sByte loadBios(GbState* state) {
     if (biosSize > 0) {
         biosFile = malloc(biosSize);
         dfs_read(biosFile, 1, biosSize, filePointer);
-        state_add_bios(state, biosFile, biosSize);
+        applyBios(state, biosFile);
     } else {
         result = -2;
     }
@@ -57,15 +57,14 @@ static sByte loadBios(GbState* state) {
  * @param romData ROM loaded from cartridge.
  * @param saveData Save file RAM loaded from cartridge.
  */
-static void initialiseEmulator(GbState* state, const ByteArray* romData, const ByteArray* saveData) {
+static void initialiseEmulator(GbState* state, GameBoyCartridge* cartridge) {
     memset(state, 0, sizeof(GbState));
 
-    state_new_from_rom(state, romData->Data, romData->Size);
+    loadCartridge(state, cartridge);
     cpu_reset_state(state);
 
     loadBios(state);
 
-    state_load_extram(state, saveData->Data, saveData->Size);
     emu_init(state);
     cpu_init_emu_cpu_state(state);
     lcd_init(state);
@@ -76,7 +75,7 @@ static void initialiseEmulator(GbState* state, const ByteArray* romData, const B
  * @param state The player to reset.
  */
 void resetPlayState(PlayerState* state) {
-    initialiseEmulator(&state->EmulationState, &state->Cartridge.Rom, &state->Cartridge.Ram);
+    initialiseEmulator(&state->EmulationState, &state->Cartridge);
     state->BuffersInitialised = 0;
     state->Meta.FrameCount = 0;
     resetSGBState(&state->SGBState);
@@ -308,7 +307,7 @@ void playLogic(RootState* state, const byte playerNumber) {
             
             memcpy(
                 state->Players[playerNumber].Cartridge.Ram.Data,
-                emulatorState->mem_EXTRAM,
+                emulatorState->SRAM,
                 state->Players[playerNumber].Cartridge.Ram.Size
             );
             sByte result = exportCartridgeRam(playerNumber, &state->Players[playerNumber].Cartridge);

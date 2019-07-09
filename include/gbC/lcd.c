@@ -151,7 +151,7 @@ static void lcd_render_current_line(PlayerState* state) {
 
     Pixel pixels[GB_LCD_WIDTH] = {0};
 
-    u8 use_col = gb_state->gb_type == GB_TYPE_CGB;
+    u8 use_col = gb_state->Cartridge->IsGbcSupported;
 
     u8 winmap_high       = (gb_state->LcdControl & (1<<6)) ? 1 : 0;
     u8 win_enable        = (gb_state->LcdControl & (1<<5)) ? 1 : 0;
@@ -162,8 +162,9 @@ static void lcd_render_current_line(PlayerState* state) {
     u8 bg_enable         = (gb_state->LcdControl & (1<<0)) ? 1 : 0;
     u8 bgwin_tilemap_unsigned = bgwin_tilemap_low;
 
-    if (use_col)
+    if (use_col) {
         bg_enable = 1;
+    }
 
     u16 bgwin_tilemap_addr = bgwin_tilemap_low ? 0x8000 : 0x9000;
     u16 bgmap_addr = bgmap_high ? 0x9c00 : 0x9800;
@@ -171,10 +172,10 @@ static void lcd_render_current_line(PlayerState* state) {
     u16 obj_tiledata_addr = 0x8000;
     u16 vram_addr = 0x8000;
 
-    u8 *bgwin_tiledata = &gb_state->mem_VRAM[bgwin_tilemap_addr - vram_addr];
-    u8 *obj_tiledata = &gb_state->mem_VRAM[obj_tiledata_addr - vram_addr];
-    u8 *bgmap = &gb_state->mem_VRAM[bgmap_addr - vram_addr];
-    u8 *winmap = &gb_state->mem_VRAM[winmap_addr - vram_addr];
+    u8 *bgwin_tiledata = &gb_state->VramBanks[bgwin_tilemap_addr - vram_addr];
+    u8 *obj_tiledata = &gb_state->VramBanks[obj_tiledata_addr - vram_addr];
+    u8 *bgmap = &gb_state->VramBanks[bgmap_addr - vram_addr];
+    u8 *winmap = &gb_state->VramBanks[winmap_addr - vram_addr];
 
     u8 bg_scroll_x = gb_state->BackgroundScrollX;
     u8 bg_scroll_y = gb_state->BackgroundScrollY;
@@ -189,7 +190,7 @@ static void lcd_render_current_line(PlayerState* state) {
 
     /* OAM scan - gather (max 10) objects on this line in cache */
     /* TODO: sort the objs so those with smaller x coord have higher prio */
-    struct OAMentry *OAM = (struct OAMentry*)&gb_state->mem_OAM[0];
+    struct OAMentry *OAM = (struct OAMentry*)&gb_state->OAM[0];
     struct OAMentry objs[10];
     int num_objs = 0;
     if (obj_enable)

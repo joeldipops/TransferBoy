@@ -129,7 +129,7 @@ static void writeDmaSource(GbState* s, byte offset, byte value) {
     // is accessible) but it's okay to be instantaneous. Normally
     // roms loop for ~200 cycles or so to wait.  
     for (unsigned i = 0; i < OAM_SIZE; i++) {
-        s->mem_OAM[i] = mmu_read(s, (value << 8) + i);
+        s->OAM[i] = mmu_read(s, (value << 8) + i);
     }
 }
 
@@ -163,7 +163,7 @@ static void writeGbcRamBankSelect(GbState* s, byte offset, byte value) {
     if (value == 0) {
         value = 1;
     }
-    value &= s->mem_num_banks_wram - 1;
+    value &= s->WramBankCount - 1;
     s->GbcRamBankSelectRegister = value;  
 }
 
@@ -314,7 +314,7 @@ static void writeRom67(GbState* s, u16 location, byte value) {
     //0x6000 - 0x7FFF: More switchable ROM
     if (s->mbc == 1) {      
         s->mem_mbc1_romram_select = value & 0x1;
-    } else if (s->has_rtc) { // MBC3 only
+    } else if (s->hasRtc) { // MBC3 only
         if (s->mem_latch_rtc == 0x01 && value == 0x01) {
         // TODO... actually latch something?
             s->mem_latch_rtc = s->mem_latch_rtc;
@@ -331,23 +331,23 @@ static void writeRom67(GbState* s, u16 location, byte value) {
 static void writeVram(GbState* s, u16 location, byte value) {
     // 0x8000 - 0x9FFF: VRAM
     //logAndPauseFrame(0, "write vram %04x", location);
-    s->mem_VRAM[s->GbcVramBank * VRAM_BANKSIZE + location - 0x8000] = value;
+    s->VramBanks[s->GbcVramBank * VRAM_BANKSIZE + location - 0x8000] = value;    
 }
 
 static void writeSram(GbState* s, u16 location, byte value) {
     // 0xA000 -0xBFFF: Cartridge RAM
     if (s->mbc == 1) {
-        if (!s->has_extram) {
+        if (!s->hasSram) {
             return;
         } else if (s->mem_mbc1_romram_select == 1) { // RAM mode
-            s->mem_EXTRAM[s->mem_mbc1_extrambank * EXTRAM_BANKSIZE + location - 0xa000] = value;
+            s->Cartridge->Ram.Data[s->mem_mbc1_extrambank * EXTRAM_BANKSIZE + location - 0xa000] = value;
         } else { // ROM mode - we can only use bank 0
-            s->mem_EXTRAM[location - 0xa000] = value;
+            s->Cartridge->Ram.Data[location - 0xa000] = value;
         }
         s->emu_state->extram_dirty = 1;
     } else if (s->mbc == 3) {
         if (s->mem_mbc3_extram_rtc_select < 0x04) {
-            s->mem_EXTRAM[s->mem_mbc3_extram_rtc_select * EXTRAM_BANKSIZE + location - 0xa000] = value;
+            s->Cartridge->Ram.Data[s->mem_mbc3_extram_rtc_select * EXTRAM_BANKSIZE + location - 0xa000] = value;
             s->emu_state->extram_dirty = 1;
         } else if (s->mem_mbc3_extram_rtc_select >= 0x08 && s->mem_mbc3_extram_rtc_select <= 0x0c) {
             s->mem_RTC[s->mem_mbc3_extram_rtc_select] = value;
@@ -355,10 +355,10 @@ static void writeSram(GbState* s, u16 location, byte value) {
             mmu_error("Writing to extram/rtc with invalid selection (%d) @%x, val=%x", s->mem_mbc3_extram_rtc_select, location, value);
         }
     } else if (s->mbc == 5) {
-        if (!s->has_extram) {
+        if (!s->hasSram) {
             return;
         }
-        s->mem_EXTRAM[s->mem_mbc5_extrambank * EXTRAM_BANKSIZE + location - 0xa000] = value;
+        s->Cartridge->Ram.Data[s->mem_mbc5_extrambank * EXTRAM_BANKSIZE + location - 0xa000] = value;
         s->emu_state->extram_dirty = 1;
     } else {
         mmu_error("Area not implemented for this MBC (mbc=%d, loc=%.4x, val=%x)\n", s->mbc, location, value);
@@ -368,12 +368,12 @@ static void writeSram(GbState* s, u16 location, byte value) {
 
 static void writeWramC(GbState* s, u16 location, byte value) {
     // 0xC000 - 0xCFFF: Fixed RAM
-    s->mem_WRAM[location - 0xc000] = value;
+    s->WramBanks[location - 0xc000] = value;
 }
 
 static void writeWramD(GbState* s, u16 location, byte value) {
     // 0xD000 - 0xDFFF: Switchable RAM
-    s->mem_WRAM[s->GbcRamBankSelectRegister * WRAM_BANKSIZE + location - 0xd000] = value; 
+    s->WramBanks[s->GbcRamBankSelectRegister * WRAM_BANKSIZE + location - 0xd000] = value; 
 }
 
 static void writeEcho(GbState* s, u16 location, byte value) {
@@ -384,7 +384,7 @@ static void writeEcho(GbState* s, u16 location, byte value) {
 static void writeOam(GbState* s, u16 location, byte value) {
     if (location <= 0xFE9F) {
         // FE00 - FE9F: OAM RAM - Sprite Attribute Table
-        s->mem_OAM[location - 0xfe00] = value;
+        s->OAM[location - 0xfe00] = value;
     }
 }
 
@@ -423,40 +423,45 @@ static byte readHigh(GbState* s, u16 location) {
 }
 
 static byte readRom0(GbState* s, u16 location) {
+    //return Memory[location];
     if (s->in_bios && location < 0x01) {
-        return s->mem_BIOS[location];
+        return s->BIOS[location];
     } else {
-        return s->mem_ROM[location];
+        return s->Cartridge->Rom.Data[location];
     }
 }
 
 static byte readRomX(GbState* s, u16 location) {
+    //return Memory[location];
     u8 bank = s->mem_bank_rom;
     if (s->mbc == 1 && s->mem_mbc1_romram_select == 0) {
         bank |= s->mem_mbc1_rombankupper << 5;
     }
 
-    bank &= s->mem_num_banks_rom - 1;
-    return s->mem_ROM[bank * 0x4000 + (location - 0x4000)];
-}
+    bank &= s->Cartridge->RomBankCount - 1;
+    return s->Cartridge->Rom.Data[bank * 0x4000 + (location - 0x4000)];
+}   
 
 static byte readVram(GbState* s, u16 location) {
-    return s->mem_VRAM[s->GbcVramBank * VRAM_BANKSIZE + location - 0x8000];
+    //return Memory[location];
+    return s->VramBanks[s->GbcVramBank * VRAM_BANKSIZE + location - 0x8000];
 }
 
 static byte readSram(GbState* s, u16 location) {
+    // May need RTC stuff
+    //return Memory[location];
     if (s->mbc == 1) {
-        if (!s->has_extram) {
+        if (!s->hasSram) {
             return 0xff;
         } else if (s->mem_mbc1_romram_select == 1) { // RAM mode
-            return s->mem_EXTRAM[s->mem_mbc1_extrambank * EXTRAM_BANKSIZE + location - 0xa000];
+            return s->Cartridge->Ram.Data[s->mem_mbc1_extrambank * EXTRAM_BANKSIZE + location - 0xa000];
         } else {
             // ROM mode - we can only be bank 0
-            return s->mem_EXTRAM[location - 0xa000];
+            return s->Cartridge->Ram.Data[location - 0xa000];
         }
     } else if (s->mbc == 3) {
         if (s->mem_mbc3_extram_rtc_select < 0x04) {
-            return s->mem_EXTRAM[s->mem_mbc3_extram_rtc_select * EXTRAM_BANKSIZE + location - 0xa000];
+            return s->Cartridge->Ram.Data[s->mem_mbc3_extram_rtc_select * EXTRAM_BANKSIZE + location - 0xa000];
         } else if (s->mem_mbc3_extram_rtc_select >= 0x08 && s->mem_mbc3_extram_rtc_select <= 0x0c) {
             return s->mem_RTC[s->mem_mbc3_extram_rtc_select];
         } else {
@@ -464,10 +469,10 @@ static byte readSram(GbState* s, u16 location) {
             return 0x00;
         }
     } else if (s->mbc == 5) {
-        if (!s->has_extram) {
+        if (!s->hasSram) {
             return 0xff;
         } else {
-            return s->mem_EXTRAM[s->mem_mbc5_extrambank * EXTRAM_BANKSIZE + location - 0xa000];
+            return s->Cartridge->Ram.Data[s->mem_mbc5_extrambank * EXTRAM_BANKSIZE + location - 0xa000];
         }
     } else {
         // unimplemented.
@@ -476,10 +481,11 @@ static byte readSram(GbState* s, u16 location) {
 }
 
 static byte readWram(GbState* s, u16 location) {
+    //return Memory[location];
     if (location < 0xD000) {
-        return s->mem_WRAM[location - 0xc000];
+        return s->WramBanks[location - 0xc000];
     } else {
-        return s->mem_WRAM[s->GbcRamBankSelectRegister * WRAM_BANKSIZE + location - 0xd000];
+        return s->WramBanks[s->GbcRamBankSelectRegister * WRAM_BANKSIZE + location - 0xd000];
     }
 }
 
@@ -489,7 +495,7 @@ static byte readEcho(GbState* s, u16 location) {
  
 static byte readOAM(GbState* s, u16 location) {
     if (location <= 0xFE9F) {
-        return s->mem_OAM[location - 0xfe00];
+        return s->OAM[location - 0xfe00];
     } else {
         return 0;
     }
