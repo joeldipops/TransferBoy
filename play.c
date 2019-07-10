@@ -8,10 +8,14 @@
 #include "play.h"
 #include "controller.h"
 #include "screen.h"
-#include "include/gbc_bundle.h"
 #include "link.h"
 #include "sound.h"
 #include "superGameboy.h"
+#include "gbc_state.h"
+#include "cpu.h"
+#include "emu.h"
+#include "lcd.h"
+#include "hwdefs.h"
 
 #include <libdragon.h>
 

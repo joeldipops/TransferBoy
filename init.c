@@ -10,7 +10,6 @@
 #include "logger.h"
 #include "text.h"
 #include <libdragon.h>
-#include "include/gbc_bundle.h"
 
 /**
  * Gets screen and state ready for Playing GB software.

@@ -10,6 +10,7 @@
 #include "state.h"
 #include "screen.h"
 #include "resources.h"
+#include "hwdefs.h"
 #include <time.h>
 #include <string.h>
 #include <stdlib.h>

@@ -9,8 +9,6 @@
 #include "eeprom.h"
 #include <libdragon.h>
 
-#include "include/gbc_bundle.h"
-
 const byte VERTICAL_MARGIN = 30;
 const byte HORIZONTAL_MARGIN = 30;
 

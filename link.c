@@ -2,7 +2,6 @@
 
 #include <string.h>
 #include "state.h"
-#include "include/gbc_bundle.h"
 #include "logger.h"
 
 // bit 3 - 0000 1000

@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "../../core.h"
+#include "core.h"
 
 typedef uint8_t  u8;
 typedef uint16_t u16;
@@ -44,6 +44,22 @@ struct emu_cpu_state {
     u16 *reg16_lut[4];
     u16 *reg16s_lut[4];
 };
+
+struct player_input {
+    bool button_left;
+    bool button_right;
+    bool button_up;
+    bool button_down;
+    bool button_a;
+    bool button_b;
+    bool button_start;
+    bool button_select;
+
+    bool special_quit;
+    bool special_savestate;
+    bool special_dbgbreak;
+};
+
 
 #define WAVEDATA_LENGTH 16
 

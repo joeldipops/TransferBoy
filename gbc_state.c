@@ -5,7 +5,7 @@
 
 #include "state.h"
 #include "hwdefs.h"
-#include "../../logger.h"
+#include "logger.h"
 
 struct rominfo {
     enum gb_type gb_type;

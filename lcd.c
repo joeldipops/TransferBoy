@@ -1,10 +1,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../../core.h"
-#include "../../state.h"
-#include "../../config.h"
-#include "../../logger.h"
+#include "core.h"
+#include "state.h"
+#include "config.h"
+#include "logger.h"
 #include "lcd.h"
 #include "hwdefs.h"
 
