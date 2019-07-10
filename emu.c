@@ -5,11 +5,11 @@
 #include "types.h"
 #include "hwdefs.h"
 #include "emu.h"
-#include "state.h"
+#include "gbc_state.h"
 #include "cpu.h"
 #include "mmu.h"
 #include "lcd.h"
-#include "../../state.h"
+#include "state.h"
 
 #define emu_error(fmt, ...) \
     do { \

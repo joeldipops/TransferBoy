@@ -1,10 +1,9 @@
-#include "../../core.h"
+#include "core.h"
 #include "types.h"
 #include "mmu.h"
 #include "cpu.h"
 #include "gbz80ops.h"
-
-#include "../../logger.h"
+#include "logger.h"
 
 #define CF s->flags.CF
 #define HF s->flags.HF

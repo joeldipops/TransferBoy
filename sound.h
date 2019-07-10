@@ -2,7 +2,7 @@
 #define SOUND_INCLUDED
 
 #include "core.h"
-#include "include/gbc_bundle.h"
+#include "types.h"
 
 typedef natural Frequency;
 

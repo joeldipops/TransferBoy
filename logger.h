@@ -1,7 +1,7 @@
 #ifndef LOGGER_INCLUDED
 #define LOGGER_INCLUDED
 #include "core.h"
-#include "include/gbc_bundle.h"
+#include "types.h"
 
 /**
  * Displays the current state of the Gameboy emulator registers.

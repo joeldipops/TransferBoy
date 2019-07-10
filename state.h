@@ -5,7 +5,7 @@
 #include "sgbDefs.h"
 #include "controller.h"
 #include "tpakio.h"
-#include "include/gbC/types.h"
+#include "types.h"
 
 #define MAX_PLAYERS 2
 

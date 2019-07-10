@@ -1,7 +1,7 @@
 #ifndef GBZ80OPS_INCLUDED
 #define GBZ80OPS_INCLUDED
 
-#include "../../core.h"
+#include "core.h"
 #include "types.h"
 
 void rlcR8(GbState* state, byte op);

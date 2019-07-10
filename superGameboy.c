@@ -3,6 +3,7 @@
 #include "state.h"
 #include "logger.h"
 #include "screen.h"
+#include "hwdefs.h"
 
 static const byte SGB_PACKET_LENGTH = 16;
 static const byte HORIZONTAL_TILES = 20;

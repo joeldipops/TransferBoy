@@ -3,7 +3,6 @@
 
 #include "core.h"
 #include "state.h"
-#include "include/gbc_bundle.h"
 
 /**
  * Checks if gameboy serial control bytes are indicating there is data to send and receive.

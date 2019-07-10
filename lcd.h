@@ -1,7 +1,7 @@
 #ifndef LCD_H
 #define LCD_H
 
-#include "../../state.h"
+#include "state.h"
 #include "types.h"
 
 int lcd_init(GbState *s);

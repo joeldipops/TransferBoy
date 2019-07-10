@@ -5,7 +5,7 @@
 
 #include "state.h"
 #include "hwdefs.h"
-#include "../../logger.h"
+#include "logger.h"
 
 static sByte setInfo(GbState* s, GameBoyCartridge* cartridge) {
     // Cart info from header

@@ -2,8 +2,7 @@
 #define EMU_H
 
 #include "types.h"
-#include "../../state.h"
-#include "player_input.h"
+#include "state.h"
 
 /**
  * Initialize the emulator state of the gameboy. This state belongs to the
