@@ -65,7 +65,7 @@ static void mmu_hdma_start(GbState *s, u8 lenmode) {
     dst = (dst & 0x1fff) | 0x8000; /* Ignore upper 3 bits (always in VRAM) */
 
     printf("HDMA @%.2x:%.4x %.4x -> %.4x, blocks=%.2x mode_hblank=%d\n",
-            s->mem_bank_rom, s->pc,  src, dst, blocks, mode_hblank);
+            s->RomBankLower, s->pc,  src, dst, blocks, mode_hblank);
 
     if (s->io_hdma_running && !mode_hblank) {
         /* Cancel ongoing H-Blank HDMA transfer */
@@ -255,63 +255,89 @@ static void writeRom01(GbState* s, u16 location, byte value) {
     }
 }
 
+natural static inline getMbc1RomBank(const GbState* s) {
+    return (s->RomBankUpper << 5) | s->RomBankLower;
+}
+
+natural static inline getMbc5RomBank(const GbState* s) {
+    return (s->RomBankUpper << 8) | s->RomBankLower;
+}
+
+/**
+ * 2000 - 3FFF: ROM bank switch
+ * Sets the lower part of the ROM bank number (in most cases) and then copies the bank in to ROMX.
+ */
 static void writeRom23(GbState* s, u16 location, byte value) {
-    // 2000 - 3FFF: Switchable ROM bank
+    natural bank = 0;
+
     if (value == 0 && s->mbc != 5) {
         value = 1;
     }
 
     if (s->mbc == 0) {
-        ; //mmu_assert(value == 1);
+        return;
     } else if (s->mbc == 1) {
-        value &= 0x1f;
+        s->RomBankLower = value & 0x1f;
+        bank = getMbc1RomBank(s);
     } else if (s->mbc == 3) {
-        value &= 0x7f;
+        s->RomBankLower = value & 0x7f;
+        bank = s->RomBankLower;
     } else if (s->mbc == 5) {
         // MBC5 splits up this area into 2000-2fff for low bits rom bank,
         // and 3000-3fff for the high bit.
         if (location < 0x3000) { // lower 8 bit
-            s->mem_bank_rom = (s->mem_bank_rom & (1<<8)) | value;
+            s->RomBankLower = value;
         } else { // Upper bit
-            s->mem_bank_rom = (s->mem_bank_rom & 0xff) | ((value & 1) << 8);    
+            s->RomBankUpper = value & 1;    
         }
+        bank = getMbc5RomBank(s);
     } else {
-        mmu_error("Area not implemented for this MBC (mbc=%d, loc=%.4x, val=%x)\n", s->mbc, location, value);
+        // return ERROR_MBC_NOT_IMPLEMENTED;
+        return; 
     }
 
-    s->mem_bank_rom = value;
+    memcpy(s->ROMX, s->Cartridge->Rom.Data + (bank * ROM_BANK_SIZE), ROM_BANK_SIZE);
 }
 
+/**
+ * 0x4000 - 0x5FFF: ROM/RAM bank switch
+ * Sets the RAM bank number or  the upper part of the ROM bank number depending on the mbc type and current state.
+ */
 static void writeRom45(GbState* s, u16 location, byte value) {
-    // 0x4000 - 0x5FFF: More switchable ROM
+    byte oldBankNumber = s->SRamBankNumber;
     if (s->mbc == 1) {
         if (s->mem_mbc1_romram_select == 0) { // ROM mode
-            s->mem_mbc1_rombankupper = value & 3;
+            s->RomBankUpper = value & 3;
+            memcpy(s->ROMX, s->Cartridge->Rom.Data + (getMbc1RomBank(s) * ROM_BANK_SIZE), ROM_BANK_SIZE);
+            return;
         } else {
-            s->mem_mbc1_extrambank = value & 3;
-            if (s->mem_num_banks_extram == 1) {
-                s->mem_mbc1_extrambank &= 1;
+            s->SRamBankNumber = value & 3;
+            if (s->Cartridge->RamBankCount == 1) {
+                s->SRamBankNumber &= 1;
             }
         }
     } else if (s->mbc == 3) {
-        if (value < 8) {
-            ; //mmu_assert(value < s->mem_num_banks_extram);
-        } else {
-            ; //mmu_assert(value <= 0xc); // RTC is at 08-0C
-            ; //mmu_assert(s->has_rtc);
-        }
-
         s->mem_mbc3_extram_rtc_select = value;
     } else if (s->mbc == 5) {
-        s->mem_mbc5_extrambank = value & 0xf;
-        s->mem_mbc5_extrambank &= s->mem_num_banks_extram - 1;
+        s->SRamBankNumber = value & 0xf;
+        s->SRamBankNumber &= s->Cartridge->RamBankCount - 1;
     } else {
-        mmu_error("Area not implemented for this MBC (mbc=%d, loc=%.4x, val=%x)\n", s->mbc, location, value);
+        //return ERROR_MBC_NOT_IMPLEMENTED;
+        return;
     }
+
+    // Swap out previous bank.
+    memcpy(s->Cartridge->Ram.Data + oldBankNumber * SRAM_BANK_SIZE, s->SRAM, SRAM_BANK_SIZE);
+
+    // Swap in new RAM bank.
+    memcpy(s->SRAM, s->Cartridge->Ram.Data + s->SRamBankNumber * SRAM_BANK_SIZE, SRAM_BANK_SIZE);
 }
 
+/**
+ * 0x6000 - 0x7FFF: Mainly Real-Time-Clock stuff
+ */
 static void writeRom67(GbState* s, u16 location, byte value) {
-    //0x6000 - 0x7FFF: More switchable ROM
+    
     if (s->mbc == 1) {      
         s->mem_mbc1_romram_select = value & 0x1;
     } else if (s->hasRtc) { // MBC3 only
@@ -331,38 +357,21 @@ static void writeRom67(GbState* s, u16 location, byte value) {
 static void writeVram(GbState* s, u16 location, byte value) {
     // 0x8000 - 0x9FFF: VRAM
     //logAndPauseFrame(0, "write vram %04x", location);
-    s->VramBanks[s->GbcVramBank * VRAM_BANKSIZE + location - 0x8000] = value;    
+    s->VramBanks[s->GbcVramBank * VRAM_BANK_SIZE + location - 0x8000] = value;    
 }
 
 static void writeSram(GbState* s, u16 location, byte value) {
     // 0xA000 -0xBFFF: Cartridge RAM
-    if (s->mbc == 1) {
-        if (!s->hasSram) {
-            return;
-        } else if (s->mem_mbc1_romram_select == 1) { // RAM mode
-            s->Cartridge->Ram.Data[s->mem_mbc1_extrambank * EXTRAM_BANKSIZE + location - 0xa000] = value;
-        } else { // ROM mode - we can only use bank 0
-            s->Cartridge->Ram.Data[location - 0xa000] = value;
-        }
-        s->emu_state->extram_dirty = 1;
-    } else if (s->mbc == 3) {
-        if (s->mem_mbc3_extram_rtc_select < 0x04) {
-            s->Cartridge->Ram.Data[s->mem_mbc3_extram_rtc_select * EXTRAM_BANKSIZE + location - 0xa000] = value;
-            s->emu_state->extram_dirty = 1;
-        } else if (s->mem_mbc3_extram_rtc_select >= 0x08 && s->mem_mbc3_extram_rtc_select <= 0x0c) {
-            s->mem_RTC[s->mem_mbc3_extram_rtc_select] = value;
-        } else {
-            mmu_error("Writing to extram/rtc with invalid selection (%d) @%x, val=%x", s->mem_mbc3_extram_rtc_select, location, value);
-        }
-    } else if (s->mbc == 5) {
-        if (!s->hasSram) {
-            return;
-        }
-        s->Cartridge->Ram.Data[s->mem_mbc5_extrambank * EXTRAM_BANKSIZE + location - 0xa000] = value;
-        s->emu_state->extram_dirty = 1;
-    } else {
-        mmu_error("Area not implemented for this MBC (mbc=%d, loc=%.4x, val=%x)\n", s->mbc, location, value);
+    if (!s->hasSram) {
         return;
+    } else if (s->mbc == 3 && s->mem_mbc3_extram_rtc_select >= 0x04) {
+        if (s->mem_mbc3_extram_rtc_select >= 0x08 && s->mem_mbc3_extram_rtc_select <= 0x0c) {
+            s->mem_RTC[s->mem_mbc3_extram_rtc_select] = value;
+        }
+        // else { doesn't do anything. }
+    } else {
+        s->SRAM[location - 0xA000] = value;
+        s->emu_state->extram_dirty = 1;        
     }
 }
 
@@ -373,7 +382,7 @@ static void writeWramC(GbState* s, u16 location, byte value) {
 
 static void writeWramD(GbState* s, u16 location, byte value) {
     // 0xD000 - 0xDFFF: Switchable RAM
-    s->WramBanks[s->GbcRamBankSelectRegister * WRAM_BANKSIZE + location - 0xd000] = value; 
+    s->WramBanks[s->GbcRamBankSelectRegister * WRAM_BANK_SIZE + location - 0xd000] = value; 
 }
 
 static void writeEcho(GbState* s, u16 location, byte value) {
@@ -427,56 +436,29 @@ static byte readRom0(GbState* s, u16 location) {
     if (s->in_bios && location < 0x01) {
         return s->BIOS[location];
     } else {
-        return s->Cartridge->Rom.Data[location];
+        return s->ROM0[location];
     }
 }
 
 static byte readRomX(GbState* s, u16 location) {
-    //return Memory[location];
-    u8 bank = s->mem_bank_rom;
-    if (s->mbc == 1 && s->mem_mbc1_romram_select == 0) {
-        bank |= s->mem_mbc1_rombankupper << 5;
-    }
-
-    bank &= s->Cartridge->RomBankCount - 1;
-    return s->Cartridge->Rom.Data[bank * 0x4000 + (location - 0x4000)];
+    return s->Memory[location];
 }   
 
 static byte readVram(GbState* s, u16 location) {
     //return Memory[location];
-    return s->VramBanks[s->GbcVramBank * VRAM_BANKSIZE + location - 0x8000];
+    return s->VramBanks[s->GbcVramBank * VRAM_BANK_SIZE + location - 0x8000];
 }
 
 static byte readSram(GbState* s, u16 location) {
     // May need RTC stuff
-    //return Memory[location];
-    if (s->mbc == 1) {
-        if (!s->hasSram) {
-            return 0xff;
-        } else if (s->mem_mbc1_romram_select == 1) { // RAM mode
-            return s->Cartridge->Ram.Data[s->mem_mbc1_extrambank * EXTRAM_BANKSIZE + location - 0xa000];
-        } else {
-            // ROM mode - we can only be bank 0
-            return s->Cartridge->Ram.Data[location - 0xa000];
-        }
-    } else if (s->mbc == 3) {
-        if (s->mem_mbc3_extram_rtc_select < 0x04) {
-            return s->Cartridge->Ram.Data[s->mem_mbc3_extram_rtc_select * EXTRAM_BANKSIZE + location - 0xa000];
-        } else if (s->mem_mbc3_extram_rtc_select >= 0x08 && s->mem_mbc3_extram_rtc_select <= 0x0c) {
+    if (s->mbc == 3 && s->mem_mbc3_extram_rtc_select < 0x04) {
+        if (s->mem_mbc3_extram_rtc_select >= 0x08 && s->mem_mbc3_extram_rtc_select <= 0x0c) {
             return s->mem_RTC[s->mem_mbc3_extram_rtc_select];
         } else {
-            // invalid.
             return 0x00;
         }
-    } else if (s->mbc == 5) {
-        if (!s->hasSram) {
-            return 0xff;
-        } else {
-            return s->Cartridge->Ram.Data[s->mem_mbc5_extrambank * EXTRAM_BANKSIZE + location - 0xa000];
-        }
-    } else {
-        // unimplemented.
-        return 0;
+    } else {  
+        return s->Memory[location];
     }
 }
 
@@ -485,7 +467,7 @@ static byte readWram(GbState* s, u16 location) {
     if (location < 0xD000) {
         return s->WramBanks[location - 0xc000];
     } else {
-        return s->WramBanks[s->GbcRamBankSelectRegister * WRAM_BANKSIZE + location - 0xd000];
+        return s->WramBanks[s->GbcRamBankSelectRegister * WRAM_BANK_SIZE + location - 0xd000];
     }
 }
 

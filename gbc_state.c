@@ -7,7 +7,7 @@
 #include "hwdefs.h"
 #include "logger.h"
 
-static sByte setInfo(GbState* s, GameBoyCartridge* cartridge) {
+static sByte setInfo(GbState* s, const GameBoyCartridge* cartridge) {
     // Cart info from header
     if (cartridge->Rom.Size < 0x0150) {
         // Cartridge too small
@@ -66,8 +66,19 @@ sByte loadCartridge(GbState *s, GameBoyCartridge* cartridge) {
 
     s->Cartridge = cartridge;
 
-    s->VramBanks = calloc(s->VramBankCount, VRAM_BANKSIZE);
-    s->WramBanks = calloc(s->WramBankCount, WRAM_BANKSIZE);
+    // Initialise cartridge memory.
+    memcpy(s->ROM0, cartridge->Rom.Data, 0x4000);
+
+    if (cartridge->Rom.Size > 0x4000) {
+        memcpy(s->ROMX, cartridge->Rom.Data + 0x4000, 0x4000);
+    }
+    memset(s->SRAM, 0xFF, 0x2000);
+    if (s->hasSram) {
+        memcpy(s->SRAM, cartridge->Ram.Data, cartridge->Ram.Size < 0x2000 ? cartridge->Ram.Size : 0x2000);
+    }
+
+    s->VramBanks = calloc(s->VramBankCount, VRAM_BANK_SIZE);
+    s->WramBanks = calloc(s->WramBankCount, WRAM_BANK_SIZE);
 
     return 0;
 }
@@ -78,6 +89,7 @@ sByte loadCartridge(GbState *s, GameBoyCartridge* cartridge) {
  */
 sByte applyBios(GbState* s, byte* bios) {
     memcpy(s->BIOS, bios, BIOS_SIZE);
+    // TODO memcpy(s->ROM0, bios, BIOS_SIZE);
     s->in_bios = 1;
     s->pc = 0;
 

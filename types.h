@@ -627,12 +627,14 @@ typedef struct {
 
 
     // memory bank controller supporting vars
-    int mem_bank_rom;
+    byte RomBankLower;
+    byte RomBankUpper;    
+    byte SRamBankNumber; 
     byte WramBankCount;
     int mem_bank_extram, mem_num_banks_extram;
     byte VramBankCount;
     // MBC1 - Upper bits ROM bank (if selected).
-    u8 mem_mbc1_rombankupper; 
+    
     // MBC1 - EXT_RAM bank (if selected).
     u8 mem_mbc1_extrambank; 
     // MBC1 - Mode for above field (ROM/RAM).

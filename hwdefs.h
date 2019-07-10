@@ -28,10 +28,10 @@ static const unsigned ROMHDR_CARTTYPE   = 0x147;
 static const unsigned ROMHDR_ROMSIZE    = 0x148;
 static const unsigned ROMHDR_EXTRAMSIZE = 0x149;
 
-static const unsigned ROM_BANKSIZE      = 0x4000; /* 16K */
-static const unsigned WRAM_BANKSIZE     = 0x1000; /* 4K */
-static const unsigned VRAM_BANKSIZE     = 0x2000; /* 8K */
-static const unsigned EXTRAM_BANKSIZE   = 0x2000; /* 8K */
+static const unsigned ROM_BANK_SIZE      = 0x4000; /* 16K */
+static const unsigned WRAM_BANK_SIZE     = 0x1000; /* 4K */
+static const unsigned VRAM_BANK_SIZE     = 0x2000; /* 8K */
+static const unsigned SRAM_BANK_SIZE    = 0x2000; /* 8K */
 
 static const unsigned OAM_SIZE          = 0xa0;
 

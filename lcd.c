@@ -219,7 +219,7 @@ static void lcd_render_current_line(PlayerState* state) {
             int shift = 7 - obj_tileoff % 8;
             int tiledata_off = objs[i].tile * 16 + obj_tileoff/8*2;
             if (use_col && objs[i].flags & (1<<3))
-                tiledata_off += VRAM_BANKSIZE;
+                tiledata_off += VRAM_BANK_SIZE;
             u8 b1 = obj_tiledata[tiledata_off];
             u8 b2 = obj_tiledata[tiledata_off + 1];
             u8 colidx = ((b1 >> shift) & 1) |
@@ -309,7 +309,7 @@ static void lcd_render_current_line(PlayerState* state) {
 
             /* BG tile attrs are only available on CGB, and are at same location
              * as tile numbers but in bank 1 instead of 0. */
-            u8 attr = use_col ?  bgmap[bg_idx + VRAM_BANKSIZE] : 0;
+            u8 attr = use_col ?  bgmap[bg_idx + VRAM_BANK_SIZE] : 0;
             u8 vram_bank = (attr & (1<<3)) ? 1 : 0;
 
             /* We have packed 2-bit color indices here, so the bits look like:
@@ -322,7 +322,7 @@ static void lcd_render_current_line(PlayerState* state) {
             int shift = 7 - bg_tileoff % 8;
             int tiledata_off = tile_idx * 16 + bg_tileoff/8*2;
             if (vram_bank)
-                tiledata_off += VRAM_BANKSIZE;
+                tiledata_off += VRAM_BANK_SIZE;
             u8 b1 = bgwin_tiledata[tiledata_off];
             u8 b2 = bgwin_tiledata[tiledata_off + 1];
             u8 colidx = ((b1 >> shift) & 1) |

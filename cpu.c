@@ -166,13 +166,13 @@ void cpu_reset_state(GbState *s) {
     s->AudioChannel4Flags = 0xbf;
 
 
-    s->mem_bank_rom = 1;
+    s->RomBankUpper = 1;
     s->GbcRamBankSelectRegister = 1;
     s->mem_bank_extram = 0;
     s->GbcVramBank = 0;
 
     s->mem_mbc1_extrambank = 0;
-    s->mem_mbc1_rombankupper = 0;
+    s->RomBankUpper = 0;
     s->mem_mbc1_romram_select = 0;
     s->mem_mbc3_extram_rtc_select = 0;
 

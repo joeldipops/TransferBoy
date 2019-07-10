@@ -309,11 +309,9 @@ void playLogic(RootState* state, const byte playerNumber) {
         // Write save file back to the catridge if it has changed.
         if (emulatorState->emu_state->extram_dirty) {
             
-            memcpy(
-                state->Players[playerNumber].Cartridge.Ram.Data,
-                emulatorState->SRAM,
-                state->Players[playerNumber].Cartridge.Ram.Size
-            );
+            // Copy in whatever was in SRAM bank.
+            memcpy(emulatorState->Cartridge->Ram.Data + emulatorState->SRamBankNumber * SRAM_BANK_SIZE, emulatorState->SRAM, SRAM_BANK_SIZE);
+
             sByte result = exportCartridgeRam(playerNumber, &state->Players[playerNumber].Cartridge);
             if (result) {
                 logAndPause("saving to cartridge failed");
