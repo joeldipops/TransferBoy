@@ -93,10 +93,10 @@ typedef enum {
 /* State of the cpu part of the emulation, not of the hardware. */
 struct emu_cpu_state;
 
-enum gb_type {
-    GB_TYPE_GB,
-    GB_TYPE_CGB,
-};
+typedef enum {
+   ROM_SELECT = 0,
+   SRAM_SELECT = 1
+} BankSelectType;
 
 #define BIOS_SIZE 0x100
 
@@ -587,8 +587,8 @@ typedef struct {
     u16* LastBuffer;
     u16* NextBuffer;
 
-    bool extramDisabled; //Writing 0 to MBC 1 turns off access to external RAM 
-    bool extram_dirty; // Write battery-backed RAM periodically when dirty.
+    bool isSramDisabled; //Writing 0 to MBC 1 turns off access to external RAM 
+    bool isSramDirty; // Write battery-backed RAM periodically when dirty.
 
     // The duration of the last intruction. Normally just
     // the CPU executing the instruction, but the MMU could
@@ -628,16 +628,12 @@ typedef struct {
     byte RomBankUpper;    
     byte SRamBankNumber; 
     byte WramBankCount;
-    int mem_bank_extram, mem_num_banks_extram;
     byte VramBankCount;
     // MBC1 - Upper bits ROM bank (if selected).
     
-    // MBC1 - EXT_RAM bank (if selected).
-    u8 mem_mbc1_extrambank; 
     // MBC1 - Mode for above field (ROM/RAM).
-    u8 mem_mbc1_romram_select; 
+    BankSelectType RomRamSelect; 
     u8 mem_mbc3_extram_rtc_select;
-    u8 mem_mbc5_extrambank;
 
     // Real time clock, select by extram banks 0x08-0x0c
     u8 mem_latch_rtc;
@@ -649,8 +645,6 @@ typedef struct {
     bool hasBattery;
     bool hasRtc;
 
-    // Internal emulator state
-    struct emu_state *emu_state;
     struct emu_cpu_state *emu_cpu_state;
 } GbState;
 

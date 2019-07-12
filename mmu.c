@@ -233,9 +233,9 @@ static mmuReadHramOperation mmuReadHramTable[] = {
 static void writeRom01(GbState* s, u16 location, byte value) {
     // 0000 - 1FFF: Fixed ROM bank
     if (value == 0) {
-        s->extramDisabled = true;          
+        s->isSramDisabled = true;          
     } else if (value == 0x0A) {
-        s->extramDisabled = false;
+        s->isSramDisabled = false;
     }
 }
 
@@ -252,6 +252,10 @@ natural static inline getMbc5RomBank(const GbState* s) {
  * Sets the lower part of the ROM bank number (in most cases) and then copies the bank in to ROMX.
  */
 static void writeRom23(GbState* s, u16 location, byte value) {
+    if (s->mbc == 0) {
+        return;
+    }
+
     natural bank = 0;
 
     if (value == 0 && s->mbc != 5) {
@@ -290,11 +294,11 @@ static void writeRom23(GbState* s, u16 location, byte value) {
 static void writeRom45(GbState* s, u16 location, byte value) {
     byte oldBankNumber = s->SRamBankNumber;
     if (s->mbc == 1) {
-        if (s->mem_mbc1_romram_select == 0) { // ROM mode
+        if (s->RomRamSelect == ROM_SELECT) {
             s->RomBankUpper = value & 3;
             memcpy(s->ROMX, s->Cartridge->Rom.Data + (getMbc1RomBank(s) * ROM_BANK_SIZE), ROM_BANK_SIZE);
             return;
-        } else {
+        } else { // RAM_SELECT
             s->SRamBankNumber = value & 3;
             if (s->Cartridge->RamBankCount == 1) {
                 s->SRamBankNumber &= 1;
@@ -323,10 +327,10 @@ static void writeRom45(GbState* s, u16 location, byte value) {
 static void writeRom67(GbState* s, u16 location, byte value) {
     
     if (s->mbc == 1) {      
-        s->mem_mbc1_romram_select = value & 0x1;
+        s->RomRamSelect = value & 0x1;
     } else if (s->hasRtc) { // MBC3 only
         if (s->mem_latch_rtc == 0x01 && value == 0x01) {
-        // TODO... actually latch something?
+            // TODO... actually latch something?
             s->mem_latch_rtc = s->mem_latch_rtc;
         }
         s->mem_latch_rtc = value;
@@ -334,7 +338,8 @@ static void writeRom67(GbState* s, u16 location, byte value) {
         // Just ignore it - Pokemon Red writes here because it's coded for
         // MBC1, but actually has an MBC3, for instance
     } else {
-        mmu_error("Area not implemented for this MBC (mbc=%d, loc=%.4x, val=%x)\n", s->mbc, location, value);
+        //return ERROR_MBC_NOT_IMPLEMENTED;
+        return;
     }
 }
 
@@ -346,7 +351,7 @@ static void writeVram(GbState* s, u16 location, byte value) {
 
 static void writeSram(GbState* s, u16 location, byte value) {
     // 0xA000 -0xBFFF: Cartridge RAM
-    if (!s->hasSram || s->extramDisabled) {
+    if (!s->hasSram || s->isSramDisabled) {
         return;
     } else if (s->mbc == 3 && s->mem_mbc3_extram_rtc_select >= 0x04) {
         if (s->mem_mbc3_extram_rtc_select >= 0x08 && s->mem_mbc3_extram_rtc_select <= 0x0c) {
@@ -355,7 +360,7 @@ static void writeSram(GbState* s, u16 location, byte value) {
         // else { doesn't do anything. }
     } else {
         s->SRAM[location - 0xA000] = value;
-        s->extram_dirty = 1;        
+        s->isSramDirty = 1;        
     }
 }
 
@@ -429,7 +434,7 @@ static byte readVram(GbState* s, u16 location) {
 }
 
 static byte readSram(GbState* s, u16 location) {
-    if (s->extramDisabled) {
+    if (s->isSramDisabled || !s->hasSram) {
         return 0xff;
     }
 
@@ -488,6 +493,9 @@ static mmuReadOperation mmuReadTable[] = {
 };
 
 byte mmu_read(GbState* s, u16 location) {
+    //if (location < 0x8000) {
+      //  return s->Memory[location];
+    //}
     return mmuReadTable[location >> 8](s, location);
 }
 

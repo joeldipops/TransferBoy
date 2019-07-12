@@ -206,7 +206,7 @@ static void renderPixels(
 
         long diff = state->Meta.NextClock - state->Meta.LastClock;
 
-        sprintf(text, "Memory: %lld FPS: %f", getCurrentMemory(), ((FRAMES_TO_SKIP + 1) / (double)diff) * 1000);
+        sprintf(text, "Mem: %lld FPS: %f", getCurrentMemory(), ((FRAMES_TO_SKIP + 1) / (double)diff) * 1000);
         graphics_set_color(GLOBAL_TEXT_COLOUR, 0x0);
         graphics_draw_box(frame, 0, 450, 680, 10, GLOBAL_BACKGROUND_COLOUR);
         graphics_draw_text(frame, 5, 450, text);
@@ -310,7 +310,7 @@ void playLogic(RootState* state, const byte playerNumber) {
         input = 0;
 
         // Write save file back to the catridge if it has changed.
-        if (emulatorState->extram_dirty) {
+        if (emulatorState->isSramDirty) {
             
             // Copy in whatever was in SRAM bank.
             memcpy(emulatorState->Cartridge->Ram.Data + emulatorState->SRamBankNumber * SRAM_BANK_SIZE, emulatorState->SRAM, SRAM_BANK_SIZE);
@@ -320,7 +320,7 @@ void playLogic(RootState* state, const byte playerNumber) {
                 logAndPause("saving to cartridge failed");
             }
 
-            emulatorState->extram_dirty = false;
+            emulatorState->isSramDirty = false;
         }
 
         // Audio off until I can test it properly.

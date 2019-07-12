@@ -168,12 +168,10 @@ void cpu_reset_state(GbState *s) {
 
     s->RomBankUpper = 1;
     s->GbcRamBankSelectRegister = 1;
-    s->mem_bank_extram = 0;
     s->GbcVramBank = 0;
 
-    s->mem_mbc1_extrambank = 0;
     s->RomBankUpper = 0;
-    s->mem_mbc1_romram_select = 0;
+    s->RomRamSelect = ROM_SELECT;
     s->mem_mbc3_extram_rtc_select = 0;
 
     s->mem_latch_rtc = 0x01;
