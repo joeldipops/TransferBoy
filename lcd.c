@@ -19,9 +19,9 @@ static void lcd_render_current_line(PlayerState* state);
  ** -1 - Out of memory.
  */
 int lcd_init(GbState* s) {
-    s->emu_state->LastBuffer = calloc(sizeof(u16), GB_LCD_WIDTH * GB_LCD_HEIGHT);
-    s->emu_state->NextBuffer = calloc(sizeof(u16), GB_LCD_WIDTH * GB_LCD_HEIGHT);
-    if (!s->emu_state->LastBuffer || !s->emu_state->NextBuffer) {
+    s->LastBuffer = calloc(sizeof(u16), GB_LCD_WIDTH * GB_LCD_HEIGHT);
+    s->NextBuffer = calloc(sizeof(u16), GB_LCD_WIDTH * GB_LCD_HEIGHT);
+    if (!s->LastBuffer || !s->NextBuffer) {
         return -1;
     }
 
@@ -44,10 +44,10 @@ void lcd_step(PlayerState* state) {
 
     GbState* s = &state->EmulationState;
 
-    s->emu_state->lcd_entered_hblank = 0;
-    s->emu_state->lcd_entered_vblank = 0;
+    s->lcd_entered_hblank = 0;
+    s->lcd_entered_vblank = 0;
 
-    s->io_lcd_mode_cycles_left -= s->emu_state->last_op_cycles;
+    s->io_lcd_mode_cycles_left -= s->last_op_cycles;
 
     if (s->io_lcd_mode_cycles_left < 0) {
         switch (s->LcdStatus & 3) {
@@ -56,7 +56,7 @@ void lcd_step(PlayerState* state) {
                 s->LcdStatus = (s->LcdStatus & 0xfc) | 1;
                 s->io_lcd_mode_cycles_left = GB_LCD_MODE_1_CLKS;
                 s->InterruptFlags |= 1 << 0;
-                s->emu_state->lcd_entered_vblank = 1;
+                s->lcd_entered_vblank = 1;
             } else { /* Back into OAM (2) */
                 s->LcdStatus = (s->LcdStatus & 0xfc) | 2;
                 s->io_lcd_mode_cycles_left = GB_LCD_MODE_2_CLKS;
@@ -79,7 +79,7 @@ void lcd_step(PlayerState* state) {
         case 3: /* Line render (OAM+VRAM), let's H-Blank (0) */
             s->LcdStatus = (s->LcdStatus & 0xfc) | 0;
             s->io_lcd_mode_cycles_left = GB_LCD_MODE_0_CLKS;
-            s->emu_state->lcd_entered_hblank = 1;
+            s->lcd_entered_hblank = 1;
             break;
         }
 
@@ -93,7 +93,7 @@ void lcd_step(PlayerState* state) {
             s->InterruptFlags |= 1 << 1;
     }
 
-    if (s->emu_state->lcd_entered_hblank)
+    if (s->lcd_entered_hblank)
         lcd_render_current_line(state);
 }
 
@@ -349,6 +349,6 @@ static void lcd_render_current_line(PlayerState* state) {
     natural lineValue = y * GB_LCD_WIDTH;
     for (natural x = 0; x < GB_LCD_WIDTH; x++) {
         u16 colour = pixels[x].Colour;
-        gb_state->emu_state->NextBuffer[x + lineValue] = colour;
+        gb_state->NextBuffer[x + lineValue] = colour;
     }
 }

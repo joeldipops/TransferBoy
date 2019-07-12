@@ -205,14 +205,14 @@ static void cpu_handle_interrupts(GbState *s) {
 void cpu_timers_step(GbState *s) {
     u32 freq = s->double_speed ? GB_FREQ : 2 * GB_FREQ;
     u32 div_cycles_per_tick = freq / GB_DIV_FREQ;
-    s->io_timer_DIV_cycles += s->emu_state->last_op_cycles;
+    s->io_timer_DIV_cycles += s->last_op_cycles;
     if (s->io_timer_DIV_cycles >= div_cycles_per_tick) {
         s->io_timer_DIV_cycles %= div_cycles_per_tick;
         s->TimerClock++;
     }
 
     if (s->TimerControl & (1<<2)) { /* Timer enable */
-        s->io_timer_TIMA_cycles += s->emu_state->last_op_cycles;
+        s->io_timer_TIMA_cycles += s->last_op_cycles;
         u32 timer_hz = GB_TIMA_FREQS[s->TimerControl & 0x3];
         u32 timer_cycles_per_tick = freq / timer_hz;
         if (s->io_timer_TIMA_cycles >= timer_cycles_per_tick) {
@@ -234,10 +234,10 @@ void cpu_step(GbState *s) {
 
     op = mmu_read(s, s->pc);
     
-    s->emu_state->last_op_cycles = cycles_per_instruction[op];
+    s->last_op_cycles = cycles_per_instruction[op];
     if (op == 0xcb) {
         u8 extOp = mmu_read(s, s->pc + 1);
-        s->emu_state->last_op_cycles = cycles_per_instruction_cb[extOp];
+        s->last_op_cycles = cycles_per_instruction_cb[extOp];
     }
 
     if (!s->halt_for_interrupts) {

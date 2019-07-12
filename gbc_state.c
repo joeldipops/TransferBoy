@@ -6,12 +6,13 @@
 #include "state.h"
 #include "hwdefs.h"
 #include "logger.h"
+#include "gbc_state.h"
 
 static sByte setInfo(GbState* s, const GameBoyCartridge* cartridge) {
     // Cart info from header
     if (cartridge->Rom.Size < 0x0150) {
         // Cartridge too small
-        return -1;
+        return LOAD_ERR_TOO_SMALL;
     }
 
     switch (cartridge->Type) {
@@ -45,7 +46,7 @@ static sByte setInfo(GbState* s, const GameBoyCartridge* cartridge) {
         /* HuCn not supported */
         default:
             // Unsupported cartridge.
-            return -2;
+            return LOAD_ERR_UNSUPPORTED;
     }
 
     if (cartridge->IsGbcSupported) {
@@ -60,18 +61,26 @@ static sByte setInfo(GbState* s, const GameBoyCartridge* cartridge) {
 }
 
 sByte loadCartridge(GbState *s, GameBoyCartridge* cartridge) {
-    if (setInfo(s, cartridge)) {
-        return -1;
+    sByte result = setInfo(s, cartridge);
+    if (result) {
+        return result;
     }
 
     s->Cartridge = cartridge;
 
     // Initialise cartridge memory.
-    memcpy(s->ROM0, cartridge->Rom.Data, 0x4000);
+    memcpy(s->ROM0, cartridge->Rom.Data, ROM_BANK_SIZE);
 
-    if (cartridge->Rom.Size > 0x4000) {
-        memcpy(s->ROMX, cartridge->Rom.Data + 0x4000, 0x4000);
+    if (cartridge->Rom.Size >= ROM_BANK_SIZE * 2) {
+        memcpy(s->ROMX, cartridge->Rom.Data + ROM_BANK_SIZE, ROM_BANK_SIZE);
+    } else if (cartridge->Rom.Size > ROM_BANK_SIZE) {
+        // Ensure the blank portion returns 0xFF
+        memset(s->ROMX, 0xFF, ROM_BANK_SIZE);
+        memcpy(s->ROMX, cartridge->Rom.Data + ROM_BANK_SIZE, cartridge->Rom.Size - ROM_BANK_SIZE);
+    } else {
+        memset(s->ROMX, 0xFF, ROM_BANK_SIZE);        
     }
+
     memset(s->SRAM, 0xFF, 0x2000);
     if (s->hasSram) {
         memcpy(s->SRAM, cartridge->Ram.Data, cartridge->Ram.Size < 0x2000 ? cartridge->Ram.Size : 0x2000);
@@ -86,10 +95,15 @@ sByte loadCartridge(GbState *s, GameBoyCartridge* cartridge) {
 /**
  * Adds BIOS to the state - should be called only after creating fresh state
  * from rom. Overwrites some state (such as PC) to facilitate running of BIOS.
+ *
  */
-sByte applyBios(GbState* s, byte* bios) {
-    memcpy(s->BIOS, bios, BIOS_SIZE);
-    // TODO memcpy(s->ROM0, bios, BIOS_SIZE);
+sByte applyBios(GbState* s, ByteArray* bios) {
+    if (bios->Size > ROM_BANK_SIZE) {
+        return LOAD_ERR_TOO_LARGE;
+    }
+
+    memcpy(s->BIOS, bios->Data, bios->Size);
+    memcpy(s->ROM0, bios->Data, bios->Size);
     s->in_bios = 1;
     s->pc = 0;
 

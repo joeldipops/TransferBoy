@@ -4,23 +4,6 @@
 #include "hwdefs.h"
 #include "logger.h"
 
-#if 1
-#define MMU_DEBUG_W(fmt, ...) \
-    do { \
-        if (s->emu_state->dbg_print_mmu) \
-            printf(" [MMU] [W] " fmt " @%x: %x\n", ##__VA_ARGS__, location, value); \
-    } while(0)
-
-#define MMU_DEBUG_R(fmt, ...) \
-    do { \
-        if (s->emu_state->dbg_print_mmu) \
-            printf(" [MMU] [R] " fmt "\n", ##__VA_ARGS__); \
-    } while(0)
-#else
-#define MMU_DEBUG_W(...)
-#define MMU_DEBUG_R(...)
-#endif
-
 #define mmu_error(fmt, ...) \
     do { \
         /*logAndPause("MMU Error: " fmt "\n", ##__VA_ARGS__);*/ \
@@ -47,7 +30,7 @@ static void mmu_hdma_do(GbState *s) {
     u32 clks = GB_HDMA_BLOCK_CLKS;
     if (s->double_speed)
         clks *= 2;
-    s->emu_state->last_op_cycles += clks;
+    s->last_op_cycles += clks;
 
     s->GbcHdmaControl--;
     if (s->GbcHdmaControl == 0xff) {
@@ -86,7 +69,7 @@ static void mmu_hdma_start(GbState *s, u8 lenmode) {
         u32 clks = blocks * GB_HDMA_BLOCK_CLKS;
         if (s->double_speed)
             clks *= 2;
-        s->emu_state->last_op_cycles += clks;
+        s->last_op_cycles += clks;
     } else {
         s->io_hdma_running = 1;
         s->io_hdma_next_src = src;
@@ -99,7 +82,7 @@ static void mmu_hdma_start(GbState *s, u8 lenmode) {
 }
 
 void mmu_step(GbState *s) {
-    if (s->emu_state->lcd_entered_hblank && s->io_hdma_running)
+    if (s->lcd_entered_hblank && s->io_hdma_running)
         mmu_hdma_do(s);
 }
 
@@ -139,6 +122,8 @@ static void writeGbcVramBank(GbState* s, byte offset, byte value) {
 
 static void writeBiosSwitch(GbState* s, byte offset, byte value) {
     s->in_bios = 0;
+    // Blow away the bios.
+    memcpy(s->ROM0, s->Cartridge->Rom.Data, ROM_BANK_SIZE);
 }
 
 static void writeGbcHdmaControl(GbState* s, byte offset, byte value) {
@@ -247,11 +232,10 @@ static mmuReadHramOperation mmuReadHramTable[] = {
 
 static void writeRom01(GbState* s, u16 location, byte value) {
     // 0000 - 1FFF: Fixed ROM bank
-    // TODO - Lots of MBC implications here.
     if (value == 0) {
-        s->emu_state->extramDisabled = true;          
+        s->extramDisabled = true;          
     } else if (value == 0x0A) {
-        s->emu_state->extramDisabled = false;
+        s->extramDisabled = false;
     }
 }
 
@@ -362,7 +346,7 @@ static void writeVram(GbState* s, u16 location, byte value) {
 
 static void writeSram(GbState* s, u16 location, byte value) {
     // 0xA000 -0xBFFF: Cartridge RAM
-    if (!s->hasSram) {
+    if (!s->hasSram || s->extramDisabled) {
         return;
     } else if (s->mbc == 3 && s->mem_mbc3_extram_rtc_select >= 0x04) {
         if (s->mem_mbc3_extram_rtc_select >= 0x08 && s->mem_mbc3_extram_rtc_select <= 0x0c) {
@@ -371,7 +355,7 @@ static void writeSram(GbState* s, u16 location, byte value) {
         // else { doesn't do anything. }
     } else {
         s->SRAM[location - 0xA000] = value;
-        s->emu_state->extram_dirty = 1;        
+        s->extram_dirty = 1;        
     }
 }
 
@@ -432,12 +416,7 @@ static byte readHigh(GbState* s, u16 location) {
 }
 
 static byte readRom0(GbState* s, u16 location) {
-    //return Memory[location];
-    if (s->in_bios && location < 0x01) {
-        return s->BIOS[location];
-    } else {
-        return s->ROM0[location];
-    }
+    return s->Memory[location];    
 }
 
 static byte readRomX(GbState* s, u16 location) {
@@ -450,6 +429,10 @@ static byte readVram(GbState* s, u16 location) {
 }
 
 static byte readSram(GbState* s, u16 location) {
+    if (s->extramDisabled) {
+        return 0xff;
+    }
+
     // May need RTC stuff
     if (s->mbc == 3 && s->mem_mbc3_extram_rtc_select < 0x04) {
         if (s->mem_mbc3_extram_rtc_select >= 0x08 && s->mem_mbc3_extram_rtc_select <= 0x0c) {

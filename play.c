@@ -43,7 +43,10 @@ static sByte loadBios(GbState* state) {
     if (biosSize > 0) {
         biosFile = malloc(biosSize);
         dfs_read(biosFile, 1, biosSize, filePointer);
-        applyBios(state, biosFile);
+        ByteArray bios;
+        bios.Data = biosFile;
+        bios.Size = biosSize;
+        applyBios(state, &bios);
     } else {
         result = -2;
     }
@@ -258,7 +261,7 @@ void playLogic(RootState* state, const byte playerNumber) {
         performSGBFunctions(&state->Players[playerNumber]);
     }
 
-    if (emulatorState->emu_state->lcd_entered_vblank) {
+    if (emulatorState->lcd_entered_vblank) {
         state->Players[playerNumber].Meta.FrameCount++;
                 
         if (FRAMES_TO_SKIP && (state->Players[playerNumber].Meta.FrameCount % (FRAMES_TO_SKIP + 1))) {
@@ -274,7 +277,7 @@ void playLogic(RootState* state, const byte playerNumber) {
         if (IS_SGB_ENABLED && state->Players[playerNumber].Cartridge.Header.IsSgbSupported) {
             applySGBPalettes(
                 &state->Players[playerNumber].SGBState, 
-                state->Players[playerNumber].EmulationState.emu_state->NextBuffer
+                state->Players[playerNumber].EmulationState.NextBuffer
             );
         }
 
@@ -307,7 +310,7 @@ void playLogic(RootState* state, const byte playerNumber) {
         input = 0;
 
         // Write save file back to the catridge if it has changed.
-        if (emulatorState->emu_state->extram_dirty) {
+        if (emulatorState->extram_dirty) {
             
             // Copy in whatever was in SRAM bank.
             memcpy(emulatorState->Cartridge->Ram.Data + emulatorState->SRamBankNumber * SRAM_BANK_SIZE, emulatorState->SRAM, SRAM_BANK_SIZE);
@@ -317,7 +320,7 @@ void playLogic(RootState* state, const byte playerNumber) {
                 logAndPause("saving to cartridge failed");
             }
 
-            emulatorState->emu_state->extram_dirty = false;
+            emulatorState->extram_dirty = false;
         }
 
         // Audio off until I can test it properly.
@@ -354,8 +357,8 @@ void playDraw(const RootState* state, const byte playerNumber) {
     renderPixels(
         state->Frame,
         &state->Players[playerNumber],       
-        state->Players[playerNumber].EmulationState.emu_state->LastBuffer,
-        state->Players[playerNumber].EmulationState.emu_state->NextBuffer,
+        state->Players[playerNumber].EmulationState.LastBuffer,
+        state->Players[playerNumber].EmulationState.NextBuffer,
         palette,
         (float)screen.Height / (float)GB_LCD_HEIGHT,
         screen.Left,
@@ -373,8 +376,8 @@ void playDraw(const RootState* state, const byte playerNumber) {
 void playAfter(RootState* state, const byte playerNumber) {
     // After each frame, NextBuffer becomes last buffer.
     memcpy(
-        state->Players[playerNumber].EmulationState.emu_state->LastBuffer,
-        state->Players[playerNumber].EmulationState.emu_state->NextBuffer,
+        state->Players[playerNumber].EmulationState.LastBuffer,
+        state->Players[playerNumber].EmulationState.NextBuffer,
         sizeof(u16) * GB_LCD_WIDTH * GB_LCD_HEIGHT
     );
     

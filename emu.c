@@ -22,7 +22,6 @@
  * emulator, not the state of the emulated hardware.
  */
 void emu_init(GbState *s) {
-    s->emu_state = calloc(1, sizeof(struct emu_state));
 }    
 
 void emu_step(PlayerState* state) {
@@ -32,10 +31,10 @@ void emu_step(PlayerState* state) {
     mmu_step(s);
     cpu_timers_step(s);
 
-    s->emu_state->time_cycles += s->emu_state->last_op_cycles;
-    if (s->emu_state->time_cycles >= GB_FREQ) {
-        s->emu_state->time_cycles %= GB_FREQ;
-        s->emu_state->time_seconds++;
+    s->time_cycles += s->last_op_cycles;
+    if (s->time_cycles >= GB_FREQ) {
+        s->time_cycles %= GB_FREQ;
+        s->time_seconds++;
     }
 }
 

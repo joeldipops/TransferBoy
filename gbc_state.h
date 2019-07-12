@@ -4,8 +4,12 @@
 #include "types.h"
 #include <stddef.h>
 
+static const sByte LOAD_ERR_TOO_SMALL = -1;
+static const sByte LOAD_ERR_TOO_LARGE = -2;
+static const sByte LOAD_ERR_UNSUPPORTED = -3;
+
 sByte loadCartridge(GbState* s, GameBoyCartridge* cartridge);
-sByte applyBios(GbState* s, byte* bios);
+sByte applyBios(GbState* s, ByteArray* bios);
 
 
 #endif

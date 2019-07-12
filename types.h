@@ -21,24 +21,6 @@ typedef int64_t s64;
 #define FLAG_N 0x40
 #define FLAG_Z 0x80
 
-// State of the emulator itself, not of the hardware.
-struct emu_state {
-    bool lcd_entered_hblank; // Set at the end of every HBlank.
-    bool lcd_entered_vblank; // Set at the beginning of every VBlank.
-    u16* LastBuffer;
-    u16* NextBuffer;
-
-    bool extramDisabled; //Writing 0 to MBC 1 turns off access to external RAM 
-    bool extram_dirty; // Write battery-backed RAM periodically when dirty.
-
-    // The duration of the last intruction. Normally just
-    // the CPU executing the instruction, but the MMU could
-    // take longer in the case of some DMA ops.
-    u32 last_op_cycles; 
-    u32 time_cycles;
-    u32 time_seconds;
-};
-
 struct emu_cpu_state {
     // Lookup tables for the reg-index encoded in instructions to ptr to reg.
     u8 *reg8_lut[9];
@@ -599,6 +581,21 @@ typedef struct {
             };
         };
     };
+
+    bool lcd_entered_hblank; // Set at the end of every HBlank.
+    bool lcd_entered_vblank; // Set at the beginning of every VBlank.
+    u16* LastBuffer;
+    u16* NextBuffer;
+
+    bool extramDisabled; //Writing 0 to MBC 1 turns off access to external RAM 
+    bool extram_dirty; // Write battery-backed RAM periodically when dirty.
+
+    // The duration of the last intruction. Normally just
+    // the CPU executing the instruction, but the MMU could
+    // take longer in the case of some DMA ops.
+    u32 last_op_cycles; 
+    u32 time_cycles;
+    u32 time_seconds;    
 
     bool in_bios:1; // At start BIOS is temporarily mapped at 0000-0100.
     bool halt_for_interrupts:1; // Don't run instructions until interrupt.
