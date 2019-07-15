@@ -310,7 +310,7 @@ void playLogic(RootState* state, const byte playerNumber) {
         input = 0;
 
         // Write save file back to the catridge if it has changed.
-        if (emulatorState->isSramDirty) {
+        if (emulatorState->isSRAMDirty) {
             
             // Copy in whatever was in SRAM bank.
             memcpy(emulatorState->Cartridge->Ram.Data + emulatorState->SRamBankNumber * SRAM_BANK_SIZE, emulatorState->SRAM, SRAM_BANK_SIZE);
@@ -320,7 +320,7 @@ void playLogic(RootState* state, const byte playerNumber) {
                 logAndPause("saving to cartridge failed");
             }
 
-            emulatorState->isSramDirty = false;
+            emulatorState->isSRAMDirty = false;
         }
 
         // Audio off until I can test it properly.

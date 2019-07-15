@@ -168,7 +168,7 @@ void cpu_reset_state(GbState *s) {
 
     s->RomBankUpper = 1;
     s->GbcRamBankSelectRegister = 1;
-    s->GbcVramBank = 0;
+    s->GbcVRAMBank = 0;
 
     s->RomBankUpper = 0;
     s->RomRamSelect = ROM_SELECT;

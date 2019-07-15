@@ -116,8 +116,8 @@ static void writeDmaSource(GbState* s, byte offset, byte value) {
     }
 }
 
-static void writeGbcVramBank(GbState* s, byte offset, byte value) {
-    s->GbcVramBank = value & 1;
+static void writeGbcVRAMBank(GbState* s, byte offset, byte value) {
+    s->GbcVRAMBank = value & 1;
 }
 
 static void writeBiosSwitch(GbState* s, byte offset, byte value) {
@@ -148,7 +148,7 @@ static void writeGbcRamBankSelect(GbState* s, byte offset, byte value) {
     if (value == 0) {
         value = 1;
     }
-    value &= s->WramBankCount - 1;
+    value &= s->WRAMBankCount - 1;
     s->GbcRamBankSelectRegister = value;  
 }
 
@@ -164,7 +164,7 @@ static void writeHram(GbState* s, byte offset, byte value) {
 /*   1 */ writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,
 /*   2 */ writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeAudioChannelSwitch,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,
 /*   3 */ writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,
-/*   4 */ writeHram,writeLcdStatus,writeHram,writeHram,writeCurrentLine,writeNextInterruptLine,writeDmaSource,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeGbcVramBank,
+/*   4 */ writeHram,writeLcdStatus,writeHram,writeHram,writeCurrentLine,writeNextInterruptLine,writeDmaSource,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeGbcVRAMBank,
 /*   5 */ writeBiosSwitch,writeHram,writeHram,writeHram,writeHram,writeGbcHdmaControl,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,
 /*   6 */ writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeGbcBackgroundPaletteData,writeHram,writeGbcSpritePaletteData,writeHram,writeHram,writeHram,writeHram,
 /*   7 */ writeGbcRamBankSelect,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,
@@ -194,9 +194,9 @@ static byte readJoypadIo(GbState* s, byte offset) {
     return rv;    
 }
 
-// FF4F GbcVramBank
-static byte readGbcVramBank(GbState* s, byte offset) {
-    return s->GbcVramBank & 1;
+// FF4F GbcVRAMBank
+static byte readGbcVRAMBank(GbState* s, byte offset) {
+    return s->GbcVRAMBank & 1;
 }
 
 // FF69 Background Palette data
@@ -216,7 +216,7 @@ static mmuReadHramOperation mmuReadHramTable[] = {
 /*   1 */ readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, 
 /*   2 */ readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, 
 /*   3 */ readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, 
-/*   4 */ readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readGbcVramBank, 
+/*   4 */ readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readGbcVRAMBank, 
 /*   5 */ readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, 
 /*   6 */ readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readBackgroundPaletteData, readHram, readSpritePaletteData, readHram, readHram, readHram, readHram, 
 /*   7 */ readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, 
@@ -233,9 +233,9 @@ static mmuReadHramOperation mmuReadHramTable[] = {
 static void writeRom01(GbState* s, u16 location, byte value) {
     // 0000 - 1FFF: Fixed ROM bank
     if (value == 0) {
-        s->isSramDisabled = true;          
+        s->isSRAMDisabled = true;          
     } else if (value == 0x0A) {
-        s->isSramDisabled = false;
+        s->isSRAMDisabled = false;
     }
 }
 
@@ -284,7 +284,7 @@ static void writeRom23(GbState* s, u16 location, byte value) {
         return; 
     }
 
-    memcpy(s->ROMX, s->Cartridge->Rom.Data + (bank * ROM_BANK_SIZE), ROM_BANK_SIZE);
+    s->ROMX = s->Cartridge->Rom.Data + (bank * ROM_BANK_SIZE);
 }
 
 /**
@@ -296,7 +296,7 @@ static void writeRom45(GbState* s, u16 location, byte value) {
     if (s->mbc == 1) {
         if (s->RomRamSelect == ROM_SELECT) {
             s->RomBankUpper = value & 3;
-            memcpy(s->ROMX, s->Cartridge->Rom.Data + (getMbc1RomBank(s) * ROM_BANK_SIZE), ROM_BANK_SIZE);
+            s->ROMX = s->Cartridge->Rom.Data + (getMbc1RomBank(s) * ROM_BANK_SIZE);
             return;
         } else { // RAM_SELECT
             s->SRamBankNumber = value & 3;
@@ -314,11 +314,8 @@ static void writeRom45(GbState* s, u16 location, byte value) {
         return;
     }
 
-    // Swap out previous bank.
-    memcpy(s->Cartridge->Ram.Data + oldBankNumber * SRAM_BANK_SIZE, s->SRAM, SRAM_BANK_SIZE);
-
     // Swap in new RAM bank.
-    memcpy(s->SRAM, s->Cartridge->Ram.Data + s->SRamBankNumber * SRAM_BANK_SIZE, SRAM_BANK_SIZE);
+    s->SRAM = s->Cartridge->Ram.Data + s->SRamBankNumber * SRAM_BANK_SIZE;
 }
 
 /**
@@ -343,15 +340,18 @@ static void writeRom67(GbState* s, u16 location, byte value) {
     }
 }
 
-static void writeVram(GbState* s, u16 location, byte value) {
-    // 0x8000 - 0x9FFF: VRAM
-    //logAndPauseFrame(0, "write vram %04x", location);
-    s->VramBanks[s->GbcVramBank * VRAM_BANK_SIZE + location - 0x8000] = value;    
+/**
+ * 0x8000 - 0x9FFF: VRAM
+ */
+static void writeVRAM(GbState* s, u16 location, byte value) {
+    s->VRAMBanks[s->GbcVRAMBank * VRAM_BANK_SIZE + location - 0x8000] = value;    
 }
 
-static void writeSram(GbState* s, u16 location, byte value) {
-    // 0xA000 -0xBFFF: Cartridge RAM
-    if (!s->hasSram || s->isSramDisabled) {
+/**
+ * 0xA000 -0xBFFF: Cartridge RAM
+ */
+static void writeSRAM(GbState* s, u16 location, byte value) {
+    if (!s->hasSRAM || s->isSRAMDisabled) {
         return;
     } else if (s->mbc == 3 && s->mem_mbc3_extram_rtc_select >= 0x04) {
         if (s->mem_mbc3_extram_rtc_select >= 0x08 && s->mem_mbc3_extram_rtc_select <= 0x0c) {
@@ -360,28 +360,36 @@ static void writeSram(GbState* s, u16 location, byte value) {
         // else { doesn't do anything. }
     } else {
         s->SRAM[location - 0xA000] = value;
-        s->isSramDirty = 1;        
+        s->isSRAMDirty = 1;        
     }
 }
 
-static void writeWramC(GbState* s, u16 location, byte value) {
-    // 0xC000 - 0xCFFF: Fixed RAM
-    s->WramBanks[location - 0xc000] = value;
+/**
+ * 0xC000 - 0xCFFF: Fixed RAM
+ */
+static void writeWRAMC(GbState* s, u16 location, byte value) {
+    s->WRAMBanks[location - 0xc000] = value;
 }
 
-static void writeWramD(GbState* s, u16 location, byte value) {
-    // 0xD000 - 0xDFFF: Switchable RAM
-    s->WramBanks[s->GbcRamBankSelectRegister * WRAM_BANK_SIZE + location - 0xd000] = value; 
+/**
+ * 0xD000 - 0xDFFF: Switchable RAM
+ */
+static void writeWRAMD(GbState* s, u16 location, byte value) {
+    s->WRAMBanks[s->GbcRamBankSelectRegister * WRAM_BANK_SIZE + location - 0xd000] = value; 
 }
 
+/**
+ * 0xE000 - 0FDFF: Echoed of WRAM
+ */
 static void writeEcho(GbState* s, u16 location, byte value) {
-    // 0xE000 - 0FDFF: Echoed RAM
-    mmu_error("Writing to ECHO area (0xc00-0xfdff) @%x, val=%x", location, value);
+    // return ERROR_UNUSED;
 }
 
+/**
+ * FE00 - FE9F: OAM RAM - Sprite Attribute Table
+ */
 static void writeOam(GbState* s, u16 location, byte value) {
     if (location <= 0xFE9F) {
-        // FE00 - FE9F: OAM RAM - Sprite Attribute Table
         s->OAM[location - 0xfe00] = value;
     }
 }
@@ -401,12 +409,12 @@ static mmuWriteOperation mmuWriteTable[] = {
 /*   5 */ writeRom45, writeRom45, writeRom45, writeRom45, writeRom45, writeRom45, writeRom45, writeRom45, writeRom45, writeRom45, writeRom45, writeRom45, writeRom45, writeRom45, writeRom45, writeRom45,
 /*   6 */ writeRom67, writeRom67, writeRom67, writeRom67, writeRom67, writeRom67, writeRom67, writeRom67, writeRom67, writeRom67, writeRom67, writeRom67, writeRom67, writeRom67, writeRom67, writeRom67,
 /*   7 */ writeRom67, writeRom67, writeRom67, writeRom67, writeRom67, writeRom67, writeRom67, writeRom67, writeRom67, writeRom67, writeRom67, writeRom67, writeRom67, writeRom67, writeRom67, writeRom67,
-/*   8 */ writeVram,  writeVram,  writeVram,  writeVram,  writeVram,  writeVram,  writeVram,  writeVram,  writeVram,  writeVram,  writeVram,  writeVram,  writeVram,  writeVram,  writeVram,  writeVram,
-/*   9 */ writeVram,  writeVram,  writeVram,  writeVram,  writeVram,  writeVram,  writeVram,  writeVram,  writeVram,  writeVram,  writeVram,  writeVram,  writeVram,  writeVram,  writeVram,  writeVram,
-/*   A */ writeSram,  writeSram,  writeSram,  writeSram,  writeSram,  writeSram,  writeSram,  writeSram,  writeSram,  writeSram,  writeSram,  writeSram,  writeSram,  writeSram,  writeSram,  writeSram,
-/*   B */ writeSram,  writeSram,  writeSram,  writeSram,  writeSram,  writeSram,  writeSram,  writeSram,  writeSram,  writeSram,  writeSram,  writeSram,  writeSram,  writeSram,  writeSram,  writeSram,
-/*   C */ writeWramC, writeWramC, writeWramC, writeWramC, writeWramC, writeWramC, writeWramC, writeWramC, writeWramC, writeWramC, writeWramC, writeWramC, writeWramC, writeWramC, writeWramC, writeWramC, 
-/*   D */ writeWramD, writeWramD, writeWramD, writeWramD, writeWramD, writeWramD, writeWramD, writeWramD, writeWramD, writeWramD, writeWramD, writeWramD, writeWramD, writeWramD, writeWramD, writeWramD, 
+/*   8 */ writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,
+/*   9 */ writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,
+/*   A */ writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,
+/*   B */ writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,
+/*   C */ writeWRAMC, writeWRAMC, writeWRAMC, writeWRAMC, writeWRAMC, writeWRAMC, writeWRAMC, writeWRAMC, writeWRAMC, writeWRAMC, writeWRAMC, writeWRAMC, writeWRAMC, writeWRAMC, writeWRAMC, writeWRAMC, 
+/*   D */ writeWRAMD, writeWRAMD, writeWRAMD, writeWRAMD, writeWRAMD, writeWRAMD, writeWRAMD, writeWRAMD, writeWRAMD, writeWRAMD, writeWRAMD, writeWRAMD, writeWRAMD, writeWRAMD, writeWRAMD, writeWRAMD, 
 /*   E */ writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,
 /*   F */ writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeOam,   writeHigh
 };
@@ -421,21 +429,20 @@ static byte readHigh(GbState* s, u16 location) {
 }
 
 static byte readRom0(GbState* s, u16 location) {
-    return s->Memory[location];    
+    return s->ROM0[location];    
 }
 
 static byte readRomX(GbState* s, u16 location) {
-    return s->Memory[location];
+    return s->ROMX[location - 0x4000];
 }   
 
-static byte readVram(GbState* s, u16 location) {
-    //return Memory[location];
-    return s->VramBanks[s->GbcVramBank * VRAM_BANK_SIZE + location - 0x8000];
+static byte readVRAM(GbState* s, u16 location) {
+    return s->VRAMBanks[s->GbcVRAMBank * VRAM_BANK_SIZE + location - 0x8000];
 }
 
-static byte readSram(GbState* s, u16 location) {
-    if (s->isSramDisabled || !s->hasSram) {
-        return 0xff;
+static byte readSRAM(GbState* s, u16 location) {
+    if (s->isSRAMDisabled || !s->hasSRAM) {
+        return 0xFF;
     }
 
     // May need RTC stuff
@@ -446,21 +453,20 @@ static byte readSram(GbState* s, u16 location) {
             return 0x00;
         }
     } else {  
-        return s->Memory[location];
+        return s->SRAM[location - 0xA000];
     }
 }
 
-static byte readWram(GbState* s, u16 location) {
-    //return Memory[location];
+static byte readWRAM(GbState* s, u16 location) {
     if (location < 0xD000) {
-        return s->WramBanks[location - 0xc000];
+        return s->WRAM0[location - 0xc000];
     } else {
-        return s->WramBanks[s->GbcRamBankSelectRegister * WRAM_BANK_SIZE + location - 0xd000];
+        return s->WRAMBanks[s->GbcRamBankSelectRegister * WRAM_BANK_SIZE + location - 0xd000];
     }
 }
 
 static byte readEcho(GbState* s, u16 location) {
-    return readWram(s, location - 0x2000);
+    return readWRAM(s, location - 0x2000);
 }
  
 static byte readOAM(GbState* s, u16 location) {
@@ -482,20 +488,17 @@ static mmuReadOperation mmuReadTable[] = {
 /*   5 */ readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX,
 /*   6 */ readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX,
 /*   7 */ readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX, readRomX,
-/*   8 */ readVram, readVram, readVram, readVram, readVram, readVram, readVram, readVram, readVram, readVram, readVram, readVram, readVram, readVram, readVram, readVram,
-/*   9 */ readVram, readVram, readVram, readVram, readVram, readVram, readVram, readVram, readVram, readVram, readVram, readVram, readVram, readVram, readVram, readVram,
-/*   A */ readSram, readSram, readSram, readSram, readSram, readSram, readSram, readSram, readSram, readSram, readSram, readSram, readSram, readSram, readSram, readSram,
-/*   B */ readSram, readSram, readSram, readSram, readSram, readSram, readSram, readSram, readSram, readSram, readSram, readSram, readSram, readSram, readSram, readSram,
-/*   C */ readWram, readWram, readWram, readWram, readWram, readWram, readWram, readWram, readWram, readWram, readWram, readWram, readWram, readWram, readWram, readWram, 
-/*   D */ readWram, readWram, readWram, readWram, readWram, readWram, readWram, readWram, readWram, readWram, readWram, readWram, readWram, readWram, readWram, readWram, 
+/*   8 */ readVRAM, readVRAM, readVRAM, readVRAM, readVRAM, readVRAM, readVRAM, readVRAM, readVRAM, readVRAM, readVRAM, readVRAM, readVRAM, readVRAM, readVRAM, readVRAM,
+/*   9 */ readVRAM, readVRAM, readVRAM, readVRAM, readVRAM, readVRAM, readVRAM, readVRAM, readVRAM, readVRAM, readVRAM, readVRAM, readVRAM, readVRAM, readVRAM, readVRAM,
+/*   A */ readSRAM, readSRAM, readSRAM, readSRAM, readSRAM, readSRAM, readSRAM, readSRAM, readSRAM, readSRAM, readSRAM, readSRAM, readSRAM, readSRAM, readSRAM, readSRAM,
+/*   B */ readSRAM, readSRAM, readSRAM, readSRAM, readSRAM, readSRAM, readSRAM, readSRAM, readSRAM, readSRAM, readSRAM, readSRAM, readSRAM, readSRAM, readSRAM, readSRAM,
+/*   C */ readWRAM, readWRAM, readWRAM, readWRAM, readWRAM, readWRAM, readWRAM, readWRAM, readWRAM, readWRAM, readWRAM, readWRAM, readWRAM, readWRAM, readWRAM, readWRAM, 
+/*   D */ readWRAM, readWRAM, readWRAM, readWRAM, readWRAM, readWRAM, readWRAM, readWRAM, readWRAM, readWRAM, readWRAM, readWRAM, readWRAM, readWRAM, readWRAM, readWRAM, 
 /*   E */ readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho,
 /*   F */ readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readOAM,  readHigh,
 };
 
 byte mmu_read(GbState* s, u16 location) {
-    //if (location < 0x8000) {
-      //  return s->Memory[location];
-    //}
     return mmuReadTable[location >> 8](s, location);
 }
 

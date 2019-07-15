@@ -157,25 +157,21 @@ typedef struct {
     GameBoyCartridge* Cartridge;
 
     // Optionally can be mapped from $0000 of ROM space.
-    byte BIOS[BIOS_SIZE];
+    byte* BiosFile;
+    // A copy of ROM0 with the bios over the top of it.
+    byte* BIOS;
 
     // $8000 - $9fff: Video RAM, 8K non-CGB, 16K CGB (banked)
-    byte* VramBanks; 
+    byte* VRAMBanks; 
     // $c000 - $dfff: Internal RAM (WRAM), 8K non-CGB, 32K CGB (banked)
-    byte* WramBanks; 
+    byte* WRAMBanks; 
 
-
-    union {
-        byte Memory[0xE000];
-        struct {
-            byte ROM0[0x4000];
-            byte ROMX[0x4000];
-            byte VRAM[0x2000];
-            byte SRAM[0x2000];
-            byte WRAM0[0x1000];
-            byte WRAMX[0x1000];
-        };
-    };
+    byte* ROM0;
+    byte* ROMX;
+    byte* VRAM;
+    byte* SRAM;    
+    byte* WRAM0;    
+    byte* WRAMX;
 
     // $fe00 - fe9f: Sprite/Object attributes
     byte OAM[0xA0];
@@ -503,7 +499,7 @@ typedef struct {
             };
             const byte unused14;
             // FF4F - VBK - VRAM Bank selector
-            byte GbcVramBank;
+            byte GbcVRAMBank;
             // FF50 - ??? - Disable BIOS
             byte BiosSwitch;
             // FF51 HDMA1, HDMA2 - Big endian gbc hdma source address.
@@ -587,8 +583,8 @@ typedef struct {
     u16* LastBuffer;
     u16* NextBuffer;
 
-    bool isSramDisabled; //Writing 0 to MBC 1 turns off access to external RAM 
-    bool isSramDirty; // Write battery-backed RAM periodically when dirty.
+    bool isSRAMDisabled; //Writing 0 to MBC 1 turns off access to external RAM 
+    bool isSRAMDirty; // Write battery-backed RAM periodically when dirty.
 
     // The duration of the last intruction. Normally just
     // the CPU executing the instruction, but the MMU could
@@ -627,8 +623,8 @@ typedef struct {
     byte RomBankLower;
     byte RomBankUpper;    
     byte SRamBankNumber; 
-    byte WramBankCount;
-    byte VramBankCount;
+    byte WRAMBankCount;
+    byte VRAMBankCount;
     // MBC1 - Upper bits ROM bank (if selected).
     
     // MBC1 - Mode for above field (ROM/RAM).
@@ -641,7 +637,7 @@ typedef struct {
 
     // Cartridge hardware metadata
     byte mbc;
-    bool hasSram;
+    bool hasSRAM;
     bool hasBattery;
     bool hasRtc;
 

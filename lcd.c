@@ -170,12 +170,12 @@ static void lcd_render_current_line(PlayerState* state) {
     u16 bgmap_addr = bgmap_high ? 0x9c00 : 0x9800;
     u16 winmap_addr = winmap_high ? 0x9c00 : 0x9800;
     u16 obj_tiledata_addr = 0x8000;
-    u16 vram_addr = 0x8000;
+    u16 VRAM_addr = 0x8000;
 
-    u8 *bgwin_tiledata = &gb_state->VramBanks[bgwin_tilemap_addr - vram_addr];
-    u8 *obj_tiledata = &gb_state->VramBanks[obj_tiledata_addr - vram_addr];
-    u8 *bgmap = &gb_state->VramBanks[bgmap_addr - vram_addr];
-    u8 *winmap = &gb_state->VramBanks[winmap_addr - vram_addr];
+    u8 *bgwin_tiledata = &gb_state->VRAMBanks[bgwin_tilemap_addr - VRAM_addr];
+    u8 *obj_tiledata = &gb_state->VRAMBanks[obj_tiledata_addr - VRAM_addr];
+    u8 *bgmap = &gb_state->VRAMBanks[bgmap_addr - VRAM_addr];
+    u8 *winmap = &gb_state->VRAMBanks[winmap_addr - VRAM_addr];
 
     u8 bg_scroll_x = gb_state->BackgroundScrollX;
     u8 bg_scroll_y = gb_state->BackgroundScrollY;
@@ -310,7 +310,7 @@ static void lcd_render_current_line(PlayerState* state) {
             /* BG tile attrs are only available on CGB, and are at same location
              * as tile numbers but in bank 1 instead of 0. */
             u8 attr = use_col ?  bgmap[bg_idx + VRAM_BANK_SIZE] : 0;
-            u8 vram_bank = (attr & (1<<3)) ? 1 : 0;
+            u8 VRAM_bank = (attr & (1<<3)) ? 1 : 0;
 
             /* We have packed 2-bit color indices here, so the bits look like:
             * (each bit denoted by the pixel index in tile)
@@ -321,7 +321,7 @@ static void lcd_render_current_line(PlayerState* state) {
             int bg_tileoff = bg_tileoff_x + bg_tileoff_y * 8;
             int shift = 7 - bg_tileoff % 8;
             int tiledata_off = tile_idx * 16 + bg_tileoff/8*2;
-            if (vram_bank)
+            if (VRAM_bank)
                 tiledata_off += VRAM_BANK_SIZE;
             u8 b1 = bgwin_tiledata[tiledata_off];
             u8 b2 = bgwin_tiledata[tiledata_off + 1];

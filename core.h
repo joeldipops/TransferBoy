@@ -2,7 +2,6 @@
 #define CORE_INCLUDED
 
 #define null 0
-//typedef enum { false, true } bool;
 
 #include <libdragon.h>
 
