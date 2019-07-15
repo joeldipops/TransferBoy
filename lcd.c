@@ -172,10 +172,10 @@ static void lcd_render_current_line(PlayerState* state) {
     u16 obj_tiledata_addr = 0x8000;
     u16 VRAM_addr = 0x8000;
 
-    u8 *bgwin_tiledata = &gb_state->VRAMBanks[bgwin_tilemap_addr - VRAM_addr];
-    u8 *obj_tiledata = &gb_state->VRAMBanks[obj_tiledata_addr - VRAM_addr];
-    u8 *bgmap = &gb_state->VRAMBanks[bgmap_addr - VRAM_addr];
-    u8 *winmap = &gb_state->VRAMBanks[winmap_addr - VRAM_addr];
+    u8 *bgwin_tiledata = &gb_state->VRAM[bgwin_tilemap_addr - VRAM_addr];
+    u8 *obj_tiledata = &gb_state->VRAM[obj_tiledata_addr - VRAM_addr];
+    u8 *bgmap = &gb_state->VRAM[bgmap_addr - VRAM_addr];
+    u8 *winmap = &gb_state->VRAM[winmap_addr - VRAM_addr];
 
     u8 bg_scroll_x = gb_state->BackgroundScrollX;
     u8 bg_scroll_y = gb_state->BackgroundScrollY;

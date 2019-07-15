@@ -104,6 +104,8 @@ sByte applyBios(GbState* s, ByteArray* bios) {
     memcpy(s->BIOS, s->ROM0, ROM_BANK_SIZE);
     memcpy(s->BIOS, bios->Data, bios->Size);
 
+    s->ROM0 = s->BIOS;
+
     s->in_bios = 1;
     s->pc = 0;
 

@@ -118,12 +118,13 @@ static void writeDmaSource(GbState* s, byte offset, byte value) {
 
 static void writeGbcVRAMBank(GbState* s, byte offset, byte value) {
     s->GbcVRAMBank = value & 1;
+    s->VRAM = s->VRAMBanks + (s->GbcVRAMBank * VRAM_BANK_SIZE); 
 }
 
 static void writeBiosSwitch(GbState* s, byte offset, byte value) {
     s->in_bios = 0;
     // Blow away the bios.
-    memcpy(s->ROM0, s->Cartridge->Rom.Data, ROM_BANK_SIZE);
+    s->ROM0 = s->Cartridge->Rom.Data;
 }
 
 static void writeGbcHdmaControl(GbState* s, byte offset, byte value) {
@@ -149,7 +150,8 @@ static void writeGbcRamBankSelect(GbState* s, byte offset, byte value) {
         value = 1;
     }
     value &= s->WRAMBankCount - 1;
-    s->GbcRamBankSelectRegister = value;  
+    s->GbcRamBankSelectRegister = value; 
+    s->WRAMX = s->WRAMBanks + (s->GbcRamBankSelectRegister * WRAM_BANK_SIZE);     
 }
 
 
@@ -322,7 +324,6 @@ static void writeRom45(GbState* s, u16 location, byte value) {
  * 0x6000 - 0x7FFF: Mainly Real-Time-Clock stuff
  */
 static void writeRom67(GbState* s, u16 location, byte value) {
-    
     if (s->mbc == 1) {      
         s->RomRamSelect = value & 0x1;
     } else if (s->hasRtc) { // MBC3 only
@@ -344,7 +345,7 @@ static void writeRom67(GbState* s, u16 location, byte value) {
  * 0x8000 - 0x9FFF: VRAM
  */
 static void writeVRAM(GbState* s, u16 location, byte value) {
-    s->VRAMBanks[s->GbcVRAMBank * VRAM_BANK_SIZE + location - 0x8000] = value;    
+    s->VRAM[location - 0x8000] = value;    
 }
 
 /**
@@ -368,14 +369,14 @@ static void writeSRAM(GbState* s, u16 location, byte value) {
  * 0xC000 - 0xCFFF: Fixed RAM
  */
 static void writeWRAMC(GbState* s, u16 location, byte value) {
-    s->WRAMBanks[location - 0xc000] = value;
+    s->WRAM0[location - 0xc000] = value;
 }
 
 /**
  * 0xD000 - 0xDFFF: Switchable RAM
  */
 static void writeWRAMD(GbState* s, u16 location, byte value) {
-    s->WRAMBanks[s->GbcRamBankSelectRegister * WRAM_BANK_SIZE + location - 0xd000] = value; 
+    s->WRAMX[location - 0xd000] = value; 
 }
 
 /**
@@ -437,7 +438,7 @@ static byte readRomX(GbState* s, u16 location) {
 }   
 
 static byte readVRAM(GbState* s, u16 location) {
-    return s->VRAMBanks[s->GbcVRAMBank * VRAM_BANK_SIZE + location - 0x8000];
+    return s->VRAM[location - 0x8000];
 }
 
 static byte readSRAM(GbState* s, u16 location) {
@@ -457,16 +458,26 @@ static byte readSRAM(GbState* s, u16 location) {
     }
 }
 
-static byte readWRAM(GbState* s, u16 location) {
-    if (location < 0xD000) {
-        return s->WRAM0[location - 0xc000];
-    } else {
-        return s->WRAMBanks[s->GbcRamBankSelectRegister * WRAM_BANK_SIZE + location - 0xd000];
-    }
+/**
+ * 0xC000 - 0xCFFF
+ */
+static byte readWRAM0(GbState* s, u16 location) {
+    return s->WRAM0[location - 0xc000];
+}
+
+/**
+ * 0xD000 - 0xDFFF
+ */
+static byte readWRAMX(GbState* s, u16 location) {
+    return s->WRAMX[location - 0xd000];
 }
 
 static byte readEcho(GbState* s, u16 location) {
-    return readWRAM(s, location - 0x2000);
+    if (location < 0xF000) {
+        return readWRAM0(s, location - 0x2000);     
+    } else {
+        return readWRAMX(s, location - 0x2000);
+    }
 }
  
 static byte readOAM(GbState* s, u16 location) {
@@ -492,8 +503,8 @@ static mmuReadOperation mmuReadTable[] = {
 /*   9 */ readVRAM, readVRAM, readVRAM, readVRAM, readVRAM, readVRAM, readVRAM, readVRAM, readVRAM, readVRAM, readVRAM, readVRAM, readVRAM, readVRAM, readVRAM, readVRAM,
 /*   A */ readSRAM, readSRAM, readSRAM, readSRAM, readSRAM, readSRAM, readSRAM, readSRAM, readSRAM, readSRAM, readSRAM, readSRAM, readSRAM, readSRAM, readSRAM, readSRAM,
 /*   B */ readSRAM, readSRAM, readSRAM, readSRAM, readSRAM, readSRAM, readSRAM, readSRAM, readSRAM, readSRAM, readSRAM, readSRAM, readSRAM, readSRAM, readSRAM, readSRAM,
-/*   C */ readWRAM, readWRAM, readWRAM, readWRAM, readWRAM, readWRAM, readWRAM, readWRAM, readWRAM, readWRAM, readWRAM, readWRAM, readWRAM, readWRAM, readWRAM, readWRAM, 
-/*   D */ readWRAM, readWRAM, readWRAM, readWRAM, readWRAM, readWRAM, readWRAM, readWRAM, readWRAM, readWRAM, readWRAM, readWRAM, readWRAM, readWRAM, readWRAM, readWRAM, 
+/*   C */ readWRAM0, readWRAM0, readWRAM0, readWRAM0, readWRAM0, readWRAM0, readWRAM0, readWRAM0, readWRAM0, readWRAM0, readWRAM0, readWRAM0, readWRAM0, readWRAM0, readWRAM0, readWRAM0, 
+/*   D */ readWRAMX, readWRAMX, readWRAMX, readWRAMX, readWRAMX, readWRAMX, readWRAMX, readWRAMX, readWRAMX, readWRAMX, readWRAMX, readWRAMX, readWRAMX, readWRAMX, readWRAMX, readWRAMX, 
 /*   E */ readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho,
 /*   F */ readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readOAM,  readHigh,
 };
