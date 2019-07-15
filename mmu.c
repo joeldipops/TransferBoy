@@ -47,8 +47,7 @@ static void mmu_hdma_start(GbState *s, u8 lenmode) {
     u16 dst = ((s->io_hdma_dst_high << 8) | s->io_hdma_dst_low) & ~0xf;
     dst = (dst & 0x1fff) | 0x8000; /* Ignore upper 3 bits (always in VRAM) */
 
-    printf("HDMA @%.2x:%.4x %.4x -> %.4x, blocks=%.2x mode_hblank=%d\n",
-            s->RomBankLower, s->pc,  src, dst, blocks, mode_hblank);
+    printf("HDMA @%.2x:%.4x %.4x -> %.4x, blocks=%.2x mode_hblank=%d\n", s->RomBankLower, s->pc,  src, dst, blocks, mode_hblank);
 
     if (s->io_hdma_running && !mode_hblank) {
         /* Cancel ongoing H-Blank HDMA transfer */
@@ -56,10 +55,6 @@ static void mmu_hdma_start(GbState *s, u8 lenmode) {
         s->GbcHdmaControl = 0xff; /* done */
         return;
     }
-
-    //mmu_assert(blocks > 0 && blocks <= 0x80);
-    //mmu_assert(src + len <= 0x8000 || /* ROM */ (src >= 0xa000 && src + len <= 0xe000)); /* EXT_RAM */
-    //mmu_assert(dst >= 0x8000 && dst + len <= 0xa000); /* VRAM */
 
     if (!mode_hblank) {
         for (u16 i = 0; i < len; i++)
@@ -242,7 +237,15 @@ static void writeRom01(GbState* s, u16 location, byte value) {
 }
 
 natural static inline getMbc1RomBank(const GbState* s) {
-    return (s->RomBankUpper << 5) | s->RomBankLower;
+    byte result = (s->RomBankUpper << 5) | s->RomBankLower;
+    if (result == 0x00 || result == 0x20 || result == 0x40 || result == 0x60) {
+        result++;
+    }     
+    return result;
+}
+
+natural static inline getMbc3RomBank(const GbState* s) {
+    return s->RomBankLower < 1 ? s->RomBankLower + 1 : s->RomBankLower;
 }
 
 natural static inline getMbc5RomBank(const GbState* s) {
@@ -260,10 +263,6 @@ static void writeRom23(GbState* s, u16 location, byte value) {
 
     natural bank = 0;
 
-    if (value == 0 && s->mbc != 5) {
-        value = 1;
-    }
-
     if (s->mbc == 0) {
         return;
     } else if (s->mbc == 1) {
@@ -271,7 +270,7 @@ static void writeRom23(GbState* s, u16 location, byte value) {
         bank = getMbc1RomBank(s);
     } else if (s->mbc == 3) {
         s->RomBankLower = value & 0x7f;
-        bank = s->RomBankLower;
+        bank = getMbc3RomBank(s);
     } else if (s->mbc == 5) {
         // MBC5 splits up this area into 2000-2fff for low bits rom bank,
         // and 3000-3fff for the high bit.
@@ -294,11 +293,11 @@ static void writeRom23(GbState* s, u16 location, byte value) {
  * Sets the RAM bank number or  the upper part of the ROM bank number depending on the mbc type and current state.
  */
 static void writeRom45(GbState* s, u16 location, byte value) {
-    byte oldBankNumber = s->SRamBankNumber;
     if (s->mbc == 1) {
         if (s->RomRamSelect == ROM_SELECT) {
             s->RomBankUpper = value & 3;
-            s->ROMX = s->Cartridge->Rom.Data + (getMbc1RomBank(s) * ROM_BANK_SIZE);
+            byte bank = getMbc1RomBank(s);
+            s->ROMX = s->Cartridge->Rom.Data + (bank * ROM_BANK_SIZE);
             return;
         } else { // RAM_SELECT
             s->SRamBankNumber = value & 3;
