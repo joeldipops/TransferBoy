@@ -15,7 +15,7 @@ static sByte setInfo(GbState* s, const GameBoyCartridge* cartridge) {
         return LOAD_ERR_TOO_SMALL;
     }
 
-    switch (cartridge->Type) {
+    switch (cartridge->Header.CartridgeType) {
         case 0x00:                                                                  break;
         case 0x01:  s->mbc = 1;                                                     break;
         case 0x02:  s->mbc = 1; s->hasSRAM = 1;                                     break;

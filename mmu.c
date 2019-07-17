@@ -446,7 +446,7 @@ static byte readSRAM(GbState* s, u16 location) {
     }
 
     // May need RTC stuff
-    if (s->mbc == 3 && s->mem_mbc3_extram_rtc_select < 0x04) {
+    if (s->mbc == 3 && s->mem_mbc3_extram_rtc_select >= 0x04) {
         if (s->mem_mbc3_extram_rtc_select >= 0x08 && s->mem_mbc3_extram_rtc_select <= 0x0c) {
             return s->mem_RTC[s->mem_mbc3_extram_rtc_select];
         } else {
