@@ -66,7 +66,7 @@ Address|Value|Address|Value
 
 ### 0x0000 - 0x7FFF *Controller Pak Data*
 
-When using a Controller Pak/Mempak the actual data stored on the Pak is read from/written to these 32kBs of address space. From what I can tell so far, The Transfer Pak does not use these addresses at all - perhaps there were plans for a combination Controller Pak/Transfer Pak or Controller Pak/Rumble Pak that never game to fruition, and they were reserved for that purpose.
+When using a Controller Pak/Mempak the actual data stored on the Pak is read from/written to these 32kBs of address space. From what I can tell so far, The Transfer Pak does not use these addresses at all - perhaps there were plans for a combination Controller Pak/Transfer Pak or Controller Pak/Rumble Pak that never came to fruition, and they were reserved for that purpose.
 
 When read from a Transfer pak:
 * 0x0000 - 0x1FFF is probably an echo of 0x8000 - 0x9FFF 
