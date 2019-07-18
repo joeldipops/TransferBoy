@@ -8,8 +8,9 @@ I had a bit of trouble finding information on how to use the Transfer Pak over l
     * Transfer Pak - NUS-019
     * Official Controller - NUS-005
     * Official Expansion Pak - NUS-007
+    * Official Rumble Pak
     * An Everdrive 64 v2.5
-    * A test ROM I wrote, built with libdragon.
+    * A series of test ROMs I wrote, built with libdragon.
 
 * Data is written to and read from the Transfer Pak in 32B blocks.  When we only care about a single byte, such as when switching banks, or checking the access mode, the block would contain that value repeated 32 times.  For simplicity, I'll just say "Reading from 0xB000 will return *0x84*" rather than "will return 0x8484848484848484848484848484848484848484848484848484848484848484"
 
