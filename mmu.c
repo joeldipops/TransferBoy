@@ -325,6 +325,13 @@ static void writeRom45(GbState* s, u16 location, byte value) {
 static void writeRom67(GbState* s, u16 location, byte value) {
     if (s->mbc == 1) {      
         s->RomRamSelect = value & 0x1;
+        if (s->RomRamSelect == ROM_SELECT) {
+            s->SRamBankNumber = 0;
+            s->SRAM = s->Cartridge->Ram.Data;
+        } else {
+            s->RomBankUpper = 0;
+            s->ROMX = s->Cartridge->Rom.Data + (getMbc1RomBank(s) * ROM_BANK_SIZE);
+        }
     } else if (s->hasRtc) { // MBC3 only
         if (s->mem_latch_rtc == 0x01 && value == 0x01) {
             // TODO... actually latch something?
