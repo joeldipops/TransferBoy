@@ -172,6 +172,7 @@ void cpu_reset_state(GbState *s) {
 
     s->RomBankUpper = 0;
     s->RomRamSelect = ROM_SELECT;
+    s->isSRAMDisabled = true;
     s->mem_mbc3_extram_rtc_select = 0;
 
     s->mem_latch_rtc = 0x01;

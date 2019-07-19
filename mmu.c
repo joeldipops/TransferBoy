@@ -229,6 +229,7 @@ static mmuReadHramOperation mmuReadHramTable[] = {
 
 static void writeRom01(GbState* s, u16 location, byte value) {
     // 0000 - 1FFF: Fixed ROM bank
+    value &= 0xF;
     if (value == 0) {
         s->isSRAMDisabled = true;          
     } else if (value == 0x0A) {
@@ -240,7 +241,8 @@ natural static inline getMbc1RomBank(const GbState* s) {
     byte result = (s->RomBankUpper << 5) | s->RomBankLower;
     if (result == 0x00 || result == 0x20 || result == 0x40 || result == 0x60) {
         result++;
-    }     
+    }  
+
     return result;
 }
 
@@ -296,8 +298,7 @@ static void writeRom45(GbState* s, u16 location, byte value) {
     if (s->mbc == 1) {
         if (s->RomRamSelect == ROM_SELECT) {
             s->RomBankUpper = value & 3;
-            byte bank = getMbc1RomBank(s);
-            s->ROMX = s->Cartridge->Rom.Data + (bank * ROM_BANK_SIZE);
+            s->ROMX = s->Cartridge->Rom.Data + (getMbc1RomBank(s) * ROM_BANK_SIZE);
             return;
         } else { // RAM_SELECT
             s->SRamBankNumber = value & 3;
