@@ -241,7 +241,7 @@ natural static inline getMbc1RomBank(const GbState* s) {
     byte result = (s->RomBankUpper << 5) | s->RomBankLower;
     if (result == 0x00 || result == 0x20 || result == 0x40 || result == 0x60) {
         result++;
-    }  
+    }
 
     return result;
 }
@@ -297,15 +297,20 @@ static void writeRom23(GbState* s, u16 location, byte value) {
 static void writeRom45(GbState* s, u16 location, byte value) {
     if (s->mbc == 1) {
         if (s->RomRamSelect == ROM_SELECT) {
-            s->RomBankUpper = value & 3;
-            s->ROMX = s->Cartridge->Rom.Data + (getMbc1RomBank(s) * ROM_BANK_SIZE);
+            if (s->Cartridge->RomBankCount > 0x1F) {
+                s->RomBankUpper = value & 3;
+                s->ROMX = s->Cartridge->Rom.Data + (getMbc1RomBank(s) * ROM_BANK_SIZE);
+            }
+
             return;
         } else { // RAM_SELECT
-            s->SRamBankNumber = value & 3;
-            if (s->Cartridge->RamBankCount == 1) {
-                s->SRamBankNumber &= 1;
+            if (s->Cartridge->RamBankCount <= 1) {
+                return;
             }
+
+            s->SRamBankNumber = value & 3;
         }
+
     } else if (s->mbc == 3) {
         s->mem_mbc3_extram_rtc_select = value;
     } else if (s->mbc == 5) {

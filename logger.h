@@ -38,7 +38,7 @@ void logAndPauseFrame(display_context_t frame, const string text, ...);
  * @param start the starting memory address.
  * @param frame display buffer to print to.
  */
-void printSegmentToFrame(const string caption, const byte* start, const display_context_t frame);
+void printSegmentToFrame(display_context_t frame, const string caption, const byte* start);
 
 /**
  * Generic debug handler for the gameboy emulation

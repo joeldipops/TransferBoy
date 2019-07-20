@@ -61,7 +61,11 @@ static void printLog(const string text, display_context_t frame) {
  * @param start the starting memory address.
  * @param frame display buffer to print to.
  */
-void printSegmentToFrame(const string caption, const byte* start, const display_context_t frame) {
+void printSegmentToFrame(display_context_t frame, const string caption, const byte* start) {
+    if (!frame) {
+        while(!(frame = display_lock()));
+    }    
+
     graphics_fill_screen(frame, GLOBAL_BACKGROUND_COLOUR);
     graphics_draw_text(frame, 10, 10, caption);
     
