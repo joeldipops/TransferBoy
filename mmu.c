@@ -237,8 +237,8 @@ static void writeRom01(GbState* s, u16 location, byte value) {
     }
 }
 
-natural static inline getMbc1RomBank(const GbState* s) {
-    byte result = (s->RomBankUpper << 5) | s->RomBankLower;
+natural static inline getMbc1RomBank(const byte lower, const byte upper) {
+    byte result = (upper << 5) | lower;
     if (result == 0x00 || result == 0x20 || result == 0x40 || result == 0x60) {
         result++;
     }
@@ -268,8 +268,17 @@ static void writeRom23(GbState* s, u16 location, byte value) {
     if (s->mbc == 0) {
         return;
     } else if (s->mbc == 1) {
-        s->RomBankLower = value & 0x1f;
-        bank = getMbc1RomBank(s);
+        value &= 0x1F;
+
+        bank = getMbc1RomBank(value, s->RomBankUpper);
+
+        // Don't switch to a bank that doesn't exist.
+        if (bank >= s->Cartridge->RomBankCount) {
+            bank = bank % s->Cartridge->RomBankCount;
+        }
+
+        s->RomBankLower = bank & 0x1F;                    
+
     } else if (s->mbc == 3) {
         s->RomBankLower = value & 0x7f;
         bank = getMbc3RomBank(s);
@@ -298,8 +307,14 @@ static void writeRom45(GbState* s, u16 location, byte value) {
     if (s->mbc == 1) {
         if (s->RomRamSelect == ROM_SELECT) {
             if (s->Cartridge->RomBankCount > 0x1F) {
-                s->RomBankUpper = value & 3;
-                s->ROMX = s->Cartridge->Rom.Data + (getMbc1RomBank(s) * ROM_BANK_SIZE);
+                value &= 3;
+                byte bank = getMbc1RomBank(s->RomBankLower, value);
+                if (bank >= s->Cartridge->RomBankCount) {
+                    bank = bank % s->Cartridge->RomBankCount;
+                }
+
+                s->RomBankUpper = bank >> 5;
+                s->ROMX = s->Cartridge->Rom.Data + (bank * ROM_BANK_SIZE);                
             }
 
             return;
@@ -336,7 +351,7 @@ static void writeRom67(GbState* s, u16 location, byte value) {
             s->SRAM = s->Cartridge->Ram.Data;
         } else {
             s->RomBankUpper = 0;
-            s->ROMX = s->Cartridge->Rom.Data + (getMbc1RomBank(s) * ROM_BANK_SIZE);
+            s->ROMX = s->Cartridge->Rom.Data + (getMbc1RomBank(s->RomBankLower, s->RomBankUpper) * ROM_BANK_SIZE);
         }
     } else if (s->hasRtc) { // MBC3 only
         if (s->mem_latch_rtc == 0x01 && value == 0x01) {
