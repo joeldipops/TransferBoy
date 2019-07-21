@@ -262,7 +262,6 @@ static void writeRom23(GbState* s, u16 location, byte value) {
     if (s->mbc == 0) {
         return;
     }
-
     natural bank = 0;
 
     if (s->mbc == 0) {
@@ -305,9 +304,9 @@ static void writeRom23(GbState* s, u16 location, byte value) {
  */
 static void writeRom45(GbState* s, u16 location, byte value) {
     if (s->mbc == 1) {
+        value &= 3;
         if (s->RomRamSelect == ROM_SELECT) {
             if (s->Cartridge->RomBankCount > 0x1F) {
-                value &= 3;
                 byte bank = getMbc1RomBank(s->RomBankLower, value);
                 if (bank >= s->Cartridge->RomBankCount) {
                     bank = bank % s->Cartridge->RomBankCount;
@@ -317,13 +316,28 @@ static void writeRom45(GbState* s, u16 location, byte value) {
                 s->ROMX = s->Cartridge->Rom.Data + (bank * ROM_BANK_SIZE);                
             }
 
+            s->ROM0 = s->Cartridge->Rom.Data;
+
             return;
-        } else { // RAM_SELECT
+        }
+        
+        if (s->RomRamSelect == SRAM_SELECT) {
+            // For MBC1 8 and 16Mbit carts, ROM0 actually changes when you write in RAM mode.
+            // https://raw.githubusercontent.com/Gekkio/gb-ctr/master/xx-mbc1.tex
+            if (s->Cartridge->RomBankCount > 0x20) {
+                byte bank = value << 5;
+                if (bank >= s->Cartridge->RomBankCount) {
+                    bank = bank % s->Cartridge->RomBankCount;
+                }
+
+                s->ROM0 = s->Cartridge->Rom.Data + (bank) * ROM_BANK_SIZE;
+            }
+
             if (s->Cartridge->RamBankCount <= 1) {
                 return;
             }
 
-            s->SRamBankNumber = value & 3;
+            s->SRamBankNumber = value;
         }
 
     } else if (s->mbc == 3) {

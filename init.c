@@ -9,6 +9,7 @@
 #include "resources.h"
 #include "logger.h"
 #include "text.h"
+#include "hwdefs.h"
 #include <libdragon.h>
 
 /**
@@ -90,6 +91,8 @@ void initLogic(RootState* state, const byte playerNumber) {
             state->Players[playerNumber].Cartridge.Ram.Size = 0x00;
             state->Players[playerNumber].Cartridge.Header.IsSgbSupported = true;   
             state->Players[playerNumber].Cartridge.IsGbcSupported = false;
+            state->Players[playerNumber].Cartridge.RomBankCount = state->Players[playerNumber].Cartridge.Rom.Size / ROM_BANK_SIZE;
+            state->Players[playerNumber].Cartridge.RamBankCount = 1;
 
             preparePlayMode(state, playerNumber);            
         }
