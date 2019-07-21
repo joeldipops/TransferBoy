@@ -305,7 +305,9 @@ static void writeRom23(GbState* s, u16 location, byte value) {
 static void writeRom45(GbState* s, u16 location, byte value) {
     if (s->mbc == 1) {
         value &= 3;
-        if (s->RomRamSelect == ROM_SELECT) {
+        if (s->RomRamSelect == ROM_SELECT || s->Cartridge->RomBankCount > 0x1F) {
+            // Apparently for large MBC1s, writing here DOES update ROMX, even in RAM mode!
+            // According to the mooneye-gb tests that is.
             if (s->Cartridge->RomBankCount > 0x1F) {
                 byte bank = getMbc1RomBank(s->RomBankLower, value);
                 if (bank >= s->Cartridge->RomBankCount) {
@@ -318,7 +320,9 @@ static void writeRom45(GbState* s, u16 location, byte value) {
 
             s->ROM0 = s->Cartridge->Rom.Data;
 
-            return;
+            if (s->RomRamSelect == ROM_SELECT) {
+                return;
+            }
         }
         
         if (s->RomRamSelect == SRAM_SELECT) {
