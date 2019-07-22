@@ -14,7 +14,7 @@ I had a bit of trouble finding information on how to use the Transfer Pak over l
 
 * Data is written to and read from the Transfer Pak in 32B blocks.  When we only care about a single byte, such as when switching banks, or checking the access mode, the block would contain that value repeated 32 times.  For simplicity, I'll just say "Reading from 0xB000 will return *0x84*" rather than "will return 0x8484848484848484848484848484848484848484848484848484848484848484"
 
-* Memory Bank Controller I/O works the same way as in a Game Boy.  So to change to Rom bank 12, for exmaple, you'll need to write 0x0C to 0x2000 in *Game Boy* address space. To access 0x2000, the Transfer Pak bank should be 0x00 and you'll write to 0xE000 of *Transfer Pak* address space.  But then to read from ROM bank 12, you'll then need to switch the Transfer Pak bank to 0x01. Got that?
+* Memory Bank Controller I/O works the same way as in a Game Boy.  So for example, to change to ROM bank 12 of an MBC1 Cartridge, you'll need to write 0x0C to 0x2000 in *Game Boy* address space. To access 0x2000, the Transfer Pak bank should be 0x00 and you'll write to 0xE000 of *Transfer Pak* address space.  But then to read from ROM bank 12, you'll then need to switch the Transfer Pak bank to 0x01. Got that?
 
 ## Memory Map
 The three "Controller Pak" accessories have a 16bit address space, laid out as below.
