@@ -214,7 +214,37 @@ static sByte switchRamBank(const byte controllerNumber, const natural bank, cons
 }
 
 /**
- * Switches what cartridge ROM bank appears at 0x4000 - 0x7FFF of cart space
+ * Getting banks 0x20, 0x40 and 0x60 on an MBC1 requires some voodoo.
+ * This switches us to ROM0 so it's immediately accessible.
+ * @param controllerNumber Controller slot tpak is plugged in to.
+ * @param bank Bank number to switch to.
+ * @returns Error code.
+ */
+static sByte switchROM0Bank(const byte controllerNumber, const natural bank, const CartridgeType type) {
+    // If not one of those three banks, don't try this.
+    if (bank & 0x9F) {
+        return TPAK_ERR_INVALID_ROM_BANK;
+    }    
+
+    if (type != MBC1) {
+        return TPAK_ERR_UNSUPPORTED_CARTRIDGE;
+    }
+
+    // Make sure we're in ROMX space
+    setTpakValue(controllerNumber, TPAK_BANK_ADDRESS, ROMX);    
+    // Switch to 'RAM' mode
+    setTpakValue(controllerNumber, mapAddress(GB_BANK_MODE_ADDRESS), GB_RAM_BANK_MODE);    
+    // Write to upper bank address, bank is the two bits << 5
+    setTpakValue(controllerNumber, mapAddress(GB_RAM_BANK_ADDRESS), bank >> 5);
+    // And move TPAK bank back to ROM0, since that's where these banks get put.
+    // GO FIGURE
+    setTpakValue(controllerNumber, TPAK_BANK_ADDRESS, ROM0);
+
+    return 0;
+}
+
+/**
+ * Switches what cartridge ROM bank appears at 0xC000 - 0xFFFF of address space
  * and switches the TPAK to map that location.
  * @param controllerNumber Controller slot tpak is plugged in to.
  * @param bank Bank number to switch to. 
@@ -222,15 +252,19 @@ static sByte switchRamBank(const byte controllerNumber, const natural bank, cons
  */
 static sByte switchBank(const byte controllerNumber, const natural bank, const CartridgeType type) {
     if (bank == 0) {
-        // Bank 0 is always ROM0
         setTpakValue(controllerNumber, TPAK_BANK_ADDRESS, ROM0);
     } else {
         if (type == MBC1) {
             // Tpak needs to map to ROMX for the following.
             setTpakValue(controllerNumber, TPAK_BANK_ADDRESS, ROMX);
             if (bank >= 32) {
-                // Ensure we are in ROM bank mode.
-                setTpakValue(controllerNumber, mapAddress(GB_BANK_MODE_ADDRESS), GB_ROM_BANK_MODE);
+                // Special voodoo required for these three banks.
+                if (bank == 0x20 || bank == 0x40 || bank == 0x60) {
+                    return switchROM0Bank(controllerNumber, bank, type);
+                } else {
+                    // Ensure we are in ROM bank mode.
+                    setTpakValue(controllerNumber, mapAddress(GB_BANK_MODE_ADDRESS), GB_ROM_BANK_MODE);
+                }
             }
 
             // Set upper two bits of the bank number at this address.

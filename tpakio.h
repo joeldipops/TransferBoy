@@ -34,9 +34,12 @@ typedef enum {
     TPAK_ERR_UNKNOWN_BEHAVIOUR,
     // We haven't been able to implement how to read the banks of this memory bank controller yet.
     TPAK_ERR_UNSUPPORTED_CARTRIDGE,
+    // Tried to switch to a bank that is not available in this context.
+    TPAK_ERR_INVALID_ROM_BANK,
     // libdragon read_mempak_address returned an error code
     // todo - break these down into useful errors we can respond to.
-    TPAK_ERR_SYSTEM_ERROR
+    TPAK_ERR_SYSTEM_ERROR,
+
 } TpakError;
 
 // Must be packed into a single byte to fit in the header.
