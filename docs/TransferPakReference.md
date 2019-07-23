@@ -1,4 +1,4 @@
-# Transfer Pak Reference
+# Nintendo 64 Accessory Reference
 
 I had a bit of trouble finding information on how to use the Transfer Pak over libdragon, so I wanted to collect what I've learnt in one place so the next person that comes along can get something up and running a little faster than I can.  There will be incomplete and possibly erraneous information on here so forgive me if things don't work or don't make much sense.
 
@@ -8,14 +8,49 @@ I had a bit of trouble finding information on how to use the Transfer Pak over l
     * Transfer Pak - NUS-019
     * Official Controller - NUS-005
     * Official Expansion Pak - NUS-007
+    * Official Rumble Pak
     * An Everdrive 64 v2.5
-    * A test ROM I wrote, built with libdragon.
+    * A series of test ROMs I wrote, built with libdragon.
 
 * Data is written to and read from the Transfer Pak in 32B blocks.  When we only care about a single byte, such as when switching banks, or checking the access mode, the block would contain that value repeated 32 times.  For simplicity, I'll just say "Reading from 0xB000 will return *0x84*" rather than "will return 0x8484848484848484848484848484848484848484848484848484848484848484"
 
-* Memory Bank Controller I/O works the same way as in a Game Boy.  So to change to Rom bank 12, for exmaple, you'll need to write 0x0C to 0x2000 in *Game Boy* address space. To access 0x2000, the Transfer Pak bank should be 0x00 and you'll write to 0xE000 of *Transfer Pak* address space.  But then to read from ROM bank 12, you'll then need to switch the Transfer Pak bank to 0x01. Got that?
+* Memory Bank Controller I/O works the same way as in a Game Boy.  So for example, to change to ROM bank 12 of an MBC1 Cartridge, you'll need to write 0x0C to 0x2000 in *Game Boy* address space. To access 0x2000, the Transfer Pak bank should be 0x00 and you'll write to 0xE000 of *Transfer Pak* address space.  But then to read from ROM bank 12, you'll then need to switch the Transfer Pak bank to 0x01. Got that?
 
-## Memory Addresses and Checksum
+## Memory Map
+The three "Controller Pak" accessories have a 16bit address space, laid out as below.
+
+Address|Transfer Pak                      | Rumble Pak       
+-------|----------------------------------|------------------
+0x0000 | Echo of 0x8000 - 0x9FFF | Ununsed (0x00 0x00 ...) 
+0x0100 | ... | ... 
+0x0200 | ... | ... 
+0x0400 | ... | ... 
+0x1000 | ... | ... 
+0x2000 | Echo of 0xA000 - 0xAFFF | ... 
+0x3000 | Echo of 0xB000 - 0xBFFF | ... 
+0x4000 | Unused.  (0x00 0x00 ...) | ... 
+0x5000 | ... | ... 
+0x6000 | ... | ... 
+0x7000 | ... | ... 
+0x8000 | Power On/Off Switch | Identifies Rumble Pak (0x80 0x80 ...)
+0x9000 | ... | ... 
+0xA000 | Bank Switch | ... 
+0xB000 | Status and Control | ... 
+0xC000 | Banked Cartridge Memory Access | Rumble Control. Write only.  1 to start and 0 to stop. (0x00 0x00...)
+0xD000 | ... | Unused (0x00 0x00 ...)
+0xE000 | ... | ... 
+0xF000 | ... | ... 
+
+## Rumble Pak Details
+
+The rumble pak is pretty simple.  There are only two addresses and three values you need to worry about.
+
+* Read from 0x8000 and if you get back 0x80 you know what you're looking at is a Rumble Pak.
+* Write to 0xC000 to turn the rumble on and off.  0x01 starts the rumble and 0x00 stops it.
+
+## Transfer Pak Details
+
+### Memory Addresses and Checksum
 Although TPak addresses are presented as 16bit, the lower five bits are not part of the address but are instead reserved for a CRC Checksum.  This is why the device is read from and written to in 32byte chunks because that's as precise as the address can get.  I've determined that calculating the checksum is not actually necessary to do I/O with the Transfer Pak.  From https://github.com/sanni/cartreader/blob/master/Cart_Reader/N64.ino#L512 the algorithm to calculate the crc seems to be 
 
 ```
@@ -29,27 +64,7 @@ for bits 15 -> 5
 
 I haven't tested this yet...
 
-
-## Memory Map
-
-Address|Description
--------|---------------
-0x0000 | Echo of 0x8000 - 0x9FFF
-0x1000 | ...
-0x2000 | Echo of 0xA000 - 0xAFFF
-0x3000 | Echo of 0xB000 - 0xBFFF
-0x4000 | Unused.  Reads are all 0x00
-0x5000 | ...
-0x6000 | ...
-0x7000 | ...
-0x8000 | Power On/Off Switch
-0x9000 | ...
-0xA000 | Bank Switch
-0xB000 | Status and Control
-0xC000 | Banked Cartridge Memory Access
-0xD000 | ...
-0xE000 | ...
-0xF000 | ...
+### Address Space Details
 
 On start up, immediately after enabling power to the Tpak, I found that the entire memory space looks like this:
 
