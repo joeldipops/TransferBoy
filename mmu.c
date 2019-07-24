@@ -230,6 +230,7 @@ static mmuReadHramOperation mmuReadHramTable[] = {
 static void writeRom01(GbState* s, u16 location, byte value) {
     // 0000 - 1FFF: Fixed ROM bank
     value &= 0xF;
+
     if (value == 0) {
         s->isSRAMDisabled = true;          
     } else if (value == 0x0A) {
@@ -278,6 +279,19 @@ static void writeRom23(GbState* s, u16 location, byte value) {
 
         s->RomBankLower = bank & 0x1F;                    
 
+    } else if (s->mbc == 2) {
+        // bit 8 must be set to allow a bank switch.
+        if (!(location & 0x0100)) {
+            return;
+        }
+
+        // Only the lowest 4 bits matter
+        s->RomBankLower = value & 0xF;
+        if (s->RomBankLower == 0) {
+            s->RomBankLower++;
+        }
+
+        bank = s->RomBankLower;        
     } else if (s->mbc == 3) {
         s->RomBankLower = value & 0x7f;
         bank = getMbc3RomBank(s);
@@ -290,6 +304,11 @@ static void writeRom23(GbState* s, u16 location, byte value) {
             s->RomBankUpper = value & 1;    
         }
         bank = getMbc5RomBank(s);
+
+        if (bank >= s->Cartridge->RomBankCount) {
+            bank = bank % s->Cartridge->RomBankCount;
+        }
+
     } else {
         // return ERROR_MBC_NOT_IMPLEMENTED;
         return; 

@@ -17,11 +17,11 @@ static sByte setInfo(GbState* s, const GameBoyCartridge* cartridge) {
 
     switch (cartridge->Header.CartridgeType) {
         case 0x00:                                                                  break;
-        case 0x01:  s->mbc = 1;                                                     break;
-        case 0x02:  s->mbc = 1; s->hasSRAM = 1;                                     break;
-        case 0x03:  s->mbc = 1; s->hasSRAM = 1; s->hasBattery = 1;                  break;
-        case 0x05:  s->mbc = 2;                                                     break;
-        case 0x06:  s->mbc = 2;                 s->hasBattery = 1;                  break;
+        case 0x01: s->mbc = 1;                                                     break;
+        case 0x02: s->mbc = 1; s->hasSRAM = 1;                                     break;
+        case 0x03: s->mbc = 1; s->hasSRAM = 1; s->hasBattery = 1;                  break;
+        case 0x05: s->mbc = 2; s->hasSRAM = 1;                                     break;
+        case 0x06: s->mbc = 2; s->hasSRAM = 1; s->hasBattery = 1;                  break;
         case 0x08:              s->hasSRAM = 1;                                     break;
         case 0x09:              s->hasSRAM = 1; s->hasBattery = 1;                  break;
         case 0x0f: s->mbc = 3;                  s->hasBattery = 1; s->hasRtc = 1;   break;
