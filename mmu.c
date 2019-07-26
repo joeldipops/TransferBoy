@@ -2,7 +2,6 @@
 
 #include "mmu.h"
 #include "hwdefs.h"
-#include "logger.h"
 
 #define mmu_error(fmt, ...) \
     do { \
@@ -227,18 +226,49 @@ static mmuReadHramOperation mmuReadHramTable[] = {
 /*   F */ readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, 
 };
 
+/**
+ * Unlike most MBCs, mbc2 has the same behaviour when writting to 0x0000-0x1FFF or 0x2000-0x3FFF
+ */
+static void mbc2writeRom0123(GbState* s, u16 location, byte value) {
+    // bit 8 must be set to allow a bank switch.
+    if (!(location & 0x0100)) {
+        if (value == 0) {
+            s->isSRAMDisabled = true;          
+        } else if (value == 0x0A) {
+            s->isSRAMDisabled = false;
+        }
+    } else {
+        // Only the lowest 4 bits matter
+        s->RomBankLower = value & 0xF;
+
+        if (s->RomBankLower == 0) {
+            s->RomBankLower++;
+        }        
+
+        if (s->RomBankLower >= s->Cartridge->RomBankCount) {
+            s->RomBankLower = s->RomBankLower % s->Cartridge->RomBankCount;
+        }   
+
+        s->ROMX = s->Cartridge->Rom.Data + (s->RomBankLower * ROM_BANK_SIZE);      
+    }
+}
+
 static void writeRom01(GbState* s, u16 location, byte value) {
     // 0000 - 1FFF: Fixed ROM bank
     value &= 0xF;
 
-    if (value == 0) {
-        s->isSRAMDisabled = true;          
-    } else if (value == 0x0A) {
-        s->isSRAMDisabled = false;
+    if (s->mbc == 2) {
+        mbc2writeRom0123(s, location, value);
+    } else {
+        if (value == 0) {
+            s->isSRAMDisabled = true;          
+        } else if (value == 0x0A) {
+            s->isSRAMDisabled = false;
+        }
     }
 }
 
-natural static inline getMbc1RomBank(const byte lower, const byte upper) {
+static inline natural getMbc1RomBank(const byte lower, const byte upper) {
     byte result = (upper << 5) | lower;
     if (result == 0x00 || result == 0x20 || result == 0x40 || result == 0x60) {
         result++;
@@ -247,11 +277,11 @@ natural static inline getMbc1RomBank(const byte lower, const byte upper) {
     return result;
 }
 
-natural static inline getMbc3RomBank(const GbState* s) {
+static inline natural getMbc3RomBank(const GbState* s) {
     return s->RomBankLower < 1 ? s->RomBankLower + 1 : s->RomBankLower;
 }
 
-natural static inline getMbc5RomBank(const GbState* s) {
+static inline natural getMbc5RomBank(const GbState* s) {
     return (s->RomBankUpper << 8) | s->RomBankLower;
 }
 
@@ -280,18 +310,8 @@ static void writeRom23(GbState* s, u16 location, byte value) {
         s->RomBankLower = bank & 0x1F;                    
 
     } else if (s->mbc == 2) {
-        // bit 8 must be set to allow a bank switch.
-        if (!(location & 0x0100)) {
-            return;
-        }
-
-        // Only the lowest 4 bits matter
-        s->RomBankLower = value & 0xF;
-        if (s->RomBankLower == 0) {
-            s->RomBankLower++;
-        }
-
-        bank = s->RomBankLower;        
+        mbc2writeRom0123(s, location, value);
+        return;      
     } else if (s->mbc == 3) {
         s->RomBankLower = value & 0x7f;
         bank = getMbc3RomBank(s);
