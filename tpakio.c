@@ -4,6 +4,8 @@
 #include <libdragon.h>
 #include <math.h>
 
+#include "logger.h"
+
 const byte BLOCK_SIZE = 32;
 const natural BANK_SIZE = 16 * 1024; // 16kB banks.
 const byte HEADER_SIZE = 80;
@@ -387,9 +389,14 @@ static sByte getNumberOfRamBanks(const CartridgeHeader* header, const CartridgeT
  * @param header the header.
  * @returns the size of each ram bank.
  */
-static natural getRamBankSize(const CartridgeHeader* header) {
+static natural getRamBankSize(const CartridgeHeader* header, const CartridgeType type) {
     switch(header->RamSizeCode) {
-        case 0: return 0;
+        case 0: 
+            if (type == MBC2) {
+                return 512;
+            } else {
+                return 0;
+            }
         case 1: return 2 * 1024;
         default: return 8 * 1024;
     }
@@ -622,6 +629,12 @@ sByte importCartridge(const byte controllerNumber, GameBoyCartridge* cartridge) 
     if (result) {
         return result;
     }
+
+    memset(cartridge->Ram.Data, 0xFA, cartridge->Ram.Size);
+
+    exportCartridgeRam(0, cartridge);
+
+    logAndPauseFrame(0, "RAM BANKS=%d RAM SIZE=%08x DataSize=%08x", cartridge->RamBankCount, cartridge->RamBankCount * cartridge->RamBankSize, cartridge->Ram.Size);
 
     // Turn off the lights when we're done.
     setTpakValue(controllerNumber, CARTRIDGE_POWER_ADDRESS, CARTRIDGE_POWER_OFF);
