@@ -450,7 +450,6 @@ static CartridgeType getPrimaryType(const CartridgeType fullType) {
  ** 0  - Successful
  ** -1 - Error
  */
-#include "logger.h"
 static sByte importRom(const byte controllerNumber, GameBoyCartridge* cartridge) {
     cartridge->Rom.Size = BANK_SIZE * cartridge->RomBankCount;
     if (cartridge->Rom.Data) {

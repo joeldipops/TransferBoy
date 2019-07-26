@@ -443,6 +443,8 @@ static void writeSRAM(GbState* s, u16 location, byte value) {
             s->mem_RTC[s->mem_mbc3_extram_rtc_select] = value;
         }
         // else { doesn't do anything. }
+    } else if (s->mbc == 2) {
+        s->SRAM[(location - 0xA000) % 0x200] = value | 0xF0;        
     } else {
         s->SRAM[location - 0xA000] = value;
         s->isSRAMDirty = 1;        
@@ -537,6 +539,8 @@ static byte readSRAM(GbState* s, u16 location) {
         } else {
             return 0x00;
         }
+    } else if (s->mbc == 2) {
+        return s->SRAM[(location - 0xA000) % 0x200] | 0xF0;
     } else {  
         return s->SRAM[location - 0xA000];
     }
