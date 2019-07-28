@@ -613,8 +613,6 @@ typedef struct {
     u8 io_buttons_buttons;
 
     // CGB DMA transfers (HDMA)
-    u8 io_hdma_src_high, io_hdma_src_low;
-    u8 io_hdma_dst_high, io_hdma_dst_low;
     bool io_hdma_running:1;
     u16 io_hdma_next_src, io_hdma_next_dst;
 

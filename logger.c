@@ -12,7 +12,7 @@
 const byte VERTICAL_MARGIN = 30;
 const byte HORIZONTAL_MARGIN = 30;
 
-static bool isBroken = false;
+static bool isBroken = true;
 
 void debug(GbState *s, string pnemonic) {
     if (isBroken) {

@@ -369,7 +369,7 @@ void addAR8(GbState* s, byte op) { // debug(s, "addAR8");
     CF = res & 0x100 ? 1 : 0;
     A = (u8)res;    
 }
-void addAaHL(GbState* s, byte op) { // debug("s, "addAaHL"); 
+void addAaHL(GbState* s, byte op) { // debug(s, "addAaHL"); 
     u8 srcval = mem(HL);
     u16 res = A + srcval;
     ZF = (u8)res == 0;

@@ -17,10 +17,6 @@
 
 static void mmu_hdma_do(GbState *s) {
     // DMA one block (0x10 byte), should be called at start of H-Blank. */
-    //mmu_assert(s->io_hdma_running);
-    //mmu_assert((s->GbcHdmaControl & (1<<7)) == 0);
-    //mmu_assert((s->LcdStatus & 3) == 0);
-
     for (int i = 0; i < 0x10; i++) {
         u8 dat = mmu_read(s, s->io_hdma_next_src++);
         mmu_write(s, s->io_hdma_next_dst++, dat);
@@ -42,16 +38,15 @@ static void mmu_hdma_start(GbState *s, u8 lenmode) {
     u16 blocks = (lenmode & ~(1<<7)) + 1;
     u16 len = blocks * 0x10;
     u8 mode_hblank = (lenmode & (1<<7)) ? 1 : 0;
-    u16 src = ((s->io_hdma_src_high << 8) | s->io_hdma_src_low) & ~0xf;
-    u16 dst = ((s->io_hdma_dst_high << 8) | s->io_hdma_dst_low) & ~0xf;
-    dst = (dst & 0x1fff) | 0x8000; /* Ignore upper 3 bits (always in VRAM) */
-
-    printf("HDMA @%.2x:%.4x %.4x -> %.4x, blocks=%.2x mode_hblank=%d\n", s->RomBankLower, s->pc,  src, dst, blocks, mode_hblank);
+    u16 src = (s->GbcHdmaSource & ~0xf);
+    u16 dst = (s->GbcHdmaDestination & ~0xf);
+    // Ignore upper 3 bits (always in VRAM)
+    dst = (dst & 0x1fff) | 0x8000; 
 
     if (s->io_hdma_running && !mode_hblank) {
-        /* Cancel ongoing H-Blank HDMA transfer */
+        // Cancel ongoing H-Blank HDMA transfer
         s->io_hdma_running = 0;
-        s->GbcHdmaControl = 0xff; /* done */
+        s->GbcHdmaControl = 0xff; // done
         return;
     }
 
@@ -59,7 +54,7 @@ static void mmu_hdma_start(GbState *s, u8 lenmode) {
         for (u16 i = 0; i < len; i++)
             mmu_write(s, dst++, mmu_read(s, src++));
 
-        s->GbcHdmaControl = 0xff; /* done */
+        s->GbcHdmaControl = 0xff; // done
         u32 clks = blocks * GB_HDMA_BLOCK_CLKS;
         if (s->double_speed)
             clks *= 2;
@@ -70,7 +65,8 @@ static void mmu_hdma_start(GbState *s, u8 lenmode) {
         s->io_hdma_next_dst = dst;
         s->GbcHdmaControl = blocks - 1;
 
-        if ((s->LcdStatus & 3) == 0) /* H-Blank */
+        // If in H-Blank
+        if ((s->LcdStatus & 3) == 0) 
             mmu_hdma_do(s);
     }
 }
@@ -140,12 +136,14 @@ static void writeGbcSpritePaletteData(GbState* s, byte offset, byte value) {
  }
 
 static void writeGbcRamBankSelect(GbState* s, byte offset, byte value) {
-    if (value == 0) {
-        value = 1;
-    }
-    value &= s->WRAMBankCount - 1;
+    value &= (s->WRAMBankCount - 1);
     s->GbcRamBankSelectRegister = value; 
-    s->WRAMX = s->WRAMBanks + (s->GbcRamBankSelectRegister * WRAM_BANK_SIZE);     
+
+    if (value == 0) {
+        value++;
+    }
+
+    s->WRAMX = s->WRAMBanks + (value * WRAM_BANK_SIZE);     
 }
 
 
@@ -454,14 +452,14 @@ static void writeSRAM(GbState* s, u16 location, byte value) {
 /**
  * 0xC000 - 0xCFFF: Fixed RAM
  */
-static void writeWRAMC(GbState* s, u16 location, byte value) {
+static void writeWRAM0(GbState* s, u16 location, byte value) {
     s->WRAM0[location - 0xc000] = value;
 }
 
 /**
  * 0xD000 - 0xDFFF: Switchable RAM
  */
-static void writeWRAMD(GbState* s, u16 location, byte value) {
+static void writeWRAMX(GbState* s, u16 location, byte value) {
     s->WRAMX[location - 0xd000] = value; 
 }
 
@@ -500,8 +498,8 @@ static mmuWriteOperation mmuWriteTable[] = {
 /*   9 */ writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,
 /*   A */ writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,
 /*   B */ writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,
-/*   C */ writeWRAMC, writeWRAMC, writeWRAMC, writeWRAMC, writeWRAMC, writeWRAMC, writeWRAMC, writeWRAMC, writeWRAMC, writeWRAMC, writeWRAMC, writeWRAMC, writeWRAMC, writeWRAMC, writeWRAMC, writeWRAMC, 
-/*   D */ writeWRAMD, writeWRAMD, writeWRAMD, writeWRAMD, writeWRAMD, writeWRAMD, writeWRAMD, writeWRAMD, writeWRAMD, writeWRAMD, writeWRAMD, writeWRAMD, writeWRAMD, writeWRAMD, writeWRAMD, writeWRAMD, 
+/*   C */ writeWRAM0, writeWRAM0, writeWRAM0, writeWRAM0, writeWRAM0, writeWRAM0, writeWRAM0, writeWRAM0, writeWRAM0, writeWRAM0, writeWRAM0, writeWRAM0, writeWRAM0, writeWRAM0, writeWRAM0, writeWRAM0, 
+/*   D */ writeWRAMX, writeWRAMX, writeWRAMX, writeWRAMX, writeWRAMX, writeWRAMX, writeWRAMX, writeWRAMX, writeWRAMX, writeWRAMX, writeWRAMX, writeWRAMX, writeWRAMX, writeWRAMX, writeWRAMX, writeWRAMX, 
 /*   E */ writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,
 /*   F */ writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeOam,   writeHigh
 };
