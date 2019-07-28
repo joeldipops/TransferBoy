@@ -4,8 +4,6 @@
 #include <libdragon.h>
 #include <math.h>
 
-#include "logger.h"
-
 const byte BLOCK_SIZE = 32;
 const natural BANK_SIZE = 16 * 1024; // 16kB banks.
 const byte HEADER_SIZE = 80;

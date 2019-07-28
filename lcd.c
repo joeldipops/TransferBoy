@@ -4,7 +4,6 @@
 #include "core.h"
 #include "state.h"
 #include "config.h"
-#include "logger.h"
 #include "lcd.h"
 #include "hwdefs.h"
 
@@ -51,47 +50,50 @@ void lcd_step(PlayerState* state) {
 
     if (s->io_lcd_mode_cycles_left < 0) {
         switch (s->LcdStatus & 3) {
-        case 0: /* H-Blank */
-            if (s->CurrentLine == 143) { /* Go into V-Blank (1) */
+        case 0: // H-Blank
+            if (s->CurrentLine == 143) { // Go into V-Blank (1)
                 s->LcdStatus = (s->LcdStatus & 0xfc) | 1;
                 s->io_lcd_mode_cycles_left = GB_LCD_MODE_1_CLKS;
                 s->InterruptFlags |= 1 << 0;
                 s->lcd_entered_vblank = 1;
-            } else { /* Back into OAM (2) */
+            } else { // Back into OAM (2)
                 s->LcdStatus = (s->LcdStatus & 0xfc) | 2;
                 s->io_lcd_mode_cycles_left = GB_LCD_MODE_2_CLKS;
             }
             s->CurrentLine = (s->CurrentLine + 1) % (GB_LCD_LY_MAX + 1);
             s->LcdStatus = (s->LcdStatus & 0xfb) | (s->CurrentLine == s->NextInterruptLine);
 
-            /* We incremented line, check LY=LYC and set interrupt if needed. */
-            if (s->LcdStatus & (1 << 6) && s->CurrentLine == s->NextInterruptLine)
+            // We incremented line, check LY=LYC and set interrupt if needed.
+            if (s->LcdStatus & (1 << 6) && s->CurrentLine == s->NextInterruptLine) {
                 s->InterruptFlags |= 1 << 1;
+            }
             break;
-        case 1: /* VBlank, Back to OAM (2) */
+        case 1: // VBlank, Back to OAM (2)
             s->LcdStatus = (s->LcdStatus & 0xfc) | 2;
             s->io_lcd_mode_cycles_left = GB_LCD_MODE_2_CLKS;
             break;
-        case 2: /* OAM, onto line drawing (OAM+VRAM busy) (3) */
+        case 2: // OAM, onto line drawing (OAM+VRAM busy) (3)
             s->LcdStatus = (s->LcdStatus & 0xfc) | 3;
             s->io_lcd_mode_cycles_left = GB_LCD_MODE_3_CLKS;
             break;
-        case 3: /* Line render (OAM+VRAM), let's H-Blank (0) */
+        case 3: // Line render (OAM+VRAM), let's H-Blank (0)
             s->LcdStatus = (s->LcdStatus & 0xfc) | 0;
             s->io_lcd_mode_cycles_left = GB_LCD_MODE_0_CLKS;
             s->lcd_entered_hblank = 1;
             break;
         }
 
-        /* We switched mode, trigger interrupt if requested. */
+        // We switched mode, trigger interrupt if requested.
         u8 newmode = s->LcdStatus & 3;
-        if (s->LcdStatus & (1 << 5) && newmode == 2) /* OAM (2) int */
+        if (s->LcdStatus & (1 << 5) && newmode == 2) // OAM (2) int
             s->InterruptFlags |= 1 << 1;
-        if (s->LcdStatus & (1 << 4) && newmode == 1) /* V-Blank (1) int */
+        if (s->LcdStatus & (1 << 4) && newmode == 1) // V-Blank (1) int
             s->InterruptFlags |= 1 << 1;
-        if (s->LcdStatus & (1 << 3) && newmode == 0) /* H-Blank (0) int */
+        if (s->LcdStatus & (1 << 3) && newmode == 0) // H-Blank (0) int
             s->InterruptFlags |= 1 << 1;
     }
+
+    s->IsCurrentLineLYC = (s->CurrentLine == s->NextInterruptLine);
 
     if (s->lcd_entered_hblank)
         lcd_render_current_line(state);
@@ -188,8 +190,8 @@ static void lcd_render_current_line(PlayerState* state) {
 
     u8 obj_tile_height = obj_8x16 ? 16 : 8;
 
-    /* OAM scan - gather (max 10) objects on this line in cache */
-    /* TODO: sort the objs so those with smaller x coord have higher prio */
+    // OAM scan - gather (max 10) objects on this line in cache
+    // TODO: sort the objs so those with smaller x coord have higher priority
     struct OAMentry *OAM = (struct OAMentry*)&gb_state->OAM[0];
     struct OAMentry objs[10];
     int num_objs = 0;
@@ -201,7 +203,7 @@ static void lcd_render_current_line(PlayerState* state) {
                 break;
         }
 
-    /* Draw any sprites (objects) on this line. */
+    // Draw any sprites (objects) on this line.
     for (int x = 0; x < GB_LCD_WIDTH; x++) {
         for (int i = 0; i < num_objs; i++) {
             int obj_tileoff_x = x - (objs[i].x - 8),
@@ -243,7 +245,7 @@ static void lcd_render_current_line(PlayerState* state) {
         }
     }
 
-    /* Draw the window for this line. */
+    // Draw the window for this line.
     if (win_enable) {
         for (int x = 0; x < GB_LCD_WIDTH; x++) {
             if (pixels[x].IsProcessed) {
@@ -287,7 +289,7 @@ static void lcd_render_current_line(PlayerState* state) {
         }
     }
 
-    /* Draw all background pixels of this line. */
+    // Draw all background pixels of this line.
     if (bg_enable) {
         for (int x = 0; x < GB_LCD_WIDTH; x++) {
             if (pixels[x].IsProcessed) {
@@ -339,7 +341,7 @@ static void lcd_render_current_line(PlayerState* state) {
             pixels[x] = (Pixel){col, true};
         }
     } else {
-        /* Background disabled - set all pixels to 0 */
+        // Background disabled - set all pixels to 0
         for (int x = 0; x < GB_LCD_WIDTH; x++)
             if (!pixels[x].IsProcessed) {
                 pixels[x] = (Pixel) {0, true};

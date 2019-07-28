@@ -2,7 +2,6 @@
 
 #include <string.h>
 #include "state.h"
-#include "logger.h"
 
 // bit 3 - 0000 1000
 const natural SERIAL_INTERRUPT_MAP = 0x08;

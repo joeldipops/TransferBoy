@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include "core.h"
-#include "logger.h"
 #include "config.h"
 #include "play.h"
 #include "controller.h"
@@ -16,6 +15,7 @@
 #include "emu.h"
 #include "lcd.h"
 #include "hwdefs.h"
+#include "logger.h"
 
 #include <libdragon.h>
 
@@ -313,7 +313,7 @@ void playLogic(RootState* state, const byte playerNumber) {
         if (emulatorState->isSRAMDirty) {
             sByte result = exportCartridgeRam(playerNumber, &state->Players[playerNumber].Cartridge);
             if (result) {
-                logAndPause("saving to cartridge failed");
+                logAndPauseFrame(0, "saving to cartridge failed");
             }
 
             emulatorState->isSRAMDirty = false;

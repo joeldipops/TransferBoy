@@ -5,7 +5,6 @@
 
 #include "state.h"
 #include "hwdefs.h"
-#include "logger.h"
 #include "gbc_state.h"
 
 static sByte setInfo(GbState* s, const GameBoyCartridge* cartridge) {

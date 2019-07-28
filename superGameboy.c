@@ -1,7 +1,6 @@
 #include "superGameboy.h"
 #include "sgbDefs.h"
 #include "state.h"
-#include "logger.h"
 #include "screen.h"
 #include "hwdefs.h"
 
@@ -454,7 +453,7 @@ static int executeSgbCommand(PlayerState* state) {
             attr_blk(state);
             break;
         default: 
-            logAndPause("SGB Command: %02x", state->SGBState.CurrentCommand); break;
+            //logAndPause("SGB Command: %02x", state->SGBState.CurrentCommand); break;
             return -1;
         //default: break;        
     }

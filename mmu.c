@@ -29,7 +29,7 @@ static void mmu_hdma_do(GbState *s) {
 
     s->GbcHdmaControl--;
     if (s->GbcHdmaControl == 0xff) {
-        /* Underflow meant we copied the last block and are done. */
+        // Underflow meant we copied the last block and are done.
         s->io_hdma_running = 0;
     }
 }
@@ -38,10 +38,8 @@ static void mmu_hdma_start(GbState *s, u8 lenmode) {
     u16 blocks = (lenmode & ~(1<<7)) + 1;
     u16 len = blocks * 0x10;
     u8 mode_hblank = (lenmode & (1<<7)) ? 1 : 0;
-    u16 src = (s->GbcHdmaSource & ~0xf);
-    u16 dst = (s->GbcHdmaDestination & ~0xf);
-    // Ignore upper 3 bits (always in VRAM)
-    dst = (dst & 0x1fff) | 0x8000; 
+    u16 src = (s->GbcHdmaSource & 0xFFF0);
+    u16 dst = (s->GbcHdmaDestination & 0x1FF0) | 0x8000;
 
     if (s->io_hdma_running && !mode_hblank) {
         // Cancel ongoing H-Blank HDMA transfer

@@ -12,10 +12,8 @@
 const byte VERTICAL_MARGIN = 30;
 const byte HORIZONTAL_MARGIN = 30;
 
-static bool isBroken = true;
-
 void debug(GbState *s, string pnemonic) {
-    if (isBroken) {
+    if (IS_DEBUGGING) {
         printRegisters(s);
         bool isPaused = true;
         while(isPaused) {
@@ -149,7 +147,7 @@ void printRegisters(GbState* s) {
         s->reg8.A, s->reg8.F, s->reg8.B, s->reg8.C,
         s->reg8.D, s->reg8.E, s->reg8.H, s->reg8.L,
         s->flags.ZF, s->flags.NF, s->flags.HF, s->flags.CF,
-        s->sp, s->pc
+        s->sp, s->pc//, s->LcdControl, s->LcdStatus
     );
 }
 
