@@ -573,7 +573,7 @@ sByte getCartridgeMetadata(const byte controllerNumber, GameBoyCartridge* cartri
 
     sShort romBanks = getNumberOfRomBanks(&header);
     sByte ramBanks = getNumberOfRamBanks(&header, cartridge->Type);
-    sInt ramBankSize = getRamBankSize(&header); 
+    sInt ramBankSize = getRamBankSize(&header, cartridge->Type); 
 
     if (romBanks * BANK_SIZE * 3 >= getMemoryLimit()) {
         return TPAK_ERR_INSUFFICIENT_MEMORY;
