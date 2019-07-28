@@ -634,8 +634,6 @@ sByte importCartridge(const byte controllerNumber, GameBoyCartridge* cartridge) 
 
     exportCartridgeRam(0, cartridge);
 
-    logAndPauseFrame(0, "RAM BANKS=%d RAM SIZE=%08x DataSize=%08x", cartridge->RamBankCount, cartridge->RamBankCount * cartridge->RamBankSize, cartridge->Ram.Size);
-
     // Turn off the lights when we're done.
     setTpakValue(controllerNumber, CARTRIDGE_POWER_ADDRESS, CARTRIDGE_POWER_OFF);
 
