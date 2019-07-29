@@ -628,10 +628,6 @@ sByte importCartridge(const byte controllerNumber, GameBoyCartridge* cartridge) 
         return result;
     }
 
-    memset(cartridge->Ram.Data, 0xFA, cartridge->Ram.Size);
-
-    exportCartridgeRam(0, cartridge);
-
     // Turn off the lights when we're done.
     setTpakValue(controllerNumber, CARTRIDGE_POWER_ADDRESS, CARTRIDGE_POWER_OFF);
 
