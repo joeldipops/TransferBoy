@@ -2,6 +2,7 @@
 
 #include "mmu.h"
 #include "hwdefs.h"
+#include "rtc.h"
 
 #define mmu_error(fmt, ...) \
     do { \
@@ -376,21 +377,21 @@ static void writeRom45(GbState* s, u16 location, byte value) {
                 return;
             }
 
-            s->SRamBankNumber = value;
+            s->SRAMBankNumber = value;
         }
 
     } else if (s->mbc == 3) {
-        s->mem_mbc3_extram_rtc_select = value;
+        s->SRAMBankNumber = value;
     } else if (s->mbc == 5) {
-        s->SRamBankNumber = value & 0xf;
-        s->SRamBankNumber &= s->Cartridge->RamBankCount - 1;
+        s->SRAMBankNumber = value & 0xf;
+        s->SRAMBankNumber &= s->Cartridge->RamBankCount - 1;
     } else {
         //return ERROR_MBC_NOT_IMPLEMENTED;
         return;
     }
 
     // Swap in new RAM bank.
-    s->SRAM = s->Cartridge->Ram.Data + s->SRamBankNumber * SRAM_BANK_SIZE;
+    s->SRAM = s->Cartridge->Ram.Data + s->SRAMBankNumber * SRAM_BANK_SIZE;
 }
 
 /**
@@ -400,23 +401,19 @@ static void writeRom67(GbState* s, u16 location, byte value) {
     if (s->mbc == 1) {      
         s->RomRamSelect = value & 0x1;
         if (s->RomRamSelect == ROM_SELECT) {
-            s->SRamBankNumber = 0;
+            s->SRAMBankNumber = 0;
             s->SRAM = s->Cartridge->Ram.Data;
         } else {
             s->RomBankUpper = 0;
             s->ROMX = s->Cartridge->Rom.Data + (getMbc1RomBank(s->RomBankLower, s->RomBankUpper) * ROM_BANK_SIZE);
         }
-    } else if (s->hasRtc) { // MBC3 only
-        if (s->mem_latch_rtc == 0x01 && value == 0x01) {
-            // TODO... actually latch something?
-            s->mem_latch_rtc = s->mem_latch_rtc;
+    } else if (s->hasRTC) { 
+        // To update the RTC values in SRAM space, clock should be unlatched to 0 and then latched again to 1
+        if (!s->isRTCLatched && value == 0x01) {
+            updateRealTimeClock(s);
         }
-        s->mem_latch_rtc = value;
-    } else if (s->mbc == 3 || s->mbc == 5) { // MBC3 without RTC or MBC5
-        // Just ignore it - Pokemon Red writes here because it's coded for
-        // MBC1, but actually has an MBC3, for instance
+        s->isRTCLatched = value;
     } else {
-        //return ERROR_MBC_NOT_IMPLEMENTED;
         return;
     }
 }
@@ -434,11 +431,18 @@ static void writeVRAM(GbState* s, u16 location, byte value) {
 static void writeSRAM(GbState* s, u16 location, byte value) {
     if (!s->hasSRAM || s->isSRAMDisabled) {
         return;
-    } else if (s->mbc == 3 && s->mem_mbc3_extram_rtc_select >= 0x04) {
-        if (s->mem_mbc3_extram_rtc_select >= 0x08 && s->mem_mbc3_extram_rtc_select <= 0x0c) {
-            s->mem_RTC[s->mem_mbc3_extram_rtc_select] = value;
+    } else if (s->hasRTC && s->SRAMBankNumber == 0x0C) {
+        // We may need to pause or restart the RTC
+        RealTimeClockStatus* newClockStatus = (RealTimeClockStatus*) &value;
+        RealTimeClockStatus* lastClockStatus = (RealTimeClockStatus*) (s->SRAM + (location - 0xA000));
+
+        if (newClockStatus->IsTimerStopped != lastClockStatus->IsTimerStopped) {
+            toggleRealTimeClock(s, newClockStatus->IsTimerStopped);
         }
-        // else { doesn't do anything. }
+
+        s->SRAM[location - 0xA000] = value;
+        s->isSRAMDirty = 1;
+
     } else if (s->mbc == 2) {
         s->SRAM[(location - 0xA000) % 0x200] = value | 0xF0;        
     } else {
@@ -526,20 +530,13 @@ static byte readVRAM(GbState* s, u16 location) {
 static byte readSRAM(GbState* s, u16 location) {
     if (s->isSRAMDisabled || !s->hasSRAM) {
         return 0xFF;
-    }
-
-    // May need RTC stuff
-    if (s->mbc == 3 && s->mem_mbc3_extram_rtc_select >= 0x04) {
-        if (s->mem_mbc3_extram_rtc_select >= 0x08 && s->mem_mbc3_extram_rtc_select <= 0x0c) {
-            return s->mem_RTC[s->mem_mbc3_extram_rtc_select];
-        } else {
-            return 0x00;
-        }
     } else if (s->mbc == 2) {
         return s->SRAM[(location - 0xA000) % 0x200] | 0xF0;
     } else {  
         return s->SRAM[location - 0xA000];
     }
+    // May need a block for RTC stuff accuracy
+
 }
 
 /**

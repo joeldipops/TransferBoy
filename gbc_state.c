@@ -23,8 +23,8 @@ static sByte setInfo(GbState* s, const GameBoyCartridge* cartridge) {
         case 0x06: s->mbc = 2; s->hasSRAM = 1; s->hasBattery = 1;                  break;
         case 0x08:              s->hasSRAM = 1;                                     break;
         case 0x09:              s->hasSRAM = 1; s->hasBattery = 1;                  break;
-        case 0x0f: s->mbc = 3;                  s->hasBattery = 1; s->hasRtc = 1;   break;
-        case 0x10: s->mbc = 3;  s->hasSRAM = 1; s->hasBattery = 1; s->hasRtc = 1;   break;
+        case 0x0f: s->mbc = 3;                  s->hasBattery = 1; s->hasRTC = 1;   break;
+        case 0x10: s->mbc = 3;  s->hasSRAM = 1; s->hasBattery = 1; s->hasRTC = 1;   break;
         case 0x11: s->mbc = 3;                                                      break;
         case 0x12: s->mbc = 3;  s->hasSRAM = 1;                                     break;
         case 0x13: s->mbc = 3;  s->hasSRAM = 1; s->hasBattery = 1;                  break;
@@ -59,7 +59,10 @@ static sByte setInfo(GbState* s, const GameBoyCartridge* cartridge) {
     return 0;
 }
 
-sByte loadCartridge(GbState *s, GameBoyCartridge* cartridge) {
+/**
+ * Initialises all the memory to emulate a gameboy cartridge.
+ */
+sByte loadCartridge(GbState* s, GameBoyCartridge* cartridge) {
     sByte result = setInfo(s, cartridge);
     if (result) {
         return result;
@@ -76,6 +79,11 @@ sByte loadCartridge(GbState *s, GameBoyCartridge* cartridge) {
     } else {
         s->SRAM = malloc(0x2000);
         memset(s->SRAM, 0xFF, 0x2000);
+    }
+
+    if (s->hasRTC) {
+        s->Cartridge->RTCTimeStopped = 0;
+        s->Cartridge->RTCStopTime = 0;
     }
 
     s->VRAMBanks = calloc(s->VRAMBankCount, VRAM_BANK_SIZE);

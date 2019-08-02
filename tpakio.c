@@ -628,6 +628,9 @@ sByte importCartridge(const byte controllerNumber, GameBoyCartridge* cartridge) 
         return result;
     }
 
+    // Try to be more accurate in getting this when RTC is fully implemented.
+    cartridge->LastRTCTicks = get_ticks_ms();
+
     // Turn off the lights when we're done.
     setTpakValue(controllerNumber, CARTRIDGE_POWER_ADDRESS, CARTRIDGE_POWER_OFF);
 

@@ -620,24 +620,20 @@ typedef struct {
     // memory bank controller supporting vars
     byte RomBankLower;
     byte RomBankUpper;    
-    byte SRamBankNumber; 
+    byte SRAMBankNumber; 
     byte WRAMBankCount;
     byte VRAMBankCount;
     // MBC1 - Upper bits ROM bank (if selected).
     
     // MBC1 - Mode for above field (ROM/RAM).
     BankSelectType RomRamSelect; 
-    u8 mem_mbc3_extram_rtc_select;
-
-    // Real time clock, select by extram banks 0x08-0x0c
-    u8 mem_latch_rtc;
-    u8 mem_RTC[0x0c]; 
 
     // Cartridge hardware metadata
     byte mbc;
     bool hasSRAM;
     bool hasBattery;
-    bool hasRtc;
+    bool hasRTC;
+    bool isRTCLatched;
 
     struct emu_cpu_state *emu_cpu_state;
 } GbState;

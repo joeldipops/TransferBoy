@@ -131,6 +131,9 @@ typedef struct {
 typedef struct {
     ByteArray Rom;
     ByteArray Ram;
+    long LastRTCTicks;
+    long RTCStopTime;
+    long RTCTimeStopped;
     CartridgeHeader Header;
     CartridgeType Type;
     natural RomBankCount;
