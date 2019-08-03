@@ -431,18 +431,20 @@ static void writeVRAM(GbState* s, u16 location, byte value) {
 static void writeSRAM(GbState* s, u16 location, byte value) {
     if (!s->hasSRAM || s->isSRAMDisabled) {
         return;
-    } else if (s->hasRTC && s->SRAMBankNumber == 0x0C) {
-        // We may need to pause or restart the RTC
-        RealTimeClockStatus* newClockStatus = (RealTimeClockStatus*) &value;
-        RealTimeClockStatus* lastClockStatus = (RealTimeClockStatus*) (s->SRAM + (location - 0xA000));
+    } else if (s->hasRTC && s->SRAMBankNumber >= 0x08) {
+        if (s->SRAMBankNumber == 0x0C) {
+            // We may need to pause or restart the RTC
+            RealTimeClockStatus* newClockStatus = (RealTimeClockStatus*) &value;
+            RealTimeClockStatus* lastClockStatus = (RealTimeClockStatus*) (s->SRAM + (location - 0xA000));
 
-        if (newClockStatus->IsTimerStopped != lastClockStatus->IsTimerStopped) {
-            toggleRealTimeClock(s, newClockStatus->IsTimerStopped);
+            if (newClockStatus->IsTimerStopped != lastClockStatus->IsTimerStopped) {
+                toggleRealTimeClock(s, newClockStatus->IsTimerStopped);
+            }
         }
 
-        s->SRAM[location - 0xA000] = value;
+        // Whole bank is filled with the same value when RTC is updated.
+        memset(s->SRAM, value, SRAM_BANK_SIZE);
         s->isSRAMDirty = 1;
-
     } else if (s->mbc == 2) {
         s->SRAM[(location - 0xA000) % 0x200] = value | 0xF0;        
     } else {

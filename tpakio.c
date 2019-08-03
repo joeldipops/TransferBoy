@@ -1,6 +1,8 @@
 #include "core.h"
 #include "tpakio.h"
 #include "config.h"
+#include "hwdefs.h"
+
 #include <libdragon.h>
 #include <math.h>
 
@@ -39,6 +41,7 @@ const natural GB_ROM_BANK_ADDRESS = 0x2100;
 const natural GB_UPPER_ROM_BANK_ADDRESS = 0x3000;
 const natural GB_RAM_BANK_ADDRESS = 0x4000;
 const natural GB_BANK_MODE_ADDRESS = 0x6000;
+const natural GB_RTC_LATCH_ADDRESS = 0x6000;
 const byte GB_ROM_BANK_MODE = 0;
 const byte GB_RAM_BANK_MODE = 1;
 
@@ -56,6 +59,21 @@ const byte TPAK_STATUS_CARTRIDGE_ABSENT = 0x40; // bit 6
 const byte TPAK_STATUS_CARTRIDGE_POWERED = 0x80; // bit 7
 
 const natural ROM_ADDRESS_OFFSET = 0xC000;
+
+/**
+ * Gets whether this cartridge has an RTC installed on it.
+ * @param header Cartridge metadata.
+ * @returns true if RTC present, false otherwise.
+ */
+static bool hasRealTimeClock(CartridgeHeader* header) {
+    switch (header->CartridgeType) {
+        case MBC3_TIMER_BATTERY:
+        case MBC3_TIMER_RAM_BATTERY:
+            return true;
+        default:
+            return false;
+    }
+}
 
 /**
  * Helper for when we just want to configure some single value, such as enabling the tpak, or switching banks.
@@ -475,6 +493,57 @@ static sByte importRom(const byte controllerNumber, GameBoyCartridge* cartridge)
     return TPAK_SUCCESS;
 }
 
+static sByte exportRTCData(const byte controllerNumber, GameBoyCartridge* cartridge) {
+    // Change to ROM0 and ensure SRAM is enabled.
+    setTpakValue(controllerNumber, TPAK_BANK_ADDRESS, ROM0);
+    setTpakValue(controllerNumber, mapAddress(ENABLE_GB_RAM_ADDRESS), ENABLE_GB_RAM);
+
+    for (byte bank = 0x08; bank < 0x0D; bank++) {
+        // Update the bank
+        setTpakValue(controllerNumber, TPAK_BANK_ADDRESS, ROMX);        
+        setTpakValue(controllerNumber, mapAddress(GB_RAM_BANK_ADDRESS), bank);
+        // Update the register.
+        setTpakValue(controllerNumber, mapAddress(SRAM_ADDRESS), cartridge->Ram.Data[SRAM_BANK_SIZE * bank]);
+    }
+
+    return TPAK_SUCCESS;
+}
+
+/**
+ * Reads the five RealTickClock registers from a cartridge into where they will sit in SRAM
+ * @param controllerNumber controller slot of the cartridge.
+ * @param cartridge In-memory representation of the cartridge.
+ * @returns Error Code
+ */
+static sByte importRTCData(const byte controllerNumber, GameBoyCartridge* cartridge) {
+    // Change to ROM0 and ensure SRAM is enabled.
+    setTpakValue(controllerNumber, TPAK_BANK_ADDRESS, ROM0);
+    setTpakValue(controllerNumber, mapAddress(ENABLE_GB_RAM_ADDRESS), ENABLE_GB_RAM);
+
+    // Prepare to latch clock (0x6000)
+    setTpakValue(controllerNumber, TPAK_BANK_ADDRESS, ROMX);
+    setTpakValue(controllerNumber, mapAddress(GB_RTC_LATCH_ADDRESS), 0x00);
+
+    // Record when we do this.
+    cartridge->LastRTCTicks = get_ticks_ms();
+    // Update the clock.
+    setTpakValue(controllerNumber, mapAddress(GB_RTC_LATCH_ADDRESS), 0x01);
+
+    // Smash the 5 RTC registers into memory.
+    byte block[32];
+    for (byte bank = 0x08; bank < 0x0D; bank++) {
+        // Update the bank
+        setTpakValue(controllerNumber, TPAK_BANK_ADDRESS, ROMX);        
+        setTpakValue(controllerNumber, mapAddress(GB_RAM_BANK_ADDRESS), bank);
+        // Read the register.
+        setTpakValue(controllerNumber, TPAK_BANK_ADDRESS, SRAM);
+        read_mempak_address(controllerNumber, mapAddress(SRAM_ADDRESS), block);
+        memset(cartridge->Ram.Data + SRAM_BANK_SIZE * bank, block[0], SRAM_BANK_SIZE);
+    }
+
+    return TPAK_SUCCESS;
+}
+
 /**
  * Gets the complete ROM data from the cartridge in a transfer pak.
  * @param controllerNumber T-Pak plugged in to this controller slot.
@@ -488,7 +557,12 @@ sByte importCartridgeRam(const byte controllerNumber, GameBoyCartridge* cartridg
 
     initialiseTPak(controllerNumber);
 
-    cartridge->Ram.Size = cartridge->RamBankSize * cartridge->RamBankCount;
+    if (hasRealTimeClock(&cartridge->Header)) {
+        cartridge->Ram.Size = SRAM_BANK_SIZE * 0x0D; // RTC goes up to bank 0x0C
+    } else {
+        cartridge->Ram.Size = cartridge->RamBankSize * cartridge->RamBankCount;
+    }
+
     if (cartridge->Ram.Data) {
         free(cartridge->Ram.Data);
     }
@@ -503,6 +577,13 @@ sByte importCartridgeRam(const byte controllerNumber, GameBoyCartridge* cartridg
             read_mempak_address(controllerNumber, mapAddress(SRAM_ADDRESS) + address, cartridge->Ram.Data + (bank * cartridge->RamBankSize) + address);
         }
     }
+
+    if (hasRealTimeClock(&cartridge->Header)) {
+        sByte result = importRTCData(controllerNumber, cartridge);
+        if (result) {
+            return result;
+        }
+    }    
 
     return TPAK_SUCCESS;
 }
@@ -529,6 +610,13 @@ sByte exportCartridgeRam(const byte controllerNumber, GameBoyCartridge* cartridg
             write_mempak_address(controllerNumber, mapAddress(SRAM_ADDRESS) + address, cartridge->Ram.Data + (bank * cartridge->RamBankSize) + address);
         }
     }
+
+    if (hasRealTimeClock(&cartridge->Header)) {
+        sByte result = exportRTCData(controllerNumber, cartridge);
+        if (result) {
+            return result;
+        }
+    }        
 
     // Turn off the lights when we're done.
     setTpakValue(controllerNumber, CARTRIDGE_POWER_ADDRESS, CARTRIDGE_POWER_OFF);        
