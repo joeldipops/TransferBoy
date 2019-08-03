@@ -48,11 +48,15 @@ sByte updateRealTimeClock(GbState* s) {
     rtcData.DaysLow = ((byte) days) & 0x7F;
 
     // TODO - These two sets are wrong, but I can't concentrate right now.
-    if (days > 0x7F) {
-        rtcData.Status.DaysHigh = 1;
-    }
     if (days > 0xFF) {
-        rtcData.Status.HasDayCarried = 1;
+        if (rtcData.Status.DaysHigh == 1) {
+            // Carry flag stays set until reset directly.
+            rtcData.Status.HasDayCarried = 1;
+            // DaysHigh overflowed back to 0.
+            rtcData.Status.DaysHigh = 0
+        } else {
+            rtcData.Status.DaysHigh = 1;
+        }
     }
 
     memset(s->SRAM + (SRAM_BANK_SIZE * 0x08), rtcData.Seconds, SRAM_BANK_SIZE);
