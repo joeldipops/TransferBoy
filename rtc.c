@@ -53,7 +53,7 @@ sByte updateRealTimeClock(GbState* s) {
             // Carry flag stays set until reset directly.
             rtcData.Status.HasDayCarried = 1;
             // DaysHigh overflowed back to 0.
-            rtcData.Status.DaysHigh = 0
+            rtcData.Status.DaysHigh = 0;
         } else {
             rtcData.Status.DaysHigh = 1;
         }

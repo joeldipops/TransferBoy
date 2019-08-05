@@ -224,9 +224,69 @@ static mmuReadHramOperation mmuReadHramTable[] = {
 };
 
 /**
+ * Writing to a ROM address in general does nothing.
+ */
+static void writeRom(GbState* s, u16 location, byte value) {
+    return;
+}
+
+/**
+ * 0000 - 1FFF: Fixed ROM bank
+ * Writing here tends to disable or enable external RAM.
+ */
+static void writeRom01(GbState* s, u16 location, byte value) {
+
+    value &= 0xF;
+
+    if (value == 0) {
+        s->isSRAMDisabled = true;          
+    } else if (value == 0x0A) {
+        s->isSRAMDisabled = false;
+    }
+ }
+
+/**
+ * Combines both mbc1 bank registers to get the bank to switch to.
+ * @param lower The lower five bits at 0x2000-0x3FFF
+ * @param upper The upper two bits at 0x4000-0x5FFF
+ * @param bankCount The number of ROM banks this particular cartridge uses.
+ * @returns Selected bank to place at 0x4000 - 0x7FFF
+ */
+static inline natural getMbc1RomBank(const byte lower, const byte upper, const byte bankCount) {
+    byte result = (upper << 5) | lower;
+
+    // MBC1 RomBankLower can't be 0, so add 1 to these values 
+    if (result == 0x00 || result == 0x20 || result == 0x40 || result == 0x60) {
+        result++;
+    }
+
+    // Don't switch to a bank that doesn't exist. Wrap around instead.
+    if (result >= bankCount) {
+        result = result % bankCount;
+    }    
+
+    return result;
+}
+
+/**
+ * 2000 - 3FFF: ROM bank switch
+ * Sets the lower part of the ROM bank number and then copies the bank in to ROMX.
+ */
+static void mbc1writeRom23(GbState* s, u16 location, byte value) {
+    value &= 0x1F;
+    
+    byte bank = getMbc1RomBank(value, s->RomBankUpper, s->Cartridge->RomBankCount);
+
+    s->RomBankLower = bank & 0x1F;    
+    s->ROMX = s->Cartridge->Rom.Data + (bank * ROM_BANK_SIZE);    
+}
+
+/**
+ * 0000 - 3FFF: SRAM enable & ROM bank switch
  * Unlike most MBCs, mbc2 has the same behaviour when writting to 0x0000-0x1FFF or 0x2000-0x3FFF
  */
 static void mbc2writeRom0123(GbState* s, u16 location, byte value) {
+    value &= 0xF;
     // bit 8 must be set to allow a bank switch.
     if (!(location & 0x0100)) {
         if (value == 0) {
@@ -250,172 +310,129 @@ static void mbc2writeRom0123(GbState* s, u16 location, byte value) {
     }
 }
 
-static void writeRom01(GbState* s, u16 location, byte value) {
-    // 0000 - 1FFF: Fixed ROM bank
-    value &= 0xF;
-
-    if (s->mbc == 2) {
-        mbc2writeRom0123(s, location, value);
-    } else {
-        if (value == 0) {
-            s->isSRAMDisabled = true;          
-        } else if (value == 0x0A) {
-            s->isSRAMDisabled = false;
-        }
-    }
-}
-
-static inline natural getMbc1RomBank(const byte lower, const byte upper) {
-    byte result = (upper << 5) | lower;
-    if (result == 0x00 || result == 0x20 || result == 0x40 || result == 0x60) {
-        result++;
-    }
-
-    return result;
-}
-
-static inline natural getMbc3RomBank(const GbState* s) {
-    return s->RomBankLower < 1 ? s->RomBankLower + 1 : s->RomBankLower;
-}
-
-static inline natural getMbc5RomBank(const GbState* s) {
-    return (s->RomBankUpper << 8) | s->RomBankLower;
+/**
+ * 2000 - 3FFF: ROM bank switch
+ * Sets the ROM bank number and then copies the bank in to ROMX.
+ */
+static void mbc3writeRom23(GbState* s, u16 location, byte value) {
+    s->RomBankLower = value & 0x7f;
+    byte bank = s->RomBankLower < 1 ? s->RomBankLower + 1 : s->RomBankLower;
+    s->ROMX = s->Cartridge->Rom.Data + (bank * ROM_BANK_SIZE);       
 }
 
 /**
  * 2000 - 3FFF: ROM bank switch
- * Sets the lower part of the ROM bank number (in most cases) and then copies the bank in to ROMX.
+ * Sets the ROM bank number and then copies the bank in to ROMX.
  */
-static void writeRom23(GbState* s, u16 location, byte value) {
-    if (s->mbc == 0) {
-        return;
+static void mbc5writeRom23(GbState* s, u16 location, byte value) {
+    // MBC5 splits up this area into 2000-2fff for low bits rom bank,
+    // and 3000-3fff for the high bit.
+    if (location < 0x3000) { // lower 8 bit
+        s->RomBankLower = value;
+    } else { // Upper bit
+        s->RomBankUpper = value & 1;    
     }
-    natural bank = 0;
+    byte bank = (s->RomBankUpper << 8) | s->RomBankLower;
 
-    if (s->mbc == 0) {
-        return;
-    } else if (s->mbc == 1) {
-        value &= 0x1F;
-
-        bank = getMbc1RomBank(value, s->RomBankUpper);
-
-        // Don't switch to a bank that doesn't exist.
-        if (bank >= s->Cartridge->RomBankCount) {
-            bank = bank % s->Cartridge->RomBankCount;
-        }
-
-        s->RomBankLower = bank & 0x1F;                    
-
-    } else if (s->mbc == 2) {
-        mbc2writeRom0123(s, location, value);
-        return;      
-    } else if (s->mbc == 3) {
-        s->RomBankLower = value & 0x7f;
-        bank = getMbc3RomBank(s);
-    } else if (s->mbc == 5) {
-        // MBC5 splits up this area into 2000-2fff for low bits rom bank,
-        // and 3000-3fff for the high bit.
-        if (location < 0x3000) { // lower 8 bit
-            s->RomBankLower = value;
-        } else { // Upper bit
-            s->RomBankUpper = value & 1;    
-        }
-        bank = getMbc5RomBank(s);
-
-        if (bank >= s->Cartridge->RomBankCount) {
-            bank = bank % s->Cartridge->RomBankCount;
-        }
-
-    } else {
-        // return ERROR_MBC_NOT_IMPLEMENTED;
-        return; 
+    if (bank >= s->Cartridge->RomBankCount) {
+        bank = bank % s->Cartridge->RomBankCount;
     }
 
-    s->ROMX = s->Cartridge->Rom.Data + (bank * ROM_BANK_SIZE);
+    s->ROMX = s->Cartridge->Rom.Data + (bank * ROM_BANK_SIZE);    
 }
 
 /**
  * 0x4000 - 0x5FFF: ROM/RAM bank switch
- * Sets the RAM bank number or  the upper part of the ROM bank number depending on the mbc type and current state.
+ * Sets the RAM bank number or the upper part of the ROM bank number depending on the mbc type and current state.
  */
-static void writeRom45(GbState* s, u16 location, byte value) {
-    if (s->mbc == 1) {
-        value &= 3;
-        if (s->RomRamSelect == ROM_SELECT || s->Cartridge->RomBankCount > 0x1F) {
-            // Apparently for large MBC1s, writing here DOES update ROMX, even in RAM mode!
-            // According to the mooneye-gb tests that is.
-            if (s->Cartridge->RomBankCount > 0x1F) {
-                byte bank = getMbc1RomBank(s->RomBankLower, value);
-                if (bank >= s->Cartridge->RomBankCount) {
-                    bank = bank % s->Cartridge->RomBankCount;
-                }
+static void mbc1writeRom45(GbState* s, u16 location, byte value) {
+    value &= 3;
+    if (s->RomRamSelect == ROM_SELECT || s->Cartridge->RomBankCount > 0x1F) {
+        // Apparently for large MBC1s, writing here DOES update ROMX, even in RAM mode!
+        // According to the mooneye-gb tests that is.
+        if (s->Cartridge->RomBankCount > 0x1F) {
+            byte bank = getMbc1RomBank(s->RomBankLower, value, s->Cartridge->RomBankCount);
 
-                s->RomBankUpper = bank >> 5;
-                s->ROMX = s->Cartridge->Rom.Data + (bank * ROM_BANK_SIZE);                
-            }
-
-            s->ROM0 = s->Cartridge->Rom.Data;
-
-            if (s->RomRamSelect == ROM_SELECT) {
-                return;
-            }
+            s->RomBankUpper = bank >> 5;
+            s->ROMX = s->Cartridge->Rom.Data + (bank * ROM_BANK_SIZE);                
         }
+
+        s->ROM0 = s->Cartridge->Rom.Data;
+
+        if (s->RomRamSelect == ROM_SELECT) {
+            return;
+        }
+    }
         
-        if (s->RomRamSelect == SRAM_SELECT) {
-            // For MBC1 8 and 16Mbit carts, ROM0 actually changes when you write in RAM mode.
-            // https://raw.githubusercontent.com/Gekkio/gb-ctr/master/xx-mbc1.tex
-            if (s->Cartridge->RomBankCount > 0x20) {
-                byte bank = value << 5;
-                if (bank >= s->Cartridge->RomBankCount) {
-                    bank = bank % s->Cartridge->RomBankCount;
-                }
-
-                s->ROM0 = s->Cartridge->Rom.Data + (bank) * ROM_BANK_SIZE;
+    if (s->RomRamSelect == SRAM_SELECT) {
+        // For MBC1 8 and 16Mbit carts, ROM0 actually changes when you write in RAM mode.
+        // https://raw.githubusercontent.com/Gekkio/gb-ctr/master/xx-mbc1.tex
+        if (s->Cartridge->RomBankCount > 0x20) {
+            byte bank = value << 5;
+            if (bank >= s->Cartridge->RomBankCount) {
+                bank = bank % s->Cartridge->RomBankCount;
             }
 
-            if (s->Cartridge->RamBankCount <= 1) {
-                return;
-            }
-
-            s->SRAMBankNumber = value;
+            s->ROM0 = s->Cartridge->Rom.Data + (bank) * ROM_BANK_SIZE;
         }
 
-    } else if (s->mbc == 3) {
+        if (s->Cartridge->RamBankCount <= 1) {
+            return;
+        }
+
         s->SRAMBankNumber = value;
-    } else if (s->mbc == 5) {
-        s->SRAMBankNumber = value & 0xf;
-        s->SRAMBankNumber &= s->Cartridge->RamBankCount - 1;
-    } else {
-        //return ERROR_MBC_NOT_IMPLEMENTED;
-        return;
     }
 
     // Swap in new RAM bank.
-    s->SRAM = s->Cartridge->Ram.Data + s->SRAMBankNumber * SRAM_BANK_SIZE;
+    s->SRAM = s->Cartridge->Ram.Data + s->SRAMBankNumber * SRAM_BANK_SIZE;    
 }
 
 /**
- * 0x6000 - 0x7FFF: Mainly Real-Time-Clock stuff
+ * 0x4000 - 0x5FFF: ROM/RAM bank switch
+ * Sets the RAM bank number.
  */
-static void writeRom67(GbState* s, u16 location, byte value) {
-    if (s->mbc == 1) {      
-        s->RomRamSelect = value & 0x1;
-        if (s->RomRamSelect == ROM_SELECT) {
-            s->SRAMBankNumber = 0;
-            s->SRAM = s->Cartridge->Ram.Data;
-        } else {
-            s->RomBankUpper = 0;
-            s->ROMX = s->Cartridge->Rom.Data + (getMbc1RomBank(s->RomBankLower, s->RomBankUpper) * ROM_BANK_SIZE);
-        }
-    } else if (s->hasRTC) { 
-        // To update the RTC values in SRAM space, clock should be unlatched to 0 and then latched again to 1
-        if (!s->isRTCLatched && value == 0x01) {
-            updateRealTimeClock(s);
-        }
-        s->isRTCLatched = value;
+static void mbc3writeRom45(GbState* s, u16 location, byte value) {
+    s->SRAMBankNumber = value;
+
+    // Swap in new RAM bank.
+    s->SRAM = s->Cartridge->Ram.Data + s->SRAMBankNumber * SRAM_BANK_SIZE;    
+}
+
+/**
+ * 0x4000 - 0x5FFF: ROM/RAM bank switch
+ * Sets the RAM bank number.
+ */
+static void mbc5writeRom45(GbState* s, u16 location, byte value) {
+    s->SRAMBankNumber = value & 0xf;
+    s->SRAMBankNumber &= s->Cartridge->RamBankCount - 1;
+
+    // Swap in new RAM bank.
+    s->SRAM = s->Cartridge->Ram.Data + s->SRAMBankNumber * SRAM_BANK_SIZE;       
+}
+
+/**
+ * 0x6000 - 0x7FFF: Sets the Banking mode.
+ */
+static void mbc1writeRom67(GbState* s, u16 location, byte value) {
+    s->RomRamSelect = value & 0x1;
+    if (s->RomRamSelect == ROM_SELECT) {
+        s->SRAMBankNumber = 0;
+        s->SRAM = s->Cartridge->Ram.Data;   
     } else {
-        return;
+        s->RomBankUpper = 0;
+        s->ROMX = s->Cartridge->Rom.Data + (getMbc1RomBank(s->RomBankLower, s->RomBankUpper, s->Cartridge->RomBankCount) * ROM_BANK_SIZE);
     }
+}
+
+/**
+ * 0x6000 - 0x7FFF: Latches or unlatches the clock.
+ */
+static void hasRTCwriteRom67(GbState* s, u16 location, byte value) {
+    // To update the RTC values in SRAM space, clock should be unlatched to 0 and then latched again to 1
+    if (!s->isRTCLatched && value == 0x01) {
+        updateRealTimeClock(s);
+    }
+    s->isRTCLatched = value;
 }
 
 /**
@@ -427,11 +444,21 @@ static void writeVRAM(GbState* s, u16 location, byte value) {
 
 /**
  * 0xA000 -0xBFFF: Cartridge RAM
+ * Only lower four bits of every byte counts.
+ * Also there're only 0x0200 available addresses.
  */
-static void writeSRAM(GbState* s, u16 location, byte value) {
-    if (!s->hasSRAM || s->isSRAMDisabled) {
-        return;
-    } else if (s->hasRTC && s->SRAMBankNumber >= 0x08) {
+static void mbc2writeSRAM(GbState* s, u16 location, byte value) {
+    if (!s->isSRAMDisabled && s->hasSRAM) {
+        s->SRAM[(location - 0xA000) % 0x200] = value | 0xF0;    
+        s->isSRAMDirty = 1;
+    }
+}
+
+/**
+ * Updates SRAM, or the Real Time Clock depending on what RAM bank is selected.
+ */
+static void hasRTCwriteSRAM(GbState* s, u16 location, byte value) {
+    if(s->SRAMBankNumber >= 0x08) {
         if (s->SRAMBankNumber == 0x0C) {
             // We may need to pause or restart the RTC
             RealTimeClockStatus* newClockStatus = (RealTimeClockStatus*) &value;
@@ -444,10 +471,20 @@ static void writeSRAM(GbState* s, u16 location, byte value) {
 
         // Whole bank is filled with the same value when RTC is updated.
         memset(s->SRAM, value, SRAM_BANK_SIZE);
-        s->isSRAMDirty = 1;
-    } else if (s->mbc == 2) {
-        s->SRAM[(location - 0xA000) % 0x200] = value | 0xF0;        
     } else {
+        s->SRAM[location - 0xA000] = value;
+    }
+
+    s->isSRAMDirty = 1;        
+}
+
+/**
+ * 0xA000 -0xBFFF: Cartridge RAM
+ */
+static void writeSRAM(GbState* s, u16 location, byte value) {
+    // Could potentially point SRAM to some junk address when sram is disabled
+    // if this check has any perf impact.
+    if (!s->isSRAMDisabled && s->hasSRAM) {
         s->SRAM[location - 0xA000] = value;
         s->isSRAMDirty = 1;        
     }
@@ -487,17 +524,16 @@ static void writeHigh(GbState* s, u16 location, byte value) {
     mmuWriteHramTable[location & 0x00FF](s, location, value);
 }
 
-typedef void (*mmuWriteOperation)(GbState*, u16, u8);
-static mmuWriteOperation mmuWriteTable[] = {
+static const mmuWriteOperation mmuWriteTable[] = {
 //        0           1           2           3           4           5           6           7           8           9           A           B           C           D           E           F       
 /*   0 */ writeRom01, writeRom01, writeRom01, writeRom01, writeRom01, writeRom01, writeRom01, writeRom01, writeRom01, writeRom01, writeRom01, writeRom01, writeRom01, writeRom01, writeRom01, writeRom01,
 /*   1 */ writeRom01, writeRom01, writeRom01, writeRom01, writeRom01, writeRom01, writeRom01, writeRom01, writeRom01, writeRom01, writeRom01, writeRom01, writeRom01, writeRom01, writeRom01, writeRom01,
-/*   2 */ writeRom23, writeRom23, writeRom23, writeRom23, writeRom23, writeRom23, writeRom23, writeRom23, writeRom23, writeRom23, writeRom23, writeRom23, writeRom23, writeRom23, writeRom23, writeRom23,
-/*   3 */ writeRom23, writeRom23, writeRom23, writeRom23, writeRom23, writeRom23, writeRom23, writeRom23, writeRom23, writeRom23, writeRom23, writeRom23, writeRom23, writeRom23, writeRom23, writeRom23,
-/*   4 */ writeRom45, writeRom45, writeRom45, writeRom45, writeRom45, writeRom45, writeRom45, writeRom45, writeRom45, writeRom45, writeRom45, writeRom45, writeRom45, writeRom45, writeRom45, writeRom45,
-/*   5 */ writeRom45, writeRom45, writeRom45, writeRom45, writeRom45, writeRom45, writeRom45, writeRom45, writeRom45, writeRom45, writeRom45, writeRom45, writeRom45, writeRom45, writeRom45, writeRom45,
-/*   6 */ writeRom67, writeRom67, writeRom67, writeRom67, writeRom67, writeRom67, writeRom67, writeRom67, writeRom67, writeRom67, writeRom67, writeRom67, writeRom67, writeRom67, writeRom67, writeRom67,
-/*   7 */ writeRom67, writeRom67, writeRom67, writeRom67, writeRom67, writeRom67, writeRom67, writeRom67, writeRom67, writeRom67, writeRom67, writeRom67, writeRom67, writeRom67, writeRom67, writeRom67,
+/*   2 */ writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,
+/*   3 */ writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,
+/*   4 */ writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,
+/*   5 */ writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,
+/*   6 */ writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,
+/*   7 */ writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,
 /*   8 */ writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,
 /*   9 */ writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,
 /*   A */ writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,
@@ -508,8 +544,14 @@ static mmuWriteOperation mmuWriteTable[] = {
 /*   F */ writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeEcho,  writeOam,   writeHigh
 };
 
-void mmu_write(GbState* s, u16 location, byte value) {
-    mmuWriteTable[location >> 8](s, location, value);
+/**
+ * Writes to an address in the virtual gameboy memory.
+ * @param s Gameboy state.
+ * @param location address to write to.
+ * @param value Value to write.
+ */
+inline void mmu_write(GbState* s, u16 location, byte value) {
+    s->mmuWrites[location >> 8](s, location, value);
 }
 
 static byte readHigh(GbState* s, u16 location) {
@@ -517,28 +559,49 @@ static byte readHigh(GbState* s, u16 location) {
     return mmuReadHramTable[lowcation](s, lowcation);
 }
 
+/**
+ * 0x0000 - 0x3FFF
+ */
 static byte readRom0(GbState* s, u16 location) {
     return s->ROM0[location];    
 }
 
+/**
+ * 0x4000 - 0x7FFF
+ */
 static byte readRomX(GbState* s, u16 location) {
     return s->ROMX[location - 0x4000];
 }   
 
+
+/**
+ * 0x0 - 0x0
+ */
 static byte readVRAM(GbState* s, u16 location) {
     return s->VRAM[location - 0x8000];
 }
 
+/**
+ * 0xA000 - 0xBFFF
+ */
+static byte mbc2readSRAM(GbState* s, u16 location) {
+    if (s->isSRAMDisabled || !s->hasSRAM) {
+        return 0xFF;
+    } else {
+        return s->SRAM[(location - 0xA000) % 0x200] | 0xF0;
+    }
+}
+
+/**
+ * 0xA000 - 0xBFFF
+ */
 static byte readSRAM(GbState* s, u16 location) {
     if (s->isSRAMDisabled || !s->hasSRAM) {
         return 0xFF;
-    } else if (s->mbc == 2) {
-        return s->SRAM[(location - 0xA000) % 0x200] | 0xF0;
-    } else {  
+    } else {
         return s->SRAM[location - 0xA000];
     }
     // May need a block for RTC stuff accuracy
-
 }
 
 /**
@@ -571,8 +634,7 @@ static byte readOAM(GbState* s, u16 location) {
     }
 }
 
-typedef byte (*mmuReadOperation)(GbState*, u16);
-static mmuReadOperation mmuReadTable[] = {
+static const mmuReadOperation mmuReadTable[] = {
 //        0         1         2         3         4         5         6         7         8         9         A         B         C         D         E         F       
 /*   0 */ readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0,
 /*   1 */ readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0, readRom0,
@@ -592,8 +654,14 @@ static mmuReadOperation mmuReadTable[] = {
 /*   F */ readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readEcho, readOAM,  readHigh,
 };
 
-byte mmu_read(GbState* s, u16 location) {
-    return mmuReadTable[location >> 8](s, location);
+/**
+ * Reads from an address in the virtual gameboy memory.
+ * @param s Gameboy state.
+ * @param location address to read from.
+ * @returns value at that address.
+ */
+inline byte mmu_read(GbState* s, u16 location) {
+    return s->mmuReads[location >> 8](s, location);
 }
 
 u16 mmu_read16(GbState *s, u16 location) {
@@ -614,4 +682,56 @@ u16 mmu_pop16(GbState *s) {
 void mmu_push16(GbState *s, u16 value) {
     s->sp -= 2;
     mmu_write16(s, s->sp, value);
+}
+
+/**
+ * Installs different mmu behaviour for different Memory Bank Controller types.
+ * @param s Gameboy state.
+ */
+void mmu_install_mbc(GbState* s) {
+    memcpy(s->mmuReads, mmuReadTable, sizeof(mmuReadOperation) * 0x100);
+    memcpy(s->mmuWrites, mmuWriteTable, sizeof(mmuWriteOperation) * 0x100);
+
+    if (s->Cartridge->Type == MBC1) {
+        for (byte i = 0x20; i < 0x40; i++) {
+            s->mmuWrites[i] = mbc1writeRom23;
+        }
+        for (byte i = 0x40; i < 0x60; i++) {
+            s->mmuWrites[i] = mbc1writeRom45;
+        }
+        for (byte i = 0x60; i < 0x80; i++) {
+            s->mmuWrites[i] = mbc1writeRom67;
+        }
+    } else if (s->Cartridge->Type == MBC2) {
+        for (byte i = 0x00; i < 0x40; i++) {
+            s->mmuWrites[i] = mbc2writeRom0123;
+        }
+        for (byte i = 0xA0; i < 0xC0; i++) {
+            s->mmuWrites[i] = mbc2writeSRAM;
+            s->mmuReads[i] = mbc2readSRAM;
+        }
+    } else if (s->Cartridge->Type == MBC3) {
+        for (byte i = 0x20; i < 0x40; i++) {
+            s->mmuWrites[i] = mbc3writeRom23;
+        }
+        for (byte i = 0x40; i < 0x60; i++) {
+            s->mmuWrites[i] = mbc3writeRom45;
+        }
+    } else if (s->Cartridge->Type == MBC5) {
+        for (byte i = 0x20; i < 0x40; i++) {
+            s->mmuWrites[i] = mbc5writeRom23;
+        }
+        for (byte i = 0x40; i < 0x60; i++) {
+            s->mmuWrites[i] = mbc5writeRom45;
+        }        
+    }
+
+    if (s->hasRTC) {
+        for (byte i = 0x60; i < 0x80; i++) {
+            s->mmuWrites[i] = hasRTCwriteRom67;
+        }
+        for (byte i = 0xA0; i < 0xC0; i++) {
+            s->mmuWrites[i] = hasRTCwriteSRAM;
+        }
+    }
 }

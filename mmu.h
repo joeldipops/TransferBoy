@@ -21,13 +21,32 @@
 
 void mmu_step(GbState *s);
 
+/**
+ * Reads from an address in the virtual gameboy memory.
+ * @param s Gameboy state.
+ * @param location address to read from.
+ * @returns value at that address.
+ */
 u8 mmu_read(GbState *s, u16 location);
+
+/**
+ * Writes to an address in the virtual gameboy memory.
+ * @param s Gameboy state.
+ * @param location address to write to.
+ * @param value Value to write.
+ */
 void mmu_write(GbState *s, u16 location, u8 value);
 
 u16 mmu_read16(GbState *s, u16 location);
 void mmu_write16(GbState *s, u16 location, u16 value);
 u16 mmu_pop16(GbState *s);
 void mmu_push16(GbState *s, u16 value);
+
+/**
+ * Installs different mmu behaviour for different Memory Bank Controller types.
+ * @param s Gameboy state.
+ */
+void mmu_install_mbc(GbState* s);
 
 
 #endif

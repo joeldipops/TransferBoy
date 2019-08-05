@@ -100,7 +100,15 @@ typedef enum {
 
 #define BIOS_SIZE 0x100
 
-typedef struct {
+struct gb_state;
+
+typedef void (*mmuWriteOperation)(struct gb_state*, u16, u8);
+typedef byte (*mmuReadOperation)(struct gb_state*, u16);
+
+typedef struct gb_state {
+    mmuWriteOperation mmuWrites[0x100];
+    mmuReadOperation mmuReads[0x100];
+
     /*
      * CPU state (registers, interrupts, etc)
      */

@@ -4,6 +4,7 @@
 #include <assert.h>
 
 #include "state.h"
+#include "mmu.h"
 #include "hwdefs.h"
 #include "gbc_state.h"
 
@@ -91,6 +92,8 @@ sByte loadCartridge(GbState* s, GameBoyCartridge* cartridge) {
     s->WRAMBanks = calloc(s->WRAMBankCount, WRAM_BANK_SIZE);
     s->WRAM0 = s->WRAMBanks;
     s->WRAMX = s->WRAMBanks + 0x1000;
+
+    mmu_install_mbc(s);
 
     return 0;
 }
