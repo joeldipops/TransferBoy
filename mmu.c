@@ -224,10 +224,18 @@ static mmuReadHramOperation mmuReadHramTable[] = {
 };
 
 /**
- * Writing to a ROM address in general does nothing.
+ * When a write operation should do nothing.
+ * eg. writing to ROM or when there is no SRAM
  */
-static void writeRom(GbState* s, u16 location, byte value) {
-    return;
+static void writeNone(GbState* s, u16 location, byte value) {
+    ;
+}
+
+/**
+ * When the result of a read operation is undefined.
+ */
+static byte readNone(GbState* s, u16 location) {
+    return 0xFF;
 }
 
 /**
@@ -235,7 +243,6 @@ static void writeRom(GbState* s, u16 location, byte value) {
  * Writing here tends to disable or enable external RAM.
  */
 static void writeRom01(GbState* s, u16 location, byte value) {
-
     value &= 0xF;
 
     if (value == 0) {
@@ -243,7 +250,7 @@ static void writeRom01(GbState* s, u16 location, byte value) {
     } else if (value == 0x0A) {
         s->isSRAMDisabled = false;
     }
- }
+}
 
 /**
  * Combines both mbc1 bank registers to get the bank to switch to.
@@ -286,28 +293,18 @@ static void mbc1writeRom23(GbState* s, u16 location, byte value) {
  * Unlike most MBCs, mbc2 has the same behaviour when writting to 0x0000-0x1FFF or 0x2000-0x3FFF
  */
 static void mbc2writeRom0123(GbState* s, u16 location, byte value) {
-    value &= 0xF;
-    // bit 8 must be set to allow a bank switch.
-    if (!(location & 0x0100)) {
-        if (value == 0) {
-            s->isSRAMDisabled = true;          
-        } else if (value == 0x0A) {
-            s->isSRAMDisabled = false;
-        }
-    } else {
-        // Only the lowest 4 bits matter
-        s->RomBankLower = value & 0xF;
+    // Only the lowest 4 bits matter
+    s->RomBankLower = value & 0xF;
 
-        if (s->RomBankLower == 0) {
-            s->RomBankLower++;
-        }        
+    if (s->RomBankLower == 0) {
+        s->RomBankLower++;
+    }        
 
-        if (s->RomBankLower >= s->Cartridge->RomBankCount) {
-            s->RomBankLower = s->RomBankLower % s->Cartridge->RomBankCount;
-        }   
+    if (s->RomBankLower >= s->Cartridge->RomBankCount) {
+        s->RomBankLower = s->RomBankLower % s->Cartridge->RomBankCount;
+    }   
 
-        s->ROMX = s->Cartridge->Rom.Data + (s->RomBankLower * ROM_BANK_SIZE);      
-    }
+    s->ROMX = s->Cartridge->Rom.Data + (s->RomBankLower * ROM_BANK_SIZE);      
 }
 
 /**
@@ -321,24 +318,32 @@ static void mbc3writeRom23(GbState* s, u16 location, byte value) {
 }
 
 /**
- * 2000 - 3FFF: ROM bank switch
- * Sets the ROM bank number and then copies the bank in to ROMX.
+ * Switches current ROMX bank of an mbc5 cartridge based on RomBankLower and RomBankUpper registers
  */
-static void mbc5writeRom23(GbState* s, u16 location, byte value) {
-    // MBC5 splits up this area into 2000-2fff for low bits rom bank,
-    // and 3000-3fff for the high bit.
-    if (location < 0x3000) { // lower 8 bit
-        s->RomBankLower = value;
-    } else { // Upper bit
-        s->RomBankUpper = value & 1;    
-    }
+static inline void mbc5switchRomBank(GbState* s, u16 location, byte value) {
     byte bank = (s->RomBankUpper << 8) | s->RomBankLower;
 
     if (bank >= s->Cartridge->RomBankCount) {
         bank = bank % s->Cartridge->RomBankCount;
     }
 
-    s->ROMX = s->Cartridge->Rom.Data + (bank * ROM_BANK_SIZE);    
+    s->ROMX = s->Cartridge->Rom.Data + (bank * ROM_BANK_SIZE);        
+}
+
+/**
+ * 2000 - 2FFF: ROM bank lower switch
+ */
+static void mbc5writeRom2(GbState* s, u16 location, byte value) {
+    s->RomBankLower = value;
+    mbc5switchRomBank(s, location, value);
+}
+
+/**
+ * 3000 - 3FFF: ROM bank upper switch.
+ */
+static void mbc5writeRom3(GbState* s, u16 location, byte value) {
+    s->RomBankUpper = value & 1;     
+    mbc5switchRomBank(s, location, value);    
 }
 
 /**
@@ -448,7 +453,7 @@ static void writeVRAM(GbState* s, u16 location, byte value) {
  * Also there're only 0x0200 available addresses.
  */
 static void mbc2writeSRAM(GbState* s, u16 location, byte value) {
-    if (!s->isSRAMDisabled && s->hasSRAM) {
+    if (!s->isSRAMDisabled) {
         s->SRAM[(location - 0xA000) % 0x200] = value | 0xF0;    
         s->isSRAMDirty = 1;
     }
@@ -528,12 +533,12 @@ static const mmuWriteOperation mmuWriteTable[] = {
 //        0           1           2           3           4           5           6           7           8           9           A           B           C           D           E           F       
 /*   0 */ writeRom01, writeRom01, writeRom01, writeRom01, writeRom01, writeRom01, writeRom01, writeRom01, writeRom01, writeRom01, writeRom01, writeRom01, writeRom01, writeRom01, writeRom01, writeRom01,
 /*   1 */ writeRom01, writeRom01, writeRom01, writeRom01, writeRom01, writeRom01, writeRom01, writeRom01, writeRom01, writeRom01, writeRom01, writeRom01, writeRom01, writeRom01, writeRom01, writeRom01,
-/*   2 */ writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,
-/*   3 */ writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,
-/*   4 */ writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,
-/*   5 */ writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,
-/*   6 */ writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,
-/*   7 */ writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,   writeRom,
+/*   2 */ writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,
+/*   3 */ writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,
+/*   4 */ writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,
+/*   5 */ writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,
+/*   6 */ writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,
+/*   7 */ writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,   writeNone,
 /*   8 */ writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,
 /*   9 */ writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,  writeVRAM,
 /*   A */ writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,  writeSRAM,
@@ -585,7 +590,7 @@ static byte readVRAM(GbState* s, u16 location) {
  * 0xA000 - 0xBFFF
  */
 static byte mbc2readSRAM(GbState* s, u16 location) {
-    if (s->isSRAMDisabled || !s->hasSRAM) {
+    if (s->isSRAMDisabled) {
         return 0xFF;
     } else {
         return s->SRAM[(location - 0xA000) % 0x200] | 0xF0;
@@ -704,7 +709,11 @@ void mmu_install_mbc(GbState* s) {
         }
     } else if (s->Cartridge->Type == MBC2) {
         for (byte i = 0x00; i < 0x40; i++) {
-            s->mmuWrites[i] = mbc2writeRom0123;
+            if (i & 0x01) {
+                s->mmuWrites[i] = mbc2writeRom0123;
+            } else {
+                s->mmuWrites[i] = writeRom01;
+            }
         }
         for (byte i = 0xA0; i < 0xC0; i++) {
             s->mmuWrites[i] = mbc2writeSRAM;
@@ -718,9 +727,12 @@ void mmu_install_mbc(GbState* s) {
             s->mmuWrites[i] = mbc3writeRom45;
         }
     } else if (s->Cartridge->Type == MBC5) {
-        for (byte i = 0x20; i < 0x40; i++) {
-            s->mmuWrites[i] = mbc5writeRom23;
+        for (byte i = 0x20; i < 0x30; i++) {
+            s->mmuWrites[i] = mbc5writeRom2;
         }
+        for (byte i = 0x30; i < 0x40; i++) {
+            s->mmuWrites[i] = mbc5writeRom3;
+        }        
         for (byte i = 0x40; i < 0x60; i++) {
             s->mmuWrites[i] = mbc5writeRom45;
         }        
@@ -734,4 +746,11 @@ void mmu_install_mbc(GbState* s) {
             s->mmuWrites[i] = hasRTCwriteSRAM;
         }
     }
+
+    if (!s->hasSRAM) {
+        for (byte i = 0xA0; i < 0xC0; i++) {
+            s->mmuWrites[i] = writeNone;
+            s->mmuReads[i] = readNone;
+        }
+    }        
 }

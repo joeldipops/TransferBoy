@@ -165,8 +165,7 @@ void cpu_reset_state(GbState *s) {
     s->AudioChannel4RNGParameters = 0x00;
     s->AudioChannel4Flags = 0xbf;
 
-
-    s->RomBankUpper = 1;
+    s->RomBankLower = 1;
     s->GbcRamBankSelectRegister = 1;
     s->GbcVRAMBank = 0;
 
