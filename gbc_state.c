@@ -75,12 +75,8 @@ sByte loadCartridge(GbState* s, GameBoyCartridge* cartridge) {
     s->ROM0 = cartridge->Rom.Data;
     s->ROMX = cartridge->Rom.Data + ROM_BANK_SIZE;
 
-    if (s->hasSRAM) {
-        s->SRAM = cartridge->Ram.Data;
-    } else {
-        s->SRAM = malloc(0x2000);
-        memset(s->SRAM, 0xFF, 0x2000);
-    }
+    // SRAM starts out disabled.
+    s->SRAM = (byte*) disabledRAMPage;
 
     if (s->hasRTC) {
         s->Cartridge->RTCTimeStopped = 0;

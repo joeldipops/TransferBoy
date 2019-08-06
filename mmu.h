@@ -3,6 +3,10 @@
 
 #include "types.h"
 
+// Removes need to check enabled flag when accessing SRAM.
+// Point s->SRAM here, which should be in ROM, to disable it.
+static const byte disabledRAMPage[0x2000] = {[0x0 ... 0x1FFF] = 0xFF };
+
 /*
  * Memory layout of the GameBoy:
  *  $0000-$3FFF ROM (bank 0)
