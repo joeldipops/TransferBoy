@@ -4,18 +4,6 @@
 #include "hwdefs.h"
 #include "rtc.h"
 
-#define mmu_error(fmt, ...) \
-    do { \
-        /*logAndPause("MMU Error: " fmt "\n", ##__VA_ARGS__);*/ \
-    } while (0)
-
-#define mmu_assert(cond) \
-    do { \
-        if (!(cond)) { \
-            printf("MMU Assertion failed at %s:%d: " #cond "\n", __FILE__, __LINE__); \
-        } \
-    } while (0)
-
 static void mmu_hdma_do(GbState *s) {
     // DMA one block (0x10 byte), should be called at start of H-Blank. */
     for (int i = 0; i < 0x10; i++) {
@@ -736,6 +724,13 @@ void mmu_install_mbc(GbState* s) {
         }        
     }
 
+    if (!s->hasSRAM) {
+        for (byte i = 0xA0; i < 0xC0; i++) {
+            s->mmuWrites[i] = writeNone;
+            s->mmuReads[i] = readNone;
+        }
+    }    
+
     if (s->hasRTC) {
         for (byte i = 0x60; i < 0x80; i++) {
             s->mmuWrites[i] = hasRTCwriteRom67;
@@ -744,11 +739,5 @@ void mmu_install_mbc(GbState* s) {
             s->mmuWrites[i] = hasRTCwriteSRAM;
         }
     }
-
-    if (!s->hasSRAM) {
-        for (byte i = 0xA0; i < 0xC0; i++) {
-            s->mmuWrites[i] = writeNone;
-            s->mmuReads[i] = readNone;
-        }
-    }        
+     
 }

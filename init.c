@@ -88,11 +88,12 @@ void initLogic(RootState* state, const byte playerNumber) {
                 logAndPauseFrame(0, "Error loading internal ROM");
             }
 
-            state->Players[playerNumber].Cartridge.Ram.Size = 0x00;
+            state->Players[playerNumber].Cartridge.Type = ROM_ONLY;
             state->Players[playerNumber].Cartridge.Header.IsSgbSupported = true;   
             state->Players[playerNumber].Cartridge.IsGbcSupported = false;
             state->Players[playerNumber].Cartridge.RomBankCount = state->Players[playerNumber].Cartridge.Rom.Size / ROM_BANK_SIZE;
             state->Players[playerNumber].Cartridge.RamBankCount = 1;
+            state->Players[playerNumber].Cartridge.Ram.Size = 0;
 
             preparePlayMode(state, playerNumber);            
         }

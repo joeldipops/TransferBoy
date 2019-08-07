@@ -16,29 +16,29 @@ static sByte setInfo(GbState* s, const GameBoyCartridge* cartridge) {
     }
 
     switch (cartridge->Header.CartridgeType) {
-        case 0x00:                                                                  break;
+        case 0x00: s->mbc = 0;                                                     break;
         case 0x01: s->mbc = 1;                                                     break;
         case 0x02: s->mbc = 1; s->hasSRAM = 1;                                     break;
         case 0x03: s->mbc = 1; s->hasSRAM = 1; s->hasBattery = 1;                  break;
         case 0x05: s->mbc = 2; s->hasSRAM = 1;                                     break;
         case 0x06: s->mbc = 2; s->hasSRAM = 1; s->hasBattery = 1;                  break;
-        case 0x08:              s->hasSRAM = 1;                                     break;
-        case 0x09:              s->hasSRAM = 1; s->hasBattery = 1;                  break;
-        case 0x0f: s->mbc = 3;                  s->hasBattery = 1; s->hasRTC = 1;   break;
-        case 0x10: s->mbc = 3;  s->hasSRAM = 1; s->hasBattery = 1; s->hasRTC = 1;   break;
-        case 0x11: s->mbc = 3;                                                      break;
-        case 0x12: s->mbc = 3;  s->hasSRAM = 1;                                     break;
-        case 0x13: s->mbc = 3;  s->hasSRAM = 1; s->hasBattery = 1;                  break;
+        case 0x08: s->mbc = 0; s->hasSRAM = 1;                                     break;
+        case 0x09: s->mbc = 0; s->hasSRAM = 1; s->hasBattery = 1;                  break;
+        case 0x0f: s->mbc = 3;                 s->hasBattery = 1; s->hasRTC = 1;   break;
+        case 0x10: s->mbc = 3; s->hasSRAM = 1; s->hasBattery = 1; s->hasRTC = 1;   break;
+        case 0x11: s->mbc = 3;                                                     break;
+        case 0x12: s->mbc = 3; s->hasSRAM = 1;                                     break;
+        case 0x13: s->mbc = 3; s->hasSRAM = 1; s->hasBattery = 1;                  break;
         //case 0x15: s->mbc = 4;                                                      break;
         //case 0x16: s->mbc = 4;  s->hasSRAM = 1;                                     break;
         //case 0x17: s->mbc = 4;  s->hasSRAM = 1; s->hasBattery = 1;                  break;
-        case 0x19: s->mbc = 5;                                                      break;
-        case 0x1a: s->mbc = 5;  s->hasSRAM = 1;                                     break;
-        case 0x1b: s->mbc = 5;  s->hasSRAM = 1; s->hasBattery = 1;                  break;
-        case 0x1c: s->mbc = 5;                                                      break; /* rumble */
-        case 0x1d: s->mbc = 5;  s->hasSRAM = 1;                                     break; /* rumble */
-        case 0x1e: s->mbc = 5;  s->hasSRAM = 1; s->hasBattery = 1;                  break; /* rumble */
-        case 0x20: s->mbc = 6;                                                      break;
+        case 0x19: s->mbc = 5;                                                     break;
+        case 0x1a: s->mbc = 5; s->hasSRAM = 1;                                     break;
+        case 0x1b: s->mbc = 5; s->hasSRAM = 1; s->hasBattery = 1;                  break;
+        case 0x1c: s->mbc = 5;                                                     break; /* rumble */
+        case 0x1d: s->mbc = 5; s->hasSRAM = 1;                                     break; /* rumble */
+        case 0x1e: s->mbc = 5; s->hasSRAM = 1; s->hasBattery = 1;                  break; /* rumble */
+        case 0x20: s->mbc = 6;                                                     break;
         /* MMM01 unsupported */
         /* MBC7 Sensor not supported */
         /* Camera not supported */
