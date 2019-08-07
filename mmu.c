@@ -185,7 +185,7 @@ static byte readNone(GbState* s, u16 location) {
 }
 
 /**
- * 0000 - 1FFF: Fixed ROM bank
+ * 0000 - 1FFF: SRAM enable.
  * Writing here tends to disable or enable external RAM.
  */
 static void writeRom01(GbState* s, u16 location, byte value) {
@@ -197,6 +197,24 @@ static void writeRom01(GbState* s, u16 location, byte value) {
     } else if (value == 0x0A) {
         s->SRAM = s->Cartridge->Ram.Data + s->SRAMBankNumber * SRAM_BANK_SIZE;   
         s->isSRAMDisabled = false;
+    }
+}
+
+/**
+ * 0000 - 1FFF: SRAM enable
+ */
+static void mbc1writeRom01(GbState* s, u16 location, byte value) {
+    value &= 0xF;
+    if (value == 0) {
+        s->SRAM = (byte*) disabledRAMPage;
+        s->isSRAMDisabled = true;        
+    } else if (value == 0x0A) {
+        s->isSRAMDisabled = false;
+        if (s->RomRamSelect == SRAM_SELECT) {
+            s->SRAM = s->Cartridge->Ram.Data + s->SRAMBankNumber * SRAM_BANK_SIZE;               
+        } else {
+            s->SRAM = s->Cartridge->Ram.Data;
+        }
     }
 }
 
@@ -300,45 +318,38 @@ static void mbc5writeRom3(GbState* s, u16 location, byte value) {
  */
 static void mbc1writeRom45(GbState* s, u16 location, byte value) {
     value &= 3;
-    if (s->RomRamSelect == ROM_SELECT || s->Cartridge->RomBankCount > 0x1F) {
-        // Apparently for large MBC1s, writing here DOES update ROMX, even in RAM mode!
-        // According to the mooneye-gb tests that is.
-        if (s->Cartridge->RomBankCount > 0x1F) {
-            byte bank = getMbc1RomBank(s->RomBankLower, value, s->Cartridge->RomBankCount);
 
-            s->RomBankUpper = bank >> 5;
-            s->ROMX = s->Cartridge->Rom.Data + (bank * ROM_BANK_SIZE);                
-        }
+    if (s->Cartridge->RomBankCount > 0x1F) {
+        // Apparently according to the mooneye-gb tests, writing here DOES update ROMX, even in RAM mode!
+        byte bank = getMbc1RomBank(s->RomBankLower, value, s->Cartridge->RomBankCount);
 
-        s->ROM0 = s->Cartridge->Rom.Data;
-
-        if (s->RomRamSelect == ROM_SELECT) {
-            return;
-        }
+        s->RomBankUpper = bank >> 5;
+        s->ROMX = s->Cartridge->Rom.Data + (bank * ROM_BANK_SIZE);                
     }
-        
-    if (s->RomRamSelect == SRAM_SELECT) {
+
+    if (s->Cartridge->RamBankCount > 1) {
+        s->SRAMBankNumber = value;    
+    }
+
+    if (s->RomRamSelect == ROM_SELECT) {
+        s->ROM0 = s->Cartridge->Rom.Data;
+    } else {
         // For MBC1 8 and 16Mbit carts, ROM0 actually changes when you write in RAM mode.
-        // https://raw.githubusercontent.com/Gekkio/gb-ctr/master/xx-mbc1.tex
+        // https://gekkio.fi/files/gb-docs/gbctr.pdf
         if (s->Cartridge->RomBankCount > 0x20) {
-            byte bank = value << 5;
-            if (bank >= s->Cartridge->RomBankCount) {
-                bank = bank % s->Cartridge->RomBankCount;
+            byte bank0 = value << 5;
+            if (bank0 >= s->Cartridge->RomBankCount) {
+                bank0 = bank0 % s->Cartridge->RomBankCount;
             }
 
-            s->ROM0 = s->Cartridge->Rom.Data + (bank) * ROM_BANK_SIZE;
+            s->ROM0 = s->Cartridge->Rom.Data + (bank0) * ROM_BANK_SIZE;            
         }
 
-        if (s->Cartridge->RamBankCount <= 1) {
-            return;
+
+        // Swap in new RAM bank.
+        if (!s->isSRAMDisabled) {
+            s->SRAM = s->Cartridge->Ram.Data + s->SRAMBankNumber * SRAM_BANK_SIZE;
         }
-
-        s->SRAMBankNumber = value;
-    }
-
-    // Swap in new RAM bank.
-    if (!s->isSRAMDisabled) {
-        s->SRAM = s->Cartridge->Ram.Data + s->SRAMBankNumber * SRAM_BANK_SIZE;    
     }
 }
 
@@ -375,13 +386,14 @@ static void mbc5writeRom45(GbState* s, u16 location, byte value) {
 static void mbc1writeRom67(GbState* s, u16 location, byte value) {
     s->RomRamSelect = value & 0x1;
     if (s->RomRamSelect == ROM_SELECT) {
-        s->SRAMBankNumber = 0;
+        if (!s->isSRAMDisabled) {
+            s->SRAM = s->Cartridge->Ram.Data;    
+        }
+        s->ROM0 = s->Cartridge->Rom.Data;        
+    } else {
         if (!s->isSRAMDisabled) {
             s->SRAM = s->Cartridge->Ram.Data + s->SRAMBankNumber * SRAM_BANK_SIZE;    
         }
-    } else {
-        s->RomBankUpper = 0;
-        s->ROMX = s->Cartridge->Rom.Data + (getMbc1RomBank(s->RomBankLower, s->RomBankUpper, s->Cartridge->RomBankCount) * ROM_BANK_SIZE);
     }
 }
 
@@ -684,6 +696,9 @@ void mmu_install_mbc(GbState* s) {
     memcpy(s->mmuWrites, mmuWriteTable, sizeof(mmuWriteOperation) * 0x100);
 
     if (s->Cartridge->Type == MBC1) {
+        for (byte i = 0x00; i < 0x20; i++) {
+            s->mmuWrites[i] = mbc1writeRom01;            
+        }
         for (byte i = 0x20; i < 0x40; i++) {
             s->mmuWrites[i] = mbc1writeRom23;
         }
