@@ -162,7 +162,7 @@ typedef struct gb_state {
     u16 pc;
     
     // Tracks All ROM & SRAM banks
-    GameBoyCartridge* Cartridge;
+    GameBoyCartridge Cartridge;
 
     // Optionally can be mapped from $0000 of ROM space.
     byte* BiosFile;

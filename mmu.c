@@ -101,7 +101,7 @@ static void writeGbcVRAMBank(GbState* s, byte offset, byte value) {
 static void writeBiosSwitch(GbState* s, byte offset, byte value) {
     s->in_bios = 0;
     // Blow away the bios.
-    s->ROM0 = s->Cartridge->Rom.Data;
+    s->ROM0 = s->Cartridge.Rom.Data;
 }
 
 static void writeGbcHdmaControl(GbState* s, byte offset, byte value) {
@@ -195,7 +195,7 @@ static void writeRom01(GbState* s, u16 location, byte value) {
         s->SRAM = (byte*) disabledRAMPage;
         s->isSRAMDisabled = true;
     } else if (value == 0x0A) {
-        s->SRAM = s->Cartridge->Ram.Data + s->SRAMBankNumber * SRAM_BANK_SIZE;   
+        s->SRAM = s->Cartridge.Ram.Data + s->SRAMBankNumber * SRAM_BANK_SIZE;   
         s->isSRAMDisabled = false;
     }
 }
@@ -211,9 +211,9 @@ static void mbc1writeRom01(GbState* s, u16 location, byte value) {
     } else if (value == 0x0A) {
         s->isSRAMDisabled = false;
         if (s->RomRamSelect == SRAM_SELECT) {
-            s->SRAM = s->Cartridge->Ram.Data + s->SRAMBankNumber * SRAM_BANK_SIZE;               
+            s->SRAM = s->Cartridge.Ram.Data + s->SRAMBankNumber * SRAM_BANK_SIZE;               
         } else {
-            s->SRAM = s->Cartridge->Ram.Data;
+            s->SRAM = s->Cartridge.Ram.Data;
         }
     }
 }
@@ -248,10 +248,10 @@ static inline natural getMbc1RomBank(const byte lower, const byte upper, const b
 static void mbc1writeRom23(GbState* s, u16 location, byte value) {
     value &= 0x1F;
     
-    byte bank = getMbc1RomBank(value, s->RomBankUpper, s->Cartridge->RomBankCount);
+    byte bank = getMbc1RomBank(value, s->RomBankUpper, s->Cartridge.RomBankCount);
 
     s->RomBankLower = bank & 0x1F;    
-    s->ROMX = s->Cartridge->Rom.Data + (bank * ROM_BANK_SIZE);    
+    s->ROMX = s->Cartridge.Rom.Data + (bank * ROM_BANK_SIZE);    
 }
 
 /**
@@ -266,11 +266,11 @@ static void mbc2writeRom0123(GbState* s, u16 location, byte value) {
         s->RomBankLower++;
     }        
 
-    if (s->RomBankLower >= s->Cartridge->RomBankCount) {
-        s->RomBankLower = s->RomBankLower % s->Cartridge->RomBankCount;
+    if (s->RomBankLower >= s->Cartridge.RomBankCount) {
+        s->RomBankLower = s->RomBankLower % s->Cartridge.RomBankCount;
     }   
 
-    s->ROMX = s->Cartridge->Rom.Data + (s->RomBankLower * ROM_BANK_SIZE);      
+    s->ROMX = s->Cartridge.Rom.Data + (s->RomBankLower * ROM_BANK_SIZE);      
 }
 
 /**
@@ -280,7 +280,7 @@ static void mbc2writeRom0123(GbState* s, u16 location, byte value) {
 static void mbc3writeRom23(GbState* s, u16 location, byte value) {
     s->RomBankLower = value & 0x7f;
     byte bank = s->RomBankLower < 1 ? s->RomBankLower + 1 : s->RomBankLower;
-    s->ROMX = s->Cartridge->Rom.Data + (bank * ROM_BANK_SIZE);       
+    s->ROMX = s->Cartridge.Rom.Data + (bank * ROM_BANK_SIZE);       
 }
 
 /**
@@ -289,11 +289,11 @@ static void mbc3writeRom23(GbState* s, u16 location, byte value) {
 static inline void mbc5switchRomBank(GbState* s, u16 location, byte value) {
     byte bank = (s->RomBankUpper << 8) | s->RomBankLower;
 
-    if (bank >= s->Cartridge->RomBankCount) {
-        bank = bank % s->Cartridge->RomBankCount;
+    if (bank >= s->Cartridge.RomBankCount) {
+        bank = bank % s->Cartridge.RomBankCount;
     }
 
-    s->ROMX = s->Cartridge->Rom.Data + (bank * ROM_BANK_SIZE);        
+    s->ROMX = s->Cartridge.Rom.Data + (bank * ROM_BANK_SIZE);        
 }
 
 /**
@@ -319,36 +319,36 @@ static void mbc5writeRom3(GbState* s, u16 location, byte value) {
 static void mbc1writeRom45(GbState* s, u16 location, byte value) {
     value &= 3;
 
-    if (s->Cartridge->RomBankCount > 0x1F) {
+    if (s->Cartridge.RomBankCount > 0x1F) {
         // Apparently according to the mooneye-gb tests, writing here DOES update ROMX, even in RAM mode!
-        byte bank = getMbc1RomBank(s->RomBankLower, value, s->Cartridge->RomBankCount);
+        byte bank = getMbc1RomBank(s->RomBankLower, value, s->Cartridge.RomBankCount);
 
         s->RomBankUpper = bank >> 5;
-        s->ROMX = s->Cartridge->Rom.Data + (bank * ROM_BANK_SIZE);                
+        s->ROMX = s->Cartridge.Rom.Data + (bank * ROM_BANK_SIZE);                
     }
 
-    if (s->Cartridge->RamBankCount > 1) {
+    if (s->Cartridge.RamBankCount > 1) {
         s->SRAMBankNumber = value;    
     }
 
     if (s->RomRamSelect == ROM_SELECT) {
-        s->ROM0 = s->Cartridge->Rom.Data;
+        s->ROM0 = s->Cartridge.Rom.Data;
     } else {
         // For MBC1 8 and 16Mbit carts, ROM0 actually changes when you write in RAM mode.
         // https://gekkio.fi/files/gb-docs/gbctr.pdf
-        if (s->Cartridge->RomBankCount > 0x20) {
+        if (s->Cartridge.RomBankCount > 0x20) {
             byte bank0 = value << 5;
-            if (bank0 >= s->Cartridge->RomBankCount) {
-                bank0 = bank0 % s->Cartridge->RomBankCount;
+            if (bank0 >= s->Cartridge.RomBankCount) {
+                bank0 = bank0 % s->Cartridge.RomBankCount;
             }
 
-            s->ROM0 = s->Cartridge->Rom.Data + (bank0) * ROM_BANK_SIZE;            
+            s->ROM0 = s->Cartridge.Rom.Data + (bank0) * ROM_BANK_SIZE;            
         }
 
 
         // Swap in new RAM bank.
         if (!s->isSRAMDisabled) {
-            s->SRAM = s->Cartridge->Ram.Data + s->SRAMBankNumber * SRAM_BANK_SIZE;
+            s->SRAM = s->Cartridge.Ram.Data + s->SRAMBankNumber * SRAM_BANK_SIZE;
         }
     }
 }
@@ -362,7 +362,7 @@ static void mbc3writeRom45(GbState* s, u16 location, byte value) {
 
     // Swap in new RAM bank.
     if (!s->isSRAMDisabled) {
-        s->SRAM = s->Cartridge->Ram.Data + s->SRAMBankNumber * SRAM_BANK_SIZE;    
+        s->SRAM = s->Cartridge.Ram.Data + s->SRAMBankNumber * SRAM_BANK_SIZE;    
     } 
 }
 
@@ -372,11 +372,11 @@ static void mbc3writeRom45(GbState* s, u16 location, byte value) {
  */
 static void mbc5writeRom45(GbState* s, u16 location, byte value) {
     s->SRAMBankNumber = value & 0xf;
-    s->SRAMBankNumber &= s->Cartridge->RamBankCount - 1;
+    s->SRAMBankNumber &= s->Cartridge.RamBankCount - 1;
 
     // Swap in new RAM bank.
     if (!s->isSRAMDisabled) {
-        s->SRAM = s->Cartridge->Ram.Data + s->SRAMBankNumber * SRAM_BANK_SIZE;    
+        s->SRAM = s->Cartridge.Ram.Data + s->SRAMBankNumber * SRAM_BANK_SIZE;    
     }   
 }
 
@@ -387,12 +387,12 @@ static void mbc1writeRom67(GbState* s, u16 location, byte value) {
     s->RomRamSelect = value & 0x1;
     if (s->RomRamSelect == ROM_SELECT) {
         if (!s->isSRAMDisabled) {
-            s->SRAM = s->Cartridge->Ram.Data;    
+            s->SRAM = s->Cartridge.Ram.Data;    
         }
-        s->ROM0 = s->Cartridge->Rom.Data;        
+        s->ROM0 = s->Cartridge.Rom.Data;        
     } else {
         if (!s->isSRAMDisabled) {
-            s->SRAM = s->Cartridge->Ram.Data + s->SRAMBankNumber * SRAM_BANK_SIZE;    
+            s->SRAM = s->Cartridge.Ram.Data + s->SRAMBankNumber * SRAM_BANK_SIZE;    
         }
     }
 }
@@ -695,7 +695,7 @@ void mmu_install_mbc(GbState* s) {
     memcpy(s->mmuReads, mmuReadTable, sizeof(mmuReadOperation) * 0x100);
     memcpy(s->mmuWrites, mmuWriteTable, sizeof(mmuWriteOperation) * 0x100);
 
-    if (s->Cartridge->Type == MBC1) {
+    if (s->Cartridge.Type == MBC1) {
         for (byte i = 0x00; i < 0x20; i++) {
             s->mmuWrites[i] = mbc1writeRom01;            
         }
@@ -708,7 +708,7 @@ void mmu_install_mbc(GbState* s) {
         for (byte i = 0x60; i < 0x80; i++) {
             s->mmuWrites[i] = mbc1writeRom67;
         }
-    } else if (s->Cartridge->Type == MBC2) {
+    } else if (s->Cartridge.Type == MBC2) {
         for (byte i = 0x00; i < 0x40; i++) {
             if (i & 0x01) {
                 s->mmuWrites[i] = mbc2writeRom0123;
@@ -720,14 +720,14 @@ void mmu_install_mbc(GbState* s) {
             s->mmuWrites[i] = mbc2writeSRAM;
             s->mmuReads[i] = mbc2readSRAM;
         }
-    } else if (s->Cartridge->Type == MBC3) {
+    } else if (s->Cartridge.Type == MBC3) {
         for (byte i = 0x20; i < 0x40; i++) {
             s->mmuWrites[i] = mbc3writeRom23;
         }
         for (byte i = 0x40; i < 0x60; i++) {
             s->mmuWrites[i] = mbc3writeRom45;
         }
-    } else if (s->Cartridge->Type == MBC5) {
+    } else if (s->Cartridge.Type == MBC5) {
         for (byte i = 0x20; i < 0x30; i++) {
             s->mmuWrites[i] = mbc5writeRom2;
         }

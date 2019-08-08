@@ -8,14 +8,14 @@
 #include "hwdefs.h"
 #include "gbc_state.h"
 
-static sByte setInfo(GbState* s, const GameBoyCartridge* cartridge) {
+static sByte setInfo(GbState* s) {
     // Cart info from header
-    if (cartridge->Rom.Size < 0x0150) {
+    if (s->Cartridge.Rom.Size < 0x0150) {
         // Cartridge too small
         return LOAD_ERR_TOO_SMALL;
     }
 
-    switch (cartridge->Header.CartridgeType) {
+    switch (s->Cartridge.Header.CartridgeType) {
         case 0x00: s->mbc = 0;                                                     break;
         case 0x01: s->mbc = 1;                                                     break;
         case 0x02: s->mbc = 1; s->hasSRAM = 1;                                     break;
@@ -49,7 +49,7 @@ static sByte setInfo(GbState* s, const GameBoyCartridge* cartridge) {
             return LOAD_ERR_UNSUPPORTED;
     }
 
-    if (cartridge->IsGbcSupported) {
+    if (s->Cartridge.IsGbcSupported) {
         s->WRAMBankCount = 8;
         s->VRAMBankCount = 2;
     } else  {
@@ -63,24 +63,22 @@ static sByte setInfo(GbState* s, const GameBoyCartridge* cartridge) {
 /**
  * Initialises all the memory to emulate a gameboy cartridge.
  */
-sByte loadCartridge(GbState* s, GameBoyCartridge* cartridge) {
-    sByte result = setInfo(s, cartridge);
+sByte loadCartridge(GbState* s) {
+    sByte result = setInfo(s);
     if (result) {
         return result;
     }
 
-    s->Cartridge = cartridge;
-
     // Initialise cartridge memory.
-    s->ROM0 = cartridge->Rom.Data;
-    s->ROMX = cartridge->Rom.Data + ROM_BANK_SIZE;
+    s->ROM0 = s->Cartridge.Rom.Data;
+    s->ROMX = s->Cartridge.Rom.Data + ROM_BANK_SIZE;
 
     // SRAM starts out disabled.
     s->SRAM = (byte*) disabledRAMPage;
 
     if (s->hasRTC) {
-        s->Cartridge->RTCTimeStopped = 0;
-        s->Cartridge->RTCStopTime = 0;
+        s->Cartridge.RTCTimeStopped = 0;
+        s->Cartridge.RTCStopTime = 0;
     }
 
     s->VRAMBanks = calloc(s->VRAMBankCount, VRAM_BANK_SIZE);

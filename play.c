@@ -64,10 +64,8 @@ static sByte loadBios(GbState* state) {
  * @param romData ROM loaded from cartridge.
  * @param saveData Save file RAM loaded from cartridge.
  */
-static void initialiseEmulator(GbState* state, GameBoyCartridge* cartridge) {
-    memset(state, 0, sizeof(GbState));
-
-    loadCartridge(state, cartridge);
+static void initialiseEmulator(GbState* state) {
+    loadCartridge(state);
     cpu_reset_state(state);
 
     loadBios(state);
@@ -82,7 +80,7 @@ static void initialiseEmulator(GbState* state, GameBoyCartridge* cartridge) {
  * @param state The player to reset.
  */
 void resetPlayState(PlayerState* state) {
-    initialiseEmulator(&state->EmulationState, &state->Cartridge);
+    initialiseEmulator(&state->EmulationState);
     state->BuffersInitialised = 0;
     state->Meta.FrameCount = 0;
     resetSGBState(&state->SGBState);
@@ -132,7 +130,7 @@ static void mapGbInputs(const char controllerNumber, const GbButton* buttonMap, 
  *        drawn once as a background
  * @private
  */
-static void renderPixels(
+static inline void renderPixels(
     const display_context_t frame,
     const PlayerState* state,
     const natural* lastBuffer,
@@ -244,7 +242,9 @@ void playAudio(const GbState* state) {
  * @param playerNumber player in play mode.
  */
 void playLogic(RootState* state, const byte playerNumber) {
-    GbState* emulatorState = &state->Players[playerNumber].EmulationState;
+    
+    PlayerState* playerState = &state->Players[playerNumber];
+    GbState* s = &state->Players[playerNumber].EmulationState;
 
     if (state->PlayerCount == 2 && isRequestingTransfer(state)) {
         GbState* states[2] = {
@@ -254,30 +254,30 @@ void playLogic(RootState* state, const byte playerNumber) {
         exchangeLinkData(states);
     }
 
-    emu_step(&state->Players[playerNumber]);
+    emu_step(playerState);
 
-    if (IS_SGB_ENABLED && state->Players[playerNumber].Cartridge.Header.IsSgbSupported) {
-        processSGBData(&state->Players[playerNumber]);
-        performSGBFunctions(&state->Players[playerNumber]);
+    if (IS_SGB_ENABLED && s->Cartridge.Header.IsSgbSupported) {
+        processSGBData(playerState);
+        performSGBFunctions(playerState);
     }
 
-    if (emulatorState->lcd_entered_vblank) {
-        state->Players[playerNumber].Meta.FrameCount++;
+    if (s->lcd_entered_vblank) {
+        playerState->Meta.FrameCount++;
                 
-        if (FRAMES_TO_SKIP && (state->Players[playerNumber].Meta.FrameCount % (FRAMES_TO_SKIP + 1))) {
-            state->Players[playerNumber].WasFrameSkipped = true;
+        if (FRAMES_TO_SKIP && (playerState->Meta.FrameCount % (FRAMES_TO_SKIP + 1))) {
+            playerState->WasFrameSkipped = true;
             return;
         } else {
-            state->Players[playerNumber].WasFrameSkipped = false;
+            playerState->WasFrameSkipped = false;
         }
 
-        state->Players[playerNumber].Meta.LastClock = state->Players[playerNumber].Meta.NextClock;
-        state->Players[playerNumber].Meta.NextClock = get_ticks_ms();
+        playerState->Meta.LastClock = playerState->Meta.NextClock;
+        playerState->Meta.NextClock = get_ticks_ms();
 
-        if (IS_SGB_ENABLED && state->Players[playerNumber].Cartridge.Header.IsSgbSupported) {
+        if (IS_SGB_ENABLED && s->Cartridge.Header.IsSgbSupported) {
             applySGBPalettes(
-                &state->Players[playerNumber].SGBState, 
-                state->Players[playerNumber].EmulationState.NextBuffer
+                &playerState->SGBState, 
+                s->NextBuffer
             );
         }
 
@@ -287,7 +287,7 @@ void playLogic(RootState* state, const byte playerNumber) {
 
         mapGbInputs(
             playerNumber,
-            state->Players[playerNumber].ButtonMap,
+            playerState->ButtonMap,
             &state->KeysPressed,
             pressedButtons,
             input
@@ -296,32 +296,32 @@ void playLogic(RootState* state, const byte playerNumber) {
         bool releasedButtons[N64_BUTTON_COUNT] = {};
         getPressedButtons(&state->KeysReleased, playerNumber, releasedButtons);
 
-        if (releasedButtons[state->Players[playerNumber].SystemMenuButton]) {
-            state->Players[playerNumber].ActiveMode = Menu;
+        if (releasedButtons[playerState->SystemMenuButton]) {
+            playerState->ActiveMode = Menu;
             state->RequiresRepaint = true;
             return;
         } else if (releasedButtons[CUp]) {
             FRAMES_TO_SKIP = !FRAMES_TO_SKIP;
         }
 
-        emu_process_inputs(emulatorState, input);
+        emu_process_inputs(s, input);
 
         free(input);
         input = 0;
 
         // Write save file back to the catridge if it has changed.
-        if (emulatorState->isSRAMDirty) {
-            sByte result = exportCartridgeRam(playerNumber, &state->Players[playerNumber].Cartridge);
+        if (s->isSRAMDirty) {
+            sByte result = exportCartridgeRam(playerNumber, &s->Cartridge);
             if (result) {
                 logAndPauseFrame(0, "saving to cartridge failed");
             }
 
-            emulatorState->isSRAMDirty = false;
+            s->isSRAMDirty = false;
         }
 
         // Audio off until I can test it properly.
-        if (IS_AUDIO_ENABLED && state->Players[playerNumber].AudioEnabled) {
-            playAudio(emulatorState);
+        if (IS_AUDIO_ENABLED && playerState->AudioEnabled) {
+            playAudio(s);
         }
 
         state->RequiresRepaint = true;
@@ -342,9 +342,9 @@ void playDraw(const RootState* state, const byte playerNumber) {
     getScreenPosition(state, playerNumber, &screen);
 
     PaletteType palette = GameboyPalette;
-    if (state->Players[playerNumber].Cartridge.IsGbcSupported) {
+    if (state->Players[playerNumber].EmulationState.Cartridge.IsGbcSupported) {
         palette = GameboyColorPalette;
-    } else if (IS_SGB_ENABLED && state->Players[playerNumber].Cartridge.Header.IsSgbSupported) {
+    } else if (IS_SGB_ENABLED && state->Players[playerNumber].EmulationState.Cartridge.Header.IsSgbSupported) {
         palette = SuperGameboyPalette;
     }
 

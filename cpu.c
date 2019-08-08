@@ -93,7 +93,7 @@ void cpu_reset_state(GbState *s) {
     s->pc = 0x0100;
 
     // Use GBC mode if compatible.
-    if (s->Cartridge->IsGbcSupported) {
+    if (s->Cartridge.IsGbcSupported) {
         s->reg16.AF = 0x1180;
         s->reg16.BC = 0x0000;
         s->reg16.DE = 0xff56;

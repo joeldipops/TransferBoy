@@ -31,46 +31,49 @@ static void preparePlayMode(RootState* state, byte playerNumber) {
  * @param playerNumber player in init mode.
  */
 void initLogic(RootState* state, const byte playerNumber) {
-    if (state->Players[playerNumber].InitState == InitRestarting) {
-        state->Players[playerNumber].InitState = InitStart;
+    PlayerState* playerState = &state->Players[playerNumber];
+    GbState* s = &playerState->EmulationState;
+
+    if (playerState->InitState == InitRestarting) {
+        playerState->InitState = InitStart;
         state->RequiresRepaint = true;
     }
 
-    if (state->Players[playerNumber].InitState == InitStart) {
-        sByte result = getCartridgeMetadata(playerNumber, &state->Players[playerNumber].Cartridge);
+    if (playerState->InitState == InitStart) {
+        sByte result = getCartridgeMetadata(playerNumber, &playerState->EmulationState.Cartridge);
 
         if (!result) {
-            state->Players[playerNumber].InitState = InitReady;
+            playerState->InitState = InitReady;
             state->RequiresRepaint = true;
         } else {
-            state->Players[playerNumber].InitState = InitError;
+            playerState->InitState = InitError;
             state->ErrorCode = result;
 
             switch(result) {
                 case TPAK_ERR_NO_TPAK:
-                    getText(TextNoTpak, state->Players[playerNumber].ErrorMessage);
+                    getText(TextNoTpak, playerState->ErrorMessage);
                     break;
                 case TPAK_ERR_NO_CARTRIDGE:
-                    getText(TextNoCartridge, state->Players[playerNumber].ErrorMessage);             
+                    getText(TextNoCartridge, playerState->ErrorMessage);             
                     break;
                 case TPAK_ERR_CORRUPT_HEADER:
                 case TPAK_ERR_CORRUPT_DATA:
-                    getText(TextChecksumFailed, state->Players[playerNumber].ErrorMessage);
+                    getText(TextChecksumFailed, playerState->ErrorMessage);
                     break;
                 case TPAK_ERR_UNSUPPORTED_CARTRIDGE:
-                    getText(TextUnsupportedCartridge, state->Players[playerNumber].ErrorMessage);                
+                    getText(TextUnsupportedCartridge, playerState->ErrorMessage);                
                     break;
                 case TPAK_ERR_INSUFFICIENT_MEMORY:
-                    getText(TextExpansionPakRequired, state->Players[playerNumber].ErrorMessage);
+                    getText(TextExpansionPakRequired, playerState->ErrorMessage);
                     break;
                 default:
-                    sprintf(state->Players[playerNumber].ErrorMessage, "Loading Cartridge failed with error: %d", state->ErrorCode);
+                    sprintf(playerState->ErrorMessage, "Loading Cartridge failed with error: %d", state->ErrorCode);
                     break;
             }
         }
     }
 
-    if (state->Players[playerNumber].InitState == InitError) {
+    if (playerState->InitState == InitError) {
         bool releasedButtons[N64_BUTTON_COUNT] = {};
         getPressedButtons(&state->KeysReleased, playerNumber, releasedButtons);
 
@@ -83,34 +86,34 @@ void initLogic(RootState* state, const byte playerNumber) {
             // Load internal easter egg cartridge.
             state->RequiresControllerRead = true;
             state->RequiresRepaint = true;
-            sInt result = loadInternalRom(&state->Players[0].Cartridge.Rom);
+            sInt result = loadInternalRom(&state->Players[0].EmulationState.Cartridge.Rom);
             if (result == -1) {
                 logAndPauseFrame(0, "Error loading internal ROM");
             }
 
-            state->Players[playerNumber].Cartridge.Type = ROM_ONLY;
-            state->Players[playerNumber].Cartridge.Header.IsSgbSupported = true;   
-            state->Players[playerNumber].Cartridge.IsGbcSupported = false;
-            state->Players[playerNumber].Cartridge.RomBankCount = state->Players[playerNumber].Cartridge.Rom.Size / ROM_BANK_SIZE;
-            state->Players[playerNumber].Cartridge.RamBankCount = 1;
-            state->Players[playerNumber].Cartridge.Ram.Size = 0;
+            s->Cartridge.Type = ROM_ONLY;
+            s->Cartridge.Header.IsSgbSupported = true;   
+            s->Cartridge.IsGbcSupported = false;
+            s->Cartridge.RomBankCount = s->Cartridge.Rom.Size / ROM_BANK_SIZE;
+            s->Cartridge.RamBankCount = 1;
+            s->Cartridge.Ram.Size = 0;
 
             preparePlayMode(state, playerNumber);            
         }
-    } else if (state->Players[playerNumber].InitState == InitReady) {
+    } else if (playerState->InitState == InitReady) {
         // Show the loading message.
         state->RequiresRepaint = true;
         state->Players[playerNumber].InitState = InitLoading;
-    } else if (state->Players[playerNumber].InitState == InitLoading) {
+    } else if (playerState->InitState == InitLoading) {
         state->RequiresRepaint = true;
 
-        sByte result = importCartridge(playerNumber, &state->Players[playerNumber].Cartridge);
+        sByte result = importCartridge(playerNumber, &s->Cartridge);
         if (result) {
             string tmp;
             state->ErrorCode = result;
             getText(TextChecksumFailed, tmp);                             
-            sprintf(state->Players[playerNumber].ErrorMessage, tmp, result);
-            state->Players[playerNumber].InitState = InitError;
+            sprintf(playerState->ErrorMessage, tmp, result);
+            playerState->InitState = InitError;
             return;
         }
 

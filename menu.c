@@ -122,8 +122,8 @@ static void changeGame(RootState* state, const byte playerNumber) {
     // Dump Save RAM first, or nah?
 
     // Reset state and send back to init.
-    freeByteArray(&state->Players[playerNumber].Cartridge.Rom);
-    freeByteArray(&state->Players[playerNumber].Cartridge.Ram);
+    freeByteArray(&state->Players[playerNumber].EmulationState.Cartridge.Rom);
+    freeByteArray(&state->Players[playerNumber].EmulationState.Cartridge.Ram);
 
     state->Players[playerNumber].MenuCursorRow = -1;
     state->Players[playerNumber].ActiveMode = Init;
@@ -166,17 +166,17 @@ static char addPlayer(RootState* state) {
     }
 
     PlayerState* newPlayer = &state->Players[state->PlayerCount];
-    const PlayerState* playerOne = &state->Players[0];
+    const GameBoyCartridge* playerOne = &state->Players[0].EmulationState.Cartridge;
     generatePlayerState(newPlayer);
 
     // Copy the most of the cartridge data by reference.  It won't be changing.
-    newPlayer->Cartridge.IsGbcSupported = playerOne->Cartridge.IsGbcSupported;
-    newPlayer->Cartridge.Header = playerOne->Cartridge.Header;
-    newPlayer->Cartridge.Rom = playerOne->Cartridge.Rom;
+    newPlayer->EmulationState.Cartridge.IsGbcSupported = playerOne->IsGbcSupported;
+    newPlayer->EmulationState.Cartridge.Header = playerOne->Header;
+    newPlayer->EmulationState.Cartridge.Rom = playerOne->Rom;
 
     // But maintain a different copy of the save file. We don't want to have two instances messing with a single save file.
     // Non-player-1 save files will never be written back to the cartridge.
-    importCartridgeRam(0, &newPlayer->Cartridge);
+    importCartridgeRam(0, &newPlayer->EmulationState.Cartridge);
 
     resetPlayState(newPlayer);
 

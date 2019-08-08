@@ -153,7 +153,7 @@ static void lcd_render_current_line(PlayerState* state) {
 
     Pixel pixels[GB_LCD_WIDTH] = {0};
 
-    u8 use_col = gb_state->Cartridge->IsGbcSupported;
+    u8 use_col = gb_state->Cartridge.IsGbcSupported;
 
     u8 winmap_high       = (gb_state->LcdControl & (1<<6)) ? 1 : 0;
     u8 win_enable        = (gb_state->LcdControl & (1<<5)) ? 1 : 0;
