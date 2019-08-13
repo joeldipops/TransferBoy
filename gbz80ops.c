@@ -658,7 +658,20 @@ void halt(GbState* s, byte op){
     s->halt_for_interrupts = 1;    
 }
 void stop(GbState* s, byte op) { // debug(s, "stop");
-    // TODO
+    // For GBC games, stop instruction also handles the speed switch.
+    if (s->IsSpeedSwitchPending && s->Cartridge.IsGbcSupported) {
+        s->IsInDoubleSpeedMode = !s->IsInDoubleSpeedMode;
+        s->IsSpeedSwitchPending = 0;
+
+        if (s->IsInDoubleSpeedMode) {
+            s->io_lcd_mode_cycles_left *= 2;
+        } else {
+            s->io_lcd_mode_cycles_left /= 2;
+        }
+
+    } else {
+        ; // TODO
+    }
 }
 void di(GbState* s, byte op) { // debug(s, "di");
     s->interrupts_master_enabled = 0;

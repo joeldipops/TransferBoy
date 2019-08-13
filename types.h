@@ -603,7 +603,6 @@ typedef struct gb_state {
 
     bool in_bios:1; // At start BIOS is temporarily mapped at 0000-0100.
     bool halt_for_interrupts:1; // Don't run instructions until interrupt.
-    bool double_speed:1; // CGB: we can run at double CPU speed.
 
     // As controlled by the di and ei instructions.
     bool interrupts_master_enabled:1;

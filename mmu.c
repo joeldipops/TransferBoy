@@ -12,8 +12,9 @@ static void mmu_hdma_do(GbState *s) {
     }
 
     u32 clks = GB_HDMA_BLOCK_CLKS;
-    if (s->double_speed)
+    if (s->IsInDoubleSpeedMode) {
         clks *= 2;
+    }
     s->last_op_cycles += clks;
 
     s->GbcHdmaControl--;
@@ -43,8 +44,9 @@ static void mmu_hdma_start(GbState *s, u8 lenmode) {
 
         s->GbcHdmaControl = 0xff; // done
         u32 clks = blocks * GB_HDMA_BLOCK_CLKS;
-        if (s->double_speed)
+        if (s->IsInDoubleSpeedMode) {
             clks *= 2;
+        }
         s->last_op_cycles += clks;
     } else {
         s->io_hdma_running = 1;
@@ -566,6 +568,10 @@ static byte readOAM(GbState* s, u16 location) {
     }
 }
 
+static void writeGbcSpeedSwitch(GbState* s, u8 location, u8 value) {
+    s->IsSpeedSwitchPending = value & 0x01;
+}
+
 /**
  * Reads from an address in the virtual gameboy memory.
  * @param s Gameboy state.
@@ -603,7 +609,7 @@ static mmuWriteHramOperation mmuWriteHramTable[] = {
 /*   1 */ writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,
 /*   2 */ writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeAudioChannelSwitch,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,
 /*   3 */ writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,
-/*   4 */ writeHram,writeLcdStatus,writeHram,writeHram,writeCurrentLine,writeNextInterruptLine,writeDmaSource,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeGbcVRAMBank,
+/*   4 */ writeHram,writeLcdStatus,writeHram,writeHram,writeCurrentLine,writeNextInterruptLine,writeDmaSource,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeGbcSpeedSwitch,writeHram,writeGbcVRAMBank,
 /*   5 */ writeBiosSwitch,writeHram,writeHram,writeHram,writeHram,writeGbcHdmaControl,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,
 /*   6 */ writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeGbcBackgroundPaletteData,writeHram,writeGbcSpritePaletteData,writeHram,writeHram,writeHram,writeHram,
 /*   7 */ writeGbcRamBankSelect,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,

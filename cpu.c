@@ -98,6 +98,9 @@ void cpu_reset_state(GbState *s) {
         s->reg16.BC = 0x0000;
         s->reg16.DE = 0xff56;
         s->reg16.HL = 0x000d;
+        s->GBCSpeedSwitch = 0x7E; // Everything returns 1 except first and last bits.        
+    } else {
+        s->GBCSpeedSwitch = 0xFF;
     }
 
     s->halt_for_interrupts = 0;
@@ -198,7 +201,7 @@ static void cpu_handle_interrupts(GbState *s) {
 }
 
 void cpu_timers_step(GbState *s) {
-    u32 freq = s->double_speed ? GB_FREQ : 2 * GB_FREQ;
+    u32 freq = s->IsInDoubleSpeedMode ? GB_FREQ : 2 * GB_FREQ;
     u32 div_cycles_per_tick = freq / GB_DIV_FREQ;
     s->io_timer_DIV_cycles += s->last_op_cycles;
     if (s->io_timer_DIV_cycles >= div_cycles_per_tick) {
