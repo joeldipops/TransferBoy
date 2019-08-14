@@ -3,11 +3,7 @@
 
 #include "types.h"
 
-// Removes need to check enabled flag when accessing SRAM.
-// Point s->SRAM here, which should be in ROM, to disable it.
-static const byte disabledRAMPage[0x2000] = {[0x0 ... 0x1FFF] = 0xFF };
-
-/*
+/*********************************
  * Memory layout of the GameBoy:
  *  $0000-$3FFF ROM (bank 0)
  *  $4000-$7FFF ROM (bank 1..n, switchable)
@@ -23,6 +19,14 @@ static const byte disabledRAMPage[0x2000] = {[0x0 ... 0x1FFF] = 0xFF };
  *  $FFFF       Interrupt Enable Flag
  */
 
+/**
+ * s->SRAM points here when SRAM is disabled.
+ */
+static const byte disabledRAMPage[0x2000] = {[0x0 ... 0x1FFF] = 0xFF };
+
+/**
+ * Performs mmu related tasks that are performed after every cpu operation.
+ */
 void mmu_step(GbState *s);
 
 /**
@@ -41,9 +45,24 @@ u8 mmu_read(GbState *s, u16 location);
  */
 void mmu_write(GbState *s, u16 location, u8 value);
 
+/**
+ * Reads two bytes from an address in virtual gameboy memory.
+ */
 u16 mmu_read16(GbState *s, u16 location);
+
+/**
+ * Writes two bytes to an address in virtual gameboy memory.
+ */
 void mmu_write16(GbState *s, u16 location, u16 value);
+
+/**
+ *  Reads two bytes from the stack pointer address then increments it twice.
+ */
 u16 mmu_pop16(GbState *s);
+
+/**
+ * Decrements the stack pointer twice then writes to bytes to the new location.
+ */
 void mmu_push16(GbState *s, u16 value);
 
 /**

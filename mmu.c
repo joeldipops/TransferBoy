@@ -492,16 +492,6 @@ static void writeOam(GbState* s, u16 location, byte value) {
 }
 
 /**
- * Writes to an address in the virtual gameboy memory.
- * @param s Gameboy state.
- * @param location address to write to.
- * @param value Value to write.
- */
-inline void mmu_write(GbState* s, u16 location, byte value) {
-    s->mmuWrites[location >> 8](s, location, value);
-}
-
-/**
  * 0x0000 - 0x3FFF
  */
 static byte readRom0(GbState* s, u16 location) {
@@ -582,21 +572,43 @@ inline byte mmu_read(GbState* s, u16 location) {
     return s->mmuReads[location >> 8](s, location);
 }
 
+/**
+ * Writes to an address in the virtual gameboy memory.
+ * @param s Gameboy state.
+ * @param location address to write to.
+ * @param value Value to write.
+ */
+inline void mmu_write(GbState* s, u16 location, byte value) {
+    s->mmuWrites[location >> 8](s, location, value);
+}
+
+/**
+ * Reads two bytes from an address in virtual gameboy memory.
+ */
 u16 mmu_read16(GbState *s, u16 location) {
     return mmu_read(s, location) | ((u16)mmu_read(s, location + 1) << 8);
 }
 
+/**
+ * Writes two bytes to an address in virtual gameboy memory.
+ */
 void mmu_write16(GbState *s, u16 location, u16 value) {
     mmu_write(s, location, value & 0xff);
     mmu_write(s, location + 1, value >> 8);
 }
 
+/**
+ *  Reads two bytes from the stack pointer address then increments it twice.
+ */
 u16 mmu_pop16(GbState *s) {
     u16 val = mmu_read16(s, s->sp);
     s->sp += 2;
     return val;
 }
 
+/**
+ * Decrements the stack pointer twice then writes to bytes to the new location.
+ */
 void mmu_push16(GbState *s, u16 value) {
     s->sp -= 2;
     mmu_write16(s, s->sp, value);
