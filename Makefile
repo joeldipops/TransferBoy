@@ -7,7 +7,7 @@ HEADERPATH = $(ROOTDIR)/mips64-elf/lib
 N64TOOL = /home/joeldipops/Projects/tools/libdragon/tools/n64tool
 HEADERNAME = header
 LINK_FLAGS = -L$(ROOTDIR)/mips64-elf/lib -ldragon -lm -lc -ldragonsys -Tn64ld.x
-PROG_NAME = transferboy64
+PROG_NAME = transferboy
 #O3FLAGS = -fgcse-after-reload -finline-functions -fipa-cp-clone -floop-interchange -floop-unroll-and-jam -fpredictive-commoning -fsplit-paths -ftree-loop-distribute-patterns -ftree-loop-distribution -ftree-loop-vectorize -ftree-partial-pre -ftree-slp-vectorize -funswitch-loops -fvect-cost-model -fversion-loops-for-strides
 OPTIMISATION_FLAGS = -O3
 CFLAGS = -std=gnu99 -march=vr4300 -mtune=vr4300 $(OPTIMISATION_FLAGS) -Wall -Wno-unused -Werror -I$(CURDIR) -I$(ROOTDIR)/mips64-elf/include 
@@ -51,10 +51,10 @@ LD_OFILES += $(CURDIR)/obj/gbc_state.o
 LD_OFILES += $(CURDIR)/obj/polyfill.o
 LD_OFILES += $(CURDIR)/obj/rtc.o
 
-$(PROG_NAME)$(ROM_EXTENSION): $(PROG_NAME).elf transferboy64.dfs
+$(PROG_NAME)$(ROM_EXTENSION): $(PROG_NAME).elf transferboy.dfs
 	$(OBJCOPY) $(PROG_NAME).elf $(PROG_NAME).bin -O binary
 	rm -f $(PROG_NAME)$(ROM_EXTENSION)
-	$(N64TOOL) $(N64_FLAGS) -t "transferboy64" -s 1M transferboy64.dfs
+	$(N64TOOL) $(N64_FLAGS) -t "transferboy" -s 1M transferboy.dfs
 	$(CHKSUM64PATH) $(PROG_NAME)$(ROM_EXTENSION)
 
 $(PROG_NAME).elf :
@@ -83,12 +83,12 @@ $(PROG_NAME).elf :
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/lcd.o $(CURDIR)/lcd.c
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/mmu.o $(CURDIR)/mmu.c
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/gbc_state.o $(CURDIR)/gbc_state.c
-	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/transferboy64.o $(CURDIR)/transferboy64.c									
+	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/transferboy.o $(CURDIR)/transferboy.c									
 
 	$(LD) -o $(PROG_NAME).elf $(CURDIR)/obj/$(PROG_NAME).o $(LD_OFILES) $(LINK_FLAGS)
 
-transferboy64.dfs:
-	$(MKDFSPATH) transferboy64.dfs ./filesystem/
+transferboy.dfs:
+	$(MKDFSPATH) transferboy.dfs ./filesystem/
 
 all: $(PROG_NAME)$(ROM_EXTENSION)
 

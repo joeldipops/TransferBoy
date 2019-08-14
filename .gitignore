@@ -10,6 +10,7 @@ filesystem/
 *.bin
 *.z64
 !transferboy64.z64
+!transferboy.z64
 test.sh
 *.o
 *~
