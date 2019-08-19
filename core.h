@@ -1,9 +1,9 @@
 #ifndef CORE_INCLUDED
 #define CORE_INCLUDED
 
-#define null 0
-
 #include <libdragon.h>
+
+#define null 0
 
 typedef uint8_t byte;
 typedef int8_t sByte;
