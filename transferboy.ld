@@ -35,7 +35,7 @@ SECTIONS {
     * The text section carries the app code and its relocation addr is
     * the first byte of the cart domain in cached, unmapped memory
     */
-   .text : {
+    .text : {
         FILL (0)
 
         *(.boot)

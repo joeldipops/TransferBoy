@@ -85,7 +85,6 @@ void getText(const TextId textId, string output) {
  * @private
  */
 static void drawSprite(const byte spriteCode, sprite_t* spriteSheet, const natural x, const natural y, const float scale) {
-    rdp_sync(SYNC_PIPE);
     rdp_load_texture_stride(0, 1, MIRROR_DISABLED, spriteSheet, spriteCode);
     rdp_draw_sprite_scaled(0, x, y, scale, scale);
 }
@@ -106,7 +105,7 @@ static void drawTransformedCharacter(const char character, const natural x, cons
         return;
     }
 
-    sprite_t* sheet = getCharacterSheet();    
+    sprite_t* sheet = getCharacterSheet();
 
     byte offset = character - 0x20;
     if (transformation) {
@@ -114,7 +113,7 @@ static void drawTransformedCharacter(const char character, const natural x, cons
         offset = 0;
     }
 
-    drawSprite(offset, sheet, x, y, scale);        
+    drawSprite(offset, sheet, x, y, scale);
 }
 
 /**

@@ -122,7 +122,7 @@ static sByte initialiseTPak(const byte controllerNumber) {
 
     byte block[BLOCK_SIZE];
 
-    sByte result = 0;    
+    sByte result = 0;
 
     // Wake up the transfer pak and send power to the cartridge.
     result = setTpakValue(controllerNumber, CARTRIDGE_POWER_ADDRESS, CARTRIDGE_POWER_ON);
@@ -183,7 +183,7 @@ static bool checkHeader(const CartridgeHeader* header) {
     for(byte i = start; i <= end; i++) {
         sum = sum - data[i] - 1;
     }
-    
+
     return sum == header->HeaderChecksum;
 }
 
@@ -249,9 +249,9 @@ static sByte switchROM0Bank(const byte controllerNumber, const natural bank, con
     }
 
     // Make sure we're in ROMX space
-    setTpakValue(controllerNumber, TPAK_BANK_ADDRESS, ROMX);    
+    setTpakValue(controllerNumber, TPAK_BANK_ADDRESS, ROMX);
     // Switch to 'RAM' mode
-    setTpakValue(controllerNumber, mapAddress(GB_BANK_MODE_ADDRESS), GB_RAM_BANK_MODE);    
+    setTpakValue(controllerNumber, mapAddress(GB_BANK_MODE_ADDRESS), GB_RAM_BANK_MODE);
     // Write to upper bank address, bank is the two bits << 5
     setTpakValue(controllerNumber, mapAddress(GB_RAM_BANK_ADDRESS), bank >> 5);
     // And move TPAK bank back to ROM0, since that's where these banks get put.
@@ -459,7 +459,7 @@ static CartridgeType getPrimaryType(const CartridgeType fullType) {
         case MMM01_RAM:
         case MMM01_RAM_BATTERY:
         default:
-            return UNKNOWN_CARTRIDGE_TYPE;            
+            return UNKNOWN_CARTRIDGE_TYPE;
 
 
     }
@@ -500,7 +500,7 @@ static sByte exportRTCData(const byte controllerNumber, GameBoyCartridge* cartri
 
     for (byte bank = 0x08; bank < 0x0D; bank++) {
         // Update the bank
-        setTpakValue(controllerNumber, TPAK_BANK_ADDRESS, ROMX);        
+        setTpakValue(controllerNumber, TPAK_BANK_ADDRESS, ROMX);
         setTpakValue(controllerNumber, mapAddress(GB_RAM_BANK_ADDRESS), bank);
         // Update the register.
         setTpakValue(controllerNumber, mapAddress(SRAM_ADDRESS), cartridge->Ram.Data[SRAM_BANK_SIZE * bank]);
@@ -533,7 +533,7 @@ static sByte importRTCData(const byte controllerNumber, GameBoyCartridge* cartri
     byte block[32];
     for (byte bank = 0x08; bank < 0x0D; bank++) {
         // Update the bank
-        setTpakValue(controllerNumber, TPAK_BANK_ADDRESS, ROMX);        
+        setTpakValue(controllerNumber, TPAK_BANK_ADDRESS, ROMX);
         setTpakValue(controllerNumber, mapAddress(GB_RAM_BANK_ADDRESS), bank);
         // Read the register.
         setTpakValue(controllerNumber, TPAK_BANK_ADDRESS, SRAM);
@@ -583,7 +583,7 @@ sByte importCartridgeRam(const byte controllerNumber, GameBoyCartridge* cartridg
         if (result) {
             return result;
         }
-    }    
+    }
 
     return TPAK_SUCCESS;
 }
@@ -616,10 +616,10 @@ sByte exportCartridgeRam(const byte controllerNumber, GameBoyCartridge* cartridg
         if (result) {
             return result;
         }
-    }        
+    }
 
     // Turn off the lights when we're done.
-    setTpakValue(controllerNumber, CARTRIDGE_POWER_ADDRESS, CARTRIDGE_POWER_OFF);        
+    setTpakValue(controllerNumber, CARTRIDGE_POWER_ADDRESS, CARTRIDGE_POWER_OFF);
 
     return TPAK_SUCCESS;
 }
@@ -650,7 +650,7 @@ sByte getCartridgeMetadata(const byte controllerNumber, GameBoyCartridge* cartri
         return TPAK_ERR_CORRUPT_HEADER;
     }
 
-    cartridge->IsGbcSupported = header.CGBTitle.GbcSupport == GBC_DMG_SUPPORTED || header.CGBTitle.GbcSupport == GBC_ONLY_SUPPORTED;        
+    cartridge->IsGbcSupported = header.CGBTitle.GbcSupport == GBC_DMG_SUPPORTED || header.CGBTitle.GbcSupport == GBC_ONLY_SUPPORTED;
     cartridge->Type = getPrimaryType(header.CartridgeType);
 
     if (cartridge->Type == UNKNOWN_CARTRIDGE_TYPE) {
@@ -671,7 +671,7 @@ sByte getCartridgeMetadata(const byte controllerNumber, GameBoyCartridge* cartri
 
     cartridge->RomBankCount = romBanks;
     cartridge->RamBankCount = ramBanks;
-    cartridge->RamBankSize = (natural) ramBankSize;     
+    cartridge->RamBankSize = (natural) ramBankSize;
 
     // TODO - Fix Broken
     /*
@@ -682,8 +682,8 @@ sByte getCartridgeMetadata(const byte controllerNumber, GameBoyCartridge* cartri
         cartridge->Title = malloc(11);
         memcpy(cartridge->Title, header.CGBTitle.Title, 11);
     } 
-    */       
-    
+    */
+
     memcpy(&cartridge->Header, &header, HEADER_SIZE);
 
     return TPAK_SUCCESS;
@@ -715,9 +715,6 @@ sByte importCartridge(const byte controllerNumber, GameBoyCartridge* cartridge) 
     if (result) {
         return result;
     }
-
-    // Try to be more accurate in getting this when RTC is fully implemented.
-    cartridge->LastRTCTicks = get_ticks_ms();
 
     // Turn off the lights when we're done.
     setTpakValue(controllerNumber, CARTRIDGE_POWER_ADDRESS, CARTRIDGE_POWER_OFF);

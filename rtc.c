@@ -33,7 +33,7 @@ sByte updateRealTimeClock(GbState* s) {
     rtcData.Minutes = s->Cartridge.Ram.Data[SRAM_BANK_SIZE * 0x09];
     rtcData.Hours = s->Cartridge.Ram.Data[SRAM_BANK_SIZE * 0x0A];
     rtcData.DaysLow = s->Cartridge.Ram.Data[SRAM_BANK_SIZE * 0x0B];
-    rtcData.StatusByte = s->Cartridge.Ram.Data[SRAM_BANK_SIZE * 0x0C];  
+    rtcData.StatusByte = s->Cartridge.Ram.Data[SRAM_BANK_SIZE * 0x0C];
 
     long now = get_ticks_ms();
     long diff = now - s->Cartridge.LastRTCTicks + s->Cartridge.RTCTimeStopped;
@@ -66,7 +66,7 @@ sByte updateRealTimeClock(GbState* s) {
     memset(s->SRAM + (SRAM_BANK_SIZE * 0x0B), rtcData.StatusByte, SRAM_BANK_SIZE);
 
     s->Cartridge.LastRTCTicks = now;
-    s->Cartridge.RTCTimeStopped = 0;    
+    s->Cartridge.RTCTimeStopped = 0;
 
     return 0;
 }

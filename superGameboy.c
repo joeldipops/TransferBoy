@@ -455,7 +455,7 @@ static int executeSgbCommand(PlayerState* state) {
         default: 
             //logAndPause("SGB Command: %02x", state->SGBState.CurrentCommand); break;
             return -1;
-        //default: break;        
+        //default: break;
     }
 
     return 0;
@@ -656,9 +656,9 @@ sByte applySGBPalettes(const SuperGameboyState* state, natural* pixelBuffer) {
             case SGBColMask:
                 colour = massageColour(state->Palettes[0][0]);
                 for (natural y = 0; y < GB_LCD_HEIGHT; y++) {
-                    for (natural x = 0; x < GB_LCD_WIDTH; x++) {                
+                    for (natural x = 0; x < GB_LCD_WIDTH; x++) {
                         natural index = x + y * GB_LCD_WIDTH;
-                        pixelBuffer[index] = colour;                        
+                        pixelBuffer[index] = colour;
                     }
                 }
                 break;

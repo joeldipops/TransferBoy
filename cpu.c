@@ -16,10 +16,6 @@
 #include "mmu.h"
 #include "hwdefs.h"
 
-#define cpu_error(fmt, ...) \
-    do { \
-    } while (0)
-
 static const u8 flagmasks[] = { FLAG_Z, FLAG_Z, FLAG_C, FLAG_C };
 
 static int cycles_per_instruction[] = {
@@ -225,13 +221,12 @@ void cpu_timers_step(GbState *s) {
 }
 
 void cpu_step(GbState *s) {
-    
     u8 op;
 
     cpu_handle_interrupts(s);
 
     op = mmu_read(s, s->pc);
-    
+
     s->last_op_cycles = cycles_per_instruction[op];
     if (op == 0xcb) {
         u8 extOp = mmu_read(s, s->pc + 1);
@@ -240,7 +235,7 @@ void cpu_step(GbState *s) {
 
     if (!s->halt_for_interrupts) {
         // Move PC forward, then go and run the operation.
-        s->pc++;        
-        opTable[op](s, op);        
+        s->pc++;
+        opTable[op](s, op);
     }
 }

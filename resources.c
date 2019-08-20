@@ -215,11 +215,11 @@ sprite_t* transformSprite(const sprite_t* sheet, const byte spriteCode, const Tr
                                 data + index,
                                 source + (row * sheet->width + column) * sheet->bitdepth,
                                 sheet->bitdepth
-                            );                        
+                            );
                             break;
                     }
 
-                    index += sheet->bitdepth;                    
+                    index += sheet->bitdepth;
                 }
             }
             break;

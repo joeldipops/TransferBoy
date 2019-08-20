@@ -21,8 +21,8 @@ static void preparePlayMode(RootState* state, byte playerNumber) {
     Rectangle screen = {};
     getScreenPosition(state, playerNumber, &screen);
     resetPlayState(&state->Players[playerNumber]);
-    state->Players[playerNumber].InitState = InitLoaded;   
-    state->Players[playerNumber].ActiveMode = Play;      
+    state->Players[playerNumber].InitState = InitLoaded;
+    state->Players[playerNumber].ActiveMode = Play;
 }
 
 /**
@@ -54,14 +54,14 @@ void initLogic(RootState* state, const byte playerNumber) {
                     getText(TextNoTpak, playerState->ErrorMessage);
                     break;
                 case TPAK_ERR_NO_CARTRIDGE:
-                    getText(TextNoCartridge, playerState->ErrorMessage);             
+                    getText(TextNoCartridge, playerState->ErrorMessage);
                     break;
                 case TPAK_ERR_CORRUPT_HEADER:
                 case TPAK_ERR_CORRUPT_DATA:
                     getText(TextChecksumFailed, playerState->ErrorMessage);
                     break;
                 case TPAK_ERR_UNSUPPORTED_CARTRIDGE:
-                    getText(TextUnsupportedCartridge, playerState->ErrorMessage);                
+                    getText(TextUnsupportedCartridge, playerState->ErrorMessage);
                     break;
                 case TPAK_ERR_INSUFFICIENT_MEMORY:
                     getText(TextExpansionPakRequired, playerState->ErrorMessage);
@@ -92,13 +92,13 @@ void initLogic(RootState* state, const byte playerNumber) {
             }
 
             s->Cartridge.Type = ROM_ONLY;
-            s->Cartridge.Header.IsSgbSupported = true;   
+            s->Cartridge.Header.IsSgbSupported = true;
             s->Cartridge.IsGbcSupported = false;
             s->Cartridge.RomBankCount = s->Cartridge.Rom.Size / ROM_BANK_SIZE;
             s->Cartridge.RamBankCount = 1;
             s->Cartridge.Ram.Size = 0;
 
-            preparePlayMode(state, playerNumber);            
+            preparePlayMode(state, playerNumber);
         }
     } else if (playerState->InitState == InitReady) {
         // Show the loading message.
@@ -111,7 +111,7 @@ void initLogic(RootState* state, const byte playerNumber) {
         if (result) {
             string tmp;
             state->ErrorCode = result;
-            getText(TextChecksumFailed, tmp);                             
+            getText(TextChecksumFailed, tmp);
             sprintf(playerState->ErrorMessage, tmp, result);
             playerState->InitState = InitError;
             return;
@@ -139,13 +139,13 @@ void initDraw(const RootState* state, const byte playerNumber) {
     natural textTop = screen.Top - TEXT_HEIGHT + (screen.Width / 2);
 
     string text = "";
-    string tmp = "";    
+    string tmp = "";
     switch (state->Players[playerNumber].InitState) {
         case InitStart: break;
         case InitLoaded: break;
         case InitReady:
         case InitRestarting:
-        case InitLoading:        
+        case InitLoading:
             getText(TextLoadingCartridge, text);
             break;
         case InitError:

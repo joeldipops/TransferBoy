@@ -151,10 +151,10 @@ static inline void renderPixels(
                 ; // Leave display as is / frozen
             } else {
                 for (natural y = 0; y < GB_LCD_HEIGHT; y++) {
-                    natural ty = y * avgPixelSize + top;                    
+                    natural ty = y * avgPixelSize + top;
                     for (natural x = 0; x < GB_LCD_WIDTH; x++) {
                         natural index = x + y * GB_LCD_WIDTH;
-                        natural tx = x * avgPixelSize + left;                        
+                        natural tx = x * avgPixelSize + left;
 
                         if (!isInitialised || lastBuffer[index] != nextBuffer[index]) {
                             // SGB Colours are already massaged.
@@ -263,7 +263,7 @@ void playLogic(RootState* state, const byte playerNumber) {
 
     if (s->lcd_entered_vblank) {
         playerState->Meta.FrameCount++;
-                
+
         if (FRAMES_TO_SKIP && (playerState->Meta.FrameCount % (FRAMES_TO_SKIP + 1))) {
             playerState->WasFrameSkipped = true;
             return;
@@ -327,8 +327,6 @@ void playLogic(RootState* state, const byte playerNumber) {
         state->RequiresRepaint = true;
         state->RequiresControllerRead = true;
     }
-
-
 }
 
 /**
@@ -352,7 +350,7 @@ void playDraw(const RootState* state, const byte playerNumber) {
 
     renderPixels(
         state->Frame,
-        &state->Players[playerNumber],       
+        &state->Players[playerNumber],
         state->Players[playerNumber].EmulationState.LastBuffer,
         state->Players[playerNumber].EmulationState.NextBuffer,
         palette,
@@ -376,7 +374,7 @@ void playAfter(RootState* state, const byte playerNumber) {
         state->Players[playerNumber].EmulationState.NextBuffer,
         sizeof(u16) * GB_LCD_WIDTH * GB_LCD_HEIGHT
     );
-    
+
     if (state->Players[playerNumber].BuffersInitialised < 2) {
         state->Players[playerNumber].BuffersInitialised++;
     }

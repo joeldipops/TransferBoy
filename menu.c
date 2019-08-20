@@ -88,7 +88,7 @@ static byte getNewRow(const float oldRowCount, const float newRowCount, const fl
  */
 static void resumePlay(PlayerState* playerState) {
     playerState->MenuCursorRow = -1;
-    playerState->BuffersInitialised = 0;    
+    playerState->BuffersInitialised = 0;
     playerState->ActiveMode = Play;
 }
 
@@ -180,7 +180,7 @@ static char addPlayer(RootState* state) {
 
     resetPlayState(newPlayer);
 
-    flushScreen(state);    
+    flushScreen(state);
 
     newPlayer->ActiveMode = Play;
     state->PlayerCount++;
@@ -246,12 +246,12 @@ void menuLogic(RootState* state, const byte playerNumber) {
     playerState->MenuLayout[0] = 4;
 
     // If next controller not plugged in, disable add player & add game options.
-    if (state->PlayerCount > 1 || !(state->ControllersPresent & (CONTROLLER_2_INSERTED))) {        
+    if (state->PlayerCount > 1 || !(state->ControllersPresent & (CONTROLLER_2_INSERTED))) {
         playerState->MenuLayout[1] = 0;
         // Can't be in the second column if there is no second column.
         playerState->MenuCursorColumn = 0;
     } else {
-        playerState->MenuLayout[1] = 2;        
+        playerState->MenuLayout[1] = 2;
     }
 
     bool pressedButtons[N64_BUTTON_COUNT] = {};
