@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <libdragon.h>
 
 #include "types.h"
 #include "hwdefs.h"
@@ -11,18 +12,18 @@
 #include "lcd.h"
 #include "state.h"
 
-#define emu_error(fmt, ...) \
-    do { \
-        printf("Emu initialization error: " fmt "\n", ##__VA_ARGS__); \
-        return 1; \
-    } while (0)
-
 /**
  * Initialize the emulator state of the gameboy. This state belongs to the
  * emulator, not the state of the emulated hardware.
  */
 void emu_init(GbState *s) {
-}    
+    s->ScreenTexture = calloc(1, sizeof(sprite_t) + 4 * GB_LCD_WIDTH * GB_LCD_HEIGHT);
+    s->ScreenTexture->width = GB_LCD_WIDTH;
+    s->ScreenTexture->height = GB_LCD_HEIGHT;
+    s->ScreenTexture->bitdepth = 2;// DEPTH_16_BPP;
+    s->ScreenTexture->hslices = 5; //GB_LCD_WIDTH / 32;
+    s->ScreenTexture->vslices = 6; //GB_LCD_HEIGHT / 24;
+}
 
 void emu_step(PlayerState* state) {
     GbState* s = &state->EmulationState;

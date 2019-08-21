@@ -115,7 +115,7 @@ static void mapGbInputs(const char controllerNumber, const GbButton* buttonMap, 
         }
     }
 }
-
+#include "resources.h"
 
 /**
  * Take the array of pixels produced by the emulator and throw it up on to the screen.
@@ -131,7 +131,7 @@ static void mapGbInputs(const char controllerNumber, const GbButton* buttonMap, 
  * @private
  */
 static inline void renderPixels(
-    const display_context_t frame,
+    display_context_t frame,
     const PlayerState* state,
     const natural* lastBuffer,
     const natural* nextBuffer,
@@ -142,7 +142,8 @@ static inline void renderPixels(
     const SuperGameboyState* sgbState,
     const bool isInitialised
 ) {
-    natural pixelSize = ceil(avgPixelSize);
+    const natural bufferLength = GB_LCD_HEIGHT * GB_LCD_WIDTH;
+
     switch(paletteType) {
         case SuperGameboyPalette:
             ;
@@ -150,53 +151,39 @@ static inline void renderPixels(
             if (sgbState->MaskState == SGBFrzMask) {
                 ; // Leave display as is / frozen
             } else {
-                for (natural y = 0; y < GB_LCD_HEIGHT; y++) {
-                    natural ty = y * avgPixelSize + top;
-                    for (natural x = 0; x < GB_LCD_WIDTH; x++) {
-                        natural index = x + y * GB_LCD_WIDTH;
-                        natural tx = x * avgPixelSize + left;
-
-                        if (!isInitialised || lastBuffer[index] != nextBuffer[index]) {
-                            // SGB Colours are already massaged.
-                            graphics_draw_box(frame, tx, ty, pixelSize, pixelSize, nextBuffer[index]);
-                        }
-                    }
+                for (natural i = 0; i < bufferLength; i++) {
+                    // SGB Colours are already massaged.
+                    state->EmulationState.ScreenTexture->data[i] = nextBuffer[i];
                 }
             }
-
             break;
         case GameboyPalette:
-            // The colors stored in pixbuf already went through the palette
-            // translation, but are still 2 bit monochrome.
-            for (natural y = 0; y < GB_LCD_HEIGHT; y++) {
-                natural ty = y * avgPixelSize + top;
-                for (natural x = 0; x < GB_LCD_WIDTH; x++) {
-                    natural index = x + y * GB_LCD_WIDTH;
-                    natural tx = x * avgPixelSize + left;
-
-                    if (!isInitialised || lastBuffer[index] != nextBuffer[index]) {
-                        graphics_draw_box(frame, tx, ty, pixelSize, pixelSize, MONOCHROME_PALETTE[nextBuffer[index]]);
-                    }
-                }
+            for (natural i = 0; i < bufferLength; i++) {
+                state->EmulationState.ScreenTexture->data[i] = MONOCHROME_PALETTE[nextBuffer[i]];
             }
             break;
         case GameboyColorPalette:
-            for (natural y = 0; y < GB_LCD_HEIGHT; y++) {
-                natural ty = y * avgPixelSize + top;
-                for (natural x = 0; x < GB_LCD_WIDTH; x++) {
-                    natural index = x + y * GB_LCD_WIDTH;
-                    natural tx = x * avgPixelSize + left;                    
-
-                    if (!isInitialised || lastBuffer[index] != nextBuffer[index]) {                    
-                        graphics_draw_box(frame, tx, ty, pixelSize, pixelSize, massageColour(nextBuffer[index]));
-                    }
+            for (natural i = 0; i < bufferLength; i++) {
+                if (!isInitialised || lastBuffer[i] != nextBuffer[i]) {
+                    state->EmulationState.ScreenTexture->data[i] = massageColour(nextBuffer[i]);
                 }
             }
             break;
         default:
-            // black screen, oh well
-            graphics_draw_box(frame, left, top, GB_LCD_WIDTH * pixelSize, GB_LCD_HEIGHT * pixelSize, 0x00010001);            
+            for (natural i = 0; i < bufferLength; i++) {
+                // black screen, oh well
+                state->EmulationState.ScreenTexture->data[i] = 0x00010001;
+            }
             break;
+    }
+
+    byte index = 0;
+    for (natural y = 0; y < state->EmulationState.ScreenTexture->vslices; y++) {
+        for (natural x = 0; x < state->EmulationState.ScreenTexture->hslices; x++) {
+            rdp_load_texture_stride(0, 0, MIRROR_DISABLED, state->EmulationState.ScreenTexture, index);
+            rdp_draw_sprite_scaled(0, left + (32 * x), top + (24 * y), 1, 1);
+            index++;
+        }
     }
 
     if (SHOW_FRAME_COUNT) {
@@ -204,12 +191,13 @@ static inline void renderPixels(
 
         long diff = state->Meta.NextClock - state->Meta.LastClock;
 
-        sprintf(text, "Mem: %lld FPS: %f", getCurrentMemory(), ((FRAMES_TO_SKIP + 1) / (double)diff) * 1000);
+        sprintf(text, "Mem: %lld FPS: %f %lld" , getCurrentMemory(), ((FRAMES_TO_SKIP + 1) / (double)diff) * 1000, state->Meta.FrameCount);
         graphics_set_color(GLOBAL_TEXT_COLOUR, 0x0);
         graphics_draw_box(frame, 0, 450, 680, 10, GLOBAL_BACKGROUND_COLOUR);
         graphics_draw_text(frame, 5, 450, text);
     }
 }
+
 
 void playAudio(const GbState* state) {
     if (!audio_can_write()) {
@@ -242,7 +230,6 @@ void playAudio(const GbState* state) {
  * @param playerNumber player in play mode.
  */
 void playLogic(RootState* state, const byte playerNumber) {
-    
     PlayerState* playerState = &state->Players[playerNumber];
     GbState* s = &state->Players[playerNumber].EmulationState;
 

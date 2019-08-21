@@ -177,8 +177,8 @@ typedef struct gb_state {
     byte* ROM0;
     byte* ROMX;
     byte* VRAM;
-    byte* SRAM;    
-    byte* WRAM0;    
+    byte* SRAM;
+    byte* WRAM0;
     byte* WRAMX;
 
     // $fe00 - fe9f: Sprite/Object attributes
@@ -196,7 +196,7 @@ typedef struct gb_state {
                 struct __attribute__((packed)) {
                     byte unused0:2;
                     byte SelectFace:1;
-                    byte SelectDPad:1;          
+                    byte SelectDPad:1;
                     byte unused01:4;
                 };      
                 struct __attribute__((packed)) {
@@ -278,7 +278,7 @@ typedef struct gb_state {
                 struct __attribute__((packed)) {
                     byte AudioChannel1InitialVolume:4;
                     bool AudioChannel1IsVolumeIncreasing:1;
-                    byte AudioChannel1EnvelopeSteps:3;                
+                    byte AudioChannel1EnvelopeSteps:3;
                 };
             };
             // FF13 - NR13 - AudioChannel1Frequency
@@ -290,7 +290,7 @@ typedef struct gb_state {
                     bool AudioChannel1IsSoundReset:1;
                     SoundTimingMode AudioChannel1TimingMode:1;
                     const byte unused7:3;
-                    byte AudioChannel1FrequencyHigh:3;                    
+                    byte AudioChannel1FrequencyHigh:3;
                 };
             };
             const byte unused8; //reserved for channel 2 sweep
@@ -308,7 +308,7 @@ typedef struct gb_state {
                 struct __attribute__((packed)) {
                     byte AudioChannel2InitialVolume:4;
                     bool AudioChannel2IsVolumeIncreasing:1;
-                    byte AudioChannel2EnvelopeSteps:3;                
+                    byte AudioChannel2EnvelopeSteps:3;
                 };
             };
             // FF18 - NR23 - AudioChannel1Frequency
@@ -320,7 +320,7 @@ typedef struct gb_state {
                     bool AudioChannel2IsSoundReset:1;
                     SoundTimingMode AudioChannel2TimingMode:1;
                     const byte unused9:3;
-                    byte AudioChannel2FrequencyHigh:3;                    
+                    byte AudioChannel2FrequencyHigh:3;
                 };
             };
             // FF1A - NR30 - AudioChannel3Control
@@ -351,10 +351,10 @@ typedef struct gb_state {
                     bool AudioChannel3IsSoundReset:1;
                     SoundTimingMode AudioChannel3TimingMode:1;
                     const byte unusedD:3;
-                    byte AudioChannel3FrequencyHigh:3;                    
+                    byte AudioChannel3FrequencyHigh:3;
                 };
             };  
-            const byte unusedE; // reserved for channel 4 sweep      
+            const byte unusedE; // reserved for channel 4 sweep
             // FF20 - NR41 - AudioChannel4Length
             byte AudioChannel4Length;
             // FF21 - NR42 - AudioChannel4Envelope
@@ -363,7 +363,7 @@ typedef struct gb_state {
                 struct __attribute__((packed)) {
                     byte AudioChannel4InitialVolume:4;
                     bool AudioChannel4IsVolumeIncreasing:1;
-                    byte AudioChannel4EnvelopeSteps:3;                
+                    byte AudioChannel4EnvelopeSteps:3;
                 };
             };
             // FF22 - NR43 - AudioChannel4RNGParameters
@@ -372,7 +372,7 @@ typedef struct gb_state {
                 struct __attribute__((packed)) {
                     byte NoiseRatioShift:4;
                     byte NoiseStepsCode: 1;
-                    byte NoiseRatioFactor:3;                
+                    byte NoiseRatioFactor:3;
                 };
             };
             // FF23 - NR44 AudioChannel4Flags
@@ -391,7 +391,7 @@ typedef struct gb_state {
                     bool IsLeftTerminalEnabled:1; // S02
                     byte LeftTerminalVolume:3;
                     bool IsRightTerminalEnabled:1; //S01
-                    byte RightTerminalVolume:3;                
+                    byte RightTerminalVolume:3;
                 };
             };
             // FF25 - NR51 - Audio Speaker Channels
@@ -405,7 +405,7 @@ typedef struct gb_state {
                     bool IsChannel4OnRightTerminal:1;
                     bool IsChannel3OnRightTerminal:1;
                     bool IsChannel2OnRightTerminal:1;
-                    bool IsChannel1OnRightTerminal:1;                
+                    bool IsChannel1OnRightTerminal:1;
                 };
             };
             // FF26 - NR52 - Audio Channel Switch
@@ -422,7 +422,7 @@ typedef struct gb_state {
             };
             const byte unused10[9];
             // FF30
-            byte SoundWaveData[WAVEDATA_LENGTH];       
+            byte SoundWaveData[WAVEDATA_LENGTH];
             // FF40 - LCDC - LCD Control
             union {
                 byte LcdControl;
@@ -588,6 +588,8 @@ typedef struct gb_state {
 
     bool lcd_entered_hblank; // Set at the end of every HBlank.
     bool lcd_entered_vblank; // Set at the beginning of every VBlank.
+
+    sprite_t* ScreenTexture;
     u16* LastBuffer;
     u16* NextBuffer;
 
@@ -597,9 +599,9 @@ typedef struct gb_state {
     // The duration of the last intruction. Normally just
     // the CPU executing the instruction, but the MMU could
     // take longer in the case of some DMA ops.
-    u32 last_op_cycles; 
+    u32 last_op_cycles;
     u32 time_cycles;
-    u32 time_seconds;    
+    u32 time_seconds;
 
     bool in_bios:1; // At start BIOS is temporarily mapped at 0000-0100.
     bool halt_for_interrupts:1; // Don't run instructions until interrupt.
@@ -626,8 +628,8 @@ typedef struct gb_state {
 
     // memory bank controller supporting vars
     byte RomBankLower;
-    byte RomBankUpper;    
-    byte SRAMBankNumber; 
+    byte RomBankUpper;
+    byte SRAMBankNumber;
     byte WRAMBankCount;
     byte VRAMBankCount;
     // MBC1 - Upper bits ROM bank (if selected).

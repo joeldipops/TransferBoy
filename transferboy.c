@@ -38,7 +38,7 @@ static void initialiseSubsystems() {
     dfs_init(DFS_DEFAULT_LOCATION);
 
     if (USE_ANTIALIASING) {
-        // SLight better picture, but frame-rate drop on my N64
+        // Slightly better picture, but frame-rate drop on my N64
         display_init(RESOLUTION_640x480, DEPTH_16_BPP, 2, GAMMA_NONE, ANTIALIAS_RESAMPLE);
     } else {
         display_init(RESOLUTION_640x480, DEPTH_16_BPP, 2, GAMMA_NONE, ANTIALIAS_OFF);
