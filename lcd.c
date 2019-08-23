@@ -274,11 +274,7 @@ static void lcd_render_current_line(PlayerState* state) {
  ** -1 - Out of memory.
  */
 int lcd_init(GbState* s) {
-    s->LastBuffer = calloc(sizeof(u16), GB_LCD_WIDTH * GB_LCD_HEIGHT);
     s->NextBuffer = calloc(sizeof(u16), GB_LCD_WIDTH * GB_LCD_HEIGHT);
-    if (!s->LastBuffer || !s->NextBuffer) {
-        return -1;
-    }
 
     return 0;
 }

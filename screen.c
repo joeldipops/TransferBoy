@@ -75,6 +75,7 @@ void loadSprite(sprite_t* spriteSheet, const byte spriteCode, const mirror_t mir
  */
 void flushScreen(RootState* state) {
     // Background
+    rdp_set_texture_flush(FLUSH_STRATEGY_AUTOMATIC);
     display_show(2);
     prepareRdpForSprite(1);
     loadSprite(getSpriteSheet(), BLUE_BG_TEXTURE, MIRROR_ENABLED);
@@ -90,6 +91,7 @@ void flushScreen(RootState* state) {
     display_show(1);
     hudDraw(state, 2);
     rdp_detach_display();
+    rdp_set_texture_flush(FLUSH_STRATEGY_NONE);
 }
 
 /**

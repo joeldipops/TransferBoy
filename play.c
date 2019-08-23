@@ -115,7 +115,6 @@ static void mapGbInputs(const char controllerNumber, const GbButton* buttonMap, 
         }
     }
 }
-#include "resources.h"
 
 /**
  * Take the array of pixels produced by the emulator and throw it up on to the screen.
@@ -133,16 +132,16 @@ static void mapGbInputs(const char controllerNumber, const GbButton* buttonMap, 
 static inline void renderPixels(
     display_context_t frame,
     const PlayerState* state,
-    const natural* lastBuffer,
     const natural* nextBuffer,
     const PaletteType paletteType,
     const float avgPixelSize,
-    const natural left,
-    const natural top,
-    const SuperGameboyState* sgbState,
-    const bool isInitialised
+    const uint32_t left,
+    const uint32_t top,
+    const SuperGameboyState* sgbState
 ) {
-    const natural bufferLength = GB_LCD_HEIGHT * GB_LCD_WIDTH;
+    const uint32_t bufferLength = GB_LCD_HEIGHT * GB_LCD_WIDTH;
+
+    uint32_t* buffer = state->EmulationState.ScreenTexture->data;
 
     switch(paletteType) {
         case SuperGameboyPalette:
@@ -151,37 +150,38 @@ static inline void renderPixels(
             if (sgbState->MaskState == SGBFrzMask) {
                 ; // Leave display as is / frozen
             } else {
-                for (natural i = 0; i < bufferLength; i++) {
+                for (uint32_t i = 0; i < bufferLength; i++) {
                     // SGB Colours are already massaged.
-                    state->EmulationState.ScreenTexture->data[i] = nextBuffer[i];
+                    buffer[i] = nextBuffer[i];
                 }
             }
             break;
         case GameboyPalette:
-            for (natural i = 0; i < bufferLength; i++) {
-                state->EmulationState.ScreenTexture->data[i] = MONOCHROME_PALETTE[nextBuffer[i]];
+            for (uint32_t i = 0; i < bufferLength; i++) {
+                buffer[i] = MONOCHROME_PALETTE[nextBuffer[i]];
             }
             break;
         case GameboyColorPalette:
-            for (natural i = 0; i < bufferLength; i++) {
-                if (!isInitialised || lastBuffer[i] != nextBuffer[i]) {
-                    state->EmulationState.ScreenTexture->data[i] = massageColour(nextBuffer[i]);
-                }
+            for (uint32_t i = 0; i < bufferLength; i++) {
+                buffer[i] = massageColour(nextBuffer[i]);
             }
             break;
         default:
-            for (natural i = 0; i < bufferLength; i++) {
+            for (uint32_t i = 0; i < bufferLength; i++) {
                 // black screen, oh well
-                state->EmulationState.ScreenTexture->data[i] = 0x00010001;
+                buffer[i] = 0x00010001;
             }
             break;
     }
 
-    byte index = 0;
-    for (natural y = 0; y < state->EmulationState.ScreenTexture->vslices; y++) {
-        for (natural x = 0; x < state->EmulationState.ScreenTexture->hslices; x++) {
+    const uint32_t vslices = state->EmulationState.ScreenTexture->vslices;
+    const uint32_t hslices = state->EmulationState.ScreenTexture->hslices;
+
+    uint32_t index = 0;
+    for (uint32_t y = 0; y < vslices; y++) {
+        for (uint32_t x = 0; x < hslices; x++) {
             rdp_load_texture_stride(0, 0, MIRROR_DISABLED, state->EmulationState.ScreenTexture, index);
-            rdp_draw_sprite_scaled(0, left + (32 * x), top + (24 * y), 1, 1);
+            rdp_draw_sprite_scaled(0, left + (64 * x), top + (47 * y), 1, 2);
             index++;
         }
     }
@@ -338,14 +338,12 @@ void playDraw(const RootState* state, const byte playerNumber) {
     renderPixels(
         state->Frame,
         &state->Players[playerNumber],
-        state->Players[playerNumber].EmulationState.LastBuffer,
         state->Players[playerNumber].EmulationState.NextBuffer,
         palette,
         (float)screen.Height / (float)GB_LCD_HEIGHT,
         screen.Left,
         screen.Top,
-        &state->Players[playerNumber].SGBState,
-        isInitialised
+        &state->Players[playerNumber].SGBState
     );
 }
 
@@ -355,16 +353,6 @@ void playDraw(const RootState* state, const byte playerNumber) {
  * @param playerNumber player in play mode.
  */
 void playAfter(RootState* state, const byte playerNumber) {
-    // After each frame, NextBuffer becomes last buffer.
-    memcpy(
-        state->Players[playerNumber].EmulationState.LastBuffer,
-        state->Players[playerNumber].EmulationState.NextBuffer,
-        sizeof(u16) * GB_LCD_WIDTH * GB_LCD_HEIGHT
-    );
-
-    if (state->Players[playerNumber].BuffersInitialised < 2) {
-        state->Players[playerNumber].BuffersInitialised++;
-    }
 }
 
 
