@@ -132,7 +132,10 @@ void initDraw(const RootState* state, const byte playerNumber) {
 
     prepareRdpForSprite(state->Frame);
     loadSprite(getSpriteSheet(), GB_BG_TEXTURE, MIRROR_ENABLED);
-    rdp_draw_textured_rectangle(0,  screen.Left, screen.Top, screen.Left +  screen.Width, screen.Top + screen.Height);
+
+    // The - 1 and - 8 crept in when I switched from software to hardware rendering.  The RDP has some strange behaviours I can't understand.
+    // If I don't subtract these here, there are grey lines along the right and bottom of the play screen in single player mode.
+    rdp_draw_textured_rectangle(0,  screen.Left, screen.Top, screen.Left + screen.Width - 1, screen.Top + screen.Height - 8);
 
     const char TEXT_HEIGHT = 100;
     const char TEXT_WIDTH = 10;

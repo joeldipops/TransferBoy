@@ -177,14 +177,23 @@ static inline void renderPixels(
     const uint32_t vslices = state->EmulationState.ScreenTexture->vslices;
     const uint32_t hslices = state->EmulationState.ScreenTexture->hslices;
 
+    rdp_set_texture_flush(FLUSH_STRATEGY_NONE);
+
+    uint32_t l = left;
+    uint32_t t = top;
     uint32_t index = 0;
     for (uint32_t y = 0; y < vslices; y++) {
         for (uint32_t x = 0; x < hslices; x++) {
             rdp_load_texture_stride(0, 0, MIRROR_DISABLED, state->EmulationState.ScreenTexture, index);
-            rdp_draw_sprite_scaled(0, left + (64 * x), top + (47 * y), 1, 2);
+            rdp_draw_sprite_scaled(0, l, t, avgPixelSize / 2, avgPixelSize);
+            l += (32 * avgPixelSize);
             index++;
         }
+        t += (24 * avgPixelSize) - 1;
+        l = left;
     }
+
+    rdp_set_texture_flush(FLUSH_STRATEGY_AUTOMATIC);
 
     if (SHOW_FRAME_COUNT) {
         string text = "";

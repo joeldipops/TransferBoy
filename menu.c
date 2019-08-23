@@ -286,7 +286,7 @@ void menuLogic(RootState* state, const byte playerNumber) {
         if (playerState->MenuCursorColumn > 0) {
             playerState->MenuCursorColumn--;
         } else {
-            // Don't move the cursor if there are no rows next door.            
+            // Don't move the cursor if there are no rows next door.
             if (playerState->MenuLayout[MAX_COLUMN_COUNT - 1]) {
                 playerState->MenuCursorColumn = MAX_COLUMN_COUNT - 1;
             } else {
