@@ -164,6 +164,8 @@ int main(void) {
     generateState(&state);
     flushScreen(&state);
 
+    rsp_init();
+
     mainLoop(&state);
 
     freeText();
