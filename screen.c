@@ -185,8 +185,7 @@ uInt massageColour(const natural colour) {
     natural b = colour & 0x7C00;
     natural g = colour & 0x03E0;
     natural r = colour & 0x001F;
-    natural t = colour & 0x8000;
-    natural reversed = (r << 11 | (g << 1) | (b >> 9) | t >> 15);
+    natural reversed = (r << 11 | (g << 1) | (b >> 9) | 1);
 
     return (reversed << 16) | reversed;
 }
