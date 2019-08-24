@@ -25,8 +25,10 @@ ROM_EXTENSION = .z64
 N64_FLAGS = -l 2M -h $(HEADERPATH)/$(HEADERNAME) -o $(PROG_NAME)$(ROM_EXTENSION) $(PROG_NAME).bin
 endif
 
-$(CURDIR)/rsp/rsp.obj:
-	make -C $(CURDIR) ucode
+all: $(PROG_NAME)$(ROM_EXTENSION)
+
+$(CURDIR)/rsp/rsp.o:
+	make -C $(CURDIR)/rsp rsp
 
 $(PROG_NAME)$(ROM_EXTENSION): $(PROG_NAME).elf transferboy.dfs
 	$(OBJCOPY) $(PROG_NAME).elf $(PROG_NAME).bin -O binary
@@ -59,8 +61,9 @@ LD_OFILES += $(CURDIR)/obj/s_gbz80ops.o
 LD_OFILES += $(CURDIR)/obj/gbc_state.o
 LD_OFILES += $(CURDIR)/obj/polyfill.o
 LD_OFILES += $(CURDIR)/obj/rtc.o
+LD_OFILES += $(CURDIR)/obj/rsp.o
 
-$(PROG_NAME).elf : $(PROG_NAME).o $(CURDIR)/rsp/rsp.o
+$(PROG_NAME).elf : $(CURDIR)/rsp/rsp.o $(PROG_NAME).o
 
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/rtc.o $(CURDIR)/rtc.c
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/polyfill.o $(CURDIR)/polyfill.c
@@ -87,15 +90,15 @@ $(PROG_NAME).elf : $(PROG_NAME).o $(CURDIR)/rsp/rsp.o
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/lcd.o $(CURDIR)/lcd.c
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/mmu.o $(CURDIR)/mmu.c
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/gbc_state.o $(CURDIR)/gbc_state.c
+	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/rsp.o $(CURDIR)/rsp.c
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/transferboy.o $(CURDIR)/transferboy.c
 
-	$(LD) -o $(PROG_NAME).elf $(CURDIR)/obj/$(PROG_NAME).o $(LD_OFILES) $(CURDIR)/rsp/rsp.o $(LINK_FLAGS)
+	$(LD) -o $(PROG_NAME).elf $(CURDIR)/rsp/rsp.o $(CURDIR)/obj/$(PROG_NAME).o $(LD_OFILES) $(LINK_FLAGS)
 
 transferboy.dfs:
 	$(MKDFSPATH) transferboy.dfs ./filesystem/
 
-all: $(PROG_NAME)$(ROM_EXTENSION)
-
 clean:
 	rm -f *.v64 *.z64 *.elf *.o *.bin *.dfs
 	rm -f ./obj/*.o
+	$(MAKE) -C ./rsp/ clean

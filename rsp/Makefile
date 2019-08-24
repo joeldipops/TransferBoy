@@ -16,7 +16,7 @@ rsp.bin: rsp.S
 	$(OBJCOPY) -O binary -j .text tmp.o rsp.bin
 
 rsp.o: rsp.bin
-	$(OBJCOPY) -I binary -O elf32-bigmips -B mips4300 --redefine-sym _binary_basic_bin_start=rsp_code_start --redefine-sym _binary_basic_bin_end=rsp_code_end --redefine-sym _binary_basic_bin_size=rsp_cpde_size --rename-section .text=.data rsp.bin rsp.o
+	$(OBJCOPY) -I binary -O elf32-bigmips -B mips4300 --redefine-sym _binary_rsp_bin_start=rsp_code_start --redefine-sym _binary_rsp_bin_end=rsp_code_end --redefine-sym _binary_rsp_bin_size=rsp_code_size --rename-section .text=.data rsp.bin rsp.o
 
 rsp-clean:
 	rm -f *.o *.bin
