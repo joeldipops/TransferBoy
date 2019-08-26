@@ -16,6 +16,8 @@
 #include <stdlib.h>
 #include <libdragon.h>
 
+#include "rsp.h"
+
 /**
  * Sets oft-use colours since we can't assign graphics_make_color to a constant.
  * @private
@@ -165,6 +167,7 @@ int main(void) {
     flushScreen(&state);
 
     rsp_init();
+    prepareMicrocode();
 
     mainLoop(&state);
 

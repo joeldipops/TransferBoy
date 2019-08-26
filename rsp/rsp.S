@@ -1,8 +1,12 @@
 #include <ucode.S>
 
-vabs v1, v2, v3, 1
-lhv v1, 15, 0, s2
-break
+    # initial buffer address is passed in through DMA
+    # cache that in a register 
+    # While index < length
+    ## DMA some screen data.
+    ## Massage it
+    ## Send it to RDP
+    ## increment index
 
 # Fill with zeros
 .org 2048, 0

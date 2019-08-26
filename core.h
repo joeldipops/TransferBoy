@@ -13,7 +13,6 @@ typedef int32_t sInt;
 typedef uint32_t uInt;
 typedef uint64_t uLong;
 
-
 typedef char string[128];
 
 natural GLOBAL_BACKGROUND_COLOUR;
@@ -57,5 +56,11 @@ uLong getMemoryLimit();
  * @return The estimates amount of remaining memory.
  */
 uLong getCurrentMemory();
+
+/**
+ * There's no threading in libdragon yet, so we're just gonna busy-wait until 
+ * that becomes a terrible idea.
+ */
+unsigned int sleep(unsigned int seconds);
 
 #endif
