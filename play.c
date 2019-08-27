@@ -143,7 +143,8 @@ static inline void renderPixels(
     const uint32_t bufferLength = GB_LCD_HEIGHT * GB_LCD_WIDTH;
 
     uint32_t* buffer = state->EmulationState.ScreenTexture->data;
-    rspDMAWrite(buffer, 0xFFF);
+
+    rspDMAWrite(state->EmulationState.ScreenTexture, sizeof(state->EmulationState.ScreenTexture));
     run_ucode();
 
     switch(paletteType) {
