@@ -117,6 +117,14 @@ static void mapGbInputs(const char controllerNumber, const GbButton* buttonMap, 
     }
 }
 
+struct rspIn {
+    sprite_t Sprite;
+    uint32_t OutAddress;
+    bool IsColour;
+};
+
+static uint32_t outBuffer[0x1000];
+
 /**
  * Take the array of pixels produced by the emulator and throw it up on to the screen.
  * @param frame Id of frame to render to.
@@ -144,7 +152,12 @@ static inline void renderPixels(
 
     uint32_t* buffer = state->EmulationState.ScreenTexture->data;
 
-    rspDMAWrite(state->EmulationState.ScreenTexture, sizeof(state->EmulationState.ScreenTexture));
+    struct rspIn input;
+    input.Sprite = *state->EmulationState.ScreenTexture;
+    input.OutAddress = (uint32_t)outBuffer;
+    input.IsColour = (paletteType == GameboyColorPalette);
+
+    rspDMAWrite(&input, sizeof(input));
     run_ucode();
 
     switch(paletteType) {
@@ -183,6 +196,7 @@ static inline void renderPixels(
 
     rdp_set_texture_flush(FLUSH_STRATEGY_NONE);
 
+
     uint32_t l = left;
     uint32_t t = top;
     uint32_t index = 0;
@@ -200,6 +214,7 @@ static inline void renderPixels(
     }
 
     rdp_set_texture_flush(FLUSH_STRATEGY_AUTOMATIC);
+
 
     if (SHOW_FRAME_COUNT) {
         string text = "";
