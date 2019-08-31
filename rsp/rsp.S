@@ -1,19 +1,14 @@
-##include <ucode.S>
+#include <ucode.S>
+#include "rsp.h"
 
+.set at
+
+###
+# Constants
+###
 .eqv _INITIAL_IN_BUFFER, 0x8
 .eqv _INITIAL_OUT_BUFFER, 0xC
 .eqv _INITIAL_IS_COLOUR, 0x10
-
-.eqv _DMA_DMEM_SET, 0xA4040000
-.eqv _DMA_DRAM_SET, 0xA4040004
-.eqv _DMA_IN_LENGTH, 0xA404008
-.eqv _DMA_OUT_LENGTH, 0xA40400C
-.eqv _DMA_STATUS, 0xA4040010
-
-.eqv DMA_BUSY, 0x04 | 0x10
-
-.eqv _DMA_RDP_START, 0xA4100000
-.eqv _DMA_RDP_END, 0xA4100004
 
 .eqv DMEM_SIZE, 0x1000
 .eqv DMEM_GB_BASE, 0x0800
@@ -22,6 +17,12 @@
 .eqv GB_LCD_HEIGHT, 144
 .eqv PIXEL_SIZE, 2
 .eqv GB_BUFFER_SIZE, GB_LCD_WIDTH * GB_LCD_HEIGHT * PIXEL_SIZE
+
+###
+# Aliases for a bunch of scalar registers.
+###
+# primary accumulator
+.set $A, $2
 
 # address of gameboy pixel to be processed in DRAM
 .set $GB_BUFFER_ADDRESS, $8
@@ -44,29 +45,36 @@
 # Address to store massaged pixels where they will be picked up by the RDP
 .set $OUT_BUFFER_POINTER, $14
 
+###
+# Writes to the three DMA registers to kick off a transfer
+# from DMEM to DRAM then then waits for it to complete.
+#
+# @input source The source address in DMEM
+# @input dest The destination adress in DRAM
+# @input length The length of data to transfer.
+###
 .macro dmaOut source, dest, length
     # Set source.
-    lw $1, source
-    sw $1, _DMA_DMEM_SET($0)
+    lw $A, source
+    mtc0 $A, $DMA_DMEM
 
     # Set destination
-    lw $1, dest
-    sw $1, _DMA_DRAM_SET($0)
+    lw $A, dest
+    mtc0 $A, $DMA_DRAM
 
     # set length (which kicks off DMA)
-    addi $1, $s0, length
-    sw $1, _DMA_OUT_LENGTH
+    addi $A, $0, length
+    mtc0 $A, $DMA_OUT_LENGTH
 
     # wait for DMA to complete
     dmaOut.loop:
-        lw $1, _DMA_STATUS($0)
-        and $1, $1, DMA_BUSY
-    bne $1, $0, dmaOut.loop
+        mfc0 $A, $DMA_BUSY
+    bne $A, $0, dmaOut.loop
 .endm
 
 ###
 # Writes to the three DMA registers to kick off a transfer
-# then waits for it to complete.
+# from DRAM to DMEM then waits for it to complete.
 #
 # @input source The source address in DRAM
 # @input dest The destination adress in DMEM
@@ -74,22 +82,21 @@
 ###
 .macro dmaIn source, dest, length
     # Set source.
-    lw $1, source
-    sw $1, _DMA_DRAM_SET($0)
+    lw $A, source
+    mtc0 $A, $DMA_DRAM
 
     # Set destination
-    lw $1, dest
-    sw $1, _DMA_DMEM_SET($0)
+    lw $A, dest
+    mtc0 $A, $DMA_DMEM
 
     # set length (which kicks off DMA)
-    addi $1, $s0, length
-    sw $1, _DMA_IN_LENGTH
+    addi $A, $0, length
+    mtc0 $A, $DMA_IN_LENGTH
 
     # wait for DMA to complete
     dmaIn.loop:
-        lw $1, _DMA_STATUS($0)
-        and $1, $1, DMA_BUSY
-    bne $1, $0, dmaIn.loop
+        mfc0 $A, $DMA_BUSY
+    bne $A, $0, dmaIn.loop
 .endm
 
 ###
@@ -102,23 +109,23 @@
 ###
 .macro massageColour reg
     # blue
-    and $2, \reg, 0x7C00
-    srl $2, $2, 0x09
+    and $3, \reg, 0x7C00
+    srl $3, $3, 0x09
 
     # green
-    and $3, \reg, 0x03E0
-    sll $3, $3, 0x01
+    and $4, \reg, 0x03E0
+    sll $4, $4, 0x01
 
     # red
-    and $4, \reg, 0x001F
-    sll $4, $4, 0x0B
+    and $5, \reg, 0x001F
+    sll $5, $5, 0x0B
 
-    or $2, $2, $3
-    or $2, $2, $4
-    ori $2, $2, 0x01
+    or $3, $3, $4
+    or $3, $3, $5
+    ori $3, $3, 0x01
 
-    sll \reg, $2, 0x10
-    or \reg, \reg, $2
+    sll \reg, $3, 0x10
+    or \reg, \reg, $3
 .endm
 
 ###
@@ -146,33 +153,33 @@ main:
     lw $IS_COLOUR_PIXELS, _INITIAL_IS_COLOUR($0)
 
     # these two lines may be wrong.  need to get the upper of GB_BUFFER_SIZE
-    lui $1, GB_BUFFER_SIZE
-    ori $1, $0, GB_BUFFER_SIZE
+    lui $A, GB_BUFFER_SIZE
+    ori $A, $0, GB_BUFFER_SIZE
 
-    add $GB_BUFFER_END, $GB_BUFFER_ADDRESS, $1
+    add $GB_BUFFER_END, $GB_BUFFER_ADDRESS, $A
 
     # while address < end of buffer
     .whileHasSections:
         # DMA in the first 2048pixels.
-        dmaIn $GB_BUFFER_ADDRESS, DMEM_BUFFER_BASE, (DMEM_SIZE / 2)
-        addi $SECTION_ADDRESS, $0, DMEM_BUFFER_BASE
+        dmaIn $GB_BUFFER_ADDRESS, DMEM_GB_BASE, (DMEM_SIZE / 2)
+        addi $SECTION_ADDRESS, $0, DMEM_GB_BASE
         addi $SECTION_END, $SECTION_ADDRESS, DMEM_SIZE
         add $N64_BUFFER_POINTER, $0, $0
 
         .whileHasBytes:
             # put the pixel into a register
-            lw $1, 0($SECTION_ADDRESS)
+            lw $A, 0($SECTION_ADDRESS)
 
             # Massage it
             beq $IS_COLOUR_PIXELS, 1, .gbcMassage
-                massageMonochrome $1
+                massageMonochrome $A
                 j .end
             .gbcMassage:
-                massageColour $1
+                massageColour $A
             .end:
 
             # push massaged colour on to the buffer.
-            sw $N64_BUFFER_POINTER, 0($1)
+            sw $N64_BUFFER_POINTER, 0($A)
             addi $N64_BUFFER_POINTER, $N64_BUFFER_POINTER, 0x04
 
             # increment address
@@ -187,30 +194,43 @@ main:
         # TODO: Pass down screen details.
 
         # Send the command to load the texture
-        addi $1, $0, 0x3D # command 0x3D "Set Texture Image"
-        sll $1, $1, 24
+        addi $A, $0, 0x3D # command 0x3D "Set Texture Image"
+        sll $A, $A, 24
 
-        addi $2, $0, 0x02 # 16b colours
-        sll $2, $2, 19
-        or $1, $1, $2
+        addi $3, $0, 0x02 # 16b colours
+        sll $3, $3, 19
+        or $A, $A, $3
 
-        addi $2, $0, 160 # 160 pixels wide.
-        or $1, $1, $2
+        addi $3, $0, 160 # 160 pixels wide.
+        or $A, $A, $3
 
         # Set up the command in DMEM
-        sd $1, 0x000($0)
-        sd $OUT_BUFFER_POINTER, 0x004($0)
+        sw $A, 0x000($0)
+        sw $OUT_BUFFER_POINTER, 0x004($0)
+
+        # clear bit 0 (DMA DRAM/DMEM switch) 
+        # of RDP_CMD_STATUS
+        mfc0 $A, $RDP_CMD_STATUS
+        andi $A, $A, 0xFE
+        mtc0 $A, $RDP_CMD_STATUS
 
         # DMA the command to the RSP
-        sw $0, _DMA_RDP_START
-        addi $1, $1, 0x02
-        sw $1, _DMA_RDP_END
+        mtc0 $0, $RDP_CMD_START
+
+        addi $A, $A, 0x02
+        mtc0 $A, $RDP_CMD_END
 
         # And tell it to draw the rectangle.
         # TODO
 
         addi $GB_BUFFER_ADDRESS, $GB_BUFFER_ADDRESS, DMEM_SIZE
     blt $GB_BUFFER_ADDRESS, $GB_BUFFER_END, .whileHasSections
+
+
+wait:
+    nop
+    j wait
+
 
 
 # Array of the four colours of DMG software.

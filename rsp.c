@@ -49,7 +49,7 @@ static void DMAWait(void) {
  * TODO - Something else
  */
 static void onRSPException() {
-    logAndPauseFrame(0, "RSP INTERRUPT");
+    logAndPauseFrame(2, "RSP INTERRUPT");
 }
 
 /**
