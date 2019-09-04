@@ -196,7 +196,6 @@ static inline void renderPixels(
 
     rdp_set_texture_flush(FLUSH_STRATEGY_NONE);
 
-
     uint32_t l = left;
     uint32_t t = top;
     uint32_t index = 0;

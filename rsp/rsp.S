@@ -140,6 +140,18 @@
 .endm
 
 ###
+#
+#
+#
+#
+###
+.macro applyToCommand out temp value shift
+    addi \temp, $0, value
+    sll \temp, \temp, \shift
+    or \out, \out, \temp
+.endm
+
+###
 # RSP Routine reads the GB pixel buffer in 4kB chunks,
 # Transforms pxiels to the n64 colour format
 # Then sends them to the RDP for rendering.
@@ -194,18 +206,19 @@ main:
         # TODO: Pass down screen details.
 
         # Send the command to load the texture
-        addi $A, $0, 0x3D # command 0x3D "Set Texture Image"
-        sll $A, $A, 24
+        mtc0 $0, $RDP_CMD_START
+        mtc0 $0, $RDP_CMD_END
 
-        addi $3, $0, 0x02 # 16b colours
-        sll $3, $3, 19
-        or $A, $A, $3
-
-        addi $3, $0, 160 # 160 pixels wide.
-        or $A, $A, $3
+        # "0x3D: Set Texture Image"
+        applyToCommand $A, $A, 0xFD, 24
+        # pixel size = 2 (16bit)
+        applyToCommand $A, $3, 0x02, 19
+        # width = 160 pixels
+        applyToCommand $A, $3, 160, 0
 
         # Set up the command in DMEM
         sw $A, 0x000($0)
+        # Second word of the command is the address.
         sw $OUT_BUFFER_POINTER, 0x004($0)
 
         # clear bit 0 (DMA DRAM/DMEM switch) 
@@ -214,18 +227,111 @@ main:
         andi $A, $A, 0xFE
         mtc0 $A, $RDP_CMD_STATUS
 
-        # DMA the command to the RSP
-        mtc0 $0, $RDP_CMD_START
-
-        addi $A, $A, 0x02
+        # TODO: wait for DMA to be available.
+        # DMA the command to the RDP
+        addi $A, $0, 0x08
         mtc0 $A, $RDP_CMD_END
 
+        mtc0 $0, $RDP_CMD_START
+        mtc0 $0, $RDP_CMD_END
+
+        # Set up a tile now that the RDP has the data.
+        # "0x35: Set Tile"
+        applyToCommand $A, $A, 0xF5, 24
+        # image data format = 0 (rgba)
+        applyToCommand $A, $3, 0, 21
+        # pixel size = 2 (16bit)
+        applyToCommand $A, $3, 0x02, 19
+        # 160x2byte pixels fit in 64x64byte words
+        applyToCommand $A, $3, 64, 9
+        # Tmem address = 0
+        # applyToCommand $A, $3, 0, 0
+
+        # Set up the command in DMEM
+        sw $A, 0x000($0)
+
+        # second word
+        # Tile index = 0 << 24
+        # Palette = 0? << 20
+        # T clamp enable = 0 << 19
+        # T mirror enable = 0 << 19
+        # Mask T
+        applyToCommand $A, $A, 8, 14
+        # Shift T = 0 << 10
+        # S clamp enable = 0 << 9
+        # S mirror enable = 0 << 8
+
+        # Mask S
+        applyToCommand $A, $3, 2, 4
+        # Shift S = 0
+
+        # Add to the buffer.
+        sw $A, 0x004($0)
+
+        # TODO: wait for DMA to be available.
+        # DMA the command to the RDP
+        addi $A, $0, 0x08
+        mtc0 $A, $RDP_CMD_END
+
+        mtc0 $0, $RDP_CMD_START
+        mtc0 $0, $RDP_CMD_END
+
+        # "0x34 Load Tile"
+        applyToCommand $A, $A, 0xF4, 24
+        # sl = 0 (low x co-ord)
+        #applyToCommand $A, $3, 0, 12
+        # tl = 0 (low y co-ord)
+        #applyToCommand $A, $3, 0, 0
+
+        sw $A, 0x000($0)
+
+        # Tile index = 0
+        #applyToCommand $A, $A, 0, 24
+        # sh = 159 (width - 1)
+        applyToCommand $A, $A, 159, 12
+        # th = 11 (height - 1)
+        applyToCommand $A, $3, 11, 0
+
+        sw $A, 0x004($0)
+
+        # TODO: wait for DMA to be available.
+        # DMA the command to the RDP
+        addi $A, $0, 0x08
+        mtc0 $A, $RDP_CMD_END
+
+        mtc0 $0, $RDP_CMD_START
+        mtc0 $0, $RDP_CMD_END
+
         # And tell it to draw the rectangle.
-        # TODO
+        # "0x24: Texture Rectangle"
+        applyToCommand $A, $A, 0x0E4, 24
+        # xl = some var we keep track of.
+        applyToCommand $A, $3, 0, 12
+        # yl = some var we keep track of
+        applyToCommand $A, $3, 12, 0
+
+        sw $A, 0x000($0)
+
+        # Tile index = 0
+        #applyToCommand $A, $A, 0, 24
+        # xh = some value we keep track of.
+        applyToCommand $A, $A, 160, 12
+        # yh = some value we keep track of.
+        applyToCommand $A, $3, 0, 0
+
+        sw $A, 0x004($0)
+
+        # next two words are for scaling.  Leave them 0 for now.
+        sw $0, 0x008($0)
+        sw $0, 0x00C($0)
+
+        # TODO: wait for DMA to be available.
+        # DMA the command to the RDP
+        addi $A, $0, 0x10
+        mtc0 $A, $RDP_CMD_END
 
         addi $GB_BUFFER_ADDRESS, $GB_BUFFER_ADDRESS, DMEM_SIZE
     blt $GB_BUFFER_ADDRESS, $GB_BUFFER_END, .whileHasSections
-
 
 wait:
     nop
