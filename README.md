@@ -7,6 +7,7 @@ Runs on https://github.com/DragonMinded/libdragon by DragonMinded.
 Other than those, credit to
 * saturnu and https://github.com/saturnu/libgbpak
 * AntonioND for "The Cycle Accurate Game Boy Docs" - https://github.com/AntonioND/giibiiadvance/tree/master/docs
+* Gekkio for https://github.com/Gekkio/mooneye-gb/tree/master/tests/emulator-only and https://gekkio.fi/files/gb-docs/gbctr.pdf
 * Anyone who worked on implementing the Transfer Pak in cen64
 * imanoleas for their breakdown of Super Gameboy communication https://imanoleasgames.blogspot.com/2016/12/games-aside-1-super-game-boy.html
 * The maintainers of https://github.com/gbdev/awesome-gbdev and pretty much anyone who has contributed to anything linked to from that page.
