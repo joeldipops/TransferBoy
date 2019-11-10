@@ -150,6 +150,8 @@ static inline void renderPixels(
 ) {
     const uint32_t bufferLength = GB_LCD_HEIGHT * GB_LCD_WIDTH;
 
+    
+
     uint32_t* buffer = state->EmulationState.ScreenTexture->data;
 
     struct rspIn input;
@@ -157,8 +159,11 @@ static inline void renderPixels(
     input.OutAddress = (uint32_t)outBuffer;
     input.IsColour = (paletteType == GameboyColorPalette);
 
+    rdp_enable_primitive_fill();
     rspDMAWrite(&input, sizeof(input));
     run_ucode();
+
+    /*
 
     switch(paletteType) {
         case SuperGameboyPalette:
@@ -225,6 +230,7 @@ static inline void renderPixels(
         graphics_draw_box(frame, 0, 450, 680, 10, GLOBAL_BACKGROUND_COLOUR);
         graphics_draw_text(frame, 5, 450, text);
     }
+    */
 }
 
 

@@ -34,3 +34,10 @@
 .set $RDP_CMD_BUSY,     $c13
 .set $RDP_CMD_PIPE_BUSY,$c14
 .set $RDP_CMD_TMEM_BUSY,$c15
+
+.equ DRAM_RDP_DMA, 1
+.equ DMEM_RDP_DMA, 2
+.equ RDP_DMA_BUSY, 0x0100
+
+# primary accumulator
+.set $A, $2
