@@ -1,5 +1,7 @@
 #include "rsp.h"
 
+# TODO: execRdp needs to be changed from a macro to a routine to save on space.
+
 ###
 # Sends an RDP command by writing to the RDP registers.
 # Assumes command starts at DMEM address 0
