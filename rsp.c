@@ -49,9 +49,7 @@ static void DMAWait(void) {
  * TODO - Something else
  */
 static void onRSPException() {
-    rdp_draw_filled_rectangle(0, 0, 200, 200);
-    while(true);
-    //logAndPauseFrame(2, "RSP INTERRUPT");
+    logAndPauseFrame(2, "RSP INTERRUPT");
 }
 
 /**

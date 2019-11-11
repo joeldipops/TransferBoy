@@ -159,7 +159,7 @@ static inline void renderPixels(
     input.OutAddress = (uint32_t)outBuffer;
     input.IsColour = (paletteType == GameboyColorPalette);
 
-    rdp_enable_primitive_fill();
+    rdp_enable_texture_copy();
     rspDMAWrite(&input, sizeof(input));
     run_ucode();
 

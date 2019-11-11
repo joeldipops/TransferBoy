@@ -28,14 +28,39 @@
 .endm
 
 ###
+# Fills specified rectangle with the colour set in setFillColour command (0x37)
+# Command 0x36
+# @input x1 x co-ord of bottom right corner
+# @input y1 y co-ord of bottom right corner
+# @input x2 x co-ord of top left corner.
+# @input y2 y co-ord of top left corner.
+.macro fillRectangle x1, y1, x2, y2
+    # Command 0x34
+    lui $at, 0xF600
+
+    addi $3, $0, \x1
+    sll $3, $3, 12
+    or $at, $at, $3
+    ori $at, $at, \y1
+
+    sw $at, 0x000($0)
+
+    lui $at, \x2
+    sll $at, $at, 12
+    ori $at, $at, \y2
+
+    sw $at, 0x004($0)
+
+    execRdp 2
+.endm
+
+###
 # Executes the setFillColour RDP command
 # Command 0x37
 # @input upper The colour to set.  Upper 16b for 32b colours.
 # @input? lower Lower 16b for 32b colours. 
 ###
 .macro setFillColour upper, lower
-    # Reset accumulator.
-    #add $at, $0, $0
     # "0x37 Set Fill Color"
     lui $at, 0xF700
     sw $at, 0x000($0)
@@ -57,10 +82,10 @@
 #
 # Command 0x24 Texture Rectangle
 # @input tileIndex
-# @input x1 x co-ord of top left
-# @input y1 y co-ord of top left
-# @input x2 x co-ord of bottom right
-# @input y2 y co-ord of bottom right
+# @input x1 x co-ord of bottom right
+# @input y1 y co-ord of bottom right
+# @input x2 x co-ord of top left
+# @input y2 y co-ord of top left
 # @input s s co-ord of texture top left
 # @input t t co-ord of texture top left
 # @input ds change in s / x

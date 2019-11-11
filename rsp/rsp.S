@@ -3,6 +3,9 @@
 
 .set noat
 
+# Address to store massaged pixels where they will be picked up by the RDP
+.set $OUT_BUFFER_POINTER, $14
+
 ###
 # Sets the RDP to draw red rectangles.
 main:
@@ -38,21 +41,20 @@ main:
         ## Give tile a size & shape
         ## tile = 0 sl,tl = {0,0}, sh,th = {width - 1, height - 1}
         loadTile 0, 0, 0, 159, 11
-        
+
         ## Draw a rectangle with the texture we have set up
         ## tile = 0 x1,y1 = {0, 0} x2,y2 = {160, 12}
         # not doing anything fancy with the s & ts
-        textureRectangle 0 0, 0, 160, 12, 0, 0, 0, 0
-        
+        textureRectangle 0 320 * 4, 240 * 4, 0, 0, 0, 0, 0, 0
     #end loop
 
 # job done, idle until IMEM refreshed.
 wait:
     nop
     j wait
-    
+
 # raise error if we get to this point.
-break    
+break
 
 # Array of the four colours of DMG software.
 MONOCHROME_PALETTE:
@@ -63,21 +65,4 @@ MONOCHROME_PALETTE:
 
 # Fill remainder with zeros
 # TODO: Check this is sensible
-.org 2048, 0  # or is `break` better?  
-        
-    
-    #loadTile 1, 0x10, 0x10, 0x20, 0x20
-    #textureRectangle 1, 0x04, 0x04, 0x04, 0x04, 0x00, 0x00, 0x00, 0x00
-    #setTile 0, 2, 0x0001, 0x0001, 1
-    #setFillColour 0xF801
-    #lui $5, 0x1234
-    #ori $5, $5, 0x5678
-    #setTextureImage 0, 2, 100, $5
-
-
-
-
-
-
-
-
+.org 2048, 0  # or is `break` better?
