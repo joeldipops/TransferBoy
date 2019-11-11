@@ -24,24 +24,25 @@ main:
         
         # First, DMA the data back to DRAM so we have our limited memory back.
         
-        # Reset the RDP registers.
-        mtc0 $0, $RDP_CMD_START
-        mtc0 $0, $RDP_CMD_END    
-    
-        # Tell RDP where to look for texture data.
-        # rbga colour format, 16 bit colours, 160 pixels, address in DRAM
+        # Then make the necessary RDP commands to render our 'textured' line.
+
+        ## Tell RDP where to look for texture data.
+        ## rbga colour format, 16 bit colours, 160 pixels, address in DRAM
         setTextureImage 0, 2, 160, $OUT_BUFFER_POINTER
         
-        # Set up a tile now that the RDP has the data.
-        # rgba format, 16b, 160*2B fit in 64x64 words (CHECK THIS!!), tmem address 0 (CHECK THAT TOO)
-        # TODO in the other file, I see us setting Mask T and Mask S.  Don't know why, guessing this is what libdragon does
-        setTile 0, 2, 64, 0
+        ## Set up a tile now that the RDP has the data.
+        ## rgba format, 16b, 160*2B fit in 64x64 words (CHECK THIS!!), tmem address 0 (CHECK THAT TOO)
+        ## maskT 8 (CHECK), maskS 2 (CHECK!!!)
+        setTile 0, 2, 64, 0, 0, 0, 0, 8, 0, 0, 0, 2, 0
 
-        # Give tile a size & shape
-        loadTile
+        ## Give tile a size & shape
+        ## tile = 0 sl,tl = {0,0}, sh,th = {width - 1, height - 1}
+        loadTile 0, 0, 0, 159, 11
         
-        # and draw a rectangle with the set up texture
-        textureRectangle
+        ## Draw a rectangle with the texture we have set up
+        ## tile = 0 x1,y1 = {0, 0} x2,y2 = {160, 12}
+        # not doing anything fancy with the s & ts
+        textureRectangle 0 0, 0, 160, 12, 0, 0, 0, 0
         
     #end loop
 
@@ -62,7 +63,7 @@ MONOCHROME_PALETTE:
 
 # Fill remainder with zeros
 # TODO: Check this is sensible
-.org 2048, 0    
+.org 2048, 0  # or is `break` better?  
         
     
     #loadTile 1, 0x10, 0x10, 0x20, 0x20
