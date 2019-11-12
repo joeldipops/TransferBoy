@@ -3,6 +3,12 @@
 
 #include <libdragon.h>
 
+typedef struct {
+    uint32_t OutAddress;
+    bool IsColour;
+    sprite_t Sprite;
+} RspIn;
+
 /**
  * DMAs a fixed set of instructions to the RSP ready to be run when we call run_ucode()
  */

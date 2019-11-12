@@ -117,12 +117,6 @@ static void mapGbInputs(const char controllerNumber, const GbButton* buttonMap, 
     }
 }
 
-struct rspIn {
-    sprite_t Sprite;
-    uint32_t OutAddress;
-    bool IsColour;
-};
-
 static uint32_t outBuffer[0x1000];
 
 /**
@@ -148,89 +142,19 @@ static inline void renderPixels(
     const uint32_t top,
     const SuperGameboyState* sgbState
 ) {
-    const uint32_t bufferLength = GB_LCD_HEIGHT * GB_LCD_WIDTH;
-
-    
-
-    uint32_t* buffer = state->EmulationState.ScreenTexture->data;
-
-    struct rspIn input;
-    input.Sprite = *state->EmulationState.ScreenTexture;
-    input.OutAddress = (uint32_t)outBuffer;
-    input.IsColour = (paletteType == GameboyColorPalette);
+    // Data to be DMAd must be aligned to 16 bytes.
+    void* allocated = malloc(sizeof(RspIn) + 15);
+    RspIn* input = (RspIn*)(((uintptr_t)allocated + 15) & ~(uintptr_t)0x0F);
+ 
+    input->Sprite = *state->EmulationState.ScreenTexture;
+    input->OutAddress = (uint32_t)outBuffer;
+    input->IsColour = (paletteType == GameboyColorPalette);
 
     rdp_enable_texture_copy();
-    rspDMAWrite(&input, sizeof(input));
+    load_data(input, sizeof(u32));
     run_ucode();
 
-    /*
-
-    switch(paletteType) {
-        case SuperGameboyPalette:
-            ;
-
-            if (sgbState->MaskState == SGBFrzMask) {
-                ; // Leave display as is / frozen
-            } else {
-                for (uint32_t i = 0; i < bufferLength; i++) {
-                    // SGB Colours are already massaged.
-                    buffer[i] = nextBuffer[i];
-                }
-            }
-            break;
-        case GameboyPalette:
-            for (uint32_t i = 0; i < bufferLength; i++) {
-                buffer[i] = MONOCHROME_PALETTE[nextBuffer[i]];
-            }
-            break;
-        case GameboyColorPalette:
-            for (uint32_t i = 0; i < bufferLength; i++) {
-                buffer[i] = massageColour(nextBuffer[i]);
-            }
-            break;
-        default:
-            for (uint32_t i = 0; i < bufferLength; i++) {
-                // black screen, oh well
-                buffer[i] = 0x00010001;
-            }
-            break;
-    }
-
-    const uint32_t vslices = state->EmulationState.ScreenTexture->vslices;
-    const uint32_t hslices = state->EmulationState.ScreenTexture->hslices;
-
-    rdp_set_texture_flush(FLUSH_STRATEGY_NONE);
-
-    uint32_t l = left;
-    uint32_t t = top;
-    uint32_t index = 0;
-    for (uint32_t y = 0; y < vslices; y++) {
-        for (uint32_t x = 0; x < hslices; x++) {
-            rdp_load_texture_stride(0, 0, MIRROR_DISABLED, state->EmulationState.ScreenTexture, index);
-            // I cannot understand why I have to double the width but not the height to get things to render properly
-            // But it works now (at least in single player), so ok.
-            rdp_draw_sprite_scaled(0, l, t, avgPixelSize / 2, avgPixelSize);
-            l += (32 * avgPixelSize);
-            index++;
-        }
-        t += (24 * avgPixelSize) - 1;
-        l = left;
-    }
-
-    rdp_set_texture_flush(FLUSH_STRATEGY_AUTOMATIC);
-
-
-    if (SHOW_FRAME_COUNT) {
-        string text = "";
-
-        long diff = state->Meta.NextClock - state->Meta.LastClock;
-
-        sprintf(text, "Mem: %lld FPS: %f %lld" , getCurrentMemory(), ((FRAMES_TO_SKIP + 1) / (double)diff) * 1000, state->Meta.FrameCount);
-        graphics_set_color(GLOBAL_TEXT_COLOUR, 0x0);
-        graphics_draw_box(frame, 0, 450, 680, 10, GLOBAL_BACKGROUND_COLOUR);
-        graphics_draw_text(frame, 5, 450, text);
-    }
-    */
+    free(allocated);
 }
 
 

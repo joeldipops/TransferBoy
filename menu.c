@@ -331,7 +331,7 @@ void menuDraw(RootState* state, const byte playerNumber) {
     getScreenPosition(state, playerNumber, &screen);
 
     prepareRdpForSprite(state->Frame);
-    loadSprite(getSpriteSheet(), BLUE_BG_TEXTURE, MIRROR_ENABLED);
+    loadSprite(getSpriteSheet(), BLUE_BG_TEXTURE, MIRROR_XY);
 
     // Cover menu section.
     rdp_draw_textured_rectangle(
@@ -339,7 +339,8 @@ void menuDraw(RootState* state, const byte playerNumber) {
         0,
         screen.Top + screen.Height,
         RESOLUTION_X,
-        RESOLUTION_Y - screen.Top + screen.Height
+        RESOLUTION_Y - screen.Top + screen.Height,
+        true
     );
 
     if (state->Players[playerNumber].ActiveMode != Menu) {

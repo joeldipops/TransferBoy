@@ -9,6 +9,7 @@
 ###
 # Sets the RDP to draw red rectangles.
 main:
+    break
     # Stash config in some registers (including screen size & loc details)
     
     # while address < end of buffer
@@ -46,6 +47,8 @@ main:
         ## tile = 0 x1,y1 = {0, 0} x2,y2 = {160, 12}
         # not doing anything fancy with the s & ts
         textureRectangle 0 320 * 4, 240 * 4, 0, 0, 0, 0, 0, 0
+
+
     #end loop
 
 # job done, idle until IMEM refreshed.

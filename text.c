@@ -86,7 +86,7 @@ void getText(const TextId textId, string output) {
  */
 static void drawSprite(const byte spriteCode, sprite_t* spriteSheet, const natural x, const natural y, const float scale) {
     rdp_load_texture_stride(0, 1, MIRROR_DISABLED, spriteSheet, spriteCode);
-    rdp_draw_sprite_scaled(0, x, y, scale, scale);
+    rdp_draw_sprite_scaled(0, x, y, scale, scale, MIRROR_XY);
 }
 
 /**
