@@ -63,4 +63,23 @@ uLong getCurrentMemory();
  */
 unsigned int sleep(unsigned int seconds);
 
+typedef struct {
+    void* p;
+    void* a;
+} AlignedPointer;
+
+/**
+ * Allocates memory aligned to a given number of bytes.
+ * @param size Size of memory to allocate.
+ * @param alignment Number of bytes to align to.
+ * @returns struct where p is your aligned pointer.
+ */
+AlignedPointer malloc_aligned(size_t size, byte alignment);
+
+/**
+ * Frees memory allocated with malloc_aligned
+ * @param ptr Holds pointer to memory to be freed.
+ */
+void free_aligned(AlignedPointer ptr);
+
 #endif

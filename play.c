@@ -143,18 +143,21 @@ static inline void renderPixels(
     const SuperGameboyState* sgbState
 ) {
     // Data to be DMAd must be aligned to 16 bytes.
-    void* allocated = malloc(sizeof(RspIn) + 15);
-    RspIn* input = (RspIn*)(((uintptr_t)allocated + 15) & ~(uintptr_t)0x0F);
- 
+    AlignedPointer pointer = malloc_aligned(sizeof(RspIn), 16);
+    RspIn* input = (RspIn*) pointer.p;
+
     input->Sprite = *state->EmulationState.ScreenTexture;
     input->OutAddress = (uint32_t)outBuffer;
     input->IsColour = (paletteType == GameboyColorPalette);
 
     rdp_enable_texture_copy();
-    load_data(input, sizeof(u32));
+
+    data_cache_hit_writeback(input, sizeof(RspIn));
+
+    load_data(input, sizeof(RspIn));
     run_ucode();
 
-    free(allocated);
+    free_aligned(pointer);
 }
 
 

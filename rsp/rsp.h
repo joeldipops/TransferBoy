@@ -40,4 +40,12 @@
 .equ RDP_DMA_BUSY, 0x0100
 
 # primary accumulator
-.set $A, $2
+.set $A, $8
+
+.set $a0, $4
+.set $a1, $5
+.set $a2, $6
+.set $a3, $7
+
+.set $t1, $9
+.set $t2, $10

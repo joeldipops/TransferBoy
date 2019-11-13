@@ -21,20 +21,18 @@
 ###
 # Aliases for a bunch of scalar registers.
 ###
-# primary accumulator
-.set $A, $2
 
 # address of gameboy pixel to be processed in DRAM
-.set $GB_BUFFER_ADDRESS, $8
+.set $GB_BUFFER_ADDRESS, $16
 
 # points to end of gameboy pixel buffer in DRAM
-.set $GB_BUFFER_END, $9
+.set $GB_BUFFER_END, $17
 
 # points to current pixel to be processed in DMEM
-.set $SECTION_ADDRESS, $10
+.set $SECTION_ADDRESS, $18
 
 # points to end of current 4kB section of gameboy pixel buffer in DRAM
-.set $SECTION_END, $11
+.set $SECTION_END, $19
 
 # Address to place next processed gameboy pixel in DMEM
 .set $N64_BUFFER_POINTER, $12

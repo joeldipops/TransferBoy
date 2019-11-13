@@ -9,22 +9,22 @@
 ###
 .macro execRdp words
     1:
-        mfc0 $at, $RDP_CMD_STATUS
+        mfc0 $A, $RDP_CMD_STATUS
         # bit 8 of $RDP_CMD_STATUS = RDP DMA is busy
-        andi $at, $at, RDP_DMA_BUSY
-    bne $at, $0, 1b
+        andi $A, $A, RDP_DMA_BUSY
+    bne $A, $0, 1b
 
     # send 2 to RDP_CMD_STATUS
     # in order to DMA from RSP memory (DMEM)
-    addi $at, $0, DMEM_RDP_DMA
-    mtc0 $at, $RDP_CMD_STATUS
+    addi $A, $0, DMEM_RDP_DMA
+    mtc0 $A, $RDP_CMD_STATUS
 
     # Kick off the DMA by setting both start and end.
     mtc0 $0, $RDP_CMD_START
 
     ## + 4 because end expects the next address after data ends.
-    addi $at, $0, (\words * 4) + 4
-    mtc0 $at, $RDP_CMD_END
+    addi $A, $0, (\words * 4) + 4
+    mtc0 $A, $RDP_CMD_END
 .endm
 
 ###
@@ -36,20 +36,20 @@
 # @input y2 y co-ord of top left corner.
 .macro fillRectangle x1, y1, x2, y2
     # Command 0x34
-    lui $at, 0xF600
+    lui $A, 0xF600
 
-    addi $3, $0, \x1
-    sll $3, $3, 12
-    or $at, $at, $3
-    ori $at, $at, \y1
+    addi $t1, $0, \x1
+    sll $t1, $t1, 12
+    or $A, $A, $t1
+    ori $A, $A, \y1
 
-    sw $at, 0x000($0)
+    sw $A, 0x000($0)
 
-    lui $at, \x2
-    sll $at, $at, 12
-    ori $at, $at, \y2
+    lui $A, \x2
+    sll $A, $A, 12
+    ori $A, $A, \y2
 
-    sw $at, 0x004($0)
+    sw $A, 0x004($0)
 
     execRdp 2
 .endm
@@ -62,18 +62,18 @@
 ###
 .macro setFillColour upper, lower
     # "0x37 Set Fill Color"
-    lui $at, 0xF700
-    sw $at, 0x000($0)
+    lui $A, 0xF700
+    sw $A, 0x000($0)
 
     ## Second Byte - Packed Color
-    lui $at, \upper
+    lui $A, \upper
 
     .ifb lower
-        ori $at, \lower
+        ori $A, \lower
     .else
-        ori $at, \upper
+        ori $A, \upper
     .endif
-    sw $at, 0x004($0)
+    sw $A, 0x004($0)
 
     execRdp 2
 .endm
@@ -92,34 +92,34 @@
 # @input dt change in t / y
 ###
 .macro textureRectangle tileIndex x1 y1 x2 y2 s t ds dt
-    lui $at, 0xE400
+    lui $A, 0xE400
 
-    addi $3, $0, \x1
-    sll $3, $3, 12
-    ori $3, $3, \y1
-    or $at, $at, $3
+    addi $t1, $0, \x1
+    sll $t1, $t1, 12
+    ori $t1, $t1, \y1
+    or $A, $A, $t1
 
-    sw $at, 0x000($0)
+    sw $A, 0x000($0)
 
-    lui $at, \tileIndex
-    sll $at, $at, 8
+    lui $A, \tileIndex
+    sll $A, $A, 8
 
-    addi $3, $0, \x2
-    sll $3, $3, 12
-    ori $3, $3, \y2
-    or $at, $at, $3
+    addi $t1, $0, \x2
+    sll $t1, $t1, 12
+    ori $t1, $t1, \y2
+    or $A, $A, $t1
 
-    sw $at, 0x004($0)
+    sw $A, 0x004($0)
 
-    lui $at, \s
-    ori $at, $at, \t
+    lui $A, \s
+    ori $A, $A, \t
 
-    sw $at, 0x008($0)
+    sw $A, 0x008($0)
 
-    lui $at, \ds
-    ori $at, $at, \dt
+    lui $A, \ds
+    ori $A, $A, \dt
 
-    sw $at, 0x00C($0)
+    sw $A, 0x00C($0)
     execRdp 4
 .endm
 
@@ -134,23 +134,23 @@
 ###
 .macro loadTile tile, sl, tl, sh, th
     # Command 0x34
-    lui $at, 0xF400
+    lui $A, 0xF400
 
-    addi $3, $0, \sl
-    sll $3, $3, 12
-    or $at, $at, $3
-    ori $at, $at, \tl
+    addi $t1, $0, \sl
+    sll $t1, $t1, 12
+    or $A, $A, $t1
+    ori $A, $A, \tl
 
-    sw $at, 0x000($0)
+    sw $A, 0x000($0)
 
-    lui $at, \tile
-    sll $at, $at, 8
-    addi $3, $0, \sh
-    sll $3, $3, 12
-    or $at, $at, $3
-    ori $at, $at, \th
+    lui $A, \tile
+    sll $A, $A, 8
+    addi $t1, $0, \sh
+    sll $t1, $t1, 12
+    or $A, $A, $t1
+    ori $A, $A, \th
 
-    sw $at, 0x004($0)
+    sw $A, 0x004($0)
 
     execRdp 2
 .endm
@@ -172,83 +172,83 @@
     shiftT clampS mirrorS maskS shiftS
 
     # Command 0x35
-    lui $at, 0xF500
+    lui $A, 0xF500
 
-    lui $3, \format
-    lui $4, \depth
-    sll $3, $3, 5
-    sll $4, $4, 3
-    or $3, $3, $4
-    or $at, $at, $3
+    lui $t1, \format
+    lui $t2, \depth
+    sll $t1, $t1, 5
+    sll $t2, $t2, 3
+    or $t1, $t1, $t2
+    or $A, $A, $t1
 
-    addi $3, $0, \size
-    sll $3, $3, 9
-    ori $3, $3, \tmem
+    addi $t1, $0, \size
+    sll $t1, $t1, 9
+    ori $t1, $t1, \tmem
 
-    or $at, $at, $3
+    or $A, $A, $t1
 
-    sw $at, 0x000($0)
+    sw $A, 0x000($0)
 
     .ifb tile
-        lui $at, \tile
-        sll $at, $at, 8
+        lui $A, \tile
+        sll $A, $A, 8
     .else
-        add $at, $0, $0
+        add $A, $0, $0
     .endif
 
     .ifb paletted
-        lui $3, \palette
-        sll $3, $3, 4
-        or $at, $at, $3
+        lui $t1, \palette
+        sll $t1, $t1, 4
+        or $A, $A, $t1
     .endif
 
     .ifb clampT
-        lui $3, \clampT
-        sll $3, $3, 3
-        or $at, $at, $3
+        lui $t1, \clampT
+        sll $t1, $t1, 3
+        or $A, $A, $t1
     .endif
 
     .ifb mirrorT
-        lui $3, \mirrorT
-        sll $3, $3, 2
-        or $at, $at, $3
+        lui $t1, \mirrorT
+        sll $t1, $t1, 2
+        or $A, $A, $t1
     .endif
 
     .ifb maskT
-        addi $3, $0, \maskT
-        sll $3, $3, 14
-        or $at, $at, $3
+        addi $t1, $0, \maskT
+        sll $t1, $t1, 14
+        or $A, $A, $t1
     .endif
     
     .ifb shiftT
-        addi $3, $0, \shiftT
-        sll $3, $3, 10
-        or $at, $at, $3
+        addi $t1, $0, \shiftT
+        sll $t1, $t1, 10
+        or $A, $A, $t1
     .endif
 
     .ifb clampS
-        addi $3, $0, \clampS
-        sll $3, $3, 9
-        or $at, $at, $3
+        addi $t1, $0, \clampS
+        sll $t1, $t1, 9
+        or $A, $A, $t1
     .endif
 
     .ifb mirrorS
-        addi $3, \mirrorS
-        sll $3, $3, 8
-        or $at, $at, $3
+        addi $t1, \mirrorS
+        sll $t1, $t1, 8
+        or $A, $A, $t1
     .endif
 
     .ifb maskS
-        addi $3, $0, \maskS
-        sll $3, $3, 4
-        or $at, $at, $3
+        addi $t1, $0, \maskS
+        sll $t1, $t1, 4
+        or $A, $A, $t1
     .endif
 
     .ifb shiftS
-        ori $at, $at, \shiftS
+        ori $A, $A, \shiftS
     .endif
 
-    sw $at, 0x004($0)
+    sw $A, 0x004($0)
 
     execRdp 2
 
@@ -261,22 +261,22 @@
 # @input depth colour depth
 # @input width
 # @input address
-# @sideAffect registers $2, $3, $4 affected.
+# @sideAffect registers $2, $t1, $t2 affected.
 # @sideAffect DMEM 0x000 - 0x008 affected.
 ###
 .macro setTextureImage format depth width address
     # Command 0x3D
-    lui $at, 0xFD00
+    lui $A, 0xFD00
 
-    lui $3, \format
-    lui $4, \depth
-    sll $3, $3, 5
-    sll $4, $4, 3
-    or $3, $3, $4
-    or $at, $at, $3
+    lui $t1, \format
+    lui $t2, \depth
+    sll $t1, $t1, 5
+    sll $t2, $t2, 3
+    or $t1, $t1, $t2
+    or $A, $A, $t1
 
-    ori $at, $at, (\width + 1)
-    sw $at, 0x000($0)
+    ori $A, $A, (\width + 1)
+    sw $A, 0x000($0)
 
     ##if it's a register
         sw \address, 0x004($0)
