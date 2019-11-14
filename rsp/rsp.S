@@ -3,6 +3,9 @@
 
 .set noat
 
+init:
+ j main
+ 
 ###
 # Writes to the three DMA registers to kick off a transfer
 # from DMEM to DRAM then then waits for it to complete.
@@ -51,11 +54,6 @@
     bne $A, $0, 1b
 .endm
 
-dmaIn:
-    _dmaIn $a0, $a1, $a2
-    #jr $ra
-    j ret
-
 ###
 # Constants
 ###
@@ -97,6 +95,11 @@ dmaIn:
 # Address to store massaged pixels where they will be picked up by the RDP
 .set $OUT_BUFFER_ADDRESS, $22
 
+dmaIn:
+    _dmaIn $a0, $a1, $a2
+    jr $ra
+ 
+
 ###
 # Sets the RDP to draw red rectangles.
 main:
@@ -113,10 +116,7 @@ main:
         add $a0, $0, $GB_BUFFER_ADDRESS
         addi $a1, $0, DMEM_GB_BASE
         addi $a2, $0, DMEM_SIZE / 2
-        # somehow, jr $ra isn't working at all.  :(
         jal dmaIn
-        ret:
-
 
         # for those pixels
             # put a pixel into a register
