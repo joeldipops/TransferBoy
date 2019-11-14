@@ -5,9 +5,9 @@
 ###
 # Sends an RDP command by writing to the RDP registers.
 # Assumes command starts at DMEM address 0
-# @input words The number of words to send
+# @param {address} $a0 address after last word to send.#
 ###
-.macro execRdp words
+_execRdp:
     1:
         mfc0 $A, $RDP_CMD_STATUS
         # bit 8 of $RDP_CMD_STATUS = RDP DMA is busy
@@ -21,10 +21,18 @@
 
     # Kick off the DMA by setting both start and end.
     mtc0 $0, $RDP_CMD_START
+    mtc0 $a0, $RDP_CMD_END
+    jr $ra
 
-    ## + 4 because end expects the next address after data ends.
-    addi $A, $0, (\words * 4) + 4
-    mtc0 $A, $RDP_CMD_END
+###
+# Sends an RDP command by writing to the RDP registers.
+# Assumes command starts at DMEM address 0
+# @input words The number of words to send
+###
+.macro execRdp words
+    # + 4 because end expects the next address after data ends.
+    addi $a0, $0, (\words * 4) + 4
+    jal _execRdp
 .endm
 
 ###
