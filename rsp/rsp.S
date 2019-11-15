@@ -3,37 +3,16 @@
 #include "rdp.h"
 
 .set noat
- 
-###
-# Writes to the three DMA registers to kick off a transfer
-# from DMEM to DRAM then then waits for it to complete.
-#
-# @input {register} source The source address in DMEM
-# @input {register} dest The destination adress in DRAM
-# @input {register} length The length of data to transfer.
-###
-.macro dmaOut source, dest, length
-    # Set source.
-    mtc0 \source, $DMA_DMEM
-
-    # Set destination
-    mtc0 \dest, $DMA_DRAM
-
-    # set length (which kicks off DMA)
-    mtc0 \length, $DMA_OUT_LENGTH
-
-    # wait for DMA to complete
-    1:
-        mfc0 $A, $DMA_BUSY
-    bne $A, $0, 1b
-.endm
 
 ###
 # Constants
 ###
-.eqv RspIn_SPRITE_BUFFER, 0x00
-.eqv RspIn_IS_COLOUR, 0x04
-.eqv RspIn_OUT_BUFFER, 0x08
+.eqv RspIn_IN_ADDRESS, 0x00
+.eqv RspIn_OUT_ADDRESS, 0x04
+.eqv RspIn_SCREEN_POSITION, 0x08
+.eqv RspIn_SCREEN_SIZE, 0x0C
+.eqv RspIn_IS_COLOUR, 0x10
+
 .eqv DMEM_SIZE, 0x1000
 # Input pixels for the current rectangle go here.
 .eqv DMEM_GB_BASE, 0x0800
@@ -41,12 +20,11 @@
 .eqv GB_LCD_WIDTH, 160
 .eqv GB_LCD_HEIGHT, 144
 .eqv PIXEL_SIZE, 2
-.eqv _GB_BUFFER_SIZE, GB_LCD_WIDTH * GB_LCD_HEIGHT * PIXEL_SIZE
+.eqv GB_BUFFER_SIZE, GB_LCD_WIDTH * GB_LCD_HEIGHT * PIXEL_SIZE
 
 ###
 # Register aliases
 ###
-
 
 # address of gameboy pixel to be processed in DRAM
 .set $GB_BUFFER_ADDRESS, $16
@@ -69,6 +47,12 @@
 # Address to store massaged pixels where they will be picked up by the RDP
 .set $OUT_BUFFER_ADDRESS, $22
 
+# Left and Top of screen
+.set $SCREEN_POSITION, $23
+
+# Length and Width of screen
+.set $SCREEN_SIZE, $26
+
 _dmaIn:
     # Set source.
     mtc0 $a0, $DMA_DRAM
@@ -77,6 +61,7 @@ _dmaIn:
     mtc0 $a1, $DMA_DMEM
 
     # set length (which kicks off DMA)
+    addi $a2, $a2, -1
     mtc0 $a2, $DMA_IN_LENGTH
 
     # wait for DMA to complete
@@ -90,15 +75,47 @@ _dmaIn:
 # Writes to the three DMA registers to kick off a transfer
 # from DRAM to DMEM then waits for it to complete.
 #
-# @input {register} source Holds the source address in DRAM
-# @input {register} dest Holds the destination adress in DMEM
-# @input {register} length Holds the length of data to transfer.
+# @input source Holds the source address in DRAM
+# @input dest Holds the destination adress in DMEM
+# @input length Holds the length of data to transfer.
 ###
 .macro dmaIn source, dest, length
     add $a0, $0, \source
     addi $a1, $0, \dest
     addi $a2, $0, \length
     jal _dmaIn
+.endm
+
+_dmaOut:
+    # Set source.
+    mtc0 $a0, $DMA_DMEM
+
+    # Set destination
+    mtc0 $a1, $DMA_DRAM
+
+    # set length (which kicks off DMA)
+    addi $a2, $a2, -1
+    mtc0 $a2, $DMA_OUT_LENGTH
+
+    # wait for DMA to complete
+    1:
+        mfc0 $A, $DMA_BUSY
+    bne $A, $0, 1b
+    jr $ra
+
+###
+# Writes to the three DMA registers to kick off a transfer
+# from DMEM to DRAM then then waits for it to complete.
+#
+# @input source The source address in DMEM
+# @input dest The destination adress in DRAM
+# @input length The length of data to transfer.
+###
+.macro dmaOut source, dest, length
+    addi $a0, $0, \source
+    add $a1, $0, \dest
+    addi $a2, $0, \length
+    jal _dmaOut
 .endm
 
 ###
@@ -122,10 +139,15 @@ _dmaIn:
 # Sets the RDP to draw red rectangles.
 main:
     # Stash config in some registers (including screen size & loc details)
-    lw $GB_BUFFER_ADDRESS, RspIn_SPRITE_BUFFER($0)
+    lw $GB_BUFFER_ADDRESS, RspIn_IN_BUFFER($0)
     lw $OUT_BUFFER_ADDRESS, RspIn_OUT_BUFFER($0)
+    lw $SCREEN_POSITION, RspIn_SCREEN_POSITION($0)
+    lw $SCREEN_SIZE, RspIn_SCREEN_SIZE($0)
     lw $IS_COLOUR, RspIn_IS_COLOUR($0)
-    lw $GB_BUFFER_END, GB_BUFFER_SIZE
+
+    addi $GB_BUFFER_END, $0, GB_BUFFER_SIZE
+    # Don't understand why I need this, but result is FFFFB400 without it...
+    andi $GB_BUFFER_END, $GB_BUFFER_END, 0x0000FFFF
     add $GB_BUFFER_END, $GB_BUFFER_END, $GB_BUFFER_ADDRESS
 
     # while address < end of buffer
@@ -158,11 +180,12 @@ main:
             addi $PIXEL_ADDRESS, $PIXEL_ADDRESS, 0x02 # 16bit gameboy colours
         # end loop
         sub $A, $RECTANGLE_END, $PIXEL_ADDRESS
-        bgez $A, .whileHasPixels
+        bgtz $A, .whileHasPixels
 
-        # Once that's done, ask the RDP to render it.
-        
-        # First, DMA the data back to DRAM so we have our limited memory back.
+        # DMA the data back to DRAM so we have our limited memory back.
+        dmaOut 0x000, $OUT_BUFFER_ADDRESS, DMEM_SIZE
+
+        # Ask the RDP to render the textured line we just built.
         
         # Then make the necessary RDP commands to render our 'textured' line.
 
@@ -170,27 +193,47 @@ main:
 
         ## Tell RDP where to look for texture data.
         ## rbga colour format, 16 bit colours, 160 pixels, address in DRAM
-        setTextureImage 0, 2, 160, $OUT_BUFFER_ADDRESS
-        
+        #setTextureImage 0, 2, 160, $OUT_BUFFER_ADDRESS
+
         ## Set up a tile now that the RDP has the data.
         ## rgba format, 16b, 160*2B fit in 64x64 words (CHECK THIS!!), tmem address 0 (CHECK THAT TOO)
         ## maskT 8 (CHECK), maskS 2 (CHECK!!!)
-        setTile 0, 2, 64, 0, 0, 0, 0, 8, 0, 0, 0, 2, 0
+        #setTile 0, 2, 64, 0, 0, 0, 0, 8, 0, 0, 0, 2, 0
 
         ## Give tile a size & shape
         ## tile = 0 sl,tl = {0,0}, sh,th = {width - 1, height - 1}
-        loadTile 0, 0, 0, 159, 11
+        #loadTile 0, 0, 0, 159, 11
 
         ## Draw a rectangle with the texture we have set up
         ## tile = 0 x1,y1 = {0, 0} x2,y2 = {160, 12}
-        # not doing anything fancy with the s & ts
-        textureRectangle 0 320 * 4, 240 * 4, 0, 0, 0, 0, 0, 0
+        ### not doing anything fancy with the s & ts
+        #textureRectangle 0 320 * 4, 240 * 4, 0, 0, 50 * 4, 50 * 4, 0, 0
+
+        # TODO Cache this somewhere. May need to use some less 
+        # than conventional registers.
+
+        add $a0, $SCREEN_POSITION, $0
+        srl $a0, $a0, 16
+        andi $a1, $SCREEN_POSITION, 0x0000FFFF
+
+        add $a2, $SCREEN_SIZE, $0
+        srl $a2, $a2, 16
+        andi $a3, $SCREEN_SIZE, 0x0000FFFF
+
+        add $a2, $a2, $a0
+        add $a3, $a3, $a1
+
+        fillRectangle $a0, $a1, $a2, $a3
 
         # increment address pointer.
-        addi $GB_BUFFER_ADDRESS, $GB_BUFFER_ADDRESS, DMEM_SIZE
+        addi $GB_BUFFER_ADDRESS, $GB_BUFFER_ADDRESS, DMEM_SIZE / 2
+
+        # increment draw top
+        # TODO - By determined block height.
+        addi $SCREEN_POSITION, $SCREEN_POSITION, 0xC
     # loop until we reach end of buffer.
     sub $A, $GB_BUFFER_END, $GB_BUFFER_ADDRESS
-    bgez $A, .whileHasRectangles
+    bgtz $A, .whileHasRectangles
 
 # job done, idle until IMEM refreshed.
 wait:
@@ -201,14 +244,13 @@ wait:
 break
 
 # Array of the four colours of DMG software.
+## This won't work because I don't think I can address IMEM
+## So might need to do an if tree instead :(
 MONOCHROME_PALETTE:
     .word 0xffffffff
     .word 0xA529A529
     .word 0x52955295
     .word 0x00010001
-
-GB_BUFFER_SIZE:
-    .word _GB_BUFFER_SIZE
 
 # Fill remainder with break instruction
 .org 2048, 0x0000000D

@@ -4,9 +4,10 @@
 #include <libdragon.h>
 
 typedef struct {
-    uint32_t OutAddress;
+    uintptr_t InAddress;
+    uintptr_t OutAddress;
+    Rectangle Screen;
     bool IsColour;
-    sprite_t Sprite;
 } RspIn;
 
 /**

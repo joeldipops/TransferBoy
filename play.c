@@ -133,24 +133,26 @@ static uint32_t outBuffer[0x1000];
  * @private
  */
 static inline void renderPixels(
-    display_context_t frame,
     const PlayerState* state,
-    const natural* nextBuffer,
     const PaletteType paletteType,
-    const float avgPixelSize,
-    const uint32_t left,
-    const uint32_t top,
-    const SuperGameboyState* sgbState
+    const u16 left,
+    const u16 top,
+    const u16 width,
+    const u16 height
 ) {
     // Data to be DMAd must be aligned to 16 bytes.
     AlignedPointer pointer = malloc_aligned(sizeof(RspIn), 16);
     RspIn* input = (RspIn*) pointer.p;
 
-    input->Sprite = *state->EmulationState.ScreenTexture;
+    input->InAddress = (uint32_t)&state->EmulationState.ScreenTexture->data;
     input->OutAddress = (uint32_t)outBuffer;
     input->IsColour = (paletteType == GameboyColorPalette);
 
-    rdp_enable_texture_copy();
+    // TODO Calculate block height
+    input->Screen = (Rectangle){ left, top, width, 12 };
+
+    //rdp_enable_texture_copy();
+    rdp_enable_primitive_fill();
 
     data_cache_hit_writeback(input, sizeof(RspIn));
 
@@ -298,14 +300,12 @@ void playDraw(const RootState* state, const byte playerNumber) {
     bool isInitialised = state->Players[playerNumber].BuffersInitialised >= 2;
 
     renderPixels(
-        state->Frame,
         &state->Players[playerNumber],
-        state->Players[playerNumber].EmulationState.NextBuffer,
         palette,
-        (float)screen.Height / (float)GB_LCD_HEIGHT,
         screen.Left,
         screen.Top,
-        &state->Players[playerNumber].SGBState
+        screen.Width,
+        screen.Height
     );
 }
 

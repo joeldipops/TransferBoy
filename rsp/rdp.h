@@ -38,24 +38,30 @@ _execRdp:
 ###
 # Fills specified rectangle with the colour set in setFillColour command (0x37)
 # Command 0x36
-# @input x1 x co-ord of bottom right corner
-# @input y1 y co-ord of bottom right corner
-# @input x2 x co-ord of top left corner.
-# @input y2 y co-ord of top left corner.
+# @input x1 x co-ord of top left corner.
+# @input y1 y co-ord of top left corner.
+# @input x2 x co-ord of bottom right corner
+# @input y2 y co-ord of bottom right corner
 .macro fillRectangle x1, y1, x2, y2
-    # Command 0x34
-    lui $A, 0xF600
+    # Command 0x36 (shifted right twice)
+    # (yes for some reason the numbers we set
+    # are divided by 4 to get the numbers that
+    # are displayed. ???)
+    lui $A, 0x3D80
 
-    addi $t1, $0, \x1
+    add $t1, $0, \x2
     sll $t1, $t1, 12
     or $A, $A, $t1
-    ori $A, $A, \y1
+    or $A, $A, \y2
+
+    sll $A, $A, 2
 
     sw $A, 0x000($0)
 
-    lui $A, \x2
+    add $A, \x1, $0
     sll $A, $A, 12
-    ori $A, $A, \y2
+    or $A, $A, \y1
+    sll $A, $A, 2
 
     sw $A, 0x004($0)
 
