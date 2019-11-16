@@ -126,9 +126,43 @@ _dmaOut:
 # TODO: Make params happen
 ###
 .macro massageMonochrome reg
-    addi $t1, $0, MONOCHROME_PALETTE
-    add \reg, \reg, $t1
-    lw \reg, 0(\reg)
+    beq \reg, $0, .colour0
+
+    addi $t1, $0, 1
+    beq \reg, $t1, .colour1
+
+    addi $t1, $0, 2
+    beq \reg, $t1, .colour2
+
+    addi $t1, $0, 3
+    beq \reg, $t1, .colour3
+
+    # default handler. for now, just make things red so it's obvious.
+        lui \reg, 0xF801
+        ori \reg, \reg, 0xF801
+        j .done
+
+    # wanted to do this with an array, but not enough DMEM
+    # and can't load IMEM :( (or can you ?)
+    .colour0:
+        lui \reg, 0xFFFF
+        ori \reg, \reg, 0xFFFF
+        j .done
+
+    .colour1:
+        lui \reg, 0xA529
+        ori \reg, \reg, 0xA529
+        j .done
+
+    .colour2:
+        lui \reg, 0x5295
+        ori \reg, \reg, 0x5295
+        j .done
+
+    .colour3:
+        lui \reg, 0x0001
+        ori \reg, \reg, 0x0001
+    .done:
 .endm
 
 .macro massageColour reg
@@ -155,7 +189,7 @@ main:
         # DMA in the next 2048 pixels
         dmaIn $GB_BUFFER_ADDRESS, DMEM_GB_BASE, DMEM_SIZE /2
         addi $PIXEL_ADDRESS, $0, DMEM_GB_BASE
-        addi $RECTANGLE_END, $PIXEL_ADDRESS, DMEM_SIZE
+        addi $RECTANGLE_END, $PIXEL_ADDRESS, DMEM_SIZE / 2
         # Starts at 0 and completely fills up DMEM as we get through GB pixels.
         add $N64_BUFFER_POINTER, $0, $0
 
@@ -163,6 +197,7 @@ main:
         .whileHasPixels:
             # put a pixel into a register
             lb $A, 0($PIXEL_ADDRESS)
+            andi $A, $A, 0x000000FF
 
             # massage it from gameboy format to n64 format.
             beq $IS_COLOUR, $0, .gbcMassage
@@ -186,31 +221,25 @@ main:
         dmaOut 0x000, $OUT_BUFFER_ADDRESS, DMEM_SIZE
 
         # Ask the RDP to render the textured line we just built.
-        
-        # Then make the necessary RDP commands to render our 'textured' line.
 
         # TODO - Pass proper values to these.
 
         ## Tell RDP where to look for texture data.
         ## rbga colour format, 16 bit colours, 160 pixels, address in DRAM
-        #setTextureImage 0, 2, 160, $OUT_BUFFER_ADDRESS
+        setTextureImage RGBA_FORMAT, COLOUR_DEPTH_16, 159, $OUT_BUFFER_ADDRESS
 
         ## Set up a tile now that the RDP has the data.
         ## rgba format, 16b, 160*2B fit in 64x64 words (CHECK THIS!!), tmem address 0 (CHECK THAT TOO)
         ## maskT 8 (CHECK), maskS 2 (CHECK!!!)
-        #setTile 0, 2, 64, 0, 0, 0, 0, 8, 0, 0, 0, 2, 0
+        setTile 1, RGBA_FORMAT, COLOUR_DEPTH_16, 64, 0, 0, 0, 8, 0, 0, 0, 2, 0
 
         ## Give tile a size & shape
-        ## tile = 0 sl,tl = {0,0}, sh,th = {width - 1, height - 1}
-        #loadTile 0, 0, 0, 159, 11
-
-        ## Draw a rectangle with the texture we have set up
-        ## tile = 0 x1,y1 = {0, 0} x2,y2 = {160, 12}
-        ### not doing anything fancy with the s & ts
-        #textureRectangle 0 320 * 4, 240 * 4, 0, 0, 50 * 4, 50 * 4, 0, 0
+        ## tile = 1 sl,tl = {0,0}, sh,th = {width - 1, height - 1}
+        loadTile 1, 0, 0, 159 * 4, 11 * 4
 
         # TODO Cache this somewhere. May need to use some less 
         # than conventional registers.
+        # Once there, can be used above as well.
 
         add $a0, $SCREEN_POSITION, $0
         srl $a0, $a0, 16
@@ -223,7 +252,10 @@ main:
         add $a2, $a2, $a0
         add $a3, $a3, $a1
 
-        fillRectangle $a0, $a1, $a2, $a3
+        ## Draw a rectangle with the texture we have set up
+        ## tile = 1 x1,y1 = {0, 0} x2,y2 = {160, 12}
+        ### not doing anything fancy with the s & ts
+        textureRectangle 1, $a0, $a1, $a2, $a3, 0, 0, 0, 0
 
         # increment address pointer.
         addi $GB_BUFFER_ADDRESS, $GB_BUFFER_ADDRESS, DMEM_SIZE / 2
@@ -242,15 +274,6 @@ wait:
 
 # raise error if we get to this point.
 break
-
-# Array of the four colours of DMG software.
-## This won't work because I don't think I can address IMEM
-## So might need to do an if tree instead :(
-MONOCHROME_PALETTE:
-    .word 0xffffffff
-    .word 0xA529A529
-    .word 0x52955295
-    .word 0x00010001
 
 # Fill remainder with break instruction
 .org 2048, 0x0000000D

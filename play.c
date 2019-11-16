@@ -144,15 +144,14 @@ static inline void renderPixels(
     AlignedPointer pointer = malloc_aligned(sizeof(RspIn), 16);
     RspIn* input = (RspIn*) pointer.p;
 
-    input->InAddress = (uint32_t)&state->EmulationState.ScreenTexture->data;
+    input->InAddress = (uint32_t)state->EmulationState.ScreenTexture->data;
     input->OutAddress = (uint32_t)outBuffer;
     input->IsColour = (paletteType == GameboyColorPalette);
 
     // TODO Calculate block height
     input->Screen = (Rectangle){ left, top, width, 12 };
 
-    //rdp_enable_texture_copy();
-    rdp_enable_primitive_fill();
+    rdp_enable_texture_copy();
 
     data_cache_hit_writeback(input, sizeof(RspIn));
 

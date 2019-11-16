@@ -2,6 +2,9 @@
 
 # TODO: execRdp needs to be changed from a macro to a routine to save on space.
 
+.eqv RGBA_FORMAT, 0
+.eqv COLOUR_DEPTH_16, 2
+
 ###
 # Sends an RDP command by writing to the RDP registers.
 # Assumes command starts at DMEM address 0
@@ -33,6 +36,30 @@ _execRdp:
     # + 4 because end expects the next address after data ends.
     addi $a0, $0, (\words * 4) + 4
     jal _execRdp
+.endm
+
+###
+# Executes the setFillColour RDP command
+# Command 0x37
+# @input upper The colour to set.  Upper 16b for 32b colours.
+# @input? lower Lower 16b for 32b colours. 
+###
+.macro setFillColour upper, lower
+    # "0x37 Set Fill Color"
+    lui $A, 0xF700
+    sw $A, 0x000($0)
+
+    ## Second Byte - Packed Color
+    lui $A, \upper
+
+    .ifb lower
+        ori $A, \lower
+    .else
+        ori $A, \upper
+    .endif
+    sw $A, 0x004($0)
+
+    execRdp 2
 .endm
 
 ###
@@ -69,30 +96,6 @@ _execRdp:
 .endm
 
 ###
-# Executes the setFillColour RDP command
-# Command 0x37
-# @input upper The colour to set.  Upper 16b for 32b colours.
-# @input? lower Lower 16b for 32b colours. 
-###
-.macro setFillColour upper, lower
-    # "0x37 Set Fill Color"
-    lui $A, 0xF700
-    sw $A, 0x000($0)
-
-    ## Second Byte - Packed Color
-    lui $A, \upper
-
-    .ifb lower
-        ori $A, \lower
-    .else
-        ori $A, \upper
-    .endif
-    sw $A, 0x004($0)
-
-    execRdp 2
-.endm
-
-###
 #
 # Command 0x24 Texture Rectangle
 # @input tileIndex
@@ -108,9 +111,15 @@ _execRdp:
 .macro textureRectangle tileIndex x1 y1 x2 y2 s t ds dt
     lui $A, 0xE400
 
-    addi $t1, $0, \x1
+    # We multiply these by four.  why I don't know at this point.
+    sll \x1, \x1, 2
+    sll \x2, \x2, 2
+    sll \y1, \y1, 2
+    sll \y2, \y2, 2
+
+    add $t1, $0, \x2
     sll $t1, $t1, 12
-    ori $t1, $t1, \y1
+    or $t1, $t1, \y2
     or $A, $A, $t1
 
     sw $A, 0x000($0)
@@ -118,9 +127,9 @@ _execRdp:
     lui $A, \tileIndex
     sll $A, $A, 8
 
-    addi $t1, $0, \x2
+    add $t1, $0, \x1
     sll $t1, $t1, 12
-    ori $t1, $t1, \y2
+    or $t1, $t1, \y1
     or $A, $A, $t1
 
     sw $A, 0x004($0)
@@ -181,8 +190,8 @@ _execRdp:
 # etc
 ###
 .macro setTile \
-    format depth size tmem \
-    tile palette clampT mirrorT maskT \
+    tileIndex format depth size tmem \
+    palette clampT mirrorT maskT \
     shiftT clampS mirrorS maskS shiftS
 
     # Command 0x35
@@ -203,12 +212,8 @@ _execRdp:
 
     sw $A, 0x000($0)
 
-    .ifb tile
-        lui $A, \tile
-        sll $A, $A, 8
-    .else
-        add $A, $0, $0
-    .endif
+    lui $A, \tileIndex
+    sll $A, $A, 8
 
     .ifb paletted
         lui $t1, \palette
