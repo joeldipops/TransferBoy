@@ -144,7 +144,7 @@ static inline void renderPixels(
     AlignedPointer pointer = malloc_aligned(sizeof(RspIn), 16);
     RspIn* input = (RspIn*) pointer.p;
 
-    input->InAddress = (uint32_t)state->EmulationState.ScreenTexture->data;
+    input->InAddress = (uint32_t)state->EmulationState.NextBuffer;
     input->OutAddress = (uint32_t)outBuffer;
     input->IsColour = (paletteType == GameboyColorPalette);
 

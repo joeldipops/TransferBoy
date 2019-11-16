@@ -187,7 +187,8 @@ main:
     # while address < end of buffer
     .whileHasRectangles:
         # DMA in the next 2048 pixels
-        dmaIn $GB_BUFFER_ADDRESS, DMEM_GB_BASE, DMEM_SIZE /2
+        dmaIn $GB_BUFFER_ADDRESS, DMEM_GB_BASE, DMEM_SIZE / 2
+
         addi $PIXEL_ADDRESS, $0, DMEM_GB_BASE
         addi $RECTANGLE_END, $PIXEL_ADDRESS, DMEM_SIZE / 2
         # Starts at 0 and completely fills up DMEM as we get through GB pixels.
@@ -196,14 +197,15 @@ main:
         # for those pixels
         .whileHasPixels:
             # put a pixel into a register
-            lb $A, 0($PIXEL_ADDRESS)
-            andi $A, $A, 0x000000FF
+            lh $A, 0($PIXEL_ADDRESS)
+            # it's sign extended, so...
+            andi $A, $A, 0x0000FFFF
 
             # massage it from gameboy format to n64 format.
-            beq $IS_COLOUR, $0, .gbcMassage
+            beq $IS_COLOUR, $0, .dmgMassage
                 massageColour $A
                 j .end
-            .gbcMassage:
+            .dmgMassage:
                 massageMonochrome $A
             .end:
 
