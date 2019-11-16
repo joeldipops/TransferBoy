@@ -344,10 +344,10 @@ void optionsDraw(RootState* state, const byte playerNumber) {
     getScreenPosition(state, playerNumber, &screen);
 
     prepareRdpForSprite(state->Frame);
-    loadSprite(getSpriteSheet(), BLUE_BG_TEXTURE, MIRROR_ENABLED);
+    loadSprite(getSpriteSheet(), BLUE_BG_TEXTURE, true);
 
     // Cover menu section.
-    rdp_draw_textured_rectangle(0, 0, screen.Top + screen.Height, RESOLUTION_X, RESOLUTION_Y);
+    rdp_draw_textured_rectangle(0, 0, screen.Top + screen.Height, RESOLUTION_X, RESOLUTION_Y, MIRROR_DISABLED);
 
     if (state->Players[playerNumber].ActiveMode != Options) {
         state->RequiresRepaint = true;

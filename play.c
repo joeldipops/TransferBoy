@@ -187,7 +187,7 @@ static inline void renderPixels(
             rdp_load_texture_stride(0, 0, MIRROR_DISABLED, state->EmulationState.ScreenTexture, index);
             // I cannot understand why I have to double the width but not the height to get things to render properly
             // But it works now (at least in single player), so ok.
-            rdp_draw_sprite_scaled(0, l, t, avgPixelSize / 2, avgPixelSize);
+            rdp_draw_sprite_scaled(0, l, t, avgPixelSize / 2, avgPixelSize, MIRROR_DISABLED);
             l += (32 * avgPixelSize);
             index++;
         }
