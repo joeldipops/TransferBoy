@@ -159,6 +159,17 @@ static inline void renderPixels(
     run_ucode();
 
     free_aligned(pointer);
+
+    if (SHOW_FRAME_COUNT) {
+        string text = "";
+
+        long diff = state->Meta.NextClock - state->Meta.LastClock;
+
+        sprintf(text, "Mem: %lld FPS: %f %lld" , getCurrentMemory(), ((FRAMES_TO_SKIP + 1) / (double)diff) * 1000, state->Meta.FrameCount);
+        graphics_set_color(GLOBAL_TEXT_COLOUR, 0x0);
+        graphics_draw_box(2, 0, 450, 680, 10, GLOBAL_BACKGROUND_COLOUR);
+        graphics_draw_text(2, 5, 450, text);
+    }
 }
 
 

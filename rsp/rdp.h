@@ -5,6 +5,13 @@
 .eqv RGBA_FORMAT, 0
 .eqv COLOUR_DEPTH_16, 2
 
+.eqv CLAMP_DISABLAED, 0
+.eqv MIRROR_DISABLED, 0
+.eqv MASK_T, 0
+.eqv MASK_S, 0
+.eqv SHIFT_T, 0
+.eqv SHIFT_S, 0
+
 ###
 # Sends an RDP command by writing to the RDP registers.
 # Assumes command starts at DMEM address 0
@@ -73,7 +80,7 @@ _execRdp:
     # Command 0x36 (shifted right twice)
     # (yes for some reason the numbers we set
     # are divided by 4 to get the numbers that
-    # are displayed. ???)
+    # are displayed. ?)
     lui $A, 0x3D80
 
     add $t1, $0, \x2
@@ -215,57 +222,39 @@ _execRdp:
     lui $A, \tileIndex
     sll $A, $A, 8
 
-    .ifb paletted
         lui $t1, \palette
         sll $t1, $t1, 4
         or $A, $A, $t1
-    .endif
 
-    .ifb clampT
         lui $t1, \clampT
         sll $t1, $t1, 3
         or $A, $A, $t1
-    .endif
 
-    .ifb mirrorT
         lui $t1, \mirrorT
         sll $t1, $t1, 2
         or $A, $A, $t1
-    .endif
 
-    .ifb maskT
         addi $t1, $0, \maskT
         sll $t1, $t1, 14
         or $A, $A, $t1
-    .endif
     
-    .ifb shiftT
         addi $t1, $0, \shiftT
         sll $t1, $t1, 10
         or $A, $A, $t1
-    .endif
 
-    .ifb clampS
         addi $t1, $0, \clampS
         sll $t1, $t1, 9
         or $A, $A, $t1
-    .endif
 
-    .ifb mirrorS
         addi $t1, \mirrorS
         sll $t1, $t1, 8
         or $A, $A, $t1
-    .endif
 
-    .ifb maskS
         addi $t1, $0, \maskS
         sll $t1, $t1, 4
         or $A, $A, $t1
-    .endif
 
-    .ifb shiftS
         ori $A, $A, \shiftS
-    .endif
 
     sw $A, 0x004($0)
 

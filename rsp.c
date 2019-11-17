@@ -12,7 +12,7 @@ extern const char rsp_code_size __attribute((section(".data")));
  * TODO - Something else
  */
 static void onRSPException() {
-    logAndPauseFrame(2, "RSP INTERRUPT");
+    //logAndPauseFrame(2, "RSP INTERRUPT");
 }
 
 /**

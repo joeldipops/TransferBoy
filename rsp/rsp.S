@@ -165,8 +165,32 @@ _dmaOut:
     .done:
 .endm
 
+###
+# Takes the 16 bit GBC colour in reg and converts
+# it in to a 32 bit n64 colour.
+#
+# @input reg contains the 16bit colour.
+# @ouput reg contains the 32bit colour.
+###
 .macro massageColour reg
-    # TODO
+    # blue
+    andi $3, \reg, 0x7C00
+    srl $3, $3, 0x09
+
+    # green
+    andi $4, \reg, 0x03E0
+    sll $4, $4, 0x01
+
+    # red
+    andi $5, \reg, 0x001F
+    sll $5, $5, 0x0B
+
+    or $3, $3, $4
+    or $3, $3, $5
+    ori $3, $3, 0x01
+
+    sll \reg, $3, 0x10
+    or \reg, \reg, $3
 .endm
 
 ###
@@ -232,12 +256,12 @@ main:
 
         ## Set up a tile now that the RDP has the data.
         ## rgba format, 16b, 160*2B fit in 64x64 words (CHECK THIS!!), tmem address 0 (CHECK THAT TOO)
-        ## maskT 8 (CHECK), maskS 2 (CHECK!!!)
-        setTile 1, RGBA_FORMAT, COLOUR_DEPTH_16, 64, 0, 0, 0, 8, 0, 0, 0, 2, 0
+        ## maskT 4 (CHECK), maskS 8 (CHECK!!!)
+        setTile 1, RGBA_FORMAT, COLOUR_DEPTH_16, 64, 0, 0, 0, 0, 4, 0, 0, 0, 8, 0
 
         ## Give tile a size & shape
         ## tile = 1 sl,tl = {0,0}, sh,th = {width - 1, height - 1}
-        loadTile 1, 0, 0, 159 * 4, 11 * 4
+        loadTile 1, 0, 0, 160 * 4, 12 * 4
 
         # TODO Cache this somewhere. May need to use some less 
         # than conventional registers.
@@ -257,15 +281,18 @@ main:
         ## Draw a rectangle with the texture we have set up
         ## tile = 1 x1,y1 = {0, 0} x2,y2 = {160, 12}
         ### not doing anything fancy with the s & ts
-        textureRectangle 1, $a0, $a1, $a2, $a3, 0, 0, 0, 0
+        textureRectangle 1, $a0, $a1, $a2, $a3, 0, 0, 2048, 2048
 
         # increment address pointer.
-        addi $GB_BUFFER_ADDRESS, $GB_BUFFER_ADDRESS, DMEM_SIZE / 2
+        # TODO - I think this may be a central issue.  160pixels doesn't fit neatly in 
+        # 0x0800 bytes, so there's an overhang that's pushing everything wrong.
+        addi $GB_BUFFER_ADDRESS, $GB_BUFFER_ADDRESS, (DMEM_SIZE / 2)
 
         # increment draw top
         # TODO - By determined block height.
-        addi $SCREEN_POSITION, $SCREEN_POSITION, 0xC
+        addi $SCREEN_POSITION, $SCREEN_POSITION, 12
     # loop until we reach end of buffer.
+
     sub $A, $GB_BUFFER_END, $GB_BUFFER_ADDRESS
     bgtz $A, .whileHasRectangles
 
