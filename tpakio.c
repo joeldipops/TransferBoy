@@ -545,6 +545,29 @@ static sByte importRTCData(const byte controllerNumber, GameBoyCartridge* cartri
 }
 
 /**
+ * Starts or stops the rumble motor for cartridges that have one.
+ * @param controllerNumber Slot that rumble-capable cartridge is using.
+ * @param isRumbleStart true to start the motor, false to stop it.
+ * @returns Error Code
+ * @note For now this will switch the transfer pak bank to romx and the ram bank to bank 0.
+ *       I think this will be ok because I usually switch to whatever bank I need before any transfer.
+ */
+sByte toggleRumble(const byte controllerNumber, const bool isRumbleStart) {
+    setTpakValue(controllerNumber, TPAK_BANK_ADDRESS, ROMX);
+
+    const byte RUMBLE_START = 8;
+    const byte RUMBLE_STOP = 0;
+
+    if (isRumbleStart) {
+        setTpakValue(controllerNumber, mapAddress(GB_RAM_BANK_ADDRESS), RUMBLE_START);
+    } else {
+        setTpakValue(controllerNumber, mapAddress(GB_RAM_BANK_ADDRESS), RUMBLE_STOP);
+    }
+
+    return TPAK_SUCCESS;
+}
+
+/**
  * Gets the complete ROM data from the cartridge in a transfer pak.
  * @param controllerNumber T-Pak plugged in to this controller slot.
  * @param cartridge Structure to copy RAM to.
