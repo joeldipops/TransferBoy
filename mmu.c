@@ -369,7 +369,7 @@ static void mbc3writeRom45(GbState* s, u16 location, byte value) {
 }
 
 /**
- * 0x4000 - 0x5FFF: ROM/RAM bank switch
+ * 0x4000 - 0x5FFF: RAM bank switch
  * Sets the RAM bank number.
  */
 static void mbc5writeRom45(GbState* s, u16 location, byte value) {
@@ -381,6 +381,27 @@ static void mbc5writeRom45(GbState* s, u16 location, byte value) {
         s->SRAM = s->Cartridge.Ram.Data + s->SRAMBankNumber * SRAM_BANK_SIZE;    
     }   
 }
+
+/**
+ * 0x4000 - 0x5FFF: RAM bank switch & Rumble control.
+ * Sets the RAM bank number or rumble state.
+ */
+/*
+static void mbc5RumbleWriteRom45(GbState* s, u16 location, byte value) {
+    // Rumble bit is bit 3
+    const byte RUMBLE_BIT = 0x08; 
+
+    if ((value & RUMBLE_BIT) && !s->Catridge.IsRumbling) {
+         toggleRumble(s->ControllerNumber, true);
+         s->Catridge.IsRumbling = true;
+    } else if (!(value  & RUMBLE_BIT) && s->Cartridge.IsRumbling) {
+         toggleRumble(s->ControllerNumber, false);
+         s->Catridge.IsRumbling = false;         
+    }
+    
+    mbc5writeRom45(s, location, value)
+}
+*/
 
 /**
  * 0x6000 - 0x7FFF: Sets the Banking mode.
