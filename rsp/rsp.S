@@ -29,14 +29,14 @@
 # address of gameboy pixel to be processed in DRAM
 .set $GB_BUFFER_ADDRESS, $16
 
-# points to end of gameboy pixel buffer in DRAM
-.set $GB_BUFFER_END, $17
-
 # points to current pixel to be processed in DMEM
-.set $PIXEL_ADDRESS, $18
+.set $PIXEL_ADDRESS, $17
 
-# points to end of current 4kB section of gameboy pixel buffer in DRAM
-.set $RECTANGLE_END, $19
+# Number of rectangles left to render in current iteration.
+.set $RECTANGLE_COUNTER, $18
+
+# Number of pixels left to render in current iteration.
+.set $PIXEL_COUNTER, $19
 
 # Address to place next processed gameboy pixel in DMEM
 .set $N64_BUFFER_POINTER, $20
@@ -52,6 +52,7 @@
 
 # Length and Width of screen
 .set $SCREEN_SIZE, $26
+
 
 _dmaIn:
     # Set source.
@@ -203,10 +204,8 @@ main:
     lw $SCREEN_SIZE, RspIn_SCREEN_SIZE($0)
     lw $IS_COLOUR, RspIn_IS_COLOUR($0)
 
-    addi $GB_BUFFER_END, $0, GB_BUFFER_SIZE
-    # Don't understand why I need this, but result is FFFFB400 without it...
-    andi $GB_BUFFER_END, $GB_BUFFER_END, 0x0000FFFF
-    add $GB_BUFFER_END, $GB_BUFFER_END, $GB_BUFFER_ADDRESS
+    # TODO - Magic number
+    addi $RECTANGLE_COUNTER, $0, 24
 
     # while address < end of buffer
     .whileHasRectangles:
@@ -214,10 +213,11 @@ main:
         dmaIn $GB_BUFFER_ADDRESS, DMEM_GB_BASE, DMEM_SIZE / 2
 
         addi $PIXEL_ADDRESS, $0, DMEM_GB_BASE
-        addi $RECTANGLE_END, $PIXEL_ADDRESS, DMEM_SIZE / 2
         # Starts at 0 and completely fills up DMEM as we get through GB pixels.
         add $N64_BUFFER_POINTER, $0, $0
 
+        # TODO - get rid of magic numbers.
+        addi $PIXEL_COUNTER, $0, 160 * 6
         # for those pixels
         .whileHasPixels:
             # put a pixel into a register
@@ -239,9 +239,10 @@ main:
             # increment the buffer pointers.
             addi $N64_BUFFER_POINTER, $N64_BUFFER_POINTER, 0x04 # 32bit n64 colours
             addi $PIXEL_ADDRESS, $PIXEL_ADDRESS, 0x02 # 16bit gameboy colours
+            addi $PIXEL_COUNTER, $PIXEL_COUNTER, -1
+
         # end loop
-        sub $A, $RECTANGLE_END, $PIXEL_ADDRESS
-        bgtz $A, .whileHasPixels
+        bgtz $PIXEL_COUNTER, .whileHasPixels
 
         # DMA the data back to DRAM so we have our limited memory back.
         dmaOut 0x000, $OUT_BUFFER_ADDRESS, DMEM_SIZE
@@ -249,6 +250,9 @@ main:
         # Ask the RDP to render the textured line we just built.
 
         # TODO - Pass proper values to these.
+
+        # Sync before loading a new texture.
+        syncPipe
 
         ## Tell RDP where to look for texture data.
         ## rbga colour format, 16 bit colours, 160 pixels, address in DRAM
@@ -261,7 +265,7 @@ main:
 
         ## Give tile a size & shape
         ## tile = 1 sl,tl = {0,0}, sh,th = {width - 1, height - 1}
-        loadTile 1, 0, 0, 160 * 4, 12 * 4
+        loadTile 1, 0, 0, 160 * 4, 6 * 4
 
         # TODO Cache this somewhere. May need to use some less 
         # than conventional registers.
@@ -279,29 +283,23 @@ main:
         add $a3, $a3, $a1
 
         ## Draw a rectangle with the texture we have set up
-        ## tile = 1 x1,y1 = {0, 0} x2,y2 = {160, 12}
+        ## tile = 1 x1,y1 = {0, 0} x2,y2 = {160, 6}
         ### not doing anything fancy with the s & ts
-        textureRectangle 1, $a0, $a1, $a2, $a3, 0, 0, 2048, 2048
+        textureRectangle 1, $a0, $a1, $a2, $a3, 0, 0, 4096, 1024
 
         # increment address pointer.
-        # TODO - I think this may be a central issue.  160pixels doesn't fit neatly in 
-        # 0x0800 bytes, so there's an overhang that's pushing everything wrong.
-        addi $GB_BUFFER_ADDRESS, $GB_BUFFER_ADDRESS, (DMEM_SIZE / 2)
+        # TODO - Magic numbers.
+        addi $GB_BUFFER_ADDRESS, $GB_BUFFER_ADDRESS, 160 * 2 * 6
 
         # increment draw top
         # TODO - By determined block height.
-        addi $SCREEN_POSITION, $SCREEN_POSITION, 12
-    # loop until we reach end of buffer.
+        addi $SCREEN_POSITION, $SCREEN_POSITION, 6
+        addi $RECTANGLE_COUNTER, $RECTANGLE_COUNTER, -1
 
-    sub $A, $GB_BUFFER_END, $GB_BUFFER_ADDRESS
-    bgtz $A, .whileHasRectangles
+    # loop until there are no more rectangles to draw.
+    bgtz $RECTANGLE_COUNTER, .whileHasRectangles
 
-# job done, idle until IMEM refreshed.
-wait:
-    nop
-    j wait
-
-# raise error if we get to this point.
+# job done
 break
 
 # Fill remainder with break instruction

@@ -149,9 +149,8 @@ static inline void renderPixels(
     input->IsColour = (paletteType == GameboyColorPalette);
 
     // TODO Calculate block height
-    input->Screen = (Rectangle){ left, top, width, 12 };
-
-    rdp_enable_texture_copy();
+    // But 6 lines of 160 16bit pixels can fit in 4kB of DMEM at a time.
+    input->Screen = (Rectangle){ left, top, width, 6 };
 
     data_cache_hit_writeback(input, sizeof(RspIn));
 

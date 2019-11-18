@@ -558,6 +558,10 @@ sByte toggleRumble(const byte controllerNumber, const bool isRumbleStart) {
     const byte RUMBLE_START = 8;
     const byte RUMBLE_STOP = 0;
 
+    // To start the rumble motor, set bit 3 of any byte in the 0x4000 - 0x5FFF address space
+    // Set it to 0 to stop it.
+    // Unfortunately, bits 0-2 of this space are responsible for changing the SRAM bank.
+    // If this is important to you, ensure you OR the current ram bank with bit 3.
     if (isRumbleStart) {
         setTpakValue(controllerNumber, mapAddress(GB_RAM_BANK_ADDRESS), RUMBLE_START);
     } else {
