@@ -340,7 +340,7 @@ void menuDraw(RootState* state, const byte playerNumber) {
         screen.Top + screen.Height,
         RESOLUTION_X,
         RESOLUTION_Y - screen.Top + screen.Height,
-        true
+        MIRROR_DISABLED
     );
 
     if (state->Players[playerNumber].ActiveMode != Menu) {

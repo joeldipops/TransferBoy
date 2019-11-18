@@ -143,7 +143,15 @@ typedef struct {
     char* Title;
 } GameBoyCartridge;
 
-
+/**
+ * Starts or stops the rumble motor for cartridges that have one.
+ * @param controllerNumber Slot that rumble-capable cartridge is using.
+ * @param isRumbleStart true to start the motor, false to stop it.
+ * @returns Error Code
+ * @note For now this will switch the transfer pak bank to romx and the ram bank to bank 0.
+ *       I think this will be ok because I usually switch to whatever bank I need before any transfer.
+ */
+sByte toggleRumble(const byte controllerNumber, const bool isRumbleStart);
 
 /**
  * Imports the entire cartridge in to RAM as CartridgeData

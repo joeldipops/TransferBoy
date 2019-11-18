@@ -77,12 +77,12 @@ void flushScreen(RootState* state) {
     // Background
     display_show(2);
     prepareRdpForSprite(1);
-    loadSprite(getSpriteSheet(), BLUE_BG_TEXTURE, MIRROR_XY);
-    rdp_draw_textured_rectangle(0, 0, 0, RESOLUTION_X, RESOLUTION_Y, true);
+    loadSprite(getSpriteSheet(), BLUE_BG_TEXTURE, true);
+    rdp_draw_textured_rectangle(0, 0, 0, RESOLUTION_X, RESOLUTION_Y, MIRROR_DISABLED);
     rdp_detach_display();
     display_show(1);
     rdp_attach_display(2);
-    rdp_draw_textured_rectangle(0, 0, 0, RESOLUTION_X, RESOLUTION_Y, true);
+    rdp_draw_textured_rectangle(0, 0, 0, RESOLUTION_X, RESOLUTION_Y, MIRROR_DISABLED);
     rdp_detach_display();
 
     display_show(2);
