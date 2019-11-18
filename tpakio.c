@@ -10,6 +10,9 @@ const byte BLOCK_SIZE = 32;
 const natural BANK_SIZE = 16 * 1024; // 16kB banks.
 const byte HEADER_SIZE = 80;
 
+const natural DETECT_DEVICE_ADDRESS = 0x8000;
+const natural RUMBLE_ADDRESS = 0xC000;
+const byte RUMBLE_PAK = 0x80;
 const natural CARTRIDGE_POWER_ADDRESS = 0x8000;
 const byte CARTRIDGE_POWER_ON = 0x84;
 const byte CARTRIDGE_POWER_OFF = 0xFE;
@@ -553,15 +556,23 @@ static sByte importRTCData(const byte controllerNumber, GameBoyCartridge* cartri
  *       I think this will be ok because I usually switch to whatever bank I need before any transfer.
  */
 sByte toggleRumble(const byte controllerNumber, const bool isRumbleStart) {
-    setTpakValue(controllerNumber, TPAK_BANK_ADDRESS, ROMX);
-
-    const byte RUMBLE_START = 8;
-    const byte RUMBLE_STOP = 0;
-
-    if (isRumbleStart) {
-        setTpakValue(controllerNumber, mapAddress(GB_RAM_BANK_ADDRESS), RUMBLE_START);
+    byte block[BLOCK_SIZE];
+    read_mempak_address(controllerNumber, DETECT_DEVICE_ADDRESS, block);
+    
+    if (block[0] == RUMBLE_PAK) {
+        // Use regular rumble_pak if detected.
+        setTpakValue(controllerNumber, RUMBLE_ADDRESS, isRumbleStart);
     } else {
-        setTpakValue(controllerNumber, mapAddress(GB_RAM_BANK_ADDRESS), RUMBLE_STOP);
+        setTpakValue(controllerNumber, TPAK_BANK_ADDRESS, ROMX);
+
+        const byte RUMBLE_START = 8;
+        const byte RUMBLE_STOP = 0;
+
+        if (isRumbleStart) {
+            setTpakValue(controllerNumber, mapAddress(GB_RAM_BANK_ADDRESS), RUMBLE_START);
+        } else {
+            setTpakValue(controllerNumber, mapAddress(GB_RAM_BANK_ADDRESS), RUMBLE_STOP);
+        }
     }
 
     return TPAK_SUCCESS;
