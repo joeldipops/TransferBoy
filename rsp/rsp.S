@@ -126,45 +126,45 @@ _dmaOut:
 # @output reg the 32bit dmg colour.
 # TODO: Make params happen
 ###
-.macro massageMonochrome reg
-    beq \reg, $0, .colour0
+massageMonochrome:
+    beq $A, $0, .colour0
 
     addi $t1, $0, 1
-    beq \reg, $t1, .colour1
+    beq $A, $t1, .colour1
 
     addi $t1, $0, 2
-    beq \reg, $t1, .colour2
+    beq $A, $t1, .colour2
 
     addi $t1, $0, 3
-    beq \reg, $t1, .colour3
+    beq $A, $t1, .colour3
 
     # default handler. for now, just make things red so it's obvious.
-        lui \reg, 0xF801
-        ori \reg, \reg, 0xF801
+        lui $A, 0xF801
+        ori $A, $A, 0xF801
         j .done
 
     # wanted to do this with an array, but not enough DMEM
     # and can't load IMEM :( (or can you ?)
     .colour0:
-        lui \reg, 0xFFFF
-        ori \reg, \reg, 0xFFFF
+        lui $A, 0xFFFF
+        ori $A, $A, 0xFFFF
         j .done
 
     .colour1:
-        lui \reg, 0xA529
-        ori \reg, \reg, 0xA529
+        lui $A, 0xA529
+        ori $A, $A, 0xA529
         j .done
 
     .colour2:
-        lui \reg, 0x5295
-        ori \reg, \reg, 0x5295
+        lui $A, 0x5295
+        ori $A, $A, 0x5295
         j .done
 
     .colour3:
-        lui \reg, 0x0001
-        ori \reg, \reg, 0x0001
+        lui $A, 0x0001
+        ori $A, $A, 0x0001
     .done:
-.endm
+    jr $ra
 
 ###
 # Takes the 16 bit GBC colour in reg and converts
@@ -173,26 +173,26 @@ _dmaOut:
 # @input reg contains the 16bit colour.
 # @ouput reg contains the 32bit colour.
 ###
-.macro massageColour reg
+massageColour:
     # blue
-    andi $3, \reg, 0x7C00
+    andi $3, $A, 0x7C00
     srl $3, $3, 0x09
 
     # green
-    andi $4, \reg, 0x03E0
+    andi $4, $A, 0x03E0
     sll $4, $4, 0x01
 
     # red
-    andi $5, \reg, 0x001F
+    andi $5, $A, 0x001F
     sll $5, $5, 0x0B
 
     or $3, $3, $4
     or $3, $3, $5
     ori $3, $3, 0x01
 
-    sll \reg, $3, 0x10
-    or \reg, \reg, $3
-.endm
+    sll $A, $3, 0x10
+    or $A, $A, $3
+    jr $ra
 
 ###
 # Sets the RDP to draw red rectangles.
@@ -217,7 +217,7 @@ main:
         add $N64_BUFFER_POINTER, $0, $0
 
         # TODO - get rid of magic numbers.
-        addi $PIXEL_COUNTER, $0, 160 * 6
+        addi $PIXEL_COUNTER, $0, GB_LCD_WIDTH * 6
         # for those pixels
         .whileHasPixels:
             # put a pixel into a register
@@ -226,19 +226,37 @@ main:
             andi $A, $A, 0x0000FFFF
 
             # massage it from gameboy format to n64 format.
-            beq $IS_COLOUR, $0, .dmgMassage
-                massageColour $A
-                j .end
-            .dmgMassage:
-                massageMonochrome $A
-            .end:
+            beq $IS_COLOUR, $0, 1f
+                jal massageColour
+                j 2f
+            1:
+                jal massageMonochrome
+            2:
+
+            # push massaged colour on to the out-buffer
+            sw $A, 0($N64_BUFFER_POINTER)
+
+            addi $N64_BUFFER_POINTER, $N64_BUFFER_POINTER, 0x04 # 32bit n64 colours
+
+            # put a pixel into a register
+            lw $A, 0($PIXEL_ADDRESS)
+            srl $A, $A, 16
+            # it's sign extended, so...
+            andi $A, $A, 0x0000FFFF
+
+            # massage it from gameboy format to n64 format.
+            beq $IS_COLOUR, $0, 1f
+                jal massageColour
+                j 2f
+            1:
+                jal massageMonochrome
+            2:
 
             # push massaged colour on to the out-buffer
             sw $A, 0($N64_BUFFER_POINTER)
 
             # increment the buffer pointers.
-            addi $N64_BUFFER_POINTER, $N64_BUFFER_POINTER, 0x04 # 32bit n64 colours
-            addi $PIXEL_ADDRESS, $PIXEL_ADDRESS, 0x02 # 16bit gameboy colours
+            addi $PIXEL_ADDRESS, $PIXEL_ADDRESS, 0x04 # 16bit gameboy colours
             addi $PIXEL_COUNTER, $PIXEL_COUNTER, -1
 
         # end loop
@@ -256,16 +274,18 @@ main:
 
         ## Tell RDP where to look for texture data.
         ## rbga colour format, 16 bit colours, 160 pixels, address in DRAM
-        setTextureImage RGBA_FORMAT, COLOUR_DEPTH_16, 159, $OUT_BUFFER_ADDRESS
+        setTextureImage RGBA_FORMAT, COLOUR_DEPTH_16, GB_LCD_WIDTH - 1, $OUT_BUFFER_ADDRESS
 
         ## Set up a tile now that the RDP has the data.
         ## rgba format, 16b, 160*2B fit in 64x64 words (CHECK THIS!!), tmem address 0 (CHECK THAT TOO)
         ## maskT 4 (CHECK), maskS 8 (CHECK!!!)
-        setTile 1, RGBA_FORMAT, COLOUR_DEPTH_16, 64, 0, 0, 0, 0, 4, 0, 0, 0, 8, 0
+        #setTile 1, RGBA_FORMAT, COLOUR_DEPTH_16, 32, 0, 0, 0, 0, 4, 0, 0, 0, 8, 0
+        setTile 1, RGBA_FORMAT, COLOUR_DEPTH_16, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 
         ## Give tile a size & shape
         ## tile = 1 sl,tl = {0,0}, sh,th = {width - 1, height - 1}
-        loadTile 1, 0, 0, 160 * 4, 6 * 4
+        #loadTile 1, 0, 0, GB_LCD_WIDTH * 4, 6 * 4
+        loadTile 1, 0, 0, GB_LCD_WIDTH * 4, 6 * 4
 
         # TODO Cache this somewhere. May need to use some less 
         # than conventional registers.
@@ -285,11 +305,11 @@ main:
         ## Draw a rectangle with the texture we have set up
         ## tile = 1 x1,y1 = {0, 0} x2,y2 = {160, 6}
         ### not doing anything fancy with the s & ts
-        textureRectangle 1, $a0, $a1, $a2, $a3, 0, 0, 4096, 1024
+        textureRectangle 1, $a0, $a1, $a2, $a3, 0, 0, 2048, 1024
 
         # increment address pointer.
         # TODO - Magic numbers.
-        addi $GB_BUFFER_ADDRESS, $GB_BUFFER_ADDRESS, 160 * 2 * 6
+        addi $GB_BUFFER_ADDRESS, $GB_BUFFER_ADDRESS, GB_LCD_WIDTH * 2 * 6
 
         # increment draw top
         # TODO - By determined block height.

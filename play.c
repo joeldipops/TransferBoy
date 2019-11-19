@@ -150,10 +150,11 @@ static inline void renderPixels(
 
     // TODO Calculate block height
     // But 6 lines of 160 16bit pixels can fit in 4kB of DMEM at a time.
-    input->Screen = (Rectangle){ left, top, width, 6 };
+    input->Screen = (Rectangle){ left, top, 160, 6 };
 
     data_cache_hit_writeback(input, sizeof(RspIn));
 
+    haltRsp();
     load_data(input, sizeof(RspIn));
     run_ucode();
 
