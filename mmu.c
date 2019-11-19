@@ -386,22 +386,20 @@ static void mbc5writeRom45(GbState* s, u16 location, byte value) {
  * 0x4000 - 0x5FFF: RAM bank switch & Rumble control.
  * Sets the RAM bank number or rumble state.
  */
-/*
-static void mbc5RumbleWriteRom45(GbState* s, u16 location, byte value) {
+static void mbc5rumbleWriteRom45(GbState* s, u16 location, byte value) {
     // Rumble bit is bit 3
     const byte RUMBLE_BIT = 0x08; 
 
-    if ((value & RUMBLE_BIT) && !s->Catridge.IsRumbling) {
-         toggleRumble(s->ControllerNumber, true);
-         s->Catridge.IsRumbling = true;
+    if ((value & RUMBLE_BIT) && !s->Cartridge.IsRumbling) {
+         toggleRumble(s->controllerSlot, true);
+         s->Cartridge.IsRumbling = true;
     } else if (!(value  & RUMBLE_BIT) && s->Cartridge.IsRumbling) {
-         toggleRumble(s->ControllerNumber, false);
-         s->Catridge.IsRumbling = false;         
+         toggleRumble(s->controllerSlot, false);
+         s->Cartridge.IsRumbling = false;
     }
-    
-    mbc5writeRom45(s, location, value)
+
+    mbc5writeRom45(s, location, value);
 }
-*/
 
 /**
  * 0x6000 - 0x7FFF: Sets the Banking mode.
@@ -410,9 +408,9 @@ static void mbc1writeRom67(GbState* s, u16 location, byte value) {
     s->RomRamSelect = value & 0x1;
     if (s->RomRamSelect == ROM_SELECT) {
         if (!s->isSRAMDisabled) {
-            s->SRAM = s->Cartridge.Ram.Data;    
+            s->SRAM = s->Cartridge.Ram.Data;
         }
-        s->ROM0 = s->Cartridge.Rom.Data;        
+        s->ROM0 = s->Cartridge.Rom.Data;
     } else {
         if (!s->isSRAMDisabled) {
             s->SRAM = s->Cartridge.Ram.Data + s->SRAMBankNumber * SRAM_BANK_SIZE;    
@@ -516,7 +514,7 @@ static void writeOam(GbState* s, u16 location, byte value) {
  * 0x0000 - 0x3FFF
  */
 static byte readRom0(GbState* s, u16 location) {
-    return s->ROM0[location];    
+    return s->ROM0[location];
 }
 
 /**
@@ -565,7 +563,7 @@ static byte readWRAMX(GbState* s, u16 location) {
 
 static byte readEcho(GbState* s, u16 location) {
     if (location < 0xF000) {
-        return readWRAM0(s, location - 0x2000);     
+        return readWRAM0(s, location - 0x2000);
     } else {
         return readWRAMX(s, location - 0x2000);
     }
@@ -736,7 +734,7 @@ void mmu_install_mbc(GbState* s) {
 
     if (s->Cartridge.Type == MBC1) {
         for (byte i = 0x00; i < 0x20; i++) {
-            s->mmuWrites[i] = mbc1writeRom01;            
+            s->mmuWrites[i] = mbc1writeRom01;
         }
         for (byte i = 0x20; i < 0x40; i++) {
             s->mmuWrites[i] = mbc1writeRom23;
@@ -772,10 +770,16 @@ void mmu_install_mbc(GbState* s) {
         }
         for (byte i = 0x30; i < 0x40; i++) {
             s->mmuWrites[i] = mbc5writeRom3;
-        }        
-        for (byte i = 0x40; i < 0x60; i++) {
-            s->mmuWrites[i] = mbc5writeRom45;
-        }        
+        }
+        if (s->hasRumble) {
+            for (byte i = 0x40; i < 0x60; i++) {
+                s->mmuWrites[i] = mbc5rumbleWriteRom45;
+            }
+        } else {
+            for (byte i = 0x40; i < 0x60; i++) {
+                s->mmuWrites[i] = mbc5writeRom45;
+            }
+        }
     }
 
     if (!s->hasSRAM) {

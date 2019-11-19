@@ -726,7 +726,7 @@ sByte getCartridgeMetadata(const byte controllerNumber, GameBoyCartridge* cartri
 /**
  * Imports the entire cartridge in to RAM as CartridgeData
  * @param controllerNumber get from T-Pak plugged in to this controller slot.
- * @out catridge GB/GBC catridge rom/ram 
+ * @out cartridge GB/GBC cartridge rom/ram 
  * @returns Error Code
  */
 sByte importCartridge(const byte controllerNumber, GameBoyCartridge* cartridge) {

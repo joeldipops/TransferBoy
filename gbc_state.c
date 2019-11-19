@@ -35,9 +35,9 @@ static sByte setInfo(GbState* s) {
         case 0x19: s->mbc = 5;                                                     break;
         case 0x1a: s->mbc = 5; s->hasSRAM = 1;                                     break;
         case 0x1b: s->mbc = 5; s->hasSRAM = 1; s->hasBattery = 1;                  break;
-        case 0x1c: s->mbc = 5;                                                     break; /* rumble */
-        case 0x1d: s->mbc = 5; s->hasSRAM = 1;                                     break; /* rumble */
-        case 0x1e: s->mbc = 5; s->hasSRAM = 1; s->hasBattery = 1;                  break; /* rumble */
+        case 0x1c: s->mbc = 5; s->hasRumble = 1;                                   break;
+        case 0x1d: s->mbc = 5; s->hasSRAM = 1; s->hasRumble = 1;                   break;
+        case 0x1e: s->mbc = 5; s->hasSRAM = 1; s->hasBattery = 1; s->hasRumble = 1;break;
         case 0x20: s->mbc = 6;                                                     break;
         /* MMM01 unsupported */
         /* MBC7 Sensor not supported */

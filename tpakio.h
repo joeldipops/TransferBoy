@@ -112,7 +112,7 @@ typedef struct {
         struct {
             char Title[11];
             byte ManufacturerCode[4];
-            GbcSupport GbcSupport;            
+            GbcSupport GbcSupport;
         } CGBTitle;
     };
     natural NewLicenseeCode;
@@ -140,6 +140,7 @@ typedef struct {
     byte RamBankCount;
     natural RamBankSize;
     bool IsGbcSupported;
+    bool IsRumbling;
     char* Title;
 } GameBoyCartridge;
 
@@ -156,7 +157,7 @@ sByte toggleRumble(const byte controllerNumber, const bool isRumbleStart);
 /**
  * Imports the entire cartridge in to RAM as CartridgeData
  * @param controllerNumber get from T-Pak plugged in to this controller slot.
- * @out catridge GB/GBC catridge rom/ram 
+ * @out cartridge GB/GBC cartridge rom/ram 
  * @returns Error Code
  */
 sByte importCartridge(const byte controllerNumber, GameBoyCartridge* cartridge);
