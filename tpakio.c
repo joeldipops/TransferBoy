@@ -557,12 +557,18 @@ static sByte importRTCData(const byte controllerNumber, GameBoyCartridge* cartri
  */
 sByte toggleRumble(const byte controllerNumber, const bool isRumbleStart) {
     byte block[BLOCK_SIZE];
+
     read_mempak_address(controllerNumber, DETECT_DEVICE_ADDRESS, block);
-    
+
     if (block[0] == RUMBLE_PAK) {
-        // Use regular rumble_pak if detected.
+        // Use regular rumble pak if detected.
         setTpakValue(controllerNumber, RUMBLE_ADDRESS, isRumbleStart);
     } else {
+        // Wake up the transfer pak and send power to the cartridge.
+        setTpakValue(controllerNumber, CARTRIDGE_POWER_ADDRESS, CARTRIDGE_POWER_ON);
+        setTpakValue(controllerNumber, TPAK_STATUS_ADDRESS, TPAK_STATUS_ACCESS_ON);
+
+        // Make sure the bank with the rumble register is selected.
         setTpakValue(controllerNumber, TPAK_BANK_ADDRESS, ROMX);
 
         const byte RUMBLE_START = 8;
@@ -572,8 +578,12 @@ sByte toggleRumble(const byte controllerNumber, const bool isRumbleStart) {
             setTpakValue(controllerNumber, mapAddress(GB_RAM_BANK_ADDRESS), RUMBLE_START);
         } else {
             setTpakValue(controllerNumber, mapAddress(GB_RAM_BANK_ADDRESS), RUMBLE_STOP);
+
+            // Since we're not rumbling, cartridge can go back to sleep.
+            setTpakValue(controllerNumber, CARTRIDGE_POWER_ADDRESS, CARTRIDGE_POWER_OFF);
         }
     }
+
 
     return TPAK_SUCCESS;
 }
@@ -695,7 +705,7 @@ sByte getCartridgeMetadata(const byte controllerNumber, GameBoyCartridge* cartri
     sByte ramBanks = getNumberOfRamBanks(&header, cartridge->Type);
     sInt ramBankSize = getRamBankSize(&header, cartridge->Type); 
 
-    if (romBanks * BANK_SIZE * 3 >= getMemoryLimit()) {
+    if (romBanks * BANK_SIZE * 3 >= getMemoryLimit() && RESERVE_WORKING_MEMORY) {
         return TPAK_ERR_INSUFFICIENT_MEMORY;
     }
 
