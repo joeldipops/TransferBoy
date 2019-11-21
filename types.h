@@ -634,14 +634,16 @@ typedef struct gb_state {
     // MBC1 - Upper bits ROM bank (if selected).
     
     // MBC1 - Mode for above field (ROM/RAM).
-    BankSelectType RomRamSelect; 
+    BankSelectType RomRamSelect;
 
     // Cartridge hardware metadata
     byte mbc;
     bool hasSRAM;
     bool hasBattery;
+    bool hasRumble;
     bool hasRTC;
     bool isRTCLatched;
+    byte controllerSlot;
 
     struct emu_cpu_state *emu_cpu_state;
 } GbState;

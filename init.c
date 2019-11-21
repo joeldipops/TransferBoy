@@ -21,6 +21,7 @@ static void preparePlayMode(RootState* state, byte playerNumber) {
     Rectangle screen = {};
     getScreenPosition(state, playerNumber, &screen);
     resetPlayState(&state->Players[playerNumber]);
+    state->Players[playerNumber].EmulationState.controllerSlot = playerNumber;
     state->Players[playerNumber].InitState = InitLoaded;
     state->Players[playerNumber].ActiveMode = Play;
 }

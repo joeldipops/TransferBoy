@@ -216,7 +216,7 @@ void playLogic(RootState* state, const byte playerNumber) {
         free(input);
         input = 0;
 
-        // Write save file back to the catridge if it has changed.
+        // Write save file back to the cartridge if it has changed.
         if (s->isSRAMDirty) {
             sByte result = exportCartridgeRam(playerNumber, &s->Cartridge);
             if (result) {
