@@ -177,18 +177,27 @@ _execRdp:
     lui $A, 0xF400
 
     addi $t1, $0, \sl
-    sll $t1, $t1, 12
+    # multiply by 4, then shift 12.
+    sll $t1, $t1, 12 + 2
+    
     or $A, $A, $t1
-    ori $A, $A, \tl
+
+    addi $t1, $0, \tl
+    # Multiply by 4 because the RDP says so.
+    sll $t1, $t1, 2
+    or $A, $A, $t1
 
     sw $A, 0x000($0)
 
     lui $A, \tile
     sll $A, $A, 8
-    addi $t1, $0, \sh
-    sll $t1, $t1, 12
+    # subtract 1 for the high values (again, because RDP says so)
+    addi $t1, $0, \sh - 1
+    sll $t1, $t1, 12 + 2
     or $A, $A, $t1
-    ori $A, $A, \th
+    addi $t1, $0, \th - 1
+    sll $t1, $t1, 2
+    or $A, $A, $t1
 
     sw $A, 0x004($0)
 
@@ -293,7 +302,7 @@ _execRdp:
     or $t1, $t1, $t2
     or $A, $A, $t1
 
-    ori $A, $A, (\width + 1)
+    ori $A, $A, (\width - 1)
     sw $A, 0x000($0)
 
     ##if it's a register
