@@ -119,60 +119,6 @@ static void mapGbInputs(const char controllerNumber, const GbButton* buttonMap, 
 
 static uint32_t outBuffer[0x1000];
 
-/**
- * Take the array of pixels produced by the emulator and throw it up on to the screen.
- * @param frame Id of frame to render to.
- * @param pixelBuffer Array of pixels.
- * @param isColour True for GBC and super-game-boy enhanced, otherwise false.
- * @param avgPixelSize upscaled TV size of gameboy pixels
- * @param left left bound of the gb screen to render.
- * @param top top bound of the gb screen to render.
- * @param sgbState SuperGameBoy related variables.
- * @param bgColourIndex which colour fills the most pixels and should therefore be 
- *        drawn once as a background
- * @private
- */
-static inline void renderPixels(
-    const PlayerState* state,
-    const PaletteType paletteType,
-    const u16 left,
-    const u16 top,
-    const u16 width,
-    const u16 height
-) {
-    // Data to be DMAd must be aligned to 16 bytes.
-    AlignedPointer pointer = malloc_aligned(sizeof(RspIn), 16);
-    RspIn* input = (RspIn*) pointer.p;
-
-    input->InAddress = (uint32_t)state->EmulationState.NextBuffer;
-    input->OutAddress = (uint32_t)outBuffer;
-    input->IsColour = (paletteType == GameboyColorPalette);
-
-    // TODO Calculate block height
-    // But 6 lines of 160 16bit pixels can fit in 4kB of DMEM at a time.
-    input->Screen = (Rectangle){ left, top, 160, 6 };
-
-    data_cache_hit_writeback(input, sizeof(RspIn));
-
-    haltRsp();
-    load_data(input, sizeof(RspIn));
-    run_ucode();
-
-    free_aligned(pointer);
-
-    if (SHOW_FRAME_COUNT) {
-        string text = "";
-
-        long diff = state->Meta.NextClock - state->Meta.LastClock;
-
-        sprintf(text, "Mem: %lld FPS: %f %lld" , getCurrentMemory(), ((FRAMES_TO_SKIP + 1) / (double)diff) * 1000, state->Meta.FrameCount);
-        graphics_set_color(GLOBAL_TEXT_COLOUR, 0x0);
-        graphics_draw_box(2, 0, 450, 680, 10, GLOBAL_BACKGROUND_COLOUR);
-        graphics_draw_text(2, 5, 450, text);
-    }
-}
-
-
 void playAudio(const GbState* state) {
     if (!audio_can_write()) {
         return;
@@ -307,16 +253,36 @@ void playDraw(const RootState* state, const byte playerNumber) {
         palette = SuperGameboyPalette;
     }
 
-    bool isInitialised = state->Players[playerNumber].BuffersInitialised >= 2;
+    // Data to be DMAd must be aligned to 16 bytes.
+    AlignedPointer pointer = malloc_aligned(sizeof(RspIn), 16);
+    RspIn* input = (RspIn*) pointer.p;
 
-    renderPixels(
-        &state->Players[playerNumber],
-        palette,
-        screen.Left,
-        screen.Top,
-        screen.Width,
-        screen.Height
-    );
+    input->InAddress = (uint32_t)state->Players[playerNumber].EmulationState.NextBuffer;
+    input->OutAddress = (uint32_t)outBuffer;
+    input->IsColour = (palette == GameboyColorPalette);
+
+    // TODO Calculate block height
+    // But 6 lines of 160 16bit pixels can fit in 4kB of DMEM at a time.
+    input->Screen = (Rectangle){ screen.Left, screen.Top, 160, 6 };
+
+    data_cache_hit_writeback(input, sizeof(RspIn));
+
+    haltRsp();
+    load_data(input, sizeof(RspIn));
+    run_ucode();
+
+    free_aligned(pointer);
+
+    if (SHOW_FRAME_COUNT) {
+        string text = "";
+
+        long diff = state->Players[playerNumber].Meta.NextClock - state->Players[playerNumber].Meta.LastClock;
+
+        sprintf(text, "Mem: %lld FPS: %f %lld" , getCurrentMemory(), ((FRAMES_TO_SKIP + 1) / (double)diff) * 1000, state->Players[playerNumber].Meta.FrameCount);
+        graphics_set_color(GLOBAL_TEXT_COLOUR, 0x0);
+        graphics_draw_box(2, 0, 450, 680, 10, GLOBAL_BACKGROUND_COLOUR);
+        graphics_draw_text(2, 5, 450, text);
+    }
 }
 
 /**
