@@ -15,7 +15,7 @@
 
 .eqv DMEM_SIZE, 0x1000
 # Input pixels for the current rectangle go here.
-.eqv DMEM_GB_BASE, 0x0800
+.eqv DMEM_GB_BASE, 0
 
 .eqv GB_LCD_WIDTH, 160
 .eqv GB_LCD_HEIGHT, 144
@@ -138,7 +138,7 @@ massageMonochrome:
     addi $t1, $0, 3
     beq $A, $t1, .colour3
 
-    # default handler. for now, just make things red so it's obvious.
+        # default handler. for now, just make things red so it's obvious.
         lui $A, 0xF801
         ori $A, $A, 0xF801
         j .done
@@ -175,23 +175,23 @@ massageMonochrome:
 ###
 massageColour:
     # blue
-    andi $3, $A, 0x7C00
-    srl $3, $3, 0x09
+    andi $t1, $A, 0x7C00
+    srl $t1, $t1, 0x09
 
     # green
-    andi $4, $A, 0x03E0
-    sll $4, $4, 0x01
+    andi $t2, $A, 0x03E0
+    sll $t2, $t2, 0x01
 
     # red
-    andi $5, $A, 0x001F
-    sll $5, $5, 0x0B
+    andi $t3, $A, 0x001F
+    sll $t3, $t3, 0x0B
 
-    or $3, $3, $4
-    or $3, $3, $5
-    ori $3, $3, 0x01
+    or $t1, $t1, $t2
+    or $t1, $t1, $t3
+    ori $t1, $t1, 0x01
 
-    sll $A, $3, 0x10
-    or $A, $A, $3
+    sll $A, $t1, 0x10
+    or $A, $A, $t1
     jr $ra
 
 ###
@@ -213,15 +213,17 @@ main:
         dmaIn $GB_BUFFER_ADDRESS, DMEM_GB_BASE, DMEM_SIZE / 2
 
         addi $PIXEL_ADDRESS, $0, DMEM_GB_BASE
-        # Starts at 0 and completely fills up DMEM as we get through GB pixels.
+        # Starts at 0 and mostly fills up DMEM as we get through GB pixels.
         add $N64_BUFFER_POINTER, $0, $0
 
         # TODO - get rid of magic numbers.
         addi $PIXEL_COUNTER, $0, GB_LCD_WIDTH * 6
+
         # for those pixels
         .whileHasPixels:
             # put a pixel into a register
             lh $A, 0($PIXEL_ADDRESS)
+
             # it's sign extended, so...
             andi $A, $A, 0x0000FFFF
 
@@ -235,28 +237,12 @@ main:
 
             # push massaged colour on to the out-buffer
             sw $A, 0($N64_BUFFER_POINTER)
-
-            addi $N64_BUFFER_POINTER, $N64_BUFFER_POINTER, 0x04 # 32bit n64 colours
-
-            # put a pixel into a register
-            lw $A, 0($PIXEL_ADDRESS)
-            srl $A, $A, 16
-            # it's sign extended, so...
-            andi $A, $A, 0x0000FFFF
-
-            # massage it from gameboy format to n64 format.
-            beq $IS_COLOUR, $0, 1f
-                jal massageColour
-                j 2f
-            1:
-                jal massageMonochrome
-            2:
-
-            # push massaged colour on to the out-buffer
-            sw $A, 0($N64_BUFFER_POINTER)
-
-            # increment the buffer pointers.
-            addi $PIXEL_ADDRESS, $PIXEL_ADDRESS, 0x04 # 16bit gameboy colours
+            # and increment
+            ## turns out the compiler is actually storing each 16bit gameboy pixels
+            ## in 32bits.  That concerns me somewhat because if it changes this will break oh well.
+            addi $PIXEL_ADDRESS, $PIXEL_ADDRESS, 0x04
+            ## n64 pixels are 32bits though.
+            addi $N64_BUFFER_POINTER, $N64_BUFFER_POINTER, 0x04
             addi $PIXEL_COUNTER, $PIXEL_COUNTER, -1
 
         # end loop

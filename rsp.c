@@ -7,6 +7,8 @@ extern const char rsp_code_start __attribute((section(".data")));
 extern const char rsp_code_end __attribute((section(".data")));
 extern const char rsp_code_size __attribute((section(".data")));
 
+extern uint32_t outBuffer[0x0400];
+
 /**
  * Called if the RSP hits a break instruction.
  */

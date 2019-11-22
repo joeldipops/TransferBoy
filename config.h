@@ -10,6 +10,6 @@ static const bool RESERVE_WORKING_MEMORY = true;
 static const bool SHOW_FRAME_COUNT = true;
 static const bool IS_AUDIO_ENABLED = false;
 static const bool IS_SGB_ENABLED = false;
-static const bool USE_ANTIALIASING = true;
+static const bool USE_ANTIALIASING = false;
 
 #endif
