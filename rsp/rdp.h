@@ -56,6 +56,16 @@ _execRdp:
 .endm
 
 ###
+# Executes the syncFull RDP command
+# Command 0x27
+###
+.macro syncFull
+    lui $A, 0xE900
+    sw $A, 0x000($0)
+    execRdp 1
+.endm
+
+###
 # Executes the setFillColour RDP command
 # Command 0x37
 # @input upper The colour to set.  Upper 16b for 32b colours.

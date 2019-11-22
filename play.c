@@ -117,8 +117,6 @@ static void mapGbInputs(const char controllerNumber, const GbButton* buttonMap, 
     }
 }
 
-static uint32_t outBuffer[0x1000];
-
 void playAudio(const GbState* state) {
     if (!audio_can_write()) {
         return;
@@ -236,6 +234,8 @@ void playLogic(RootState* state, const byte playerNumber) {
     }
 }
 
+static uint32_t outBuffer[0x0400];
+
 /**
  * Draws gameboy screen.
  * @param state program state.
@@ -266,8 +266,8 @@ void playDraw(const RootState* state, const byte playerNumber) {
     input->Screen = (Rectangle){ screen.Left, screen.Top, 160, 6 };
 
     data_cache_hit_writeback(input, sizeof(RspIn));
-
     haltRsp();
+    rdp_enable_texture_copy();
     load_data(input, sizeof(RspIn));
     run_ucode();
 

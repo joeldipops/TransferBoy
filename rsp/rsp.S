@@ -198,8 +198,8 @@ massageColour:
 # Sets the RDP to draw red rectangles.
 main:
     # Stash config in some registers (including screen size & loc details)
-    lw $GB_BUFFER_ADDRESS, RspIn_IN_BUFFER($0)
-    lw $OUT_BUFFER_ADDRESS, RspIn_OUT_BUFFER($0)
+    lw $GB_BUFFER_ADDRESS, RspIn_IN_ADDRESS($0)
+    lw $OUT_BUFFER_ADDRESS, RspIn_OUT_ADDRESS($0)
     lw $SCREEN_POSITION, RspIn_SCREEN_POSITION($0)
     lw $SCREEN_SIZE, RspIn_SCREEN_SIZE($0)
     lw $IS_COLOUR, RspIn_IS_COLOUR($0)

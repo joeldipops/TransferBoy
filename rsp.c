@@ -9,10 +9,8 @@ extern const char rsp_code_size __attribute((section(".data")));
 
 /**
  * Called if the RSP hits a break instruction.
- * TODO - Something else
  */
 static void onRSPException() {
-    //logAndPauseFrame(2, "RSP INTERRUPT");
 }
 
 // Following taken from libdragon source since it doesn't provide direct access to these registers.
