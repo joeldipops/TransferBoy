@@ -69,7 +69,9 @@ _dmaIn:
     1:
         mfc0 $A, $DMA_BUSY
     bne $A, $0, 1b
+    nop
     jr $ra
+    nop
 
 
 ###
@@ -85,6 +87,7 @@ _dmaIn:
     addi $a1, $0, \dest
     addi $a2, $0, \length
     jal _dmaIn
+    nop
 .endm
 
 _dmaOut:
@@ -102,7 +105,9 @@ _dmaOut:
     1:
         mfc0 $A, $DMA_BUSY
     bne $A, $0, 1b
+    nop
     jr $ra
+    nop
 
 ###
 # Writes to the three DMA registers to kick off a transfer
@@ -117,6 +122,7 @@ _dmaOut:
     add $a1, $0, \dest
     addi $a2, $0, \length
     jal _dmaOut
+    nop
 .endm
 
 ###
@@ -128,20 +134,25 @@ _dmaOut:
 ###
 massageMonochrome:
     beq $A, $0, .colour0
+    nop
 
     addi $t1, $0, 1
     beq $A, $t1, .colour1
+    nop
 
     addi $t1, $0, 2
     beq $A, $t1, .colour2
+    nop
 
     addi $t1, $0, 3
     beq $A, $t1, .colour3
+    nop
 
         # default handler. for now, just make things red so it's obvious.
         lui $A, 0xF801
         ori $A, $A, 0xF801
         j .done
+        nop
 
     # wanted to do this with an array, but not enough DMEM
     # and can't load IMEM :( (or can you ?)
@@ -149,22 +160,27 @@ massageMonochrome:
         lui $A, 0xFFFF
         ori $A, $A, 0xFFFF
         j .done
+        nop
 
     .colour1:
         lui $A, 0xA529
         ori $A, $A, 0xA529
         j .done
+        nop
 
     .colour2:
         lui $A, 0x5295
         ori $A, $A, 0x5295
         j .done
+        nop
 
     .colour3:
         lui $A, 0x0001
         ori $A, $A, 0x0001
+
     .done:
-    jr $ra
+        jr $ra
+        nop
 
 ###
 # Takes the 16 bit GBC colour in reg and converts
@@ -193,6 +209,7 @@ massageColour:
     sll $A, $t1, 0x10
     or $A, $A, $t1
     jr $ra
+    nop
 
 ###
 # Sets the RDP to draw red rectangles.
@@ -229,10 +246,14 @@ main:
 
             # massage it from gameboy format to n64 format.
             beq $IS_COLOUR, $0, 1f
+            nop
                 jal massageColour
+                nop
                 j 2f
+                nop
             1:
                 jal massageMonochrome
+                nop
             2:
 
             # push massaged colour on to the out-buffer
@@ -247,6 +268,7 @@ main:
 
         # end loop
         bgtz $PIXEL_COUNTER, .whileHasPixels
+        nop
 
         # DMA the data back to DRAM so we have our limited memory back.
         dmaOut 0x000, $OUT_BUFFER_ADDRESS, DMEM_SIZE
@@ -302,6 +324,7 @@ main:
 
     # loop until there are no more rectangles to draw.
     bgtz $RECTANGLE_COUNTER, .whileHasRectangles
+    nop
 
 # job done
 break
