@@ -268,6 +268,8 @@ void playDraw(const RootState* state, const byte playerNumber) {
     data_cache_hit_writeback(input, sizeof(RspIn));
     haltRsp();
     rdp_enable_texture_copy();
+
+    // TODO: re-implement load_data to check $RSP_RESERVED before writing to any registers!
     load_data(input, sizeof(RspIn));
     run_ucode();
 

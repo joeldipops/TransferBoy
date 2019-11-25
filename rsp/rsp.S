@@ -55,6 +55,16 @@
 
 
 _dmaIn:
+    1:
+        mfc0 $A, $RSP_RESERVED
+    bne $A, $0, 1b
+    nop
+
+    2:
+        mfc0 $A, $DMA_FULL
+    bne $A, $0, 2b
+    nop
+
     # Set source.
     mtc0 $a0, $DMA_DRAM
 
@@ -66,10 +76,13 @@ _dmaIn:
     mtc0 $a2, $DMA_IN_LENGTH
 
     # wait for DMA to complete
-    1:
+    3:
         mfc0 $A, $DMA_BUSY
-    bne $A, $0, 1b
+    bne $A, $0, 3b
     nop
+
+    # release the flag
+    mtc0 $0, $RSP_RESERVED
     jr $ra
     nop
 
@@ -91,6 +104,16 @@ _dmaIn:
 .endm
 
 _dmaOut:
+    1:
+        mfc0 $A, $RSP_RESERVED
+    bne $A, $0, 1b
+    nop
+
+    2:
+        mfc0 $A, $DMA_FULL
+    bne $A, $0, 2b
+    nop
+
     # Set source.
     mtc0 $a0, $DMA_DMEM
 
@@ -102,10 +125,13 @@ _dmaOut:
     mtc0 $a2, $DMA_OUT_LENGTH
 
     # wait for DMA to complete
-    1:
+    3:
         mfc0 $A, $DMA_BUSY
-    bne $A, $0, 1b
+    bne $A, $0, 3b
     nop
+
+    # release the flag
+    mtc0 $0, $RSP_RESERVED
     jr $ra
     nop
 
