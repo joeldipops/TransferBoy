@@ -236,19 +236,17 @@ void playLogic(RootState* state, const byte playerNumber) {
 }
 
 /**
+ * Place holder callback for
+ * event triggered when RSP finishes rendering.
+ */
+static void onFrameRendered() {}
+
+/**
  * Draws gameboy screen.
  * @param state program state.
  * @param playerNumber player in play mode.
  */
 void playDraw(const RootState* state, const byte playerNumber) {
-    // We need a  way to pass this commented out information to the RDP
-    // But so far have struggled.
-    // I've hard coded it for now which has means
-    // * Monochrome GB only
-    // * Single player only
-    // * Very fickle, if any mem addresses change, the hard coding needs to be updated.
-
-    /*
     Rectangle screen = {};
     getScreenPosition(state, playerNumber, &screen);
 
@@ -269,20 +267,10 @@ void playDraw(const RootState* state, const byte playerNumber) {
 
     // TODO Calculate block height
     // But 6 lines of 160 16bit pixels can fit in 4kB of DMEM at a time.
-    input->Screen = (Rectangle){ screen.Left, screen.Top, 160, 6 };
+    input->Screen = (Rectangle){ screen.Left, screen.Top, 320, 12 };
 
-    data_cache_hit_writeback(input, sizeof(RspIn));
-    haltRsp();
-    rdp_enable_texture_copy();
-
-    // TODO: re-implement load_data to check $RSP_RESERVED before writing to any registers!
-    load_data(input, sizeof(RspIn));
-    run_ucode();
+    renderFrame(input, onFrameRendered);
     free_aligned(pointer);
-
-    */
-    haltRsp();
-    run_ucode();
 
     if (SHOW_FRAME_COUNT) {
         string text = "";

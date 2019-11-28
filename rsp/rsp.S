@@ -13,6 +13,11 @@
 .eqv RspIn_SCREEN_SIZE, 0x0C
 .eqv RspIn_IS_COLOUR, 0x10
 
+# This will change easily after certain compiles.
+# Need to find a way to cement it in place.
+.eqv INTERFACE_ADDRESS, 0x80029388
+.eqv INTERFACE_SIZE, 0x20
+
 .eqv DMEM_SIZE, 0x1000
 # Input pixels for the current rectangle go here.
 .eqv DMEM_GB_BASE, 0
@@ -240,24 +245,13 @@ massageColour:
 ###
 # Sets the RDP to draw red rectangles.
 main:
-    # Hard code the config for now since I can't bloody get DMA to work properly
-    # TODO: Obviously not this.  Aside form the general dodginess it makes two-player impossible.
-    lui $A, 0x801c
-    ori $A, $A, 0xa108
-    sw $A, RspIn_IN_ADDRESS($0)
+    lui $A, INTERFACE_ADDRESS >> 16
+    ori $A, INTERFACE_ADDRESS & 0xFFFF
 
-    lui $A, 0x8002
-    ori $A, $A, 0x7988
-    sw $A, RspIn_OUT_ADDRESS($0)
-
-    lui $A, 0x00a0
-    ori $A, $A, 0x0032
-    sw $A, RspIn_SCREEN_POSITION($0)
-
-    lui $A, 0x0140
-    ori $A, $A, 0x000C
-    sw $A, RspIn_SCREEN_SIZE($0)
-
+    # Bring in the configuration.
+    dmaIn $A, DMEM_GB_BASE, INTERFACE_SIZE
+    # TODO: Currently doesn't bring in this flag on hardware.
+    # Seems you need to size things perfectly to get the DMA to work as needed.
     sw $0, RspIn_IS_COLOUR($0)
 
     # Stash config in some registers (including screen size & loc details)

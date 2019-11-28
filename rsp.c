@@ -2,18 +2,43 @@
 #include <stdlib.h>
 #include "core.h"
 #include "logger.h"
+#include "rsp.h"
 
 extern const char rsp_code_start __attribute((section(".data")));
 extern const char rsp_code_end __attribute((section(".data")));
 extern const char rsp_code_size __attribute((section(".data")));
 
-extern uint32_t outBuffer[0x0400];
+/**
+ * Memory Address that RSP will read from to get
+ * the data it needs to know what to render.
+ * TODO: Is there are way to fix this at a known address?
+ * Currently each compile might end up putting it somewhere completely different
+ * and breaking everythig until I find what the new value is.
+ */
+static RspIn RspInterface;
 
 /**
  * Called if the RSP hits a break instruction.
  */
 static void onRSPException() {
     //while(true);
+}
+
+/**
+ * Kicks off the RSP to render the next frame.
+ * @param configuration configures how and what to render.
+ * @param onRspBreak callback to run in the event of an rsp break instruction.
+ */
+void renderFrame(RspIn* configuration, RspEventHandler onRspBreak) {
+    haltRsp();
+    if (onRspBreak) {
+        register_SP_handler(onRspBreak);
+        set_SP_interrupt(1);
+    }
+
+    memcpy(&RspInterface, configuration, sizeof(RspIn));
+    data_cache_hit_writeback(&RspInterface, sizeof(RspIn));
+    run_ucode();
 }
 
 // Following taken from libdragon source since it doesn't provide direct access to these registers.
@@ -53,9 +78,6 @@ void haltRsp() {
  * DMAs a fixed set of instructions to the RSP ready to be run when we call run_ucode()
  */
 void prepareMicrocode() {
-    register_SP_handler(&onRSPException);
-    set_SP_interrupt(1);
-
     unsigned long size = (unsigned long)&rsp_code_size;
     load_ucode((void*)&rsp_code_start, size);
 }
