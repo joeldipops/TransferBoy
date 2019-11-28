@@ -254,8 +254,8 @@ main:
     ori $A, $A, 0x0032
     sw $A, RspIn_SCREEN_POSITION($0)
 
-    lui $A, 0x00a0
-    ori $A, $A, 0x0006
+    lui $A, 0x0140
+    ori $A, $A, 0x000C
     sw $A, RspIn_SCREEN_SIZE($0)
 
     sw $0, RspIn_IS_COLOUR($0)
@@ -360,8 +360,7 @@ main:
         ## Draw a rectangle with the texture we have set up
         ## tile = 1 x1,y1 = {0, 0} x2,y2 = {160, 6}
         ### not doing anything fancy with the s & ts
-        textureRectangle 1, $a0, $a1, $a2, $a3, 0, 0, 4096, 1024
-        #textureRectangle 1, $a0, $a1, $a2, $a3, 0, 0, 2048, 2048
+        textureRectangle 1, $a0, $a1, $a2, $a3, 0, 0, 2048, 512
 
         # increment address pointer.
         # TODO - Magic numbers.
@@ -369,7 +368,7 @@ main:
 
         # increment draw top
         # TODO - By determined block height.
-        addi $SCREEN_POSITION, $SCREEN_POSITION, 6
+        addi $SCREEN_POSITION, $SCREEN_POSITION, 12
         addi $RECTANGLE_COUNTER, $RECTANGLE_COUNTER, -1
 
     # loop until there are no more rectangles to draw.
