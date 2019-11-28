@@ -240,6 +240,26 @@ massageColour:
 ###
 # Sets the RDP to draw red rectangles.
 main:
+    # Hard code the config for now since I can't bloody get DMA to work properly
+    # TODO: Obviously not this.  Aside form the general dodginess it makes two-player impossible.
+    lui $A, 0x801c
+    ori $A, $A, 0xa108
+    sw $A, RspIn_IN_ADDRESS($0)
+
+    lui $A, 0x8002
+    ori $A, $A, 0x7988
+    sw $A, RspIn_OUT_ADDRESS($0)
+
+    lui $A, 0x00a0
+    ori $A, $A, 0x0032
+    sw $A, RspIn_SCREEN_POSITION($0)
+
+    lui $A, 0x00a0
+    ori $A, $A, 0x0006
+    sw $A, RspIn_SCREEN_SIZE($0)
+
+    sw $0, RspIn_IS_COLOUR($0)
+
     # Stash config in some registers (including screen size & loc details)
     lw $GB_BUFFER_ADDRESS, RspIn_IN_ADDRESS($0)
     lw $OUT_BUFFER_ADDRESS, RspIn_OUT_ADDRESS($0)
@@ -253,7 +273,7 @@ main:
     # while address < end of buffer
     .whileHasRectangles:
         # DMA in the next 2048 pixels
-        dmaIn $GB_BUFFER_ADDRESS, DMEM_GB_BASE, DMEM_SIZE / 2
+        dmaIn $GB_BUFFER_ADDRESS, DMEM_GB_BASE, DMEM_SIZE
 
         addi $PIXEL_ADDRESS, $0, DMEM_GB_BASE
         # Starts at 0 and mostly fills up DMEM as we get through GB pixels.
@@ -302,9 +322,9 @@ main:
         # Ask the RDP to render the textured line we just built.
 
         # TODO - Pass proper values to these.
-
         # Sync before loading a new texture.
         syncPipe
+
 
         ## Tell RDP where to look for texture data.
         ## rbga colour format, 16 bit colours, 160 pixels, address in DRAM
@@ -334,10 +354,14 @@ main:
         add $a2, $a2, $a0
         add $a3, $a3, $a1
 
+        #addi $a2, $a2, 160
+        #addi $a3, $a3, 144
+
         ## Draw a rectangle with the texture we have set up
         ## tile = 1 x1,y1 = {0, 0} x2,y2 = {160, 6}
         ### not doing anything fancy with the s & ts
         textureRectangle 1, $a0, $a1, $a2, $a3, 0, 0, 4096, 1024
+        #textureRectangle 1, $a0, $a1, $a2, $a3, 0, 0, 2048, 2048
 
         # increment address pointer.
         # TODO - Magic numbers.

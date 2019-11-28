@@ -21,7 +21,7 @@
 #include <libdragon.h>
 
 typedef enum {GameboyPalette, SuperGameboyPalette, GameboyColorPalette } PaletteType;
-
+static uint32_t outBuffer[0x0400];
 /**
  * Loads a gb bios file if one is available.
  * @param state state to copy the bios to.
@@ -82,6 +82,7 @@ static void initialiseEmulator(GbState* state) {
  */
 void resetPlayState(PlayerState* state) {
     initialiseEmulator(&state->EmulationState);
+    memset(outBuffer, 0x00, 0x1000);
     state->BuffersInitialised = 0;
     state->Meta.FrameCount = 0;
     resetSGBState(&state->SGBState);
@@ -234,15 +235,20 @@ void playLogic(RootState* state, const byte playerNumber) {
     }
 }
 
-static uint32_t outBuffer[0x0400];
-
 /**
  * Draws gameboy screen.
  * @param state program state.
  * @param playerNumber player in play mode.
  */
 void playDraw(const RootState* state, const byte playerNumber) {
-    // Main background.
+    // We need a  way to pass this commented out information to the RDP
+    // But so far have struggled.
+    // I've hard coded it for now which has means
+    // * Monochrome GB only
+    // * Single player only
+    // * Very fickle, if any mem addresses change, the hard coding needs to be updated.
+
+    /*
     Rectangle screen = {};
     getScreenPosition(state, playerNumber, &screen);
 
@@ -272,8 +278,11 @@ void playDraw(const RootState* state, const byte playerNumber) {
     // TODO: re-implement load_data to check $RSP_RESERVED before writing to any registers!
     load_data(input, sizeof(RspIn));
     run_ucode();
-
     free_aligned(pointer);
+
+    */
+    haltRsp();
+    run_ucode();
 
     if (SHOW_FRAME_COUNT) {
         string text = "";

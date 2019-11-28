@@ -13,6 +13,7 @@ extern uint32_t outBuffer[0x0400];
  * Called if the RSP hits a break instruction.
  */
 static void onRSPException() {
+    //while(true);
 }
 
 // Following taken from libdragon source since it doesn't provide direct access to these registers.
