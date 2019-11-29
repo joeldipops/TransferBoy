@@ -257,20 +257,16 @@ void playDraw(const RootState* state, const byte playerNumber) {
         palette = SuperGameboyPalette;
     }
 
-    // Data to be DMAd must be aligned to 16 bytes.
-    AlignedPointer pointer = malloc_aligned(sizeof(RspIn), 16);
-    RspIn* input = (RspIn*) pointer.p;
+    screen = (Rectangle) { screen.Left, screen.Top, 320, 12 };
 
-    input->InAddress = (uint32_t)state->Players[playerNumber].EmulationState.NextBuffer;
-    input->OutAddress = (uint32_t)outBuffer;
-    input->IsColour = (palette == GameboyColorPalette);
-
-    // TODO Calculate block height
-    // But 6 lines of 160 16bit pixels can fit in 4kB of DMEM at a time.
-    input->Screen = (Rectangle){ screen.Left, screen.Top, 320, 12 };
-
-    renderFrame(input, onFrameRendered);
-    free_aligned(pointer);
+    renderFrame(
+        (uintptr_t)state->Players[playerNumber].EmulationState.NextBuffer,
+        (uintptr_t)outBuffer,
+        // TODO Calculate block height
+        // But 6 lines of 160 16bit pixels can fit in 4kB of DMEM at a time.
+        &screen,
+        palette == GameboyColorPalette
+    );
 
     if (SHOW_FRAME_COUNT) {
         string text = "";

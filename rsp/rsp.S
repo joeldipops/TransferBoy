@@ -1,4 +1,5 @@
 #include <ucode.S>
+#include "../global.h"
 #include "init.S"
 #include "rdp.h"
 
@@ -13,9 +14,6 @@
 .eqv RspIn_SCREEN_SIZE, 0x0C
 .eqv RspIn_IS_COLOUR, 0x10
 
-# This will change easily after certain compiles.
-# Need to find a way to cement it in place.
-.eqv INTERFACE_ADDRESS, 0x80029388
 .eqv INTERFACE_SIZE, 0x20
 
 .eqv DMEM_SIZE, 0x1000
@@ -245,8 +243,8 @@ massageColour:
 ###
 # Sets the RDP to draw red rectangles.
 main:
-    lui $A, INTERFACE_ADDRESS >> 16
-    ori $A, INTERFACE_ADDRESS & 0xFFFF
+    lui $A, RSP_INTERFACE_ADDRESS >> 16
+    ori $A, RSP_INTERFACE_ADDRESS & 0xFFFF
 
     # Bring in the configuration.
     dmaIn $A, DMEM_GB_BASE, INTERFACE_SIZE

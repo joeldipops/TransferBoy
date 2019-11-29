@@ -3,6 +3,7 @@
 #include "core.h"
 #include "logger.h"
 #include "rsp.h"
+#include "global.h"
 
 extern const char rsp_code_start __attribute((section(".data")));
 extern const char rsp_code_end __attribute((section(".data")));
@@ -11,11 +12,8 @@ extern const char rsp_code_size __attribute((section(".data")));
 /**
  * Memory Address that RSP will read from to get
  * the data it needs to know what to render.
- * TODO: Is there are way to fix this at a known address?
- * Currently each compile might end up putting it somewhere completely different
- * and breaking everythig until I find what the new value is.
  */
-static RspIn RspInterface;
+volatile RspIn* RspInterface = (RspIn*) RSP_INTERFACE_ADDRESS;
 
 /**
  * Called if the RSP hits a break instruction.
@@ -26,18 +24,20 @@ static void onRSPException() {
 
 /**
  * Kicks off the RSP to render the next frame.
- * @param configuration configures how and what to render.
- * @param onRspBreak callback to run in the event of an rsp break instruction.
+ * @param inBuffer gameboy screen buffer pixels are picked up by the RSP from here.
+ * @param outBuffer after RSP generates a texture, it will DMA it back into DRAM at this address.
+ * @param screen size and position of the textures drawn by the RSP.
+ * @param isColour if true, inBuffer words represent 2 bit DMG pixels.  Otherwise they are 16bit GBC pixels
  */
-void renderFrame(RspIn* configuration, RspEventHandler onRspBreak) {
+void renderFrame(uintptr_t inBuffer, uintptr_t outBuffer, Rectangle* screen, bool isColour) {
     haltRsp();
-    if (onRspBreak) {
-        register_SP_handler(onRspBreak);
-        set_SP_interrupt(1);
-    }
 
-    memcpy(&RspInterface, configuration, sizeof(RspIn));
-    data_cache_hit_writeback(&RspInterface, sizeof(RspIn));
+    RspInterface->InAddress = inBuffer;
+    RspInterface->OutAddress = outBuffer;
+    RspInterface->Screen = *screen;
+    RspInterface->IsColour = isColour;
+
+    data_cache_hit_writeback(RspInterface, sizeof(RspIn));
     run_ucode();
 }
 
