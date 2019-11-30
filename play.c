@@ -21,7 +21,7 @@
 #include <libdragon.h>
 
 typedef enum {GameboyPalette, SuperGameboyPalette, GameboyColorPalette } PaletteType;
-static uint32_t outBuffer[0x0400];
+
 /**
  * Loads a gb bios file if one is available.
  * @param state state to copy the bios to.
@@ -82,7 +82,6 @@ static void initialiseEmulator(GbState* state) {
  */
 void resetPlayState(PlayerState* state) {
     initialiseEmulator(&state->EmulationState);
-    memset(outBuffer, 0x00, 0x1000);
     state->BuffersInitialised = 0;
     state->Meta.FrameCount = 0;
     resetSGBState(&state->SGBState);
@@ -261,7 +260,7 @@ void playDraw(const RootState* state, const byte playerNumber) {
 
     renderFrame(
         (uintptr_t)state->Players[playerNumber].EmulationState.NextBuffer,
-        (uintptr_t)outBuffer,
+        (uintptr_t)state->Players[playerNumber].EmulationState.TextureBuffer,
         // TODO Calculate block height
         // But 6 lines of 160 16bit pixels can fit in 4kB of DMEM at a time.
         &screen,

@@ -17,15 +17,7 @@
  * emulator, not the state of the emulated hardware.
  */
 void emu_init(GbState *s) {
-    s->ScreenTexture = calloc(1, sizeof(sprite_t) + 4 * GB_LCD_WIDTH * GB_LCD_HEIGHT);
-    
-    // I cannot understand why I have double the width but not the height to get things to render properly
-    // But it works now (at least in single player), so ok.
-    s->ScreenTexture->width = GB_LCD_WIDTH * 2;
-    s->ScreenTexture->height = GB_LCD_HEIGHT;
-    s->ScreenTexture->bitdepth = 2;// DEPTH_16_BPP;
-    s->ScreenTexture->hslices = 5; //GB_LCD_WIDTH / 32;
-    s->ScreenTexture->vslices = 6; //GB_LCD_HEIGHT / 24;
+
 }
 
 void emu_step(PlayerState* state) {

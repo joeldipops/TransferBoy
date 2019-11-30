@@ -248,7 +248,7 @@ main:
 
     # Bring in the configuration.
     dmaIn $A, DMEM_GB_BASE, INTERFACE_SIZE
-
+    
     # Stash config in some registers (including screen size & loc details)
     lw $GB_BUFFER_ADDRESS, RspIn_IN_ADDRESS($0)
     lw $OUT_BUFFER_ADDRESS, RspIn_OUT_ADDRESS($0)

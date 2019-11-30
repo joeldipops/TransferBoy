@@ -89,4 +89,11 @@ void haltRsp() {
 void prepareMicrocode() {
     unsigned long size = (unsigned long)&rsp_code_size;
     load_ucode((void*)&rsp_code_start, size);
+
+    // Zero out the padding.
+    rspInterface->BytePadding[0] = 0;
+    rspInterface->BytePadding[1] = 0;
+    rspInterface->BytePadding[2] = 0;
+    rspInterface->WordPadding[0] = 0;
+    rspInterface->WordPadding[1] = 0;
 }
