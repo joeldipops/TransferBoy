@@ -4,14 +4,6 @@
 #include <libdragon.h>
 #include "screen.h"
 
-typedef struct {
-    uintptr_t InAddress;
-    uintptr_t OutAddress;
-    Rectangle Screen;
-    bool IsColour;
-    uint32_t padding[3];
-} RspIn;
-
 typedef void (*RspEventHandler)();
 
 /**

@@ -248,9 +248,6 @@ main:
 
     # Bring in the configuration.
     dmaIn $A, DMEM_GB_BASE, INTERFACE_SIZE
-    # TODO: Currently doesn't bring in this flag on hardware.
-    # Seems you need to size things perfectly to get the DMA to work as needed.
-    sw $0, RspIn_IS_COLOUR($0)
 
     # Stash config in some registers (including screen size & loc details)
     lw $GB_BUFFER_ADDRESS, RspIn_IN_ADDRESS($0)
@@ -317,15 +314,13 @@ main:
         # Sync before loading a new texture.
         syncPipe
 
-
         ## Tell RDP where to look for texture data.
         ## rbga colour format, 16 bit colours, 160 pixels, address in DRAM
         setTextureImage RGBA_FORMAT, COLOUR_DEPTH_16, GB_LCD_WIDTH, $OUT_BUFFER_ADDRESS
 
         ## Set up a tile now that the RDP has the data.
-        ## rgba format, 16b, 160*2B fit in 64x64 words (CHECK THIS!!), tmem address 0 (CHECK THAT TOO)
-        ## maskT 4 (CHECK), maskS 8 (CHECK!!!)
-        setTile 1, RGBA_FORMAT, COLOUR_DEPTH_16, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ## rgba format, 16b, 160*2B fit in 64x64 words.
+        setTile 1, RGBA_FORMAT, COLOUR_DEPTH_16, 64, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0
 
         ## Give tile a size & shape
         ## tile = 1 sl,tl = {0,0}, sh,th = {width - 1, height - 1}

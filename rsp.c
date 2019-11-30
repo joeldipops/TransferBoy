@@ -9,11 +9,20 @@ extern const char rsp_code_start __attribute((section(".data")));
 extern const char rsp_code_end __attribute((section(".data")));
 extern const char rsp_code_size __attribute((section(".data")));
 
+typedef struct {
+    uintptr_t InAddress;
+    uintptr_t OutAddress;
+    Rectangle Screen;
+    bool IsColour;
+    byte BytePadding[3];
+    uint32_t WordPadding[2];
+} RspInterface;
+
 /**
  * Memory Address that RSP will read from to get
  * the data it needs to know what to render.
  */
-volatile RspIn* RspInterface = (RspIn*) RSP_INTERFACE_ADDRESS;
+volatile RspInterface* rspInterface = (RspInterface*) RSP_INTERFACE_ADDRESS;
 
 /**
  * Called if the RSP hits a break instruction.
@@ -32,12 +41,12 @@ static void onRSPException() {
 void renderFrame(uintptr_t inBuffer, uintptr_t outBuffer, Rectangle* screen, bool isColour) {
     haltRsp();
 
-    RspInterface->InAddress = inBuffer;
-    RspInterface->OutAddress = outBuffer;
-    RspInterface->Screen = *screen;
-    RspInterface->IsColour = isColour;
+    rspInterface->InAddress = inBuffer;
+    rspInterface->OutAddress = outBuffer;
+    rspInterface->Screen = *screen;
+    rspInterface->IsColour = isColour;
 
-    data_cache_hit_writeback(RspInterface, sizeof(RspIn));
+    data_cache_hit_writeback(rspInterface, sizeof(RspInterface));
     run_ucode();
 }
 
