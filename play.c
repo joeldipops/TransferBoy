@@ -273,7 +273,7 @@ void playDraw(const RootState* state, const byte playerNumber) {
 
         long diff = state->Players[playerNumber].Meta.NextClock - state->Players[playerNumber].Meta.LastClock;
 
-        sprintf(text, "Mem: %lld FPS: %f %lld" , getCurrentMemory(), ((FRAMES_TO_SKIP + 1) / (double)diff) * 1000, state->Players[playerNumber].Meta.FrameCount);
+        sprintf(text, "FPS: %f %lld", ((FRAMES_TO_SKIP + 1) / (double)diff) * 1000, state->Players[playerNumber].Meta.FrameCount);
         graphics_set_color(GLOBAL_TEXT_COLOUR, 0x0);
         graphics_draw_box(2, 0, 450, 680, 10, GLOBAL_BACKGROUND_COLOUR);
         graphics_draw_text(2, 5, 450, text);
