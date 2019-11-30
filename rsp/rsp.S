@@ -17,8 +17,15 @@
 .eqv INTERFACE_SIZE, 0x20
 
 .eqv DMEM_SIZE, 0x1000
+.eqv BUFFER_SIZE, 0x0F00
 # Input pixels for the current rectangle go here.
 .eqv DMEM_GB_BASE, 0
+
+.eqv MONOCHROME_PALETTE, 0x0FF0
+.eqv LIGHTEST, 0xFFFFFFFF
+.eqv LIGHTER, 0xA529A529
+.eqv DARKER,  0x52955295
+.eqv DARKEST, 0x00010001
 
 .eqv GB_LCD_WIDTH, 160
 .eqv GB_LCD_HEIGHT, 144
@@ -56,17 +63,26 @@
 # Length and Width of screen
 .set $SCREEN_SIZE, $26
 
+###
+# Load Immediate Word
+# loads a 32bit immediate value into register.
+# @input \reg Register to load.
+# @input \word Value to load.
+###
+.macro liw reg word
+    lui \reg, \word >> 16
+    ori \reg, \reg, \word & 0xFFFF
+.endm
+
 
 _dmaIn:
     1:
         mfc0 $A, $RSP_RESERVED
     bne $A, $0, 1b
-    nop
 
     2:
         mfc0 $A, $DMA_FULL
     bne $A, $0, 2b
-    nop
 
     # Set source.
     mtc0 $a0, $DMA_DRAM
@@ -82,12 +98,10 @@ _dmaIn:
     3:
         mfc0 $A, $DMA_BUSY
     bne $A, $0, 3b
-    nop
 
     # release the flag
     mtc0 $0, $RSP_RESERVED
     jr $ra
-    nop
 
 
 ###
@@ -103,19 +117,17 @@ _dmaIn:
     addi $a1, $0, \dest
     addi $a2, $0, \length
     jal _dmaIn
-    nop
+    
 .endm
 
 _dmaOut:
     1:
         mfc0 $A, $RSP_RESERVED
     bne $A, $0, 1b
-    nop
 
     2:
         mfc0 $A, $DMA_FULL
     bne $A, $0, 2b
-    nop
 
     # Set source.
     mtc0 $a0, $DMA_DMEM
@@ -131,12 +143,10 @@ _dmaOut:
     3:
         mfc0 $A, $DMA_BUSY
     bne $A, $0, 3b
-    nop
 
     # release the flag
     mtc0 $0, $RSP_RESERVED
     jr $ra
-    nop
 
 ###
 # Writes to the three DMA registers to kick off a transfer
@@ -151,7 +161,6 @@ _dmaOut:
     add $a1, $0, \dest
     addi $a2, $0, \length
     jal _dmaOut
-    nop
 .endm
 
 ###
@@ -162,54 +171,12 @@ _dmaOut:
 # TODO: Make params happen
 ###
 massageMonochrome:
-    beq $A, $0, .colour0
-    nop
-
-    addi $t1, $0, 1
-    beq $A, $t1, .colour1
-    nop
-
-    addi $t1, $0, 2
-    beq $A, $t1, .colour2
-    nop
-
-    addi $t1, $0, 3
-    beq $A, $t1, .colour3
-    nop
-
-        # default handler. for now, just make things red so it's obvious.
-        lui $A, 0xF801
-        ori $A, $A, 0xF801
-        j .done
-        nop
-
-    # wanted to do this with an array, but not enough DMEM
-    # and can't load IMEM :( (or can you ?)
-    .colour0:
-        lui $A, 0xFFFF
-        ori $A, $A, 0xFFFF
-        j .done
-        nop
-
-    .colour1:
-        lui $A, 0xA529
-        ori $A, $A, 0xA529
-        j .done
-        nop
-
-    .colour2:
-        lui $A, 0x5295
-        ori $A, $A, 0x5295
-        j .done
-        nop
-
-    .colour3:
-        lui $A, 0x0001
-        ori $A, $A, 0x0001
-
-    .done:
-        jr $ra
-        nop
+    # zero out irrelevant bits
+    andi $A, $A, 3
+    # and multiply by four since we deal with 32bit addresses
+    sll $A, $A, 2
+    lw $A, MONOCHROME_PALETTE($A)
+    jr $ra
 
 ###
 # Takes the 16 bit GBC colour in reg and converts
@@ -219,6 +186,9 @@ massageMonochrome:
 # @ouput reg contains the 32bit colour.
 ###
 massageColour:
+    # it's sign extended, so...
+    andi $A, $A, 0x0000FFFF
+
     # blue
     andi $t1, $A, 0x7C00
     srl $t1, $t1, 0x09
@@ -238,17 +208,15 @@ massageColour:
     sll $A, $t1, 0x10
     or $A, $A, $t1
     jr $ra
-    nop
 
 ###
 # Sets the RDP to draw red rectangles.
 main:
-    lui $A, RSP_INTERFACE_ADDRESS >> 16
-    ori $A, RSP_INTERFACE_ADDRESS & 0xFFFF
+    liw $A, RSP_INTERFACE_ADDRESS
 
     # Bring in the configuration.
     dmaIn $A, DMEM_GB_BASE, INTERFACE_SIZE
-    
+
     # Stash config in some registers (including screen size & loc details)
     lw $GB_BUFFER_ADDRESS, RspIn_IN_ADDRESS($0)
     lw $OUT_BUFFER_ADDRESS, RspIn_OUT_ADDRESS($0)
@@ -256,13 +224,25 @@ main:
     lw $SCREEN_SIZE, RspIn_SCREEN_SIZE($0)
     lw $IS_COLOUR, RspIn_IS_COLOUR($0)
 
+    bne $IS_COLOUR, $0, 1f
+        # If monochrome, set up palette in memory
+        liw $A, LIGHTEST
+        sw $A, MONOCHROME_PALETTE($0)
+        liw $A, LIGHTER
+        sw $A, (MONOCHROME_PALETTE + 4)($0)
+        liw $A, DARKER
+        sw $A, (MONOCHROME_PALETTE + 8)($0)
+        liw $A, DARKEST
+        sw $A, (MONOCHROME_PALETTE + 0xC)($0)
+    1:
+
     # TODO - Magic number
     addi $RECTANGLE_COUNTER, $0, 24
 
     # while address < end of buffer
     .whileHasRectangles:
         # DMA in the next 2048 pixels
-        dmaIn $GB_BUFFER_ADDRESS, DMEM_GB_BASE, DMEM_SIZE
+        dmaIn $GB_BUFFER_ADDRESS, DMEM_GB_BASE, BUFFER_SIZE
 
         addi $PIXEL_ADDRESS, $0, DMEM_GB_BASE
         # Starts at 0 and mostly fills up DMEM as we get through GB pixels.
@@ -276,19 +256,12 @@ main:
             # put a pixel into a register
             lh $A, 0($PIXEL_ADDRESS)
 
-            # it's sign extended, so...
-            andi $A, $A, 0x0000FFFF
-
             # massage it from gameboy format to n64 format.
             beq $IS_COLOUR, $0, 1f
-            nop
                 jal massageColour
-                nop
                 j 2f
-                nop
             1:
                 jal massageMonochrome
-                nop
             2:
 
             # push massaged colour on to the out-buffer
@@ -303,10 +276,9 @@ main:
 
         # end loop
         bgtz $PIXEL_COUNTER, .whileHasPixels
-        nop
 
         # DMA the data back to DRAM so we have our limited memory back.
-        dmaOut 0x000, $OUT_BUFFER_ADDRESS, DMEM_SIZE
+        dmaOut 0x000, $OUT_BUFFER_ADDRESS, BUFFER_SIZE
 
         # Ask the RDP to render the textured line we just built.
 
@@ -360,7 +332,6 @@ main:
 
     # loop until there are no more rectangles to draw.
     bgtz $RECTANGLE_COUNTER, .whileHasRectangles
-    nop
 
 # job done
 break

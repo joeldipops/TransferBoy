@@ -23,7 +23,6 @@ _execRdp:
         # bit 8 of $RDP_CMD_STATUS = RDP DMA is busy
         andi $A, $A, RDP_DMA_BUSY
     bne $A, $0, 1b
-    nop
 
     # send 2 to RDP_CMD_STATUS
     # in order to DMA from RSP memory (DMEM)
@@ -34,7 +33,7 @@ _execRdp:
     mtc0 $0, $RDP_CMD_START
     mtc0 $a0, $RDP_CMD_END
     jr $ra
-    nop
+
 
 ###
 # Sends an RDP command by writing to the RDP registers.
@@ -45,7 +44,6 @@ _execRdp:
     # + 4 because end expects the next address after data ends.
     addi $a0, $0, (\words * 4) + 4
     jal _execRdp
-    nop
 .endm
 
 ###
