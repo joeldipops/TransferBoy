@@ -11,6 +11,7 @@
 #include "screen.h"
 #include "resources.h"
 #include "hwdefs.h"
+#include "fps.h"
 #include <time.h>
 #include <string.h>
 #include <stdlib.h>
@@ -36,6 +37,9 @@ static void initialiseSubsystems() {
     getMemoryLimit();
     init_interrupts();
     timer_init();
+
+    new_timer(TIMER_TICKS(1000000), TF_CONTINUOUS, fps_timer);
+
     controller_init();
     dfs_init(DFS_DEFAULT_LOCATION);
 

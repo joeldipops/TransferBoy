@@ -10,8 +10,6 @@
 #define MAX_PLAYERS 2
 
 typedef struct {
-    long long LastClock;
-    long long NextClock;
     uLong FrameCount;
 } MetaState;
 

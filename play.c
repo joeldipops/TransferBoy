@@ -17,6 +17,7 @@
 #include "rsp.h"
 #include "hwdefs.h"
 #include "logger.h"
+#include "fps.h"
 
 #include <libdragon.h>
 
@@ -167,6 +168,9 @@ void playLogic(RootState* state, const byte playerNumber) {
     }
 
     if (s->lcd_entered_vblank) {
+
+        fps_frame();
+
         playerState->Meta.FrameCount++;
 
         if (FRAMES_TO_SKIP && (playerState->Meta.FrameCount % (FRAMES_TO_SKIP + 1))) {
@@ -175,9 +179,6 @@ void playLogic(RootState* state, const byte playerNumber) {
         } else {
             playerState->WasFrameSkipped = false;
         }
-
-        playerState->Meta.LastClock = playerState->Meta.NextClock;
-        playerState->Meta.NextClock = get_ticks_ms();
 
         if (IS_SGB_ENABLED && s->Cartridge.Header.IsSgbSupported) {
             applySGBPalettes(
@@ -270,9 +271,7 @@ void playDraw(const RootState* state, const byte playerNumber) {
     if (SHOW_FRAME_COUNT) {
         string text = "";
 
-        long diff = state->Players[playerNumber].Meta.NextClock - state->Players[playerNumber].Meta.LastClock;
-
-        sprintf(text, "FPS: %f %lld", ((FRAMES_TO_SKIP + 1) / (double)diff) * 1000, state->Players[playerNumber].Meta.FrameCount);
+        sprintf(text, "FPS: %d %lld", fps_get(), state->Players[playerNumber].Meta.FrameCount);
         graphics_set_color(GLOBAL_TEXT_COLOUR, 0x0);
         graphics_draw_box(2, 0, 450, 680, 10, GLOBAL_BACKGROUND_COLOUR);
         graphics_draw_text(2, 5, 450, text);

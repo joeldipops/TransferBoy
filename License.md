@@ -11,4 +11,6 @@ The above notice does not apply to the following, as they are not my original wo
   * gbc_state.h
   * gbz80ops.c
 
+* fps.c/h, which comes under the apache license.
+
 * assets/textMap.png Which contains a font that is Licensed as Freeware https://www.fontspace.com/help/#license-3

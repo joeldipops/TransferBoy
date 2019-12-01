@@ -168,7 +168,6 @@ _dmaOut:
 #
 # @input reg the dmg colour index (0 - 3)
 # @output reg the 32bit dmg colour.
-# TODO: Make params happen
 ###
 massageMonochrome:
     # zero out irrelevant bits

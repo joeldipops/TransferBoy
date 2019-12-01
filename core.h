@@ -81,5 +81,4 @@ AlignedPointer malloc_aligned(size_t size, byte alignment);
  * @param ptr Holds pointer to memory to be freed.
  */
 void free_aligned(AlignedPointer ptr);
-
 #endif

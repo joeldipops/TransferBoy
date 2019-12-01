@@ -37,6 +37,7 @@ $(PROG_NAME)$(ROM_EXTENSION): $(PROG_NAME).elf transferboy.dfs
 	$(CHKSUM64PATH) $(PROG_NAME)$(ROM_EXTENSION)
 
 LD_OFILES =  $(CURDIR)/obj/core.o
+LD_OFILES += $(CURDIR)/obj/fps.o
 LD_OFILES += $(CURDIR)/obj/resources.o
 LD_OFILES += $(CURDIR)/obj/init.o
 LD_OFILES += $(CURDIR)/obj/play.o
@@ -65,6 +66,7 @@ LD_OFILES += $(CURDIR)/obj/rsp.o
 
 $(PROG_NAME).elf : $(CURDIR)/rsp/rsp.o $(PROG_NAME).o
 
+	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/fps.o $(CURDIR)/fps.c
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/rtc.o $(CURDIR)/rtc.c
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/polyfill.o $(CURDIR)/polyfill.c
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/core.o $(CURDIR)/core.c
