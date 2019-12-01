@@ -28,26 +28,7 @@ volatile RspInterface* rspInterface = (RspInterface*) RSP_INTERFACE_ADDRESS;
  * Called if the RSP hits a break instruction.
  */
 static void onRSPException() {
-    //while(true);
-}
-
-/**
- * Kicks off the RSP to render the next frame.
- * @param inBuffer gameboy screen buffer pixels are picked up by the RSP from here.
- * @param outBuffer after RSP generates a texture, it will DMA it back into DRAM at this address.
- * @param screen size and position of the textures drawn by the RSP.
- * @param isColour if true, inBuffer words represent 2 bit DMG pixels.  Otherwise they are 16bit GBC pixels
- */
-void renderFrame(uintptr_t inBuffer, uintptr_t outBuffer, Rectangle* screen, bool isColour) {
-    haltRsp();
-
-    rspInterface->InAddress = inBuffer;
-    rspInterface->OutAddress = outBuffer;
-    rspInterface->Screen = *screen;
-    rspInterface->IsColour = isColour;
-
-    data_cache_hit_writeback(rspInterface, sizeof(RspInterface));
-    run_ucode();
+    printSegmentToFrame(2, "RSP Exception Raised", (byte*) rspInterface);
 }
 
 // Following taken from libdragon source since it doesn't provide direct access to these registers.
@@ -76,14 +57,6 @@ static volatile struct SP_regs_s* const SP_regs = (struct SP_regs_s *)0xa4040000
 #define SP_STATUS_SET_HALT 0x00002
 
 /**
- * Sets the RSP halt status so that it stops executing while we reload IMEM/DMEM
- */
-void haltRsp() {
-    *(volatile uint32_t *) 0xA4080000 = SP_DMA_IMEM;
-    SP_regs->status = SP_STATUS_SET_HALT;
-}
-
-/**
  * DMAs a fixed set of instructions to the RSP ready to be run when we call run_ucode()
  */
 void prepareMicrocode() {
@@ -96,4 +69,30 @@ void prepareMicrocode() {
     rspInterface->BytePadding[2] = 0;
     rspInterface->WordPadding[0] = 0;
     rspInterface->WordPadding[1] = 0;
+}
+
+/**
+ * Sets the RSP halt status so that it stops executing while we reload IMEM/DMEM
+ */
+void haltRsp() {
+    SP_regs->status = SP_STATUS_SET_HALT;
+}
+
+/**
+ * Kicks off the RSP to render the next frame.
+ * @param inBuffer gameboy screen buffer pixels are picked up by the RSP from here.
+ * @param outBuffer after RSP generates a texture, it will DMA it back into DRAM at this address.
+ * @param screen size and position of the textures drawn by the RSP.
+ * @param isColour if true, inBuffer words represent 2 bit DMG pixels.  Otherwise they are 16bit GBC pixels
+ */
+void renderFrame(uintptr_t inBuffer, uintptr_t outBuffer, Rectangle* screen, bool isColour) {
+    haltRsp();
+
+    rspInterface->InAddress = inBuffer;
+    rspInterface->OutAddress = outBuffer;
+    rspInterface->Screen = *screen;
+    rspInterface->IsColour = isColour;
+
+    data_cache_hit_writeback(rspInterface, sizeof(RspInterface));
+    run_ucode();
 }

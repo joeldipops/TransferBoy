@@ -333,7 +333,10 @@ main:
     bgtz $RECTANGLE_COUNTER, .whileHasRectangles
 
 # job done
-break
+stall:
+    nop
+    j stall
 
+break
 # Fill remainder with break instruction
 .org 2048, 0x0000000D
