@@ -241,9 +241,9 @@ main:
     # while address < end of buffer
     .whileHasRectangles:
         # DMA in the next 2048 pixels
-        dmaIn $GB_BUFFER_ADDRESS, DMEM_GB_BASE, BUFFER_SIZE
+        dmaIn $GB_BUFFER_ADDRESS, DMEM_GB_BASE + 0x800, BUFFER_SIZE / 2
 
-        addi $PIXEL_ADDRESS, $0, DMEM_GB_BASE
+        addi $PIXEL_ADDRESS, $0, DMEM_GB_BASE + 0x800
         # Starts at 0 and mostly fills up DMEM as we get through GB pixels.
         add $N64_BUFFER_POINTER, $0, $0
 
@@ -253,7 +253,10 @@ main:
         # for those pixels
         .whileHasPixels:
             # put a pixel into a register
-            lh $A, 0($PIXEL_ADDRESS)
+            lw $A, 0($PIXEL_ADDRESS)
+
+            # Pixels are 16 bit, not 32, so get the uppper bit first.
+            srl $A, $A, 16
 
             # massage it from gameboy format to n64 format.
             beq $IS_COLOUR, $0, 1f
@@ -262,16 +265,34 @@ main:
             1:
                 jal massageMonochrome
             2:
+            nop
 
             # push massaged colour on to the out-buffer
             sw $A, 0($N64_BUFFER_POINTER)
-            # and increment
-            ## turns out the compiler is actually storing each 16bit gameboy pixels
-            ## in 32bits.  That concerns me somewhat because if it changes this will break oh well.
-            addi $PIXEL_ADDRESS, $PIXEL_ADDRESS, 0x04
-            ## n64 pixels are 32bits though.
+
             addi $N64_BUFFER_POINTER, $N64_BUFFER_POINTER, 0x04
-            addi $PIXEL_COUNTER, $PIXEL_COUNTER, -1
+
+            # Repeat for the lower bit.
+            lw $A, 0($PIXEL_ADDRESS)
+            andi $A, $A, 0xFFFF
+
+            # massage it from gameboy format to n64 format.
+            beq $IS_COLOUR, $0, 1f
+                jal massageColour
+                j 2f
+            1:
+                jal massageMonochrome
+            2:
+            nop
+
+            # push massaged colour on to the out-buffer
+            sw $A, 0($N64_BUFFER_POINTER)
+
+            # and increment
+            ## n64 pixels are 32bits.
+            addi $PIXEL_ADDRESS, $PIXEL_ADDRESS, 0x04
+            addi $N64_BUFFER_POINTER, $N64_BUFFER_POINTER, 0x04
+            addi $PIXEL_COUNTER, $PIXEL_COUNTER, -2
 
         # end loop
         bgtz $PIXEL_COUNTER, .whileHasPixels
@@ -311,9 +332,6 @@ main:
 
         add $a2, $a2, $a0
         add $a3, $a3, $a1
-
-        #addi $a2, $a2, 160
-        #addi $a3, $a3, 144
 
         ## Draw a rectangle with the texture we have set up
         ## tile = 1 x1,y1 = {0, 0} x2,y2 = {160, 6}
