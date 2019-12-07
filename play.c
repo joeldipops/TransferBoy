@@ -257,7 +257,7 @@ void playDraw(const RootState* state, const byte playerNumber) {
         palette = SuperGameboyPalette;
     }
 
-    screen = (Rectangle) { screen.Left, screen.Top, 320, 12 };
+    screen = (Rectangle) { screen.Left, screen.Top, 160, 6 };
 
     renderFrame(
         (uintptr_t)state->Players[playerNumber].EmulationState.NextBuffer,

@@ -244,6 +244,7 @@ main:
         dmaIn $GB_BUFFER_ADDRESS, DMEM_GB_BASE + 0x800, BUFFER_SIZE / 2
 
         addi $PIXEL_ADDRESS, $0, DMEM_GB_BASE + 0x800
+        
         # Starts at 0 and mostly fills up DMEM as we get through GB pixels.
         add $N64_BUFFER_POINTER, $0, $0
 
@@ -297,26 +298,29 @@ main:
         # end loop
         bgtz $PIXEL_COUNTER, .whileHasPixels
 
+        # Sync before loading a new texture.
+        syncPipe
+
         # DMA the data back to DRAM so we have our limited memory back.
         dmaOut 0x000, $OUT_BUFFER_ADDRESS, BUFFER_SIZE
 
         # Ask the RDP to render the textured line we just built.
 
         # TODO - Pass proper values to these.
-        # Sync before loading a new texture.
-        syncPipe
+
 
         ## Tell RDP where to look for texture data.
         ## rbga colour format, 16 bit colours, 160 pixels, address in DRAM
-        setTextureImage RGBA_FORMAT, COLOUR_DEPTH_16, GB_LCD_WIDTH, $OUT_BUFFER_ADDRESS
+        setTextureImage RGBA_FORMAT, COLOUR_DEPTH_16, GB_LCD_WIDTH * 2, $OUT_BUFFER_ADDRESS
 
         ## Set up a tile now that the RDP has the data.
-        ## rgba format, 16b, 160*2B fit in 64x64 words.
-        setTile 1, RGBA_FORMAT, COLOUR_DEPTH_16, 64, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0
+        ## rgba format, 16b, 160 pixels * 4byte words * 6 rows fit in 64x64 words.
+        setTile 1, RGBA_FORMAT, COLOUR_DEPTH_16, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 
         ## Give tile a size & shape
         ## tile = 1 sl,tl = {0,0}, sh,th = {width - 1, height - 1}
-        loadTile 1, 0, 0, GB_LCD_WIDTH, 6
+        andi $a0, $SCREEN_SIZE, 0x0000FFFF
+        loadTile 1, 0, 0, GB_LCD_WIDTH, $a0
 
         # TODO Cache this somewhere. May need to use some less 
         # than conventional registers.
@@ -336,15 +340,16 @@ main:
         ## Draw a rectangle with the texture we have set up
         ## tile = 1 x1,y1 = {0, 0} x2,y2 = {160, 6}
         ### not doing anything fancy with the s & ts
-        textureRectangle 1, $a0, $a1, $a2, $a3, 0, 0, 2048, 512
+        textureRectangle 1, $a0, $a1, $a2, $a3, 0, 0, 4096, 1024
 
         # increment address pointer.
         # TODO - Magic numbers.
-        addi $GB_BUFFER_ADDRESS, $GB_BUFFER_ADDRESS, GB_LCD_WIDTH * 2 * 6
+        addi $GB_BUFFER_ADDRESS, $GB_BUFFER_ADDRESS, GB_LCD_WIDTH * 6 * 2
 
         # increment draw top
         # TODO - By determined block height.
-        addi $SCREEN_POSITION, $SCREEN_POSITION, 12
+        andi $A, $SCREEN_SIZE, 0x0000FFFF
+        add $SCREEN_POSITION, $SCREEN_POSITION, $A
         addi $RECTANGLE_COUNTER, $RECTANGLE_COUNTER, -1
 
     # loop until there are no more rectangles to draw.

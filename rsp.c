@@ -28,7 +28,7 @@ volatile RspInterface* rspInterface = (RspInterface*) RSP_INTERFACE_ADDRESS;
  * Called if the RSP hits a break instruction.
  */
 static void onRSPException() {
-    printSegmentToFrame(2, "RSP Exception Raised", (byte*) rspInterface);
+    printSegmentToFrame(2, "RSP Exception Raised - dumping rspInterface", (byte*) rspInterface);
 }
 
 // Following taken from libdragon source since it doesn't provide direct access to these registers.
@@ -60,6 +60,9 @@ static volatile struct SP_regs_s* const SP_regs = (struct SP_regs_s *)0xa4040000
  * DMAs a fixed set of instructions to the RSP ready to be run when we call run_ucode()
  */
 void prepareMicrocode() {
+    register_SP_handler(&onRSPException);
+    set_SP_interrupt(1);
+
     unsigned long size = (unsigned long)&rsp_code_size;
     load_ucode((void*)&rsp_code_start, size);
 

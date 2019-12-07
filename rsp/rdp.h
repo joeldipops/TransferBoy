@@ -206,7 +206,7 @@ _execRdp:
     addi $t1, $0, \sh - 1
     sll $t1, $t1, 12 + 2
     or $A, $A, $t1
-    addi $t1, $0, \th - 1
+    addi $t1, \th, -1
     sll $t1, $t1, 2
     or $A, $A, $t1
 
