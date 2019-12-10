@@ -236,7 +236,7 @@ main:
     1:
 
     # TODO - Magic number
-    addi $RECTANGLE_COUNTER, $0, 24
+    addi $RECTANGLE_COUNTER, $0, 1
 
     # while address < end of buffer
     .whileHasRectangles:
@@ -298,20 +298,18 @@ main:
         # end loop
         bgtz $PIXEL_COUNTER, .whileHasPixels
 
-        # Sync before loading a new texture.
-        syncPipe
-
         # DMA the data back to DRAM so we have our limited memory back.
         dmaOut 0x000, $OUT_BUFFER_ADDRESS, BUFFER_SIZE
 
         # Ask the RDP to render the textured line we just built.
 
+        ## Sync before loading a new texture.
+        syncPipe
         # TODO - Pass proper values to these.
-
 
         ## Tell RDP where to look for texture data.
         ## rbga colour format, 16 bit colours, 160 pixels, address in DRAM
-        setTextureImage RGBA_FORMAT, COLOUR_DEPTH_16, GB_LCD_WIDTH * 2, $OUT_BUFFER_ADDRESS
+        setTextureImage RGBA_FORMAT, COLOUR_DEPTH_16, GB_LCD_WIDTH, $OUT_BUFFER_ADDRESS
 
         ## Set up a tile now that the RDP has the data.
         ## rgba format, 16b, 160 pixels * 4byte words * 6 rows fit in 64x64 words.
@@ -340,7 +338,8 @@ main:
         ## Draw a rectangle with the texture we have set up
         ## tile = 1 x1,y1 = {0, 0} x2,y2 = {160, 6}
         ### not doing anything fancy with the s & ts
-        textureRectangle 1, $a0, $a1, $a2, $a3, 0, 0, 4096, 1024
+        #textureRectangle 1, $a0, $a1, $a2, $a3, 0, 0, 4096, 1024
+        textureRectangle 1, $a0, $a1, $a2, $a3, 0, 0, 1024, 256
 
         # increment address pointer.
         # TODO - Magic numbers.

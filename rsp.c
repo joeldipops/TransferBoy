@@ -29,6 +29,7 @@ volatile RspInterface* rspInterface = (RspInterface*) RSP_INTERFACE_ADDRESS;
  */
 static void onRSPException() {
     printSegmentToFrame(2, "RSP Exception Raised - dumping rspInterface", (byte*) rspInterface);
+    printSegmentToFrame(2, "RSP Exception Raised - dumping output", (byte*) rspInterface->OutAddress);
 }
 
 // Following taken from libdragon source since it doesn't provide direct access to these registers.
