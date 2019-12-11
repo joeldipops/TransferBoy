@@ -22,10 +22,6 @@
 .eqv DMEM_GB_BASE, 0
 
 .eqv MONOCHROME_PALETTE, 0x0FF0
-#.eqv LIGHTEST, 0xFFFFFFFF
-#.eqv LIGHTER, 0xA529A529
-#.eqv DARKER,  0x52955295
-#.eqv DARKEST, 0x00010001
 .eqv LIGHTEST,0x0000FFFF
 .eqv LIGHTER, 0x0000A529
 .eqv DARKER,  0x00005295
@@ -33,6 +29,7 @@
 
 .eqv GB_LCD_WIDTH, 160
 .eqv GB_LCD_HEIGHT, 144
+.eqv BATCH_HEIGHT, 6
 .eqv PIXEL_SIZE, 2
 .eqv GB_BUFFER_SIZE, GB_LCD_WIDTH * GB_LCD_HEIGHT * PIXEL_SIZE
 
@@ -246,12 +243,11 @@ main:
         # DMA in the next 2048 pixels
         dmaIn $GB_BUFFER_ADDRESS, DMEM_GB_BASE + 0x800, BUFFER_SIZE / 2
         addi $PIXEL_ADDRESS, $0, DMEM_GB_BASE + 0x800
-        
+
         # Starts at 0 and mostly fills up DMEM as we get through GB pixels.
         add $N64_BUFFER_POINTER, $0, $0
 
-        # TODO - get rid of magic numbers.
-        addi $PIXEL_COUNTER, $0, GB_LCD_WIDTH * 6
+        addi $PIXEL_COUNTER, $0, GB_LCD_WIDTH * BATCH_HEIGHT
 
         # for those pixels
         .whileHasPixels:
@@ -303,7 +299,7 @@ main:
         bgtz $PIXEL_COUNTER, .whileHasPixels
 
         # DMA the data back to DRAM so we have our limited memory back.
-        dmaOut 0x000, $OUT_BUFFER_ADDRESS, BUFFER_SIZE
+        dmaOut 0x000, $OUT_BUFFER_ADDRESS, BUFFER_SIZE / 2
 
         # Ask the RDP to render the textured line we just built.
 
@@ -321,8 +317,7 @@ main:
 
         ## Give tile a size & shape
         ## tile = 1 sl,tl = {0,0}, sh,th = {width - 1, height - 1}
-        andi $a0, $SCREEN_SIZE, 0x0000FFFF
-        loadTile 1, 0, 0, GB_LCD_WIDTH, $a0
+        loadTile 1, 0, 0, GB_LCD_WIDTH, BATCH_HEIGHT
 
         # TODO Cache this somewhere. May need to use some less 
         # than conventional registers.
@@ -342,15 +337,13 @@ main:
         ## Draw a rectangle with the texture we have set up
         ## tile = 1 x1,y1 = {0, 0} x2,y2 = {160, 6}
         ### not doing anything fancy with the s & ts
-        #textureRectangle 1, $a0, $a1, $a2, $a3, 0, 0, 4096, 1024
-        textureRectangle 1, $a0, $a1, $a2, $a3, 0, 0, 4096, 1024
+        textureRectangle 1, $a0, $a1, $a2, $a3, 0, 0, 2048, 512
 
         # increment address pointer.
         # TODO - Magic numbers.
-        addi $GB_BUFFER_ADDRESS, $GB_BUFFER_ADDRESS, GB_LCD_WIDTH * 6 * 2
+        addi $GB_BUFFER_ADDRESS, $GB_BUFFER_ADDRESS, GB_LCD_WIDTH * BATCH_HEIGHT * 2
 
         # increment draw top
-        # TODO - By determined block height.
         andi $A, $SCREEN_SIZE, 0x0000FFFF
         add $SCREEN_POSITION, $SCREEN_POSITION, $A
         addi $RECTANGLE_COUNTER, $RECTANGLE_COUNTER, -1
