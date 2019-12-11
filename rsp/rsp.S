@@ -22,10 +22,14 @@
 .eqv DMEM_GB_BASE, 0
 
 .eqv MONOCHROME_PALETTE, 0x0FF0
-.eqv LIGHTEST, 0xFFFFFFFF
-.eqv LIGHTER, 0xA529A529
-.eqv DARKER,  0x52955295
-.eqv DARKEST, 0x00010001
+#.eqv LIGHTEST, 0xFFFFFFFF
+#.eqv LIGHTER, 0xA529A529
+#.eqv DARKER,  0x52955295
+#.eqv DARKEST, 0x00010001
+.eqv LIGHTEST,0x0000FFFF
+.eqv LIGHTER, 0x0000A529
+.eqv DARKER,  0x00005295
+.eqv DARKEST, 0x00000001
 
 .eqv GB_LCD_WIDTH, 160
 .eqv GB_LCD_HEIGHT, 144
@@ -204,8 +208,7 @@ massageColour:
     or $t1, $t1, $t3
     ori $t1, $t1, 0x01
 
-    sll $A, $t1, 0x10
-    or $A, $A, $t1
+    ori $A, $t1, 0
     jr $ra
 
 ###
@@ -236,13 +239,12 @@ main:
     1:
 
     # TODO - Magic number
-    addi $RECTANGLE_COUNTER, $0, 1
+    addi $RECTANGLE_COUNTER, $0, 24
 
     # while address < end of buffer
     .whileHasRectangles:
         # DMA in the next 2048 pixels
         dmaIn $GB_BUFFER_ADDRESS, DMEM_GB_BASE + 0x800, BUFFER_SIZE / 2
-
         addi $PIXEL_ADDRESS, $0, DMEM_GB_BASE + 0x800
         
         # Starts at 0 and mostly fills up DMEM as we get through GB pixels.
@@ -271,8 +273,6 @@ main:
             # push massaged colour on to the out-buffer
             sw $A, 0($N64_BUFFER_POINTER)
 
-            addi $N64_BUFFER_POINTER, $N64_BUFFER_POINTER, 0x04
-
             # Repeat for the lower bit.
             lw $A, 0($PIXEL_ADDRESS)
             andi $A, $A, 0xFFFF
@@ -286,11 +286,15 @@ main:
             2:
             nop
 
-            # push massaged colour on to the out-buffer
+            # smoosh the two 16bit colours together into a 32bit word.
+            lw $t1, 0($N64_BUFFER_POINTER)
+            sll $t1, $t1, 16
+            or $A, $A, $t1
+            
+            # and push on to the buffer.
             sw $A, 0($N64_BUFFER_POINTER)
 
-            # and increment
-            ## n64 pixels are 32bits.
+            # increment all the things.
             addi $PIXEL_ADDRESS, $PIXEL_ADDRESS, 0x04
             addi $N64_BUFFER_POINTER, $N64_BUFFER_POINTER, 0x04
             addi $PIXEL_COUNTER, $PIXEL_COUNTER, -2
@@ -339,7 +343,7 @@ main:
         ## tile = 1 x1,y1 = {0, 0} x2,y2 = {160, 6}
         ### not doing anything fancy with the s & ts
         #textureRectangle 1, $a0, $a1, $a2, $a3, 0, 0, 4096, 1024
-        textureRectangle 1, $a0, $a1, $a2, $a3, 0, 0, 1024, 256
+        textureRectangle 1, $a0, $a1, $a2, $a3, 0, 0, 4096, 1024
 
         # increment address pointer.
         # TODO - Magic numbers.
