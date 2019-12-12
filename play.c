@@ -14,8 +14,10 @@
 #include "cpu.h"
 #include "emu.h"
 #include "lcd.h"
+#include "rsp.h"
 #include "hwdefs.h"
 #include "logger.h"
+#include "fps.h"
 
 #include <libdragon.h>
 
@@ -116,100 +118,6 @@ static void mapGbInputs(const char controllerNumber, const GbButton* buttonMap, 
     }
 }
 
-/**
- * Take the array of pixels produced by the emulator and throw it up on to the screen.
- * @param frame Id of frame to render to.
- * @param pixelBuffer Array of pixels.
- * @param isColour True for GBC and super-game-boy enhanced, otherwise false.
- * @param avgPixelSize upscaled TV size of gameboy pixels
- * @param left left bound of the gb screen to render.
- * @param top top bound of the gb screen to render.
- * @param sgbState SuperGameBoy related variables.
- * @param bgColourIndex which colour fills the most pixels and should therefore be 
- *        drawn once as a background
- * @private
- */
-static inline void renderPixels(
-    display_context_t frame,
-    const PlayerState* state,
-    const natural* nextBuffer,
-    const PaletteType paletteType,
-    const float avgPixelSize,
-    const uint32_t left,
-    const uint32_t top,
-    const SuperGameboyState* sgbState
-) {
-    const uint32_t bufferLength = GB_LCD_HEIGHT * GB_LCD_WIDTH;
-
-    uint32_t* buffer = state->EmulationState.ScreenTexture->data;
-
-    switch(paletteType) {
-        case SuperGameboyPalette:
-            ;
-
-            if (sgbState->MaskState == SGBFrzMask) {
-                ; // Leave display as is / frozen
-            } else {
-                for (uint32_t i = 0; i < bufferLength; i++) {
-                    // SGB Colours are already massaged.
-                    buffer[i] = nextBuffer[i];
-                }
-            }
-            break;
-        case GameboyPalette:
-            for (uint32_t i = 0; i < bufferLength; i++) {
-                buffer[i] = MONOCHROME_PALETTE[nextBuffer[i]];
-            }
-            break;
-        case GameboyColorPalette:
-            for (uint32_t i = 0; i < bufferLength; i++) {
-                buffer[i] = massageColour(nextBuffer[i]);
-            }
-            break;
-        default:
-            for (uint32_t i = 0; i < bufferLength; i++) {
-                // black screen, oh well
-                buffer[i] = 0x00010001;
-            }
-            break;
-    }
-
-    const uint32_t vslices = state->EmulationState.ScreenTexture->vslices;
-    const uint32_t hslices = state->EmulationState.ScreenTexture->hslices;
-
-    rdp_set_texture_flush(FLUSH_STRATEGY_NONE);
-
-    uint32_t l = left;
-    uint32_t t = top;
-    uint32_t index = 0;
-    for (uint32_t y = 0; y < vslices; y++) {
-        for (uint32_t x = 0; x < hslices; x++) {
-            rdp_load_texture_stride(0, 0, MIRROR_DISABLED, state->EmulationState.ScreenTexture, index);
-            // I cannot understand why I have to double the width but not the height to get things to render properly
-            // But it works now (at least in single player), so ok.
-            rdp_draw_sprite_scaled(0, l, t, avgPixelSize / 2, avgPixelSize, MIRROR_DISABLED);
-            l += (32 * avgPixelSize);
-            index++;
-        }
-        t += (24 * avgPixelSize) - 1;
-        l = left;
-    }
-
-    rdp_set_texture_flush(FLUSH_STRATEGY_AUTOMATIC);
-
-    if (SHOW_FRAME_COUNT) {
-        string text = "";
-
-        long diff = state->Meta.NextClock - state->Meta.LastClock;
-
-        sprintf(text, "Mem: %lld FPS: %f %lld" , getCurrentMemory(), ((FRAMES_TO_SKIP + 1) / (double)diff) * 1000, state->Meta.FrameCount);
-        graphics_set_color(GLOBAL_TEXT_COLOUR, 0x0);
-        graphics_draw_box(frame, 0, 450, 680, 10, GLOBAL_BACKGROUND_COLOUR);
-        graphics_draw_text(frame, 5, 450, text);
-    }
-}
-
-
 void playAudio(const GbState* state) {
     if (!audio_can_write()) {
         return;
@@ -260,6 +168,9 @@ void playLogic(RootState* state, const byte playerNumber) {
     }
 
     if (s->lcd_entered_vblank) {
+
+        fps_frame();
+
         playerState->Meta.FrameCount++;
 
         if (FRAMES_TO_SKIP && (playerState->Meta.FrameCount % (FRAMES_TO_SKIP + 1))) {
@@ -268,9 +179,6 @@ void playLogic(RootState* state, const byte playerNumber) {
         } else {
             playerState->WasFrameSkipped = false;
         }
-
-        playerState->Meta.LastClock = playerState->Meta.NextClock;
-        playerState->Meta.NextClock = get_ticks_ms();
 
         if (IS_SGB_ENABLED && s->Cartridge.Header.IsSgbSupported) {
             applySGBPalettes(
@@ -298,8 +206,6 @@ void playLogic(RootState* state, const byte playerNumber) {
             playerState->ActiveMode = Menu;
             state->RequiresRepaint = true;
             return;
-        } else if (releasedButtons[CUp]) {
-            FRAMES_TO_SKIP = !FRAMES_TO_SKIP;
         }
 
         emu_process_inputs(s, input);
@@ -328,12 +234,17 @@ void playLogic(RootState* state, const byte playerNumber) {
 }
 
 /**
+ * Place holder callback for
+ * event triggered when RSP finishes rendering.
+ */
+static void onFrameRendered() {}
+
+/**
  * Draws gameboy screen.
  * @param state program state.
  * @param playerNumber player in play mode.
  */
 void playDraw(const RootState* state, const byte playerNumber) {
-    // Main background.
     Rectangle screen = {};
     getScreenPosition(state, playerNumber, &screen);
 
@@ -344,18 +255,25 @@ void playDraw(const RootState* state, const byte playerNumber) {
         palette = SuperGameboyPalette;
     }
 
-    bool isInitialised = state->Players[playerNumber].BuffersInitialised >= 2;
+    screen = (Rectangle) { screen.Left, screen.Top, 320, 12 };
 
-    renderPixels(
-        state->Frame,
-        &state->Players[playerNumber],
-        state->Players[playerNumber].EmulationState.NextBuffer,
-        palette,
-        (float)screen.Height / (float)GB_LCD_HEIGHT,
-        screen.Left,
-        screen.Top,
-        &state->Players[playerNumber].SGBState
+    renderFrame(
+        (uintptr_t)state->Players[playerNumber].EmulationState.NextBuffer,
+        (uintptr_t)state->Players[playerNumber].EmulationState.TextureBuffer,
+        // TODO Calculate block height
+        // But 6 lines of 160 16bit pixels can fit in 4kB of DMEM at a time.
+        &screen,
+        palette == GameboyColorPalette
     );
+
+    if (SHOW_FRAME_COUNT) {
+        string text = "";
+
+        sprintf(text, "FPS: %d %lld", fps_get(), state->Players[playerNumber].Meta.FrameCount);
+        graphics_set_color(GLOBAL_TEXT_COLOUR, 0x0);
+        graphics_draw_box(2, 0, 450, 680, 10, GLOBAL_BACKGROUND_COLOUR);
+        graphics_draw_text(2, 5, 450, text);
+    }
 }
 
 /**
@@ -364,6 +282,14 @@ void playDraw(const RootState* state, const byte playerNumber) {
  * @param playerNumber player in play mode.
  */
 void playAfter(RootState* state, const byte playerNumber) {
+    if (state->Players[playerNumber].ActiveMode != Play) {
+        haltRsp();
+    } else {
+        // Swap the pointers.
+        uintptr_t temp = (uintptr_t) state->Players[playerNumber].EmulationState.NextBuffer;
+        state->Players[playerNumber].EmulationState.NextBuffer = state->Players[playerNumber].EmulationState.LastBuffer;
+        state->Players[playerNumber].EmulationState.LastBuffer = (u16*) temp;
+    }
 }
 
 

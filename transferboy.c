@@ -11,10 +11,13 @@
 #include "screen.h"
 #include "resources.h"
 #include "hwdefs.h"
+#include "fps.h"
 #include <time.h>
 #include <string.h>
 #include <stdlib.h>
 #include <libdragon.h>
+
+#include "rsp.h"
 
 /**
  * Sets oft-use colours since we can't assign graphics_make_color to a constant.
@@ -34,6 +37,9 @@ static void initialiseSubsystems() {
     getMemoryLimit();
     init_interrupts();
     timer_init();
+
+    new_timer(TIMER_TICKS(1000000), TF_CONTINUOUS, fps_timer);
+
     controller_init();
     dfs_init(DFS_DEFAULT_LOCATION);
 
@@ -96,7 +102,10 @@ static void mainLoop(RootState* state) {
             iterations++;
         }
 
-        Mode modes[MAX_PLAYERS] = {0, 0};
+        Mode modes[MAX_PLAYERS];
+        for(byte i = 0; i < MAX_PLAYERS; i++) {
+            modes[i] = 0;
+        }
 
         // Cache this as it may change in the below calls.
         byte playerCount = state->PlayerCount;
@@ -163,6 +172,9 @@ int main(void) {
     RootState state;
     generateState(&state);
     flushScreen(&state);
+
+    rsp_init();
+    prepareMicrocode();
 
     mainLoop(&state);
 

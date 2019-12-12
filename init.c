@@ -132,7 +132,7 @@ void initDraw(const RootState* state, const byte playerNumber) {
     getScreenPosition(state, playerNumber, &screen);
 
     prepareRdpForSprite(state->Frame);
-    loadSprite(getSpriteSheet(), GB_BG_TEXTURE, true);
+    loadSprite(getSpriteSheet(), GB_BG_TEXTURE, MIRROR_XY);
 
     // The - 1 and - 8 crept in when I switched from software to hardware rendering.  The RDP has some strange behaviours I can't understand.
     // If I don't subtract these here, there are grey lines along the right and bottom of the play screen in single player mode.

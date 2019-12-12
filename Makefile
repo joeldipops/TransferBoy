@@ -9,7 +9,7 @@ HEADERNAME = header
 LINK_FLAGS = -L$(ROOTDIR)/mips64-elf/lib -ldragon -lm -lc -ldragonsys -T./transferboy.ld
 PROG_NAME = transferboy
 #O3FLAGS = -fgcse-after-reload -finline-functions -fipa-cp-clone -floop-interchange -floop-unroll-and-jam -fpredictive-commoning -fsplit-paths -ftree-loop-distribute-patterns -ftree-loop-distribution -ftree-loop-vectorize -ftree-partial-pre -ftree-slp-vectorize -funswitch-loops -fvect-cost-model -fversion-loops-for-strides
-OPTIMISATION_FLAGS = -Os
+OPTIMISATION_FLAGS = -O3
 CFLAGS = -std=gnu99 -march=vr4300 -mtune=vr4300 $(OPTIMISATION_FLAGS) -Wall -Wno-unused -Werror -I$(CURDIR) -I$(ROOTDIR)/mips64-elf/include 
 ASFLAGS = -mtune=vr4300 -march=vr4300
 CC = $(GCCN64PREFIX)gcc
@@ -25,7 +25,19 @@ ROM_EXTENSION = .z64
 N64_FLAGS = -l 2M -h $(HEADERPATH)/$(HEADERNAME) -o $(PROG_NAME)$(ROM_EXTENSION) $(PROG_NAME).bin
 endif
 
+all: $(PROG_NAME)$(ROM_EXTENSION)
+
+$(CURDIR)/rsp/rsp.o:
+	make -C $(CURDIR)/rsp rsp
+
+$(PROG_NAME)$(ROM_EXTENSION): $(PROG_NAME).elf transferboy.dfs
+	$(OBJCOPY) $(PROG_NAME).elf $(PROG_NAME).bin -O binary
+	rm -f $(PROG_NAME)$(ROM_EXTENSION)
+	$(N64TOOL) $(N64_FLAGS) -t "transferboy" -s 1M transferboy.dfs
+	$(CHKSUM64PATH) $(PROG_NAME)$(ROM_EXTENSION)
+
 LD_OFILES =  $(CURDIR)/obj/core.o
+LD_OFILES += $(CURDIR)/obj/fps.o
 LD_OFILES += $(CURDIR)/obj/resources.o
 LD_OFILES += $(CURDIR)/obj/init.o
 LD_OFILES += $(CURDIR)/obj/play.o
@@ -50,14 +62,11 @@ LD_OFILES += $(CURDIR)/obj/s_gbz80ops.o
 LD_OFILES += $(CURDIR)/obj/gbc_state.o
 LD_OFILES += $(CURDIR)/obj/polyfill.o
 LD_OFILES += $(CURDIR)/obj/rtc.o
+LD_OFILES += $(CURDIR)/obj/rsp.o
 
-$(PROG_NAME)$(ROM_EXTENSION): $(PROG_NAME).elf transferboy.dfs
-	$(OBJCOPY) $(PROG_NAME).elf $(PROG_NAME).bin -O binary
-	rm -f $(PROG_NAME)$(ROM_EXTENSION)
-	$(N64TOOL) $(N64_FLAGS) -t "transferboy" -s 1M transferboy.dfs
-	$(CHKSUM64PATH) $(PROG_NAME)$(ROM_EXTENSION)
+$(PROG_NAME).elf : $(CURDIR)/rsp/rsp.o $(PROG_NAME).o
 
-$(PROG_NAME).elf :
+	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/fps.o $(CURDIR)/fps.c
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/rtc.o $(CURDIR)/rtc.c
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/polyfill.o $(CURDIR)/polyfill.c
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/core.o $(CURDIR)/core.c
@@ -83,15 +92,15 @@ $(PROG_NAME).elf :
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/lcd.o $(CURDIR)/lcd.c
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/mmu.o $(CURDIR)/mmu.c
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/gbc_state.o $(CURDIR)/gbc_state.c
-	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/transferboy.o $(CURDIR)/transferboy.c									
+	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/rsp.o $(CURDIR)/rsp.c
+	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/transferboy.o $(CURDIR)/transferboy.c
 
-	$(LD) -o $(PROG_NAME).elf $(CURDIR)/obj/$(PROG_NAME).o $(LD_OFILES) $(LINK_FLAGS)
+	$(LD) -o $(PROG_NAME).elf $(CURDIR)/rsp/rsp.o $(CURDIR)/obj/$(PROG_NAME).o $(LD_OFILES) $(LINK_FLAGS)
 
 transferboy.dfs:
 	$(MKDFSPATH) transferboy.dfs ./filesystem/
 
-all: $(PROG_NAME)$(ROM_EXTENSION)
-
 clean:
 	rm -f *.v64 *.z64 *.elf *.o *.bin *.dfs
 	rm -f ./obj/*.o
+	$(MAKE) -C ./rsp/ clean

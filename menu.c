@@ -6,6 +6,7 @@
 #include "resources.h"
 #include "init.h"
 #include "play.h"
+#include "config.h"
 
 #include <libdragon.h>
 
@@ -45,16 +46,18 @@ static void drawMenuItem(
     }
     natural left = screen->Left + (xOffset *  x);
 
-    string text = "";
-    getText(label, text);
+    if (!disabled || !HIDE_DISABLED_OPTIONS) {
+        string text = "";
+        getText(label, text);
 
-    if (disabled) {
-        string tmp;
-        sprintf(tmp, "~%s", text);
-        strcpy(text, tmp);
+        if (disabled) {
+            string tmp;
+            sprintf(tmp, "~%s", text);
+            strcpy(text, tmp);
+        }
+
+        drawText(frame, text, left, top, scale);
     }
-
-    drawText(frame, text, left, top, scale);
 
     if (drawCursor) {
         Rectangle border = {top, left, xOffset, menuItemOffset };
@@ -331,7 +334,7 @@ void menuDraw(RootState* state, const byte playerNumber) {
     getScreenPosition(state, playerNumber, &screen);
 
     prepareRdpForSprite(state->Frame);
-    loadSprite(getSpriteSheet(), BLUE_BG_TEXTURE, true);
+    loadSprite(getSpriteSheet(), BLUE_BG_TEXTURE, MIRROR_XY);
 
     // Cover menu section.
     rdp_draw_textured_rectangle(

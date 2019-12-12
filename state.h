@@ -7,11 +7,10 @@
 #include "tpakio.h"
 #include "types.h"
 
-#define MAX_PLAYERS 2
+// Abysmal performance aside, 2 player mode is fundamentally broken until the RSP knows how to handle it.
+#define MAX_PLAYERS 1
 
 typedef struct {
-    long long LastClock;
-    long long NextClock;
     uLong FrameCount;
 } MetaState;
 

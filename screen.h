@@ -10,10 +10,10 @@ static const short RESOLUTION_Y = 480;
 static const float TEXT_SCALE_FACTOR = 0.210 / 100.0;
 
 typedef struct {
-    uint32_t Top;
-    uint32_t Left;
-    uint32_t Width;
-    uint32_t Height;
+    u16 Top;
+    u16 Left;
+    u16 Width;
+    u16 Height;
 } Rectangle;
 
 // 16 bit colours are are 5 bits per colour and a transparency flag

@@ -58,3 +58,26 @@ byte parseByte(const char* start, const byte maxLength, const byte base) {
     char* end = 0;
     return strtol(code, &end, base);
 }
+
+/**
+ * Allocates memory aligned to a given number of bytes.
+ * @param size Size of memory to allocate.
+ * @param alignment Number of bytes to align to.
+ * @returns struct where p is your aligned pointer.
+ */
+AlignedPointer malloc_aligned(size_t size, byte alignment) {
+    byte offset = alignment - 1;
+    AlignedPointer result;
+    result.a = malloc(size + offset);
+    result.p = (void*)(((uintptr_t)result.a + offset) & ~(uintptr_t)offset);
+
+    return result;
+}
+
+/**
+ * Frees memory allocated with malloc_aligned
+ * @param ptr Holds pointer to memory to be freed.
+ */
+void free_aligned(AlignedPointer ptr) {
+    free(ptr.a);
+}

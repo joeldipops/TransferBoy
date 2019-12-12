@@ -82,6 +82,8 @@ SECTIONS {
         __data_end = . ;
     }
 
+    . = ALIGN(8);
+
     .ctors : {
         __CTOR_LIST_SIZE__ = .;
         LONG((__CTOR_END__ - __CTOR_LIST__) / 4 - 1)
