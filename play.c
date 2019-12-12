@@ -284,6 +284,9 @@ void playDraw(const RootState* state, const byte playerNumber) {
  * @param playerNumber player in play mode.
  */
 void playAfter(RootState* state, const byte playerNumber) {
+    if (state->Players[playerNumber].ActiveMode != Play) {
+        haltRsp();
+    }
 }
 
 

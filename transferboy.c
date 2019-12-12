@@ -102,7 +102,10 @@ static void mainLoop(RootState* state) {
             iterations++;
         }
 
-        Mode modes[MAX_PLAYERS] = {0, 0};
+        Mode modes[MAX_PLAYERS];
+        for(byte i = 0; i < MAX_PLAYERS; i++) {
+            modes[i] = 0;
+        }
 
         // Cache this as it may change in the below calls.
         byte playerCount = state->PlayerCount;

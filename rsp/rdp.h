@@ -15,7 +15,7 @@
 ###
 # Sends an RDP command by writing to the RDP registers.
 # Assumes command starts at DMEM address 0
-# @param {address} $a0 address after last word to send.#
+# @param {address} $a0 address after last word to send.
 ###
 _execRdp:
     1:
@@ -252,6 +252,8 @@ _execRdp:
     lui $A, \tileIndex
     sll $A, $A, 8
 
+        # All this is a waste of time & space for now since I'm setting it all to zero.
+        # But can stay until it becomes a problem or I learn mips macros a bit better.
         lui $t1, \palette
         sll $t1, $t1, 4
         or $A, $A, $t1
@@ -319,8 +321,7 @@ _execRdp:
     ##if it's a register
         sw \address, 0x004($0)
     ##else it's a constant...
-        #lui $A, .hi(0x10000001)
-        #ori $A, .lo(0x10000001)
+        #liw $A, \address
     ##endif
 
     execRdp 2

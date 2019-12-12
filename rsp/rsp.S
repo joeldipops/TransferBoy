@@ -11,7 +11,7 @@
 .eqv RspIn_IN_ADDRESS, 0x00
 .eqv RspIn_OUT_ADDRESS, 0x04
 .eqv RspIn_SCREEN_POSITION, 0x08
-.eqv RspIn_SCREEN_SIZE, 0x0C
+.eqv RspIn_RECTANGLE_SIZE, 0x0C
 .eqv RspIn_IS_COLOUR, 0x10
 
 .eqv INTERFACE_SIZE, 0x20
@@ -30,6 +30,7 @@
 .eqv GB_LCD_WIDTH, 160
 .eqv GB_LCD_HEIGHT, 144
 .eqv BATCH_HEIGHT, 6
+.eqv BATCH_COUNT, GB_LCD_HEIGHT / BATCH_HEIGHT
 .eqv PIXEL_SIZE, 2
 .eqv GB_BUFFER_SIZE, GB_LCD_WIDTH * GB_LCD_HEIGHT * PIXEL_SIZE
 
@@ -37,10 +38,10 @@
 # Register aliases
 ###
 
-# address of gameboy pixel to be processed in DRAM
+# address of next batch of gameboy pixels to be processed in DRAM
 .set $GB_BUFFER_ADDRESS, $16
 
-# points to current pixel to be processed in DMEM
+# points to current gameboy pixel to be processed in DMEM
 .set $PIXEL_ADDRESS, $17
 
 # Number of rectangles left to render in current iteration.
@@ -61,8 +62,11 @@
 # Left and Top of screen
 .set $SCREEN_POSITION, $23
 
-# Length and Width of screen
-.set $SCREEN_SIZE, $26
+# Length and Height of each rectangle to render.
+.set $RECTANGLE_SIZE, $26
+
+# Stashed height of rectangle to save a few cycles.
+.set $RECTANGLE_HEIGHT, $27
 
 ###
 # Load Immediate Word
@@ -76,7 +80,11 @@
 .endm
 
 
+###
+# See dmaIn macro below
+###
 _dmaIn:
+    # Don't do anything until DMA is no longer busy
     1:
         mfc0 $A, $RSP_RESERVED
     bne $A, $0, 1b
@@ -118,10 +126,13 @@ _dmaIn:
     addi $a1, $0, \dest
     addi $a2, $0, \length
     jal _dmaIn
-    
 .endm
 
+###
+# See dmaOut macro below
+###
 _dmaOut:
+    # Don't do anything until DMA is not busy.
     1:
         mfc0 $A, $RSP_RESERVED
     bne $A, $0, 1b
@@ -165,10 +176,10 @@ _dmaOut:
 .endm
 
 ###
-# Takes a 2bit DMG colour index and converts to a 32bit n64 colour.
+# Takes a 2bit DMG colour index and converts to a 16bit n64 colour.
 #
 # @input reg the dmg colour index (0 - 3)
-# @output reg the 32bit dmg colour.
+# @output reg the 16bit dmg colour.
 ###
 massageMonochrome:
     # zero out irrelevant bits
@@ -179,11 +190,11 @@ massageMonochrome:
     jr $ra
 
 ###
-# Takes the 16 bit GBC colour in reg and converts
-# it in to a 32 bit n64 colour.
+# Takes the 16bit blue-endian GBC colour and converts
+# it in a red-endian n64 colour.
 #
-# @input reg contains the 16bit colour.
-# @ouput reg contains the 32bit colour.
+# @input reg contains the GBC colour.
+# @ouput reg contains the N64 colour.
 ###
 massageColour:
     # it's sign extended, so...
@@ -201,8 +212,11 @@ massageColour:
     andi $t3, $A, 0x001F
     sll $t3, $t3, 0x0B
 
+    # smoosh the three colours together
     or $t1, $t1, $t2
     or $t1, $t1, $t3
+
+    # set the transparency bit. There are no transparent pixels at this stage.
     ori $t1, $t1, 0x01
 
     ori $A, $t1, 0
@@ -216,11 +230,12 @@ main:
     # Bring in the configuration.
     dmaIn $A, DMEM_GB_BASE, INTERFACE_SIZE
 
-    # Stash config in some registers (including screen size & loc details)
+    # Stash config in some registers so whole memory space is available.
     lw $GB_BUFFER_ADDRESS, RspIn_IN_ADDRESS($0)
     lw $OUT_BUFFER_ADDRESS, RspIn_OUT_ADDRESS($0)
     lw $SCREEN_POSITION, RspIn_SCREEN_POSITION($0)
-    lw $SCREEN_SIZE, RspIn_SCREEN_SIZE($0)
+    lw $RECTANGLE_SIZE, RspIn_RECTANGLE_SIZE($0)
+    andi $RECTANGLE_HEIGHT, $RECTANGLE_SIZE, 0x0000FFFF
     lw $IS_COLOUR, RspIn_IS_COLOUR($0)
 
     bne $IS_COLOUR, $0, 1f
@@ -235,16 +250,15 @@ main:
         sw $A, (MONOCHROME_PALETTE + 0xC)($0)
     1:
 
-    # TODO - Magic number
-    addi $RECTANGLE_COUNTER, $0, 24
+    addi $RECTANGLE_COUNTER, $0, BATCH_COUNT
 
     # while address < end of buffer
     .whileHasRectangles:
         # DMA in the next 2048 pixels
-        dmaIn $GB_BUFFER_ADDRESS, DMEM_GB_BASE + 0x800, BUFFER_SIZE / 2
-        addi $PIXEL_ADDRESS, $0, DMEM_GB_BASE + 0x800
+        dmaIn $GB_BUFFER_ADDRESS, DMEM_GB_BASE + (DMEM_SIZE / 2), BUFFER_SIZE / 2
+        addi $PIXEL_ADDRESS, $0, DMEM_GB_BASE + (DMEM_SIZE / 2)
 
-        # Starts at 0 and mostly fills up DMEM as we get through GB pixels.
+        # Starts at 0 and fills up DMEM as we get through GB pixels.
         add $N64_BUFFER_POINTER, $0, $0
 
         addi $PIXEL_COUNTER, $0, GB_LCD_WIDTH * BATCH_HEIGHT
@@ -305,18 +319,14 @@ main:
 
         ## Sync before loading a new texture.
         syncPipe
-        # TODO - Pass proper values to these.
 
         ## Tell RDP where to look for texture data.
-        ## rbga colour format, 16 bit colours, 160 pixels, address in DRAM
         setTextureImage RGBA_FORMAT, COLOUR_DEPTH_16, GB_LCD_WIDTH, $OUT_BUFFER_ADDRESS
 
         ## Set up a tile now that the RDP has the data.
-        ## rgba format, 16b, 160 pixels * 4byte words * 6 rows fit in 64x64 words.
         setTile 1, RGBA_FORMAT, COLOUR_DEPTH_16, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 
         ## Give tile a size & shape
-        ## tile = 1 sl,tl = {0,0}, sh,th = {width - 1, height - 1}
         loadTile 1, 0, 0, GB_LCD_WIDTH, BATCH_HEIGHT
 
         # TODO Cache this somewhere. May need to use some less 
@@ -327,12 +337,11 @@ main:
         srl $a0, $a0, 16
         andi $a1, $SCREEN_POSITION, 0x0000FFFF
 
-        add $a2, $SCREEN_SIZE, $0
+        add $a2, $RECTANGLE_SIZE, $0
         srl $a2, $a2, 16
-        andi $a3, $SCREEN_SIZE, 0x0000FFFF
 
         add $a2, $a2, $a0
-        add $a3, $a3, $a1
+        add $a3, $RECTANGLE_HEIGHT, $a1
 
         ## Draw a rectangle with the texture we have set up
         ## tile = 1 x1,y1 = {0, 0} x2,y2 = {160, 6}
@@ -344,8 +353,7 @@ main:
         addi $GB_BUFFER_ADDRESS, $GB_BUFFER_ADDRESS, GB_LCD_WIDTH * BATCH_HEIGHT * 2
 
         # increment draw top
-        andi $A, $SCREEN_SIZE, 0x0000FFFF
-        add $SCREEN_POSITION, $SCREEN_POSITION, $A
+        add $SCREEN_POSITION, $SCREEN_POSITION, $RECTANGLE_HEIGHT
         addi $RECTANGLE_COUNTER, $RECTANGLE_COUNTER, -1
 
     # loop until there are no more rectangles to draw.
