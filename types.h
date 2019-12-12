@@ -590,6 +590,7 @@ typedef struct gb_state {
     bool lcd_entered_vblank; // Set at the beginning of every VBlank.
 
     u16* TextureBuffer;
+    u16* LastBuffer;
     u16* NextBuffer;
 
     bool isSRAMDisabled; //Writing 0 to MBC 1 turns off access to external RAM 

@@ -206,8 +206,6 @@ void playLogic(RootState* state, const byte playerNumber) {
             playerState->ActiveMode = Menu;
             state->RequiresRepaint = true;
             return;
-        } else if (releasedButtons[CUp]) {
-            FRAMES_TO_SKIP = !FRAMES_TO_SKIP;
         }
 
         emu_process_inputs(s, input);
@@ -286,6 +284,11 @@ void playDraw(const RootState* state, const byte playerNumber) {
 void playAfter(RootState* state, const byte playerNumber) {
     if (state->Players[playerNumber].ActiveMode != Play) {
         haltRsp();
+    } else {
+        // Swap the pointers.
+        uintptr_t temp = (uintptr_t) state->Players[playerNumber].EmulationState.NextBuffer;
+        state->Players[playerNumber].EmulationState.NextBuffer = state->Players[playerNumber].EmulationState.LastBuffer;
+        state->Players[playerNumber].EmulationState.LastBuffer = (u16*) temp;
     }
 }
 
