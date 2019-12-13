@@ -14,7 +14,9 @@ typedef struct {
     uintptr_t OutAddress;
     Rectangle Screen;
     bool IsColour;
-    byte BytePadding[3];
+    byte IsColourPadding[3];
+    bool IsBusy;
+    byte IsBusyPadding[3];
     uint32_t WordPadding[2];
 } RspInterface;
 
@@ -68,9 +70,13 @@ void prepareMicrocode() {
     load_ucode((void*)&rsp_code_start, size);
 
     // Zero out the padding.
-    rspInterface->BytePadding[0] = 0;
-    rspInterface->BytePadding[1] = 0;
-    rspInterface->BytePadding[2] = 0;
+    rspInterface->IsBusy = false;
+    rspInterface->IsColourPadding[0] = 0;
+    rspInterface->IsColourPadding[1] = 0;
+    rspInterface->IsColourPadding[2] = 0;
+    rspInterface->IsBusyPadding[0] = 0;
+    rspInterface->IsBusyPadding[1] = 0;
+    rspInterface->IsBusyPadding[2] = 0;
     rspInterface->WordPadding[0] = 0;
     rspInterface->WordPadding[1] = 0;
 }
@@ -90,12 +96,18 @@ void haltRsp() {
  * @param isColour if true, inBuffer words represent 2 bit DMG pixels.  Otherwise they are 16bit GBC pixels
  */
 void renderFrame(uintptr_t inBuffer, uintptr_t outBuffer, Rectangle* screen, bool isColour) {
-    haltRsp();
+    data_cache_hit_invalidate(rspInterface, sizeof(RspInterface));
+    // Let the RSP finish it's current frame & skip this one.
+    if (rspInterface->IsBusy) {
+        return;
+    }
 
+    haltRsp();
     rspInterface->InAddress = inBuffer;
     rspInterface->OutAddress = outBuffer;
     rspInterface->Screen = *screen;
     rspInterface->IsColour = isColour;
+    rspInterface->IsBusy = true;
 
     data_cache_hit_writeback(rspInterface, sizeof(RspInterface));
     run_ucode();

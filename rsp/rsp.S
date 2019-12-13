@@ -13,6 +13,7 @@
 .eqv RspIn_SCREEN_POSITION, 0x08
 .eqv RspIn_RECTANGLE_SIZE, 0x0C
 .eqv RspIn_IS_COLOUR, 0x10
+.eqv RspIn_IS_BUSY, 0x14
 
 .eqv INTERFACE_SIZE, 0x20
 
@@ -254,6 +255,9 @@ main:
 
     # while address < end of buffer
     .whileHasRectangles:
+        ## Sync before loading a new texture.
+        syncPipe
+
         # DMA in the next 2048 pixels
         dmaIn $GB_BUFFER_ADDRESS, DMEM_GB_BASE + (DMEM_SIZE / 2), BUFFER_SIZE / 2
         addi $PIXEL_ADDRESS, $0, DMEM_GB_BASE + (DMEM_SIZE / 2)
@@ -313,12 +317,9 @@ main:
         bgtz $PIXEL_COUNTER, .whileHasPixels
 
         # DMA the data back to DRAM so we have our limited memory back.
-        dmaOut 0x000, $OUT_BUFFER_ADDRESS, BUFFER_SIZE / 2
+        dmaOut DMEM_GB_BASE, $OUT_BUFFER_ADDRESS, BUFFER_SIZE / 2
 
         # Ask the RDP to render the textured line we just built.
-
-        ## Sync before loading a new texture.
-        syncPipe
 
         ## Tell RDP where to look for texture data.
         setTextureImage RGBA_FORMAT, COLOUR_DEPTH_16, GB_LCD_WIDTH, $OUT_BUFFER_ADDRESS
@@ -358,6 +359,14 @@ main:
 
     # loop until there are no more rectangles to draw.
     bgtz $RECTANGLE_COUNTER, .whileHasRectangles
+
+    # Reset DRAM flag that says we're done with this frame.
+    sw $0, RspIn_IS_BUSY($0)
+    # Gotta zero out IS_COLOUR too because of the way values are packed.
+    sw $0, RspIn_IS_COLOUR
+
+    liw $A, RSP_INTERFACE_ADDRESS
+    dmaOut DMEM_GB_BASE, $A, INTERFACE_SIZE
 
 # job done
 stall:
