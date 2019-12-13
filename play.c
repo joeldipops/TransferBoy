@@ -284,11 +284,6 @@ void playDraw(const RootState* state, const byte playerNumber) {
 void playAfter(RootState* state, const byte playerNumber) {
     if (state->Players[playerNumber].ActiveMode != Play) {
         haltRsp();
-    } else {
-        // Swap the pointers.
-        uintptr_t temp = (uintptr_t) state->Players[playerNumber].EmulationState.NextBuffer;
-        state->Players[playerNumber].EmulationState.NextBuffer = state->Players[playerNumber].EmulationState.LastBuffer;
-        state->Players[playerNumber].EmulationState.LastBuffer = (u16*) temp;
     }
 }
 
