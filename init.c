@@ -12,6 +12,10 @@
 #include "hwdefs.h"
 #include <libdragon.h>
 
+
+const char TEXT_HEIGHT = 100;
+const char TEXT_WIDTH = 10;
+
 /**
  * Gets screen and state ready for Playing GB software.
  * @param state The play state.
@@ -25,6 +29,58 @@ static void preparePlayMode(RootState* state, byte playerNumber) {
     state->Players[playerNumber].InitState = InitLoaded;
     state->Players[playerNumber].ActiveMode = Play;
 }
+
+
+static RootState* state;
+
+/**
+ * Fired periodically as we load a cartridge.  It updates the display so we know
+ * how much longer to wait (and that we haven't crashed.)
+ * @param controllerNumber controller we are loading from.
+ */
+void onLoadProgressTimer(const byte controllerNumber) {
+    byte loadPercent = getLoadProgress(controllerNumber);
+    string text;
+    getText(TextLoadingCartridge, text);
+    sprintf(text, "%s - %d%%", text, loadPercent);
+
+    Rectangle screen = {};
+    getScreenPosition(state, controllerNumber, &screen);
+
+    natural textTop = screen.Top - TEXT_HEIGHT + (screen.Width / 2);
+
+    // This is crashing us somehow :(
+    // drawTextParagraph(state->Frame, text, screen.Left + TEXT_WIDTH, textTop, 0.8, screen.Width - TEXT_WIDTH);
+}
+
+// C doesn't let you bind args to callbacks, so this is the next best thing, as far as I know.
+void fn0(int ovfl) { return onLoadProgressTimer(0); }
+void fn1(int ovfl) { return onLoadProgressTimer(1); }
+void (*onLoadProgressTimers[MAX_PLAYERS])(int ovfl) = { fn0 };
+
+/**
+ * Sets up handlers to display a progress bar for the cartridge load.
+ * @param Address of the global state so it can be referenced in a callback.
+ * @param Number identifying player that will load a cartridge.
+ * @returns Reference to the timer that updates the progress bar.
+ */
+static timer_link_t* startLoadProgressTimer(RootState* rootState, const byte playerNumber) {
+    if (!state) {
+        state = rootState;
+    }
+    return new_timer(TIMER_TICKS(1000000), TF_CONTINUOUS, onLoadProgressTimers[playerNumber]);
+}
+
+/**
+ * Cleans up handlers for displaying the cartridge load progress bar.
+ */
+static void closeLoadProgressTimer(timer_link_t* timer) {
+    delete_timer(timer);
+    state = null;
+}
+
+
+
 
 /**
  * Waits for a Start Button pressed, then goes and loads a rom.
@@ -108,7 +164,12 @@ void initLogic(RootState* state, const byte playerNumber) {
     } else if (playerState->InitState == InitLoading) {
         state->RequiresRepaint = true;
 
+        timer_link_t* timer = startLoadProgressTimer(state, playerNumber);
+
         sByte result = importCartridge(playerNumber, &s->Cartridge);
+
+        closeLoadProgressTimer(timer);
+
         if (result) {
             string tmp;
             state->ErrorCode = result;
@@ -138,8 +199,6 @@ void initDraw(const RootState* state, const byte playerNumber) {
     // If I don't subtract these here, there are grey lines along the right and bottom of the play screen in single player mode.
     rdp_draw_textured_rectangle(0,  screen.Left, screen.Top, screen.Left + screen.Width - 1, screen.Top + screen.Height - 8, true);
 
-    const char TEXT_HEIGHT = 100;
-    const char TEXT_WIDTH = 10;
     natural textTop = screen.Top - TEXT_HEIGHT + (screen.Width / 2);
 
     string text = "";
