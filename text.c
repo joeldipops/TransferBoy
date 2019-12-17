@@ -313,7 +313,6 @@ void drawTextParagraph(
         i += lineBreak;
         top += CHARACTER_SIZE;
     }
-    rdp_detach_display();
 }
 
 /**
