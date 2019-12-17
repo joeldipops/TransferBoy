@@ -7,6 +7,9 @@
 static const short RESOLUTION_X = 640;
 static const short RESOLUTION_Y = 480;
 
+static const char TEXT_HEIGHT = 100;
+static const char TEXT_WIDTH = 10;
+
 static const float TEXT_SCALE_FACTOR = 0.210 / 100.0;
 
 typedef struct {
