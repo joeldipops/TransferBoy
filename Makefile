@@ -6,7 +6,9 @@ MKDFSPATH = /home/joeldipops/Projects/tools/libdragon/tools/mkdfs/mkdfs
 HEADERPATH = $(ROOTDIR)/mips64-elf/lib
 N64TOOL = /home/joeldipops/Projects/tools/libdragon/tools/n64tool
 HEADERNAME = header
-LINK_FLAGS = -L$(ROOTDIR)/mips64-elf/lib -ldragon -lm -lc -ldragonsys -T./transferboy.ld
+PRE_LD_FILE = $(PROG_NAME).ld
+LD_FILE = $(PROG_NAME)_generated.ld
+LINK_FLAGS = -L$(ROOTDIR)/mips64-elf/lib -ldragon -lm -lc -ldragonsys -T./$(LD_FILE)
 PROG_NAME = transferboy
 #O3FLAGS = -fgcse-after-reload -finline-functions -fipa-cp-clone -floop-interchange -floop-unroll-and-jam -fpredictive-commoning -fsplit-paths -ftree-loop-distribute-patterns -ftree-loop-distribution -ftree-loop-vectorize -ftree-partial-pre -ftree-slp-vectorize -funswitch-loops -fvect-cost-model -fversion-loops-for-strides
 OPTIMISATION_FLAGS = -O3
@@ -15,6 +17,7 @@ ASFLAGS = -mtune=vr4300 -march=vr4300
 CC = $(GCCN64PREFIX)gcc
 AS = $(GCCN64PREFIX)as
 LD = $(GCCN64PREFIX)ld
+
 OBJCOPY = $(GCCN64PREFIX)objcopy
 
 ifeq ($(N64_BYTE_SWAP),true)
@@ -65,7 +68,7 @@ LD_OFILES += $(CURDIR)/obj/polyfill.o
 LD_OFILES += $(CURDIR)/obj/rtc.o
 LD_OFILES += $(CURDIR)/obj/rsp.o
 
-$(PROG_NAME).elf : $(CURDIR)/rsp/rsp.o $(PROG_NAME).o
+$(PROG_NAME).elf : $(CURDIR)/rsp/rsp.o $(PROG_NAME).o $(LD_FILE)
 
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/progressBar.o $(CURDIR)/progressBar.c
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/fps.o $(CURDIR)/fps.c
@@ -99,10 +102,13 @@ $(PROG_NAME).elf : $(CURDIR)/rsp/rsp.o $(PROG_NAME).o
 
 	$(LD) -o $(PROG_NAME).elf $(CURDIR)/rsp/rsp.o $(CURDIR)/obj/$(PROG_NAME).o $(LD_OFILES) $(LINK_FLAGS)
 
+$(LD_FILE) : $(PRE_LD_FILE)
+	cpp $(PRE_LD_FILE) | grep -v '^#'	>>$(LD_FILE)
+
 transferboy.dfs:
 	$(MKDFSPATH) transferboy.dfs ./filesystem/
 
 clean:
-	rm -f *.v64 *.z64 *.elf *.o *.bin *.dfs
+	rm -f *.v64 *.z64 *.elf *.o *.bin *.dfs $(LD_FILE)
 	rm -f ./obj/*.o
 	$(MAKE) -C ./rsp/ clean

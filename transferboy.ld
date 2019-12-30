@@ -17,6 +17,14 @@
  * ========================================================================
  */
 
+/*
+ This file must be run through the cpp pre-compiler before use.
+ Like so:
+     cpp $(PRE_LD_FILE) | grep -v '^#'	>>$(LD_FILE)
+*/
+
+#include "global.h"
+
 OUTPUT_FORMAT ("elf32-bigmips", "elf32-bigmips", "elf32-littlemips")
 OUTPUT_ARCH (mips)
 EXTERN (_start)
@@ -93,14 +101,19 @@ SECTIONS {
         __CTOR_END__ = .;
     }
 
+    /* This is a hack until I figure out how to do this properly.  Value will certainly change as code changes :( */
+    OFFSET = 0x28a00 ;
     .bss (NOLOAD) : {
         __bss_start = . ;
         *(.scommon)
         *(.sbss)
         *(COMMON)
         *(.bss)
+        . = ( RSP_INTERFACE_ADDRESS - OFFSET ) ;
+        *(.irsp)
         . = ALIGN(4);
         __bss_end = . ;
+
         end = . ;
     }
 }
