@@ -174,6 +174,9 @@ void initDraw(const byte playerNumber) {
     // otherwise it may happen too fast and we might not know for sure.
     // that the t-pak was even retried.
     if (rootState.Players[playerNumber].InitState == InitRestarting) {
-        wait_ms(500);
+        // Seems to be some issue with this function, maybe when combined with my use of timer interrupts in this module.
+        // This function never finishes executing.
+        // So commenting out for now as it's not super important.
+        //wait_ms(500);
     }
 }

@@ -32,7 +32,7 @@ static void updateProgressIndicator(const byte controllerNumber) {
     // Hide the previous text.
     prepareRdpForSprite(rootState.Frame);
     loadSprite(getSpriteSheet(), GB_BG_TEXTURE, MIRROR_DISABLED);
-    rdp_draw_textured_rectangle(0, screen.Left - 1, screen.Top, screen.Left + screen.Width, screen.Top + screen.Height - 8, MIRROR_XY);
+    rdp_draw_textured_rectangle(0, screen.Left - 1, screen.Top, screen.Left + screen.Width, screen.Top + screen.Height, MIRROR_XY);
     drawTextParagraph(rootState.Frame, text, screen.Left + TEXT_WIDTH, textTop, 0.8, screen.Width - TEXT_WIDTH);
 
     display_show(rootState.Frame);
