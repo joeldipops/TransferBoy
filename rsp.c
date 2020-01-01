@@ -104,14 +104,12 @@ void renderFrame(uintptr_t inBuffer, uintptr_t outBuffer, Rectangle* screen, boo
         return;
     }
 
-    /*
     if (rootState.Frame) {
         rdp_detach_display();
         display_show(rootState.Frame);
     }
     while(!(rootState.Frame = display_lock()));
     rdp_attach_display(rootState.Frame);
-    */
 
     haltRsp();
     rspInterface.InAddress = inBuffer;

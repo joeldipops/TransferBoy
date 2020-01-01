@@ -263,8 +263,8 @@ void playDraw(const byte playerNumber) {
 
         sprintf(text, "FPS: %d %lld", fps_get(), rootState.Players[playerNumber].Meta.FrameCount);
         graphics_set_color(GLOBAL_TEXT_COLOUR, 0x0);
-        graphics_draw_box(2, 0, 450, 680, 10, GLOBAL_BACKGROUND_COLOUR);
-        graphics_draw_text(2, 5, 450, text);
+        graphics_draw_box(rootState.Frame, 0, 450, 680, 10, GLOBAL_BACKGROUND_COLOUR);
+        graphics_draw_text(rootState.Frame, 5, 450, text);
     }
 }
 
