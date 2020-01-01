@@ -101,19 +101,19 @@ SECTIONS {
         __CTOR_END__ = .;
     }
 
-    /* This is a hack until I figure out how to do this properly.  Value will certainly change as code changes :( */
-    OFFSET = 0x28a00 ;
     .bss (NOLOAD) : {
         __bss_start = . ;
         *(.scommon)
         *(.sbss)
         *(COMMON)
         *(.bss)
-        . = ( RSP_INTERFACE_ADDRESS - OFFSET ) ;
-        *(.irsp)
         . = ALIGN(4);
         __bss_end = . ;
-
         end = . ;
+    }
+
+    /* Places the structure that is shared between the CPU and RSP at a known address so it can be DMAd */
+    .rspInterface RSP_INTERFACE_ADDRESS : {
+        *(.rspInterface)
     }
 }

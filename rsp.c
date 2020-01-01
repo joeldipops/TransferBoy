@@ -21,10 +21,9 @@ typedef struct {
 } RspInterface;
 
 /**
- * Memory Address that RSP will read from to get
- * the data it needs to know what to render.
+ * Memory Address that RSP will read from to get data shared between the two processors.
  */
-volatile RspInterface rspInterface __attribute__ ((section (".irsp"))) __attribute__ ((__used__));
+volatile RspInterface rspInterface __attribute__ ((section (".rspInterface"))) __attribute__ ((__used__));
 
 /**
  * Called if the RSP hits a break instruction.
