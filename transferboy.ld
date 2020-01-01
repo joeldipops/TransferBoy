@@ -60,7 +60,6 @@ SECTIONS {
         __text_end  = . ;
     }
 
-
    /**
     * Data section has relocation address at start of RAM in cached,
     * unmapped memory, but is loaded just at the end of the text segment,
@@ -81,6 +80,7 @@ SECTIONS {
         . = ALIGN(16);
         __data_start = . ;
         *(.data)
+        *(.irsp)
         *(.lit8)
         *(.lit4) ;
         . = ALIGN(16);

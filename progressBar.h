@@ -5,10 +5,9 @@
 
 /**
  * Sets up handlers to display a progress bar for the cartridge load.
- * @param Address of the global state so it can be referenced in a callback.
- * @param Number identifying player that will load a cartridge.
+ * @param playerNumber identifying player that will load a cartridge.
  */
-void startLoadProgressTimer(RootState* rootState, const byte playerNumber);
+void startLoadProgressTimer(const byte playerNumber);
 
 /**
  * Cleans up handlers for displaying the cartridge load progress bar.

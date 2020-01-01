@@ -5,16 +5,14 @@
 
 /**
  * Handles the pause menu for given player.
- * @param state Program state.
  * @param playerNumber player in menu mode.
  */
-void menuLogic(RootState* state, const byte playerNumber);
+void menuLogic(const byte playerNumber);
 
 /**
  * Displays the pause menu for given player.
- * @param state Program state.
  * @param playerNumber player in menu mode.
  */
-void menuDraw(RootState* state, const byte playerNumber);
+void menuDraw(const byte playerNumber);
 
 #endif

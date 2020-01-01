@@ -37,7 +37,7 @@ const natural PLAYER_2_SCREEN_HEIGHT = 240;
  * @param frame identifies the frame to draw on.
  * @private
  */
-static void hudDraw(const RootState* state, const display_context_t frame) {
+static void hudDraw(const display_context_t frame) {
     string text = "";
     getText(TextSplash, text);
     drawText(frame, text, 170, 10, 1);
@@ -73,7 +73,7 @@ void loadSprite(sprite_t* spriteSheet, const byte spriteCode, const mirror_t mir
  * Rerenders the background over both display buffers to cover whatever junk was there previously.
  * @param state program state
  */
-void flushScreen(RootState* state) {
+void flushScreen() {
     // Background
     display_show(2);
     prepareRdpForSprite(1);
@@ -86,9 +86,9 @@ void flushScreen(RootState* state) {
     rdp_detach_display();
 
     display_show(2);
-    hudDraw(state, 1);
+    hudDraw(1);
     display_show(1);
-    hudDraw(state, 2);
+    hudDraw(2);
     rdp_detach_display();
 }
 
@@ -119,13 +119,13 @@ void drawSolidBorder(const display_context_t frame, const Rectangle* position, c
  * @param playerNumber number of a given player.
  * @out output The calculated screen size & position.
  */
-void getScreenPosition(const RootState* state, const byte playerNumber, Rectangle* output) {
-    if (state->PlayerCount == 1) {
+void getScreenPosition(const byte playerNumber, Rectangle* output) {
+    if (rootState.PlayerCount == 1) {
         output->Top = SINGLE_PLAYER_SCREEN_TOP;
         output->Left = SINGLE_PLAYER_SCREEN_LEFT;
         output->Width = SINGLE_PLAYER_SCREEN_WIDTH;
         output->Height = SINGLE_PLAYER_SCREEN_HEIGHT;
-    } else if (state->PlayerCount == 2) {
+    } else if (rootState.PlayerCount == 2) {
         if (playerNumber == 0) {
             output->Top = PLAYER_1_SCREEN_TOP;
             output->Left = PLAYER_1_SCREEN_LEFT;
@@ -137,10 +137,10 @@ void getScreenPosition(const RootState* state, const byte playerNumber, Rectangl
             output->Width = PLAYER_2_SCREEN_WIDTH;
             output->Height = PLAYER_2_SCREEN_HEIGHT;
         } else {
-            logAndPause("Unimplemented getScreenPosition");
+            logAndPause("Unimplemented getScreenPosition: %d", rootState.PlayerCount);
         }
     } else {
-        logAndPause("Unimplemented getScreenPosition");
+        logAndPause("Unimplemented getScreenPosition: %d", rootState.PlayerCount);
     }
 }
 

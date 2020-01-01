@@ -19,13 +19,13 @@
  * @param state The play state.
  * @param playerNumber identifies player that wants to move to play mode.
  */
-static void preparePlayMode(RootState* state, byte playerNumber) {
+static void preparePlayMode(byte playerNumber) {
     Rectangle screen = {};
-    getScreenPosition(state, playerNumber, &screen);
-    resetPlayState(&state->Players[playerNumber]);
-    state->Players[playerNumber].EmulationState.controllerSlot = playerNumber;
-    state->Players[playerNumber].InitState = InitLoaded;
-    state->Players[playerNumber].ActiveMode = Play;
+    getScreenPosition(playerNumber, &screen);
+    resetPlayState(&rootState.Players[playerNumber]);
+    rootState.Players[playerNumber].EmulationState.controllerSlot = playerNumber;
+    rootState.Players[playerNumber].InitState = InitLoaded;
+    rootState.Players[playerNumber].ActiveMode = Play;
 }
 
 /**
@@ -33,13 +33,13 @@ static void preparePlayMode(RootState* state, byte playerNumber) {
  * @param state program state.
  * @param playerNumber player in init mode.
  */
-void initLogic(RootState* state, const byte playerNumber) {
-    PlayerState* playerState = &state->Players[playerNumber];
+void initLogic(const byte playerNumber) {
+    PlayerState* playerState = &rootState.Players[playerNumber];
     GbState* s = &playerState->EmulationState;
 
     if (playerState->InitState == InitRestarting) {
         playerState->InitState = InitStart;
-        state->RequiresRepaint = true;
+        rootState.RequiresRepaint = true;
     }
 
     if (playerState->InitState == InitStart) {
@@ -47,10 +47,10 @@ void initLogic(RootState* state, const byte playerNumber) {
 
         if (!result) {
             playerState->InitState = InitReady;
-            state->RequiresRepaint = true;
+            rootState.RequiresRepaint = true;
         } else {
             playerState->InitState = InitError;
-            state->ErrorCode = result;
+            rootState.ErrorCode = result;
 
             switch(result) {
                 case TPAK_ERR_NO_TPAK:
@@ -70,7 +70,7 @@ void initLogic(RootState* state, const byte playerNumber) {
                     getText(TextExpansionPakRequired, playerState->ErrorMessage);
                     break;
                 default:
-                    sprintf(playerState->ErrorMessage, "Loading Cartridge failed with error: %d", state->ErrorCode);
+                    sprintf(playerState->ErrorMessage, "Loading Cartridge failed with error: %d", rootState.ErrorCode);
                     break;
             }
         }
@@ -78,18 +78,18 @@ void initLogic(RootState* state, const byte playerNumber) {
 
     if (playerState->InitState == InitError) {
         bool releasedButtons[N64_BUTTON_COUNT] = {};
-        getPressedButtons(&state->KeysReleased, playerNumber, releasedButtons);
+        getPressedButtons(&rootState.KeysReleased, playerNumber, releasedButtons);
 
         // Press A or Start to retry.
         if (releasedButtons[A] || releasedButtons[Start]) {
-            state->RequiresControllerRead = true;
-            state->RequiresRepaint = true;
-            state->Players[playerNumber].InitState = InitRestarting;
+            rootState.RequiresControllerRead = true;
+            rootState.RequiresRepaint = true;
+            rootState.Players[playerNumber].InitState = InitRestarting;
         } else if (releasedButtons[CDown]) {
             // Load internal easter egg cartridge.
-            state->RequiresControllerRead = true;
-            state->RequiresRepaint = true;
-            sInt result = loadInternalRom(&state->Players[0].EmulationState.Cartridge.Rom);
+            rootState.RequiresControllerRead = true;
+            rootState.RequiresRepaint = true;
+            sInt result = loadInternalRom(&rootState.Players[0].EmulationState.Cartridge.Rom);
             if (result == -1) {
                 logAndPauseFrame(0, "Error loading internal ROM");
             }
@@ -101,16 +101,16 @@ void initLogic(RootState* state, const byte playerNumber) {
             s->Cartridge.RamBankCount = 1;
             s->Cartridge.Ram.Size = 0;
 
-            preparePlayMode(state, playerNumber);
+            preparePlayMode(playerNumber);
         }
     } else if (playerState->InitState == InitReady) {
         // Show the loading message.
-        state->RequiresRepaint = true;
-        state->Players[playerNumber].InitState = InitLoading;
+        rootState.RequiresRepaint = true;
+        rootState.Players[playerNumber].InitState = InitLoading;
     } else if (playerState->InitState == InitLoading) {
-        state->RequiresRepaint = true;
+        rootState.RequiresRepaint = true;
 
-        startLoadProgressTimer(state, playerNumber);
+        startLoadProgressTimer(playerNumber);
 
         sByte result = importCartridge(playerNumber, &s->Cartridge);
 
@@ -118,14 +118,14 @@ void initLogic(RootState* state, const byte playerNumber) {
 
         if (result) {
             string tmp;
-            state->ErrorCode = result;
+            rootState.ErrorCode = result;
             getText(TextChecksumFailed, tmp);
             sprintf(playerState->ErrorMessage, tmp, result);
             playerState->InitState = InitError;
             return;
         }
 
-        preparePlayMode(state, playerNumber);
+        preparePlayMode(playerNumber);
     }
 }
 
@@ -134,11 +134,11 @@ void initLogic(RootState* state, const byte playerNumber) {
  * @param state program state.
  * @param playerNumber player in init mode.
  */
-void initDraw(const RootState* state, const byte playerNumber) {
+void initDraw(const byte playerNumber) {
     Rectangle screen = {};
-    getScreenPosition(state, playerNumber, &screen);
+    getScreenPosition(playerNumber, &screen);
 
-    prepareRdpForSprite(state->Frame);
+    prepareRdpForSprite(rootState.Frame);
     loadSprite(getSpriteSheet(), GB_BG_TEXTURE, MIRROR_XY);
 
     // The - 1 and - 8 crept in when I switched from software to hardware rendering.  The RDP has some strange behaviours I can't understand.
@@ -149,7 +149,7 @@ void initDraw(const RootState* state, const byte playerNumber) {
 
     string text = "";
     string tmp = "";
-    switch (state->Players[playerNumber].InitState) {
+    switch (rootState.Players[playerNumber].InitState) {
         case InitStart: break;
         case InitLoaded: break;
         case InitReady:
@@ -159,19 +159,19 @@ void initDraw(const RootState* state, const byte playerNumber) {
             break;
         case InitError:
             getText(TextLoadCartridgePrompt, tmp);
-            sprintf(text, "%s %s", state->Players[playerNumber].ErrorMessage, tmp);
+            sprintf(text, "%s %s", rootState.Players[playerNumber].ErrorMessage, tmp);
             break;
         default:
             strcpy(text, "Unknown Error!!!");
             break;
     }
 
-    drawTextParagraph(state->Frame, text, screen.Left + TEXT_WIDTH, textTop, 0.8, screen.Width - TEXT_WIDTH);
+    drawTextParagraph(rootState.Frame, text, screen.Left + TEXT_WIDTH, textTop, 0.8, screen.Width - TEXT_WIDTH);
 
     // sleep just to give some indiciation that something has changed.
     // otherwise it may happen too fast and we might not know for sure.
     // that the t-pak was even retried.
-    if (state->Players[playerNumber].InitState == InitRestarting) {
+    if (rootState.Players[playerNumber].InitState == InitRestarting) {
         sleep(1);
     }
 }

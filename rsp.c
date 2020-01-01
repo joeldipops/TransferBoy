@@ -62,6 +62,9 @@ static volatile struct SP_regs_s* const SP_regs = (struct SP_regs_s *)0xa4040000
  * DMAs a fixed set of instructions to the RSP ready to be run when we call run_ucode()
  */
 void prepareMicrocode() {
+
+    //logAndPauseFrame(0, "address = %08x", &rspInterface);
+
     register_SP_handler(&onRSPException);
     set_SP_interrupt(1);
 
@@ -100,6 +103,15 @@ void renderFrame(uintptr_t inBuffer, uintptr_t outBuffer, Rectangle* screen, boo
     if (rspInterface.IsBusy) {
         return;
     }
+
+    /*
+    if (rootState.Frame) {
+        rdp_detach_display();
+        display_show(rootState.Frame);
+    }
+    while(!(rootState.Frame = display_lock()));
+    rdp_attach_display(rootState.Frame);
+    */
 
     haltRsp();
     rspInterface.InAddress = inBuffer;

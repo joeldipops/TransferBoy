@@ -7,7 +7,6 @@
 #include <stdio.h>
 #include <libdragon.h>
 
-static RootState* _state;
 static bool _isLoading[MAX_PLAYERS] = {0};
 static timer_link_t* _timer;
 static const int UPDATE_TIME = 500000;
@@ -24,19 +23,19 @@ static void updateProgressIndicator(const byte controllerNumber) {
     sprintf(text, "%s - %d%%", text, loadPercent);
 
     Rectangle screen = {};
-    getScreenPosition(_state, controllerNumber, &screen);
+    getScreenPosition(controllerNumber, &screen);
 
     natural textTop = screen.Top - TEXT_HEIGHT + (screen.Width / 2);
 
-    while(!(_state->Frame = display_lock()));
+    while(!(rootState.Frame = display_lock()));
 
     // Hide the previous text.
-    prepareRdpForSprite(_state->Frame);
+    prepareRdpForSprite(rootState.Frame);
     loadSprite(getSpriteSheet(), GB_BG_TEXTURE, MIRROR_DISABLED);
     rdp_draw_textured_rectangle(0, screen.Left - 1, screen.Top, screen.Left + screen.Width, screen.Top + screen.Height - 8, MIRROR_XY);
-    drawTextParagraph(_state->Frame, text, screen.Left + TEXT_WIDTH, textTop, 0.8, screen.Width - TEXT_WIDTH);
+    drawTextParagraph(rootState.Frame, text, screen.Left + TEXT_WIDTH, textTop, 0.8, screen.Width - TEXT_WIDTH);
 
-    display_show(_state->Frame);
+    display_show(rootState.Frame);
 }
 
 /**
@@ -56,11 +55,7 @@ static void onLoadProgressTimer(int ovfl) {
  * @param Address of the global state so it can be referenced in a callback.
  * @param Number identifying player that will load a cartridge.
  */
-void startLoadProgressTimer(RootState* rootState, const byte playerNumber) {
-    if (!_state) {
-        _state = rootState;
-    }
-
+void startLoadProgressTimer(const byte playerNumber) {
     _isLoading[playerNumber] = true;
 
     if (!_timer) {
@@ -87,8 +82,7 @@ void closeLoadProgressTimer(const byte playerNumber) {
     if (isDone) {
         delete_timer(_timer);
         _timer = null;
-        _state = null;
-    }
+}
 }
 
 

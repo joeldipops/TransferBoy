@@ -6,10 +6,9 @@
 
 /**
  * Checks if gameboy serial control bytes are indicating there is data to send and receive.
- * @param state program state.
  * @return true if gameboy is ready to transfer a byte.
  */
-bool isRequestingTransfer(const RootState* state);
+bool isRequestingTransfer();
 
 /**
  * Sends data between gameboy states, emulating serial link cable transfer.

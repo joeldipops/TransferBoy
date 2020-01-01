@@ -49,6 +49,9 @@ typedef struct {
     PlayerState Players[MAX_PLAYERS]; // Really not aiming for anything other than 2, but you never know.
 } RootState;
 
+// Global program state.
+extern RootState rootState;
+
 /**
  * Sets a Gameboy button to a particular N64 button, unsetting it from the previous mapping.
  * @param playerState state containing controller mapping to update.
