@@ -130,7 +130,7 @@ static void changeGame(const byte playerNumber) {
 
     rootState.Players[playerNumber].MenuCursorRow = -1;
     rootState.Players[playerNumber].ActiveMode = Init;
-    rootState.Players[playerNumber].InitState = InitStart;
+    rootState.Players[playerNumber].InitState = InitChanging;
     rootState.RequiresRepaint = true;
 }
 

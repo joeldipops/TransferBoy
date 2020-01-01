@@ -11,7 +11,7 @@ typedef enum {
     TextLoadCartridge,
     TextLoadingCartridge,
     TextExpansionPakRequired,
-    TextLoadCartridgePrompt,
+    TextRetryCartridgePrompt,
     TextChecksumFailed,
     TextUnsupportedCartridge,
     TextMenuResume,

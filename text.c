@@ -35,7 +35,7 @@ sByte initText() {
     strcpy(_strings[TextExpansionPakRequired], "This cartridge cannot be loaded without an Expansion Pak.");
     strcpy(_strings[TextChecksumFailed], "The cartridge could not be read correctly. Error %d.");
     strcpy(_strings[TextUnsupportedCartridge], "This cartridge is not yet supported");
-    strcpy(_strings[TextLoadCartridgePrompt], "Press A to retry.");
+    strcpy(_strings[TextRetryCartridgePrompt], "Press A to retry.");
     strcpy(_strings[TextMenuResume], "Resume");
     strcpy(_strings[TextMenuReset], "Reset");
     strcpy(_strings[TextMenuChangeCart], "Switch");

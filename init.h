@@ -5,7 +5,7 @@
 
 typedef enum {
     InitStart = 0,
-    InitReady, InitLoading, InitLoaded, InitError, InitRestarting
+    InitReady, InitLoading, InitLoaded, InitError, InitRestarting, InitChanging
 } InitState;
 
 /**

@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <string.h>
-#include <unistd.h>
 #include "init.h"
 #include "screen.h"
 #include "play.h"
@@ -76,7 +75,7 @@ void initLogic(const byte playerNumber) {
         }
     }
 
-    if (playerState->InitState == InitError) {
+    if (playerState->InitState == InitError || playerState->InitState == InitChanging) {
         bool releasedButtons[N64_BUTTON_COUNT] = {};
         getPressedButtons(&rootState.KeysReleased, playerNumber, releasedButtons);
 
@@ -143,7 +142,7 @@ void initDraw(const byte playerNumber) {
 
     // The - 1 and - 8 crept in when I switched from software to hardware rendering.  The RDP has some strange behaviours I can't understand.
     // If I don't subtract these here, there are grey lines along the right and bottom of the play screen in single player mode.
-    rdp_draw_textured_rectangle(0,  screen.Left, screen.Top, screen.Left + screen.Width - 1, screen.Top + screen.Height - 8, true);
+    rdp_draw_textured_rectangle(0,  screen.Left, screen.Top, screen.Left + screen.Width - 1, screen.Top + screen.Height, true);
 
     natural textTop = screen.Top - TEXT_HEIGHT + (screen.Width / 2);
 
@@ -157,8 +156,11 @@ void initDraw(const byte playerNumber) {
         case InitLoading:
             getText(TextLoadingCartridge, text);
             break;
+        case InitChanging: 
+            getText(TextLoadCartridge, text);
+            break;
         case InitError:
-            getText(TextLoadCartridgePrompt, tmp);
+            getText(TextRetryCartridgePrompt, tmp);
             sprintf(text, "%s %s", rootState.Players[playerNumber].ErrorMessage, tmp);
             break;
         default:
@@ -172,6 +174,6 @@ void initDraw(const byte playerNumber) {
     // otherwise it may happen too fast and we might not know for sure.
     // that the t-pak was even retried.
     if (rootState.Players[playerNumber].InitState == InitRestarting) {
-        sleep(1);
+        wait_ms(500);
     }
 }
