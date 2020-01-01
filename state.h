@@ -30,7 +30,6 @@ typedef struct {
     sByte MenuCursorColumn;
     byte MenuLayout[2];
     bool WasFrameSkipped;
-    byte BuffersInitialised;
     MetaState Meta;
     string ErrorMessage;
 } PlayerState;

@@ -91,7 +91,7 @@ static byte getNewRow(const float oldRowCount, const float newRowCount, const fl
  */
 static void resumePlay(PlayerState* playerState) {
     playerState->MenuCursorRow = -1;
-    playerState->BuffersInitialised = 0;
+    rootState.RequiresRepaint = false;
     playerState->ActiveMode = Play;
 }
 

@@ -30,7 +30,7 @@ volatile RspInterface rspInterface __attribute__ ((section (".rspInterface"))) _
  */
 static void onRSPException() {
     printSegmentToFrame(2, "RSP Exception Raised - dumping rspInterface", (byte*) &rspInterface);
-    printSegmentToFrame(1, "RSP Exception Raised - dumping output", (byte*) rspInterface.OutAddress);
+    printSegmentToFrame(rootState.Frame, "RSP Exception Raised - dumping output", (byte*) rspInterface.OutAddress);
 }
 
 // Following taken from libdragon source since it doesn't provide direct access to these registers.
@@ -88,6 +88,7 @@ void prepareMicrocode() {
  */
 void haltRsp() {
     SP_regs->status = SP_STATUS_SET_HALT;
+    rspInterface.IsBusy = false;
 }
 
 /**
@@ -119,5 +120,6 @@ void renderFrame(uintptr_t inBuffer, uintptr_t outBuffer, Rectangle* screen, boo
     rspInterface.IsBusy = true;
 
     data_cache_hit_writeback(&rspInterface, sizeof(RspInterface));
+
     run_ucode();
 }

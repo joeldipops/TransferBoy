@@ -83,7 +83,6 @@ static void initialiseEmulator(GbState* state) {
  */
 void resetPlayState(PlayerState* state) {
     initialiseEmulator(&state->EmulationState);
-    state->BuffersInitialised = 0;
     state->Meta.FrameCount = 0;
     resetSGBState(&state->SGBState);
 }
