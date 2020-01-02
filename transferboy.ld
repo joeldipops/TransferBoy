@@ -17,6 +17,14 @@
  * ========================================================================
  */
 
+/*
+ This file must be run through the cpp pre-compiler before use.
+ Like so:
+     cpp $(PRE_LD_FILE) | grep -v '^#'	>>$(LD_FILE)
+*/
+
+#include "global.h"
+
 OUTPUT_FORMAT ("elf32-bigmips", "elf32-bigmips", "elf32-littlemips")
 OUTPUT_ARCH (mips)
 EXTERN (_start)
@@ -52,7 +60,6 @@ SECTIONS {
         __text_end  = . ;
     }
 
-
    /**
     * Data section has relocation address at start of RAM in cached,
     * unmapped memory, but is loaded just at the end of the text segment,
@@ -73,6 +80,7 @@ SECTIONS {
         . = ALIGN(16);
         __data_start = . ;
         *(.data)
+        *(.irsp)
         *(.lit8)
         *(.lit4) ;
         . = ALIGN(16);
@@ -102,5 +110,10 @@ SECTIONS {
         . = ALIGN(4);
         __bss_end = . ;
         end = . ;
+    }
+
+    /* Places the structure that is shared between the CPU and RSP at a known address so it can be DMAd */
+    .rspInterface RSP_INTERFACE_ADDRESS : {
+        *(.rspInterface)
     }
 }

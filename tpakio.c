@@ -2,6 +2,7 @@
 #include "tpakio.h"
 #include "config.h"
 #include "hwdefs.h"
+#include "state.h"
 
 #include <libdragon.h>
 #include <math.h>
@@ -62,6 +63,8 @@ const byte TPAK_STATUS_CARTRIDGE_ABSENT = 0x40; // bit 6
 const byte TPAK_STATUS_CARTRIDGE_POWERED = 0x80; // bit 7
 
 const natural ROM_ADDRESS_OFFSET = 0xC000;
+
+byte _progress[MAX_PLAYERS] = {0};
 
 /**
  * Gets whether this cartridge has an RTC installed on it.
@@ -477,6 +480,8 @@ static CartridgeType getPrimaryType(const CartridgeType fullType) {
  ** -1 - Error
  */
 static sByte importRom(const byte controllerNumber, GameBoyCartridge* cartridge) {
+    _progress[controllerNumber] = 0;
+
     cartridge->Rom.Size = BANK_SIZE * cartridge->RomBankCount;
     if (cartridge->Rom.Data) {
         free(cartridge->Rom.Data);
@@ -490,7 +495,11 @@ static sByte importRom(const byte controllerNumber, GameBoyCartridge* cartridge)
         // Read into memory 32bytes at a time.
         for (natural address = 0; address < BANK_SIZE; address += BLOCK_SIZE) {
             read_mempak_address(controllerNumber, ROM_ADDRESS_OFFSET + address, cartridge->Rom.Data + (bank * BANK_SIZE) + address);
+
+            _progress[controllerNumber] = ((float)(bank * BANK_SIZE + address) / (float)cartridge->Rom.Size) * 100;
         }
+
+
     }
 
     return TPAK_SUCCESS;
@@ -764,4 +773,12 @@ sByte importCartridge(const byte controllerNumber, GameBoyCartridge* cartridge) 
     setTpakValue(controllerNumber, CARTRIDGE_POWER_ADDRESS, CARTRIDGE_POWER_OFF);
 
     return TPAK_SUCCESS;
+}
+
+/**
+ * Gets the percentage complete that a given TPak cartridge load is.
+ * @param controllerNumber controller port we are loading from.
+ */
+byte getLoadProgress(const byte controllerNumber) {
+    return _progress[controllerNumber];
 }

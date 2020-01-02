@@ -5,9 +5,13 @@
 #include "rsp.h"
 #include "global.h"
 
-extern const char rsp_code_start __attribute((section(".data")));
-extern const char rsp_code_end __attribute((section(".data")));
-extern const char rsp_code_size __attribute((section(".data")));
+extern const char renderer_code_start __attribute((section(".data")));
+extern const char renderer_code_end __attribute((section(".data")));
+extern const char renderer_code_size __attribute((section(".data")));
+
+extern const char ppu_code_start __attribute((section(".data")));
+extern const char ppu_code_end __attribute((section(".data")));
+extern const char ppu_code_size __attribute((section(".data")));
 
 typedef struct {
     uintptr_t InAddress;
@@ -21,17 +25,16 @@ typedef struct {
 } RspInterface;
 
 /**
- * Memory Address that RSP will read from to get
- * the data it needs to know what to render.
+ * Memory Address that RSP will read from to get data shared between the two processors.
  */
-volatile RspInterface* rspInterface = (RspInterface*) RSP_INTERFACE_ADDRESS;
+volatile RspInterface rspInterface __attribute__ ((section (".rspInterface"))) __attribute__ ((__used__));
 
 /**
  * Called if the RSP hits a break instruction.
  */
 static void onRSPException() {
-    printSegmentToFrame(2, "RSP Exception Raised - dumping rspInterface", (byte*) rspInterface);
-    printSegmentToFrame(2, "RSP Exception Raised - dumping output", (byte*) rspInterface->OutAddress);
+    printSegmentToFrame(2, "RSP Exception Raised - dumping rspInterface", (byte*) &rspInterface);
+    printSegmentToFrame(rootState.Frame, "RSP Exception Raised - dumping output", (byte*) rspInterface.OutAddress);
 }
 
 // Following taken from libdragon source since it doesn't provide direct access to these registers.
@@ -62,23 +65,37 @@ static volatile struct SP_regs_s* const SP_regs = (struct SP_regs_s *)0xa4040000
 /**
  * DMAs a fixed set of instructions to the RSP ready to be run when we call run_ucode()
  */
-void prepareMicrocode() {
+s8 prepareMicrocode(const Microcode code) {
     register_SP_handler(&onRSPException);
     set_SP_interrupt(1);
 
-    unsigned long size = (unsigned long)&rsp_code_size;
-    load_ucode((void*)&rsp_code_start, size);
+    unsigned long size = 0;
+    switch (code) {
+        case RSP_RENDERER:
+            size = (unsigned long)&renderer_code_size;
+            load_ucode((void*)&renderer_code_start, size);
+            break;
+        case RSP_PPU:
+            size = (unsigned long)&ppu_code_size;
+            load_ucode((void*)&ppu_code_start, size);
+        default:
+            return -1;
+    }
+
+
 
     // Zero out the padding.
-    rspInterface->IsBusy = false;
-    rspInterface->IsColourPadding[0] = 0;
-    rspInterface->IsColourPadding[1] = 0;
-    rspInterface->IsColourPadding[2] = 0;
-    rspInterface->IsBusyPadding[0] = 0;
-    rspInterface->IsBusyPadding[1] = 0;
-    rspInterface->IsBusyPadding[2] = 0;
-    rspInterface->WordPadding[0] = 0;
-    rspInterface->WordPadding[1] = 0;
+    rspInterface.IsBusy = false;
+    rspInterface.IsColourPadding[0] = 0;
+    rspInterface.IsColourPadding[1] = 0;
+    rspInterface.IsColourPadding[2] = 0;
+    rspInterface.IsBusyPadding[0] = 0;
+    rspInterface.IsBusyPadding[1] = 0;
+    rspInterface.IsBusyPadding[2] = 0;
+    rspInterface.WordPadding[0] = 0;
+    rspInterface.WordPadding[1] = 0;
+
+    return 0;
 }
 
 /**
@@ -86,6 +103,15 @@ void prepareMicrocode() {
  */
 void haltRsp() {
     SP_regs->status = SP_STATUS_SET_HALT;
+    rspInterface.IsBusy = false;
+}
+
+/**
+ * Checks the RSP interface to determine what it's doing.
+ * @returns True if the RSP is working, false if it's idle.
+ */
+bool isRspBusy() {
+    return rspInterface.IsBusy;
 }
 
 /**
@@ -96,19 +122,27 @@ void haltRsp() {
  * @param isColour if true, inBuffer words represent 2 bit DMG pixels.  Otherwise they are 16bit GBC pixels
  */
 void renderFrame(uintptr_t inBuffer, uintptr_t outBuffer, Rectangle* screen, bool isColour) {
-    data_cache_hit_invalidate(rspInterface, sizeof(RspInterface));
+    data_cache_hit_invalidate(&rspInterface, sizeof(RspInterface));
     // Let the RSP finish it's current frame & skip this one.
-    if (rspInterface->IsBusy) {
+    if (rspInterface.IsBusy) {
         return;
     }
 
-    haltRsp();
-    rspInterface->InAddress = inBuffer;
-    rspInterface->OutAddress = outBuffer;
-    rspInterface->Screen = *screen;
-    rspInterface->IsColour = isColour;
-    rspInterface->IsBusy = true;
+    if (rootState.Frame) {
+        rdp_detach_display();
+        display_show(rootState.Frame);
+    }
+    while(!(rootState.Frame = display_lock()));
+    rdp_attach_display(rootState.Frame);
 
-    data_cache_hit_writeback(rspInterface, sizeof(RspInterface));
+    haltRsp();
+    rspInterface.InAddress = inBuffer;
+    rspInterface.OutAddress = outBuffer;
+    rspInterface.Screen = *screen;
+    rspInterface.IsColour = isColour;
+    rspInterface.IsBusy = true;
+
+    data_cache_hit_writeback(&rspInterface, sizeof(RspInterface));
+
     run_ucode();
 }

@@ -7,6 +7,9 @@
 static const short RESOLUTION_X = 640;
 static const short RESOLUTION_Y = 480;
 
+static const char TEXT_HEIGHT = 100;
+static const char TEXT_WIDTH = 10;
+
 static const float TEXT_SCALE_FACTOR = 0.210 / 100.0;
 
 typedef struct {
@@ -25,7 +28,7 @@ static const uInt MONOCHROME_PALETTE[] = {
  * Resets all screen buffers to a known state.
  * @param state program state.
  */
-void flushScreen(RootState* state);
+void flushScreen();
 
 /**
  * Gets the RDP module ready to render a new texture.
@@ -56,7 +59,7 @@ void drawSolidBorder(const display_context_t frame, const Rectangle* position, c
  * @param playerNumber number of a given player.
  * @out output The calculated screen size & position.
  */
-void getScreenPosition(const RootState* state, const byte playerNumber, Rectangle* output);
+void getScreenPosition(const byte playerNumber, Rectangle* output);
 
 /**
  * Takes a 16bit gameboy colour and returns a 32 bit libdragon colour

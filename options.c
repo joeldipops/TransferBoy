@@ -136,11 +136,11 @@ static void confirmOptions(PlayerState* playerState) {
  * @param state Program state.
  * @param playerNumber player in options mode.
  */
-void optionsLogic(RootState* state, byte playerNumber) {
-    PlayerState* playerState = &state->Players[playerNumber];
+void optionsLogic(byte playerNumber) {
+    PlayerState* playerState = &rootState.Players[playerNumber];
 
     bool pressedButtons[N64_BUTTON_COUNT] = {0};
-    getPressedButtons(&state->KeysReleased, playerNumber, pressedButtons);
+    getPressedButtons(&rootState.KeysReleased, playerNumber, pressedButtons);
 
     bool repaintRequired = true;
     bool ctrlReadRequired = true;
@@ -171,26 +171,25 @@ void optionsLogic(RootState* state, byte playerNumber) {
     } else if (pressedButtons[Start] || pressedButtons[playerState->SystemMenuButton]) {
         confirmOptions(playerState);
         resumePlayFromOptions(playerState);
-        flushScreen(state);
+        flushScreen();
     } else {
         repaintRequired = false;
         ctrlReadRequired = false;
     }
 
-    state->RequiresRepaint |= repaintRequired;
-    state->RequiresControllerRead |= ctrlReadRequired;
+    rootState.RequiresRepaint |= repaintRequired;
+    rootState.RequiresControllerRead |= ctrlReadRequired;
 }
 
 /**
  * Draws the option name and current state to the screen.
- * @param state program state.
  * @param playerNumber number of the player with options to draw.
  * @param text text include option and value.
  * @param screen area of the screen to draw to.
  * @param row option will be drawn in this row.
  * @private
  */
-static void drawOptionRow(const RootState* state, const byte playerNumber, const string text, const Rectangle* screen, const byte row) {
+static void drawOptionRow(const byte playerNumber, const string text, const Rectangle* screen, const byte row) {
     const float scale = (float) screen->Width * TEXT_SCALE_FACTOR;
     const natural menuItemOffset = 32;
 
@@ -200,59 +199,57 @@ static void drawOptionRow(const RootState* state, const byte playerNumber, const
     natural left = screen->Left + (screen->Width - length) / 2;
 
 
-    drawText(state->Frame, text, left, top, scale);
+    drawText(rootState.Frame, text, left, top, scale);
 
     // draw border if selected.
-    if (state->Players[playerNumber].OptionsCursorRow == row) {
+    if (rootState.Players[playerNumber].OptionsCursorRow == row) {
         // TODO: draw left & right arrows.
         Rectangle border = { top, screen->Left, screen->Width, menuItemOffset };
-        drawSolidBorder(state->Frame, &border, 2, SELECTED_OPTIONS_ITEM_COLOUR);
+        drawSolidBorder(rootState.Frame, &border, 2, SELECTED_OPTIONS_ITEM_COLOUR);
     }
 }
 
 /**
  * Draws the Audio Enable/Disable option.
- * @param state program state.
  * @param playerNumber number of the player with options to draw.
  * @param screen area of the screen to draw to.
  * @param row option will be drawn in this row.
  * @private
  */
-static void drawAudioOption(const RootState* state, const byte playerNumber, const Rectangle* screen, const byte row) {
+static void drawAudioOption(const byte playerNumber, const Rectangle* screen, const byte row) {
     string text = "";
-    if (state->Players[playerNumber].AudioEnabled) {
+    if (rootState.Players[playerNumber].AudioEnabled) {
         getText(TextAudioOn, text);
     } else {
         getText(TextAudioOff, text);
     }
 
-    drawOptionRow(state, playerNumber, text, screen, row);
+    drawOptionRow(playerNumber, text, screen, row);
 }
 
 /**
  * Draws one of the button map options, drawing the button images.
- * @param state program state.
  * @param playerNumber number of the player with options to draw.
  * @param button the gameboy/system button we are assigning to an N64 controller button.
  * @param screen area of the screen to draw to.
  * @param row option will be drawn in this row.
  * @private
  */
-static void drawButtonMapOption(const RootState* state, const byte playerNumber, const GbButton button, const Rectangle* screen, const byte row) {
+static void drawButtonMapOption(const byte playerNumber, const GbButton button, const Rectangle* screen, const byte row) {
     byte gbButtonSprite = 0;
     N64Button n64Button = 0;
     switch(button) {
         case GbStart:
             gbButtonSprite = GB_START_SPRITE;
-            n64Button = state->Players[playerNumber].GbStartButton;
+            n64Button = rootState.Players[playerNumber].GbStartButton;
             break;
         case GbSelect:
             gbButtonSprite = GB_SELECT_SPRITE;
-            n64Button = state->Players[playerNumber].GbSelectButton;
+            n64Button = rootState.Players[playerNumber].GbSelectButton;
             break;
         case GbSystemMenu:
             gbButtonSprite = MENU_SPRITE;
-            n64Button = state->Players[playerNumber].SystemMenuButton;
+            n64Button = rootState.Players[playerNumber].SystemMenuButton;
             break;
         default:
             gbButtonSprite = ERROR_SPRITE;
@@ -301,31 +298,30 @@ static void drawButtonMapOption(const RootState* state, const byte playerNumber,
         sprintf(text, "$%02x : $%02x", gbButtonSprite, n64ButtonSprite);
     }
 
-    drawOptionRow(state, playerNumber, text, screen, row);
+    drawOptionRow(playerNumber, text, screen, row);
 }
 
 /**
  * Determines how to draw each possible option.
- * @param state program state.
  * @param playerNumber number of the player with options to draw.
  * @param option the option being drawn.
  * @param screen area of the screen to draw pto.
  * @param row option will be drawn in this row.
  * @private
  */
-static sByte drawOption(const RootState* state, const byte playerNumber, const OptionType option, const Rectangle* screen, const byte row) {
+static sByte drawOption(const byte playerNumber, const OptionType option, const Rectangle* screen, const byte row) {
     switch (option) {
         case OptionsAudio:
-            drawAudioOption(state, playerNumber, screen, row);
+            drawAudioOption(playerNumber, screen, row);
             break;
         case OptionsMenu:
-            drawButtonMapOption(state, playerNumber, GbSystemMenu, screen, row);
+            drawButtonMapOption(playerNumber, GbSystemMenu, screen, row);
             break;
         case OptionsStart:
-            drawButtonMapOption(state, playerNumber, GbStart, screen, row);
+            drawButtonMapOption(playerNumber, GbStart, screen, row);
             break;
         case OptionsSelect:
-            drawButtonMapOption(state, playerNumber, GbSelect, screen, row);
+            drawButtonMapOption(playerNumber, GbSelect, screen, row);
             break;
         default:
             return -1;
@@ -339,23 +335,23 @@ static sByte drawOption(const RootState* state, const byte playerNumber, const O
  * @param state Program state.
  * @param playerNumber player in options mode.
  */
-void optionsDraw(RootState* state, const byte playerNumber) {
+void optionsDraw(const byte playerNumber) {
     Rectangle screen = {};
-    getScreenPosition(state, playerNumber, &screen);
+    getScreenPosition(playerNumber, &screen);
 
-    prepareRdpForSprite(state->Frame);
+    prepareRdpForSprite(rootState.Frame);
     loadSprite(getSpriteSheet(), BLUE_BG_TEXTURE, true);
 
     // Cover menu section.
     rdp_draw_textured_rectangle(0, 0, screen.Top + screen.Height, RESOLUTION_X, RESOLUTION_Y, MIRROR_DISABLED);
 
-    if (state->Players[playerNumber].ActiveMode != Options) {
-        state->RequiresRepaint = true;
+    if (rootState.Players[playerNumber].ActiveMode != Options) {
+        rootState.RequiresRepaint = true;
         return;
     }
 
     for (byte i = 0; i < OptionsEnd; i++) {
-        drawOption(state, playerNumber, (OptionType) i, &screen, i);
+        drawOption(playerNumber, (OptionType) i, &screen, i);
     }
 
     rdp_detach_display();

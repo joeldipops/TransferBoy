@@ -1,6 +1,8 @@
 #include "state.h"
-
+#include "global.h"
 #include <string.h>
+
+RootState rootState;
 
 /**
  * Sets up initial configuration for N64 - Gameboy button map.

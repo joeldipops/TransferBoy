@@ -3,6 +3,8 @@
 
 #include "core.h"
 #include "state.h"
+#include "rsp.h"
+#include "logger.h"
 #include "config.h"
 #include "lcd.h"
 #include "hwdefs.h"
@@ -53,6 +55,10 @@ static void lcd_render_current_line(PlayerState* state) {
     GbState* gb_state = &state->EmulationState;
 
     if (gb_state->CurrentLine >= GB_LCD_HEIGHT) { /* VBlank */
+        return;
+    }
+
+    if (FRAMES_TO_SKIP && ((state->Meta.FrameCount + 1) % (FRAMES_TO_SKIP + 1))) {
         return;
     }
 

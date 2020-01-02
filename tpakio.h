@@ -145,6 +145,12 @@ typedef struct {
 } GameBoyCartridge;
 
 /**
+ * Gets the percentage complete that a given TPak cartridge load is.
+ * @param controllerNumber controller port we are loading from.
+ */
+byte getLoadProgress(const byte controllerNumber);
+
+/**
  * Starts or stops the rumble motor for cartridges that have one.
  * @param controllerNumber Slot that rumble-capable cartridge is using.
  * @param isRumbleStart true to start the motor, false to stop it.

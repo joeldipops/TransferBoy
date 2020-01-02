@@ -4,6 +4,8 @@
 #include <libdragon.h>
 #include "screen.h"
 
+typedef enum { NONE, RSP_RENDERER, RSP_PPU } Microcode;
+
 typedef void (*RspEventHandler)();
 
 /**
@@ -17,13 +19,22 @@ void renderFrame(uintptr_t inBuffer, uintptr_t outBuffer, Rectangle* screen, boo
 
 /**
  * DMAs a fixed set of instructions to the RSP ready to be run when we call run_ucode()
+ * @returns Error Code
+ **  0 Success
+ ** -1 Invalid microcode
  */
-void prepareMicrocode();
+s8 prepareMicrocode(const Microcode code);
 
 /**
  * Sets the RSP halt status so that it stops executing while we reload IMEM/DMEM
  */
 void haltRsp();
+
+/**
+ * Checks the RSP interface to determine what it's doing.
+ * @returns True if the RSP is working, false if it's idle.
+ */
+bool isRspBusy();
 
 
 #endif

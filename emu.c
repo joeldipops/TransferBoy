@@ -11,6 +11,7 @@
 #include "mmu.h"
 #include "lcd.h"
 #include "state.h"
+#include "ppu.h"
 #include "config.h"
 
 /**
@@ -24,14 +25,8 @@ void emu_init(GbState *s) {
 void emu_step(PlayerState* state) {
     GbState* s = &state->EmulationState;
     cpu_step(s);
-
-
-    // This is actually a terrible idea because there're interrupts that need firing
-    // But maybe there's a way to calculate them while still skipping uneeded things.
-    if (FRAMES_TO_SKIP && ((state->Meta.FrameCount + 1) % (FRAMES_TO_SKIP + 1))) {
-        lcd_step(state);
-    }
-
+    ppuStep(state);
+    lcd_step(state);
     mmu_step(s);
     cpu_timers_step(s);
 

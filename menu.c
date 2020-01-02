@@ -91,7 +91,7 @@ static byte getNewRow(const float oldRowCount, const float newRowCount, const fl
  */
 static void resumePlay(PlayerState* playerState) {
     playerState->MenuCursorRow = -1;
-    playerState->BuffersInitialised = 0;
+    rootState.RequiresRepaint = false;
     playerState->ActiveMode = Play;
 }
 
@@ -110,10 +110,10 @@ static void showOptionsMenu(PlayerState* playerState) {
  * @param state Program state.
  * @param playerNumber player that wants to reset.
  */
-static  void resetGame(RootState* state, const byte playerNumber) {
-    resetPlayState(&state->Players[playerNumber]);
+static  void resetGame(const byte playerNumber) {
+    resetPlayState(&rootState.Players[playerNumber]);
 
-    state->Players[playerNumber].ActiveMode = Play;
+    rootState.Players[playerNumber].ActiveMode = Play;
 }
 
 /**
@@ -121,55 +121,53 @@ static  void resetGame(RootState* state, const byte playerNumber) {
  * @param state Program state.
  * @param playerNumber Player that wants to change cartridge.
  */
-static void changeGame(RootState* state, const byte playerNumber) {
+static void changeGame(const byte playerNumber) {
     // Dump Save RAM first, or nah?
 
     // Reset state and send back to init.
-    freeByteArray(&state->Players[playerNumber].EmulationState.Cartridge.Rom);
-    freeByteArray(&state->Players[playerNumber].EmulationState.Cartridge.Ram);
+    freeByteArray(&rootState.Players[playerNumber].EmulationState.Cartridge.Rom);
+    freeByteArray(&rootState.Players[playerNumber].EmulationState.Cartridge.Ram);
 
-    state->Players[playerNumber].MenuCursorRow = -1;
-    state->Players[playerNumber].ActiveMode = Init;
-    state->Players[playerNumber].InitState = InitStart;
-    state->RequiresRepaint = true;
+    rootState.Players[playerNumber].MenuCursorRow = -1;
+    rootState.Players[playerNumber].ActiveMode = Init;
+    rootState.Players[playerNumber].InitState = InitChanging;
+    rootState.RequiresRepaint = true;
 }
 
 /**
  * Initialises another player with the cartridge plugged into controller slot 2
- * @param state Program state
  * @return error code
  * @private
  */
-static char addGame(RootState* state) {
-    if (state->PlayerCount >= MAX_PLAYERS) {
+static char addGame() {
+    if (rootState.PlayerCount >= MAX_PLAYERS) {
         // No more players supported.
         return -2;
     }
 
-    PlayerState* newPlayer = &state->Players[state->PlayerCount];
+    PlayerState* newPlayer = &rootState.Players[rootState.PlayerCount];
     generatePlayerState(newPlayer);
 
-    state->PlayerCount++;
+    rootState.PlayerCount++;
     return 0;
 }
 
 /**
  * Initialises another player, using the same ROM & Save as in controller slot 1
- * @param state Program state.
  * @return error code.
  * @private
  */
-static char addPlayer(RootState* state) {
-    if (state->PlayerCount < 1) {
+static char addPlayer() {
+    if (rootState.PlayerCount < 1) {
          // Can't copy from 1 if there is no 1
         return -1;
-    } else if (state->PlayerCount >= MAX_PLAYERS) {
+    } else if (rootState.PlayerCount >= MAX_PLAYERS) {
          // No more players supported.
         return -2;
     }
 
-    PlayerState* newPlayer = &state->Players[state->PlayerCount];
-    const GameBoyCartridge* playerOne = &state->Players[0].EmulationState.Cartridge;
+    PlayerState* newPlayer = &rootState.Players[rootState.PlayerCount];
+    const GameBoyCartridge* playerOne = &rootState.Players[0].EmulationState.Cartridge;
     generatePlayerState(newPlayer);
 
     // Copy the most of the cartridge data by reference.  It won't be changing.
@@ -183,30 +181,29 @@ static char addPlayer(RootState* state) {
 
     resetPlayState(newPlayer);
 
-    flushScreen(state);
+    flushScreen();
 
     newPlayer->ActiveMode = Play;
-    state->PlayerCount++;
+    rootState.PlayerCount++;
 
     // Now that we've flushed, we need to put the GB screen back.
-    playDraw(state, 0);
+    playDraw(0);
     return 0;
 }
 
 /**
  * Carries out the option selected from the menu.
- * @param state program state.
- * @param playerNumber number of player selecting an option.
+  * @param playerNumber number of player selecting an option.
  * @param x column of selected item.
  * @param y row of selected item.
  */
-static void executeMenuItem(RootState* state, const byte playerNumber, const byte x, const byte y) {
+static void executeMenuItem(const byte playerNumber, const byte x, const byte y) {
     typedef enum { Resume, Reset, Change, Options, AddPlayer, AddGame } items;
 
     byte position = 0;
     bool done = false;
     for(byte col = 0; col <= x && !done; col++) {
-        for(byte row = 0; row < state->Players[playerNumber].MenuLayout[col] && !done; row++) {
+        for(byte row = 0; row < rootState.Players[playerNumber].MenuLayout[col] && !done; row++) {
             if (col == x && row == y) {
                 done = true;
             } else {
@@ -217,22 +214,22 @@ static void executeMenuItem(RootState* state, const byte playerNumber, const byt
 
     switch((items)position) {
         case Resume:
-            resumePlay(&state->Players[playerNumber]);
+            resumePlay(&rootState.Players[playerNumber]);
             break;
         case Reset:
-            resetGame(state, playerNumber);
+            resetGame(playerNumber);
             break;
         case Change:
-            changeGame(state, playerNumber);
+            changeGame(playerNumber);
             break;
         case AddPlayer:
-            addPlayer(state);
+            addPlayer();
             break;
         case AddGame:
-            addGame(state);
+            addGame();
             break;
         case Options:
-            showOptionsMenu(&state->Players[playerNumber]);
+            showOptionsMenu(&rootState.Players[playerNumber]);
             break;
         default: ; break;
     }
@@ -243,13 +240,13 @@ static void executeMenuItem(RootState* state, const byte playerNumber, const byt
  * @param state Program state.
  * @param playerNumber player in menu mode.
  */
-void menuLogic(RootState* state, const byte playerNumber) {
-    PlayerState* playerState = &state->Players[playerNumber];
+void menuLogic(const byte playerNumber) {
+    PlayerState* playerState = &rootState.Players[playerNumber];
 
     playerState->MenuLayout[0] = 4;
 
     // If next controller not plugged in, disable add player & add game options.
-    if (state->PlayerCount > 1 || !(state->ControllersPresent & (CONTROLLER_2_INSERTED))) {
+    if (rootState.PlayerCount > 1 || !(rootState.ControllersPresent & (CONTROLLER_2_INSERTED))) {
         playerState->MenuLayout[1] = 0;
         // Can't be in the second column if there is no second column.
         playerState->MenuCursorColumn = 0;
@@ -258,7 +255,7 @@ void menuLogic(RootState* state, const byte playerNumber) {
     }
 
     bool pressedButtons[N64_BUTTON_COUNT] = {};
-    getPressedButtons(&state->KeysReleased, playerNumber, pressedButtons);
+    getPressedButtons(&rootState.KeysReleased, playerNumber, pressedButtons);
 
     const bool menuPressed = pressedButtons[playerState->SystemMenuButton];
 
@@ -296,7 +293,11 @@ void menuLogic(RootState* state, const byte playerNumber) {
                 return;
             }
         }
-        playerState->MenuCursorRow = getNewRow(playerState->MenuLayout[column], playerState->MenuLayout[(byte)playerState->MenuCursorColumn], playerState->MenuCursorRow);
+        playerState->MenuCursorRow = getNewRow(
+            playerState->MenuLayout[column], 
+            playerState->MenuLayout[(byte)playerState->MenuCursorColumn], 
+            playerState->MenuCursorRow
+        );
     } else if (pressedButtons[Right]) {
         if (playerState->MenuCursorColumn < MAX_COLUMN_COUNT - 1) {
             // Don't move the cursor if there are no rows next door.
@@ -308,20 +309,24 @@ void menuLogic(RootState* state, const byte playerNumber) {
         } else {
             playerState->MenuCursorColumn = 0;
         }
-        playerState->MenuCursorRow = getNewRow(playerState->MenuLayout[column], playerState->MenuLayout[(byte)playerState->MenuCursorColumn], playerState->MenuCursorRow);
+        playerState->MenuCursorRow = getNewRow(
+            playerState->MenuLayout[column], 
+            playerState->MenuLayout[(byte)playerState->MenuCursorColumn], 
+            playerState->MenuCursorRow
+        );
 
     // BACK, SELECT ETC,
     } else if (pressedButtons[B] || menuPressed) {
         resumePlay(playerState);
     } else if (pressedButtons[A]) {
-        executeMenuItem(state, playerNumber, playerState->MenuCursorColumn, playerState->MenuCursorRow);
+        executeMenuItem(playerNumber, playerState->MenuCursorColumn, playerState->MenuCursorRow);
     } else {
         repaintRequired = false;
         ctrlReadRequired = false;
     }
 
-    state->RequiresRepaint |= repaintRequired;
-    state->RequiresControllerRead |= ctrlReadRequired;
+    rootState.RequiresRepaint |= repaintRequired;
+    rootState.RequiresControllerRead |= ctrlReadRequired;
 }
 
 /**
@@ -329,11 +334,11 @@ void menuLogic(RootState* state, const byte playerNumber) {
  * @param state Program state.
  * @param playerNumber player in menu mode.
  */
-void menuDraw(RootState* state, const byte playerNumber) {
+void menuDraw(const byte playerNumber) {
     Rectangle screen = {};
-    getScreenPosition(state, playerNumber, &screen);
+    getScreenPosition(playerNumber, &screen);
 
-    prepareRdpForSprite(state->Frame);
+    prepareRdpForSprite(rootState.Frame);
     loadSprite(getSpriteSheet(), BLUE_BG_TEXTURE, MIRROR_XY);
 
     // Cover menu section.
@@ -346,8 +351,8 @@ void menuDraw(RootState* state, const byte playerNumber) {
         MIRROR_DISABLED
     );
 
-    if (state->Players[playerNumber].ActiveMode != Menu) {
-        state->RequiresRepaint = true;
+    if (rootState.Players[playerNumber].ActiveMode != Menu) {
+        rootState.RequiresRepaint = true;
         return;
     }
 
@@ -365,13 +370,13 @@ void menuDraw(RootState* state, const byte playerNumber) {
     for(byte x = 0; x < MAX_COLUMN_COUNT; x++) {
         for(byte y = 0; y < MAX_ROW_COUNT; y++) {
             drawMenuItem(
-                state->Frame,
+                rootState.Frame,
                 playerNumber,
                 labels[position],
                 x,
                 y,
-                state->Players[playerNumber].MenuCursorRow == y && state->Players[playerNumber].MenuCursorColumn == x,
-                y >= state->Players[playerNumber].MenuLayout[x],
+                rootState.Players[playerNumber].MenuCursorRow == y && rootState.Players[playerNumber].MenuCursorColumn == x,
+                y >= rootState.Players[playerNumber].MenuLayout[x],
                 &screen
             );
             position++;

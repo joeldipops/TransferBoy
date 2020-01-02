@@ -83,7 +83,6 @@ static void initialiseEmulator(GbState* state) {
  */
 void resetPlayState(PlayerState* state) {
     initialiseEmulator(&state->EmulationState);
-    state->BuffersInitialised = 0;
     state->Meta.FrameCount = 0;
     resetSGBState(&state->SGBState);
 }
@@ -145,17 +144,16 @@ void playAudio(const GbState* state) {
 
 /**
  * Handles gameboy emulation.
- * @param state program state.
  * @param playerNumber player in play mode.
  */
-void playLogic(RootState* state, const byte playerNumber) {
-    PlayerState* playerState = &state->Players[playerNumber];
-    GbState* s = &state->Players[playerNumber].EmulationState;
+void playLogic(const byte playerNumber) {
+    PlayerState* playerState = &rootState.Players[playerNumber];
+    GbState* s = &playerState->EmulationState;
 
-    if (state->PlayerCount == 2 && isRequestingTransfer(state)) {
+    if (rootState.PlayerCount == 2 && isRequestingTransfer()) {
         GbState* states[2] = {
-            &state->Players[0].EmulationState,
-            &state->Players[1].EmulationState
+            &rootState.Players[0].EmulationState,
+            &rootState.Players[1].EmulationState
         };
         exchangeLinkData(states);
     }
@@ -194,17 +192,17 @@ void playLogic(RootState* state, const byte playerNumber) {
         mapGbInputs(
             playerNumber,
             playerState->ButtonMap,
-            &state->KeysPressed,
+            &rootState.KeysPressed,
             pressedButtons,
             input
         );
 
         bool releasedButtons[N64_BUTTON_COUNT] = {};
-        getPressedButtons(&state->KeysReleased, playerNumber, releasedButtons);
+        getPressedButtons(&rootState.KeysReleased, playerNumber, releasedButtons);
 
         if (releasedButtons[playerState->SystemMenuButton]) {
             playerState->ActiveMode = Menu;
-            state->RequiresRepaint = true;
+            rootState.RequiresRepaint = true;
             return;
         }
 
@@ -228,38 +226,31 @@ void playLogic(RootState* state, const byte playerNumber) {
             playAudio(s);
         }
 
-        state->RequiresRepaint = true;
-        state->RequiresControllerRead = true;
+        rootState.RequiresRepaint = true;
+        rootState.RequiresControllerRead = true;
     }
 }
 
 /**
- * Place holder callback for
- * event triggered when RSP finishes rendering.
- */
-static void onFrameRendered() {}
-
-/**
  * Draws gameboy screen.
- * @param state program state.
  * @param playerNumber player in play mode.
  */
-void playDraw(const RootState* state, const byte playerNumber) {
+void playDraw(const byte playerNumber) {
     Rectangle screen = {};
-    getScreenPosition(state, playerNumber, &screen);
+    getScreenPosition(playerNumber, &screen);
 
     PaletteType palette = GameboyPalette;
-    if (state->Players[playerNumber].EmulationState.Cartridge.IsGbcSupported) {
+    if (rootState.Players[playerNumber].EmulationState.Cartridge.IsGbcSupported) {
         palette = GameboyColorPalette;
-    } else if (IS_SGB_ENABLED && state->Players[playerNumber].EmulationState.Cartridge.Header.IsSgbSupported) {
+    } else if (IS_SGB_ENABLED && rootState.Players[playerNumber].EmulationState.Cartridge.Header.IsSgbSupported) {
         palette = SuperGameboyPalette;
     }
 
     screen = (Rectangle) { screen.Left, screen.Top, 320, 12 };
 
     renderFrame(
-        (uintptr_t)state->Players[playerNumber].EmulationState.NextBuffer,
-        (uintptr_t)state->Players[playerNumber].EmulationState.TextureBuffer,
+        (uintptr_t)rootState.Players[playerNumber].EmulationState.NextBuffer,
+        (uintptr_t)rootState.Players[playerNumber].EmulationState.TextureBuffer,
         // TODO Calculate block height
         // But 6 lines of 160 16bit pixels can fit in 4kB of DMEM at a time.
         &screen,
@@ -269,21 +260,25 @@ void playDraw(const RootState* state, const byte playerNumber) {
     if (SHOW_FRAME_COUNT) {
         string text = "";
 
-        sprintf(text, "FPS: %d %lld", fps_get(), state->Players[playerNumber].Meta.FrameCount);
+        sprintf(text, "FPS: %d %lld", fps_get(), rootState.Players[playerNumber].Meta.FrameCount);
         graphics_set_color(GLOBAL_TEXT_COLOUR, 0x0);
-        graphics_draw_box(2, 0, 450, 680, 10, GLOBAL_BACKGROUND_COLOUR);
-        graphics_draw_text(2, 5, 450, text);
+        graphics_draw_box(rootState.Frame, 0, 450, 680, 10, GLOBAL_BACKGROUND_COLOUR);
+        graphics_draw_text(rootState.Frame, 5, 450, text);
     }
 }
 
 /**
  * Does any necessary cleanup after drawing.
- * @param state program state.
  * @param playerNumber player in play mode.
  */
-void playAfter(RootState* state, const byte playerNumber) {
-    if (state->Players[playerNumber].ActiveMode != Play) {
+void playAfter(const byte playerNumber) {
+    if (rootState.Players[playerNumber].ActiveMode != Play) {
         haltRsp();
+    } else {
+        // Swap the pointers.
+        uintptr_t temp = (uintptr_t) rootState.Players[playerNumber].EmulationState.NextBuffer;
+        rootState.Players[playerNumber].EmulationState.NextBuffer = rootState.Players[playerNumber].EmulationState.LastBuffer;
+        rootState.Players[playerNumber].EmulationState.LastBuffer = (u16*) temp;
     }
 }
 

@@ -11,6 +11,7 @@
 #include "screen.h"
 #include "resources.h"
 #include "hwdefs.h"
+#include "rsp.h"
 #include "fps.h"
 #include <time.h>
 #include <string.h>
@@ -60,9 +61,9 @@ static void initialiseSubsystems() {
  * Sets up initial state object that will be used throughout the program.
  * @out state the state object.
  */
-static void generateState(RootState* state) {
-    state->PlayerCount = 1;
-    generatePlayerState(&state->Players[0]);
+static void generateState() {
+    rootState.PlayerCount = 1;
+    generatePlayerState(&rootState.Players[0]);
 }
 
 /**
@@ -72,31 +73,31 @@ static void generateState(RootState* state) {
  * phase 3 paint the screen if required.
  * todo - audio.
  */
-static void mainLoop(RootState* state) {
+static void mainLoop() {
     bool allQuit = false;
-    state->RequiresRepaint = true;
-    state->RequiresControllerRead = true;
+    rootState.RequiresRepaint = true;
+    rootState.RequiresControllerRead = true;
     uLong iterations = 0;
 
-    while(!(state->Frame = display_lock())); 
+    while(!(rootState.Frame = display_lock())); 
 
     while (!allQuit) {
         allQuit = true;
 
         // Read controller about once per frame.
-        if (state->RequiresControllerRead || iterations > GB_LCD_FRAME_CLKS / 2) {
+        if (rootState.RequiresControllerRead || iterations > GB_LCD_FRAME_CLKS / 2) {
             controller_scan();
-            natural previous = state->ControllersPresent;
-            state->ControllersPresent = get_controllers_present();
+            natural previous = rootState.ControllersPresent;
+            rootState.ControllersPresent = get_controllers_present();
             
             // If a new controller is plugged in, we may need to indicate that.
-            if (previous != state->ControllersPresent) {
-                state->RequiresRepaint = true;
+            if (previous != rootState.ControllersPresent) {
+                rootState.RequiresRepaint = true;
             }
 
-            state->KeysPressed = get_keys_pressed();
-            state->KeysReleased = get_keys_up();
-            state->RequiresControllerRead = false;
+            rootState.KeysPressed = get_keys_pressed();
+            rootState.KeysReleased = get_keys_up();
+            rootState.RequiresControllerRead = false;
             iterations = 0;
         } else {
             iterations++;
@@ -108,57 +109,57 @@ static void mainLoop(RootState* state) {
         }
 
         // Cache this as it may change in the below calls.
-        byte playerCount = state->PlayerCount;
+        byte playerCount = rootState.PlayerCount;
 
         for (byte i = 0; i < playerCount; i++) {
-            if (allQuit && state->Players[i].ActiveMode != Quit) {
+            if (allQuit && rootState.Players[i].ActiveMode != Quit) {
                 allQuit = false;
             }
 
-            modes[i] = state->Players[i].ActiveMode;
+            modes[i] = rootState.Players[i].ActiveMode;
 
             switch(modes[i]) {
                 case Quit:
                     allQuit &= true;
                     break;
                 case Init:
-                    initLogic(state, i);
+                    initLogic(i);
                     break;
                 case Play:
-                    playLogic(state, i);
+                    playLogic(i);
                     break;
                 case Menu:
-                    menuLogic(state, i);
+                    menuLogic(i);
                     break;
                 case Options:
-                    optionsLogic(state, i);
+                    optionsLogic(i);
                     break;
                 default: break;
             }
         }
 
-        if (state->RequiresRepaint) {
-            state->RequiresRepaint = false;
+        if (rootState.RequiresRepaint) {
+            rootState.RequiresRepaint = false;
 
-            for (byte i = 0; i < state->PlayerCount; i++) {
+            for (byte i = 0; i < rootState.PlayerCount; i++) {
                 switch(modes[i]) {
                     case Init:
-                        initDraw(state, i);
+                        initDraw(i);
                         break;
                     case Play:
-                        playDraw(state, i);
-                        playAfter(state, i);
+                        playDraw(i);
+                        playAfter(i);
                         break;
                     case Menu:
-                        menuDraw(state, i);
+                        menuDraw(i);
                         break;
                     case Options:
-                        optionsDraw(state, i);
+                        optionsDraw(i);
                         break;
                     default: break;
                 }
             }
-            display_show(state->Frame);
+            display_show(rootState.Frame);
         }
     }
 }
@@ -169,14 +170,13 @@ static void mainLoop(RootState* state) {
 int main(void) {
     initialiseSubsystems();
     setGlobalConstants();
-    RootState state;
-    generateState(&state);
-    flushScreen(&state);
+    generateState();
+    flushScreen();
 
     rsp_init();
-    prepareMicrocode();
+    prepareMicrocode(RSP_RENDERER);
 
-    mainLoop(&state);
+    mainLoop();
 
     freeText();
     freeResources();

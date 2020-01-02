@@ -5,9 +5,6 @@
  * that becomes a terrible idea.
  */
 unsigned int sleep(unsigned int seconds) {
-    unsigned long start = get_ticks_ms();
-    unsigned long end = start + (seconds * 1000);
-    while (get_ticks_ms() < end);
-
+    wait_ms(seconds * 1000);
     return 0;
 }

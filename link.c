@@ -11,22 +11,22 @@ const natural SERIAL_INTERRUPT_MAP = 0x08;
  * @param state gameboy state.
  * @return true if gameboy is ready to transfer a byte.
  */
-bool isRequestingTransfer(const RootState* state) {
-    if (state->PlayerCount < 2) {
+bool isRequestingTransfer() {
+    if (rootState.PlayerCount < 2) {
         return false;
     }
 
     bool readyToSend = false;
 
-    for (byte i = 0; i < state->PlayerCount; i++) {
+    for (byte i = 0; i < rootState.PlayerCount; i++) {
         // If a game isn't ready, don't do anything yet.
         // May be able to send even if this bit isn't set?
-        if (!state->Players[i].EmulationState.IsLinkTransferAvailable) {
+        if (!rootState.Players[i].EmulationState.IsLinkTransferAvailable) {
             return false;
         }
 
         // At least one game must be hosting the connection.
-        if (state->Players[i].EmulationState.IsLinkClockExternal) {
+        if (rootState.Players[i].EmulationState.IsLinkClockExternal) {
             readyToSend = true;
         }
     }

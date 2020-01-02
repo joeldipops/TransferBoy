@@ -5,7 +5,7 @@
 
 typedef enum {
     InitStart = 0,
-    InitReady, InitLoading, InitLoaded, InitError, InitRestarting
+    InitReady, InitLoading, InitLoaded, InitError, InitRestarting, InitChanging
 } InitState;
 
 /**
@@ -13,13 +13,13 @@ typedef enum {
  * @param state program state.
  * @param playerNumber player in init mode.
  */
-void initLogic(RootState* state, const byte playerNumber);
+void initLogic(const byte playerNumber);
 
 /**
  * Draws screen for init mode.
  * @param state program state.
  * @param playerNumber player in init mode.
  */
-void initDraw(const RootState* state, const byte playerNumber);
+void initDraw(const byte playerNumber);
 
 #endif
