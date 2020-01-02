@@ -25,7 +25,6 @@ void emu_init(GbState *s) {
 void emu_step(PlayerState* state) {
     GbState* s = &state->EmulationState;
     cpu_step(s);
-    ppuStep(state);
     lcd_step(state);
     mmu_step(s);
     cpu_timers_step(s);

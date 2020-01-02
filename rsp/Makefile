@@ -11,6 +11,10 @@ clean: rsp-clean
 
 rsp: renderer.o ppu.o
 
+ppu: ppu.o
+
+renderer: renderer.o
+
 ppu.bin: ppu.S
 	$(CC) -c -o tmp.o ppu.S
 	$(OBJCOPY) -O binary -j .text tmp.o ppu.bin

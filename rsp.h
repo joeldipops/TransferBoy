@@ -4,7 +4,7 @@
 #include <libdragon.h>
 #include "screen.h"
 
-typedef enum { NONE, RSP_RENDERER, RSP_PPU } Microcode;
+typedef enum { NONE, UCODE_RENDERER, UCODE_PPU } Microcode;
 
 typedef void (*RspEventHandler)();
 

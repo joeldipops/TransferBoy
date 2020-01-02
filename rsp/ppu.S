@@ -1,1 +1,214 @@
+#include <ucode.S>
+#include "../global.h"
+#include "init.S"
+#include "rsp.inc"
+#include "rdp.h"
+
+###------------------------------------------
+# Renders a scan line of the gameboy screen.
+#
+###------------------------------------------
+
+###
+# Constants
+###
+
+.eqv RspIn_IN_ADDRESS, 0x00
+.eqv RspIn_OUT_ADDRESS, 0x04
+.eqv RspIn_SCREEN_POSITION, 0x08
+.eqv RspIn_RECTANGLE_SIZE, 0x0C
+.eqv RspIn_IS_COLOUR, 0x10
+.eqv RspIn_IS_BUSY, 0x14
+
+.eqv INTERFACE_SIZE, 0x20
+
+.eqv DMEM_SIZE, 0x1000
+.eqv BUFFER_SIZE, 0x0F00
+# Input pixels for the current rectangle go here.
+.eqv DMEM_GB_BASE, 0
+
+.eqv MONOCHROME_PALETTE, 0x0FF0
+.eqv LIGHTEST,0x0000FFFF
+.eqv LIGHTER, 0x0000A529
+.eqv DARKER,  0x00005295
+.eqv DARKEST, 0x00000001
+.eqv BUFFER_SIZE, GB_LCD_WIDTH * 2 # ( x2 for 16bit colours)
+
+###
+# Register aliases
+###
+
+# address of next batch of gameboy pixels to be processed in DRAM
+.set $GB_BUFFER_ADDRESS, $16
+
+# points to current gameboy pixel to be processed in DMEM
+.set $PIXEL_ADDRESS, $17
+
+# Number of pixels left to render in current iteration.
+.set $PIXEL_COUNTER, $19
+
+# Address to place next processed gameboy pixel in DMEM
+.set $N64_BUFFER_POINTER, $20
+
+# Set if pixels are in colour
+.set $IS_COLOUR, $21
+
+# Address to store massaged pixels where they will be picked up by the RDP
+.set $OUT_BUFFER_ADDRESS, $22
+
+# Left and Top position of line to render.
+.set $START_POSITION, $23
+
+# Length & Width of the line to draw in N64 pixels so it can be scaled.
+.set $RECTANGLE_SIZE, $24
+
+# Cached Height may not be necessary
+.set $RECTANGLE_HEIGHT, $25
+
+
+###
+# Takes a 2bit DMG colour index and converts to a 16bit n64 colour.
+#
+# @input reg the dmg colour index (0 - 3)
+# @output reg the 16bit dmg colour.
+###
+massageMonochrome:
+    # zero out irrelevant bits
+    andi $A, $A, 3
+    # and multiply by four since we deal with 32bit addresses
+    sll $A, $A, 2
+    lw $A, MONOCHROME_PALETTE($A)
+    jr $ra
+
+###
+# Takes the 16bit blue-endian GBC colour and converts
+# it in a red-endian n64 colour.
+#
+# @input reg contains the GBC colour.
+# @ouput reg contains the N64 colour.
+###
+massageColour:
+    # it's sign extended, so...
+    andi $A, $A, 0x0000FFFF
+
+    # blue
+    andi $t1, $A, 0x7C00
+    srl $t1, $t1, 0x09
+
+    # green
+    andi $t2, $A, 0x03E0
+    sll $t2, $t2, 0x01
+
+    # red
+    andi $t3, $A, 0x001F
+    sll $t3, $t3, 0x0B
+
+    # smoosh the three colours together
+    or $t1, $t1, $t2
+    or $t1, $t1, $t3
+
+    # set the transparency bit. There are no transparent pixels at this stage.
+    ori $t1, $t1, 0x01
+
+    ori $A, $t1, 0
+    jr $ra
+
+###
+# Sets the RDP to draw red rectangles.
+main:
+    # Initialise this task
+
+    ## Bring in the configuration.
+    liw $A, RSP_INTERFACE_ADDRESS
+    dmaIn $A, DMEM_GB_BASE, INTERFACE_SIZE
+
+    ## Stash config in some registers so whole memory space is available.
+    lw $GB_BUFFER_ADDRESS, RspIn_IN_ADDRESS($0)
+    lw $OUT_BUFFER_ADDRESS, RspIn_OUT_ADDRESS($0)
+    lw $SCREEN_POSITION, RspIn_SCREEN_POSITION($0)
+    lw $RECTANGLE_SIZE, RspIn_RECTANGLE_SIZE($0)
+    andi $RECTANGLE_HEIGHT, $RECTANGLE_SIZE, 0x0000FFFF
+    lw $IS_COLOUR, RspIn_IS_COLOUR($0)
+
+    ## If monochrome mode, set up palette in memory
+    bne $IS_COLOUR, $0, 1f
+        liw $A, LIGHTEST
+        sw $A, MONOCHROME_PALETTE($0)
+        liw $A, LIGHTER
+        sw $A, (MONOCHROME_PALETTE + 4)($0)
+        liw $A, DARKER
+        sw $A, (MONOCHROME_PALETTE + 8)($0)
+        liw $A, DARKEST
+        sw $A, (MONOCHROME_PALETTE + 0xC)($0)
+    1:
+
+    # Build up this scanline to a buffer than can be rendered as a texture.
+
+    ## First draw any sprites.
+
+    ## Then the window
+
+    ## Then the background
+
+        addi $PIXEL_COUNTER, $0, GB_LCD_WIDTH
+
+
+        .whileHasPixels:
+            # Go through VRAM...
+            # Massage the colours to n64 16bit colours.
+
+            addi $PIXEL_COUNTER, $PIXEL_COUNTER, -1
+
+        # end loop
+        bgtz $PIXEL_COUNTER, .whileHasPixels
+
+    # Ask the RDP to render the line we just built.
+
+    ## Sync before loading a new texture.
+    syncPipe
+
+    ## DMA the data back to DRAM so that the RDP can pick it up.
+    dmaOut DMEM_GB_BASE, $OUT_BUFFER_ADDRESS, BUFFER_SIZE
+
+    ## Tell RDP where to look for texture data.
+    setTextureImage RGBA_FORMAT, COLOUR_DEPTH_16, GB_LCD_WIDTH, $OUT_BUFFER_ADDRESS
+
+    ## Set up a tile now that the RDP has the data.
+    setTile 1, RGBA_FORMAT, COLOUR_DEPTH_16, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+
+    ## Give tile a size & shape
+    loadTile 1, 0, 0, GB_LCD_WIDTH, 1
+
+    # Calculate where to draw the line.
+    add $a0, $START_POSITION, $0
+    srl $a0, $a0, 16
+    andi $a1, $START_POSITION, 0x0000FFFF
+
+    add $a2, $RECTANGLE_SIZE, $0
+    srl $a2, $a2, 16
+
+    add $a2, $a2, $a0
+    add $a3, $RECTANGLE_HEIGHT, $a1
+
+    ## Draw a rectangle with the texture we have set up
+    textureRectangle 1, $a0, $a1, $a2, $a3, 0, 0, 2048, 512
+
+
+    # Clean-up now that we're done.
+
+    ## Reset DRAM flag that says we're done with this work.
+    sw $0, RspIn_IS_BUSY($0)
+    ## Gotta zero out IS_COLOUR too because of the way values are packed.
+    sw $0, RspIn_IS_COLOUR
+
+    liw $A, RSP_INTERFACE_ADDRESS
+    dmaOut DMEM_GB_BASE, $A, INTERFACE_SIZE
+
+# job done
+stall:
+    nop
+    j stall
+
 break
+# Fill remainder with break instruction
+.org 2048, 0x0000000D

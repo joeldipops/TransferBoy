@@ -174,7 +174,7 @@ int main(void) {
     flushScreen();
 
     rsp_init();
-    prepareMicrocode(RSP_RENDERER);
+    prepareMicrocode(UCODE_RENDERER);
 
     mainLoop();
 

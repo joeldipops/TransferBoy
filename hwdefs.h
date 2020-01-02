@@ -1,10 +1,7 @@
 #ifndef HWDEFS_H
 #define HWDEFS_H
 
-#define GB_FREQ 4194304 /* Hz */
-
-#define GB_LCD_WIDTH  160 /* px */
-#define GB_LCD_HEIGHT 144 /* px */
+#include "global.h"
 
 static const int GB_LCD_LY_MAX = 153;
 

@@ -71,13 +71,14 @@ s8 prepareMicrocode(const Microcode code) {
 
     unsigned long size = 0;
     switch (code) {
-        case RSP_RENDERER:
+        case UCODE_RENDERER:
             size = (unsigned long)&renderer_code_size;
             load_ucode((void*)&renderer_code_start, size);
             break;
-        case RSP_PPU:
+        case UCODE_PPU:
             size = (unsigned long)&ppu_code_size;
             load_ucode((void*)&ppu_code_start, size);
+            break;
         default:
             return -1;
     }
