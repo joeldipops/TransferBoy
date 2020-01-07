@@ -158,4 +158,12 @@ _dmaOut:
     jal _dmaOut
 .endm
 
+.macro memcpy source, dest, length
+    1:
+        lw $A, source($0)
+        sw $A, dest($0)
+        addi \length, \length, -1
+    bgtz \length, 1b
+.endm
+
 #endif

@@ -9,9 +9,9 @@ extern const char renderer_code_start __attribute((section(".data")));
 extern const char renderer_code_end __attribute((section(".data")));
 extern const char renderer_code_size __attribute((section(".data")));
 
-extern const char ppu_code_start __attribute((section(".data")));
-extern const char ppu_code_end __attribute((section(".data")));
-extern const char ppu_code_size __attribute((section(".data")));
+extern const char ppuDMG_code_start __attribute((section(".data")));
+extern const char ppuDMG_code_end __attribute((section(".data")));
+extern const char ppuDMG_code_size __attribute((section(".data")));
 
 typedef struct {
     uintptr_t InAddress;
@@ -75,15 +75,16 @@ s8 prepareMicrocode(const Microcode code) {
             size = (unsigned long)&renderer_code_size;
             load_ucode((void*)&renderer_code_start, size);
             break;
-        case UCODE_PPU:
-            size = (unsigned long)&ppu_code_size;
-            load_ucode((void*)&ppu_code_start, size);
+        case UCODE_DMG_PPU:
+            size = (unsigned long)&ppuDMG_code_size;
+            load_ucode((void*)&ppuDMG_code_start, size);
             break;
+        case UCODE_GBC_PPU:
+        case UCODE_SGB_PPU:
+            return RSP_ERR_UNIMPLEMENTED_UCODE;
         default:
-            return -1;
+            return RSP_ERR_INVALID_UCODE;
     }
-
-
 
     // Zero out the padding.
     rspInterface.IsBusy = false;
@@ -96,7 +97,7 @@ s8 prepareMicrocode(const Microcode code) {
     rspInterface.WordPadding[0] = 0;
     rspInterface.WordPadding[1] = 0;
 
-    return 0;
+    return RSP_SUCCESS;
 }
 
 /**

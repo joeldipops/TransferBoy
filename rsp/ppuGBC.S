@@ -17,7 +17,6 @@
 .eqv RspIn_OUT_ADDRESS, 0x04
 .eqv RspIn_SCREEN_POSITION, 0x08
 .eqv RspIn_RECTANGLE_SIZE, 0x0C
-.eqv RspIn_IS_COLOUR, 0x10
 .eqv RspIn_IS_BUSY, 0x14
 
 .eqv INTERFACE_SIZE, 0x20
@@ -27,11 +26,6 @@
 # Input pixels for the current rectangle go here.
 .eqv DMEM_GB_BASE, 0
 
-.eqv MONOCHROME_PALETTE, 0x0FF0
-.eqv LIGHTEST,0x0000FFFF
-.eqv LIGHTER, 0x0000A529
-.eqv DARKER,  0x00005295
-.eqv DARKEST, 0x00000001
 .eqv BUFFER_SIZE, GB_LCD_WIDTH * 2 # ( x2 for 16bit colours)
 
 ###
@@ -50,9 +44,6 @@
 # Address to place next processed gameboy pixel in DMEM
 .set $N64_BUFFER_POINTER, $20
 
-# Set if pixels are in colour
-.set $IS_COLOUR, $21
-
 # Address to store massaged pixels where they will be picked up by the RDP
 .set $OUT_BUFFER_ADDRESS, $22
 
@@ -64,21 +55,6 @@
 
 # Cached Height may not be necessary
 .set $RECTANGLE_HEIGHT, $25
-
-
-###
-# Takes a 2bit DMG colour index and converts to a 16bit n64 colour.
-#
-# @input reg the dmg colour index (0 - 3)
-# @output reg the 16bit dmg colour.
-###
-massageMonochrome:
-    # zero out irrelevant bits
-    andi $A, $A, 3
-    # and multiply by four since we deal with 32bit addresses
-    sll $A, $A, 2
-    lw $A, MONOCHROME_PALETTE($A)
-    jr $ra
 
 ###
 # Takes the 16bit blue-endian GBC colour and converts
@@ -128,19 +104,6 @@ main:
     lw $SCREEN_POSITION, RspIn_SCREEN_POSITION($0)
     lw $RECTANGLE_SIZE, RspIn_RECTANGLE_SIZE($0)
     andi $RECTANGLE_HEIGHT, $RECTANGLE_SIZE, 0x0000FFFF
-    lw $IS_COLOUR, RspIn_IS_COLOUR($0)
-
-    ## If monochrome mode, set up palette in memory
-    bne $IS_COLOUR, $0, 1f
-        liw $A, LIGHTEST
-        sw $A, MONOCHROME_PALETTE($0)
-        liw $A, LIGHTER
-        sw $A, (MONOCHROME_PALETTE + 4)($0)
-        liw $A, DARKER
-        sw $A, (MONOCHROME_PALETTE + 8)($0)
-        liw $A, DARKEST
-        sw $A, (MONOCHROME_PALETTE + 0xC)($0)
-    1:
 
     # Build up this scanline to a buffer than can be rendered as a texture.
 
@@ -151,7 +114,6 @@ main:
     ## Then the background
 
         addi $PIXEL_COUNTER, $0, GB_LCD_WIDTH
-
 
         .whileHasPixels:
             # Go through VRAM...
@@ -198,8 +160,6 @@ main:
 
     ## Reset DRAM flag that says we're done with this work.
     sw $0, RspIn_IS_BUSY($0)
-    ## Gotta zero out IS_COLOUR too because of the way values are packed.
-    sw $0, RspIn_IS_COLOUR
 
     liw $A, RSP_INTERFACE_ADDRESS
     dmaOut DMEM_GB_BASE, $A, INTERFACE_SIZE
