@@ -212,17 +212,18 @@ main:
 
             # Cache a sprite that exists on this scan line.
 
-            ## Now calculate the destination offset.
+            ## Calculate the destination offset to cache at.
             addi $A, $0, SPRITE_LIMIT
             sub $A, $A, $t2
             sll $A, $A, 2
 
+            ## And cache it
             sw $a0, OAM_CACHE($A)
 
             # There is a limit of 10 sprites per scanline.
             ## Once we've found that many relevant sprites, we're done.
 
-            ## The limit should actually be done from left to right, but assumption is most 
+            ## The limit should actually be done from left to right (i think), but assumption is most 
             ## code won't break the limit anyway.
             ## Will create a job to improve accuracy of this once general case is working.
             addi $t2, $t2, -1
