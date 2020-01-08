@@ -73,9 +73,10 @@
 ###
 # Memory Map
 ###
+.eqv TILE_CACHE, 0xBD0      # 50 possible tiles with 16B/tile assuming 2b colour.
 .eqv PPU_SETTINGS, 0x0EF0
 .eqv INPUT, 0x0F00
-.eqv OAM_CACHE, 0x0F40
+.eqv OAM_CACHE, 0x0F40      # 10 OAM entries per scanline at 4B/entry
 .eqv OAM_MIRROR, 0x0F50
 .eqv MONOCHROME_PALETTE, 0x0FF0
 
@@ -130,6 +131,7 @@ massageMonochrome:
     sll $A, $A, 2
     lw $A, MONOCHROME_PALETTE($A)
     jr $ra
+    
 
 ###
 # Sets the RDP to draw red rectangles.
@@ -240,6 +242,26 @@ main:
     addi $PIXEL_COUNTER, $0, GB_LCD_WIDTH
     .whileHasPixels:
         ## First draw any sprites.
+        
+        ### Loop through the sprite cache
+        
+        ### Does this sprite appear in this x position?
+        
+        ### Is the tile in the tile cache?
+        
+            ### Set up a cache entry
+        
+            ### DMA the tile into the cache
+            
+        ### Find the pixel that correlates to this x position.
+        
+        ### Check it against the palette
+        
+            ### Unless it's transparent, mark this pixel as filled
+        
+            ### convert to a 16bit N64 colour
+        
+            ### add it to the output buffer.
 
         ## Then the window
 
