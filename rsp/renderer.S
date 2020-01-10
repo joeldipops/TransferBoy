@@ -37,34 +37,34 @@
 ###
 
 # address of next batch of gameboy pixels to be processed in DRAM
-.set $GB_BUFFER_ADDRESS, $16
+.set $GB_BUFFER_ADDRESS, $s0
 
 # points to current gameboy pixel to be processed in DMEM
-.set $PIXEL_ADDRESS, $17
+.set $PIXEL_ADDRESS, $s1
 
 # Number of rectangles left to render in current iteration.
-.set $RECTANGLE_COUNTER, $18
+.set $RECTANGLE_COUNTER, $s2
 
 # Number of pixels left to render in current iteration.
-.set $PIXEL_COUNTER, $19
+.set $PIXEL_COUNTER, $s3
 
 # Address to place next processed gameboy pixel in DMEM
-.set $N64_BUFFER_POINTER, $20
+.set $N64_BUFFER_POINTER, $s4
 
 # Set if pixels are in colour
-.set $IS_COLOUR, $21
+.set $IS_COLOUR, $s5
 
 # Address to store massaged pixels where they will be picked up by the RDP
-.set $OUT_BUFFER_ADDRESS, $22
+.set $OUT_BUFFER_ADDRESS, $s6
 
 # Left and Top of screen
-.set $SCREEN_POSITION, $23
+.set $SCREEN_POSITION, $s7
 
 # Length and Height of each rectangle to render.
-.set $RECTANGLE_SIZE, $26
+.set $RECTANGLE_SIZE, $s8
 
 # Stashed height of rectangle to save a few cycles.
-.set $RECTANGLE_HEIGHT, $27
+.set $RECTANGLE_HEIGHT, $s9
 
 ###
 # Takes a 2bit DMG colour index and converts to a 16bit n64 colour.
@@ -74,10 +74,10 @@
 ###
 massageMonochrome:
     # zero out irrelevant bits
-    andi $A, $A, 3
+    andi $t0, $t0, 3
     # and multiply by four since we deal with 32bit addresses
-    sll $A, $A, 2
-    lw $A, MONOCHROME_PALETTE($A)
+    sll $t0, $t0, 2
+    lw $t0, MONOCHROME_PALETTE($t0)
     jr $ra
 
 ###
@@ -89,18 +89,18 @@ massageMonochrome:
 ###
 massageColour:
     # it's sign extended, so...
-    andi $A, $A, 0x0000FFFF
+    andi $t0, $t0, 0x0000FFFF
 
     # blue
-    andi $t1, $A, 0x7C00
+    andi $t1, $t0, 0x7C00
     srl $t1, $t1, 0x09
 
     # green
-    andi $t2, $A, 0x03E0
+    andi $t2, $t0, 0x03E0
     sll $t2, $t2, 0x01
 
     # red
-    andi $t3, $A, 0x001F
+    andi $t3, $t0, 0x001F
     sll $t3, $t3, 0x0B
 
     # smoosh the three colours together
@@ -110,16 +110,16 @@ massageColour:
     # set the transparency bit. There are no transparent pixels at this stage.
     ori $t1, $t1, 0x01
 
-    ori $A, $t1, 0
+    ori $t0, $t1, 0
     jr $ra
 
 ###
 # Sets the RDP to draw red rectangles.
 main:
-    liw $A, RSP_INTERFACE_ADDRESS
+    liw $t0, RSP_INTERFACE_ADDRESS
 
     # Bring in the configuration.
-    dmaIn $A, DMEM_GB_BASE, INTERFACE_SIZE
+    dmaIn $t0, DMEM_GB_BASE, INTERFACE_SIZE
 
     # Stash config in some registers so whole memory space is available.
     lw $GB_BUFFER_ADDRESS, RspIn_IN_ADDRESS($0)
@@ -131,14 +131,14 @@ main:
 
     bne $IS_COLOUR, $0, 1f
         # If monochrome, set up palette in memory
-        liw $A, LIGHTEST
-        sw $A, MONOCHROME_PALETTE($0)
-        liw $A, LIGHTER
-        sw $A, (MONOCHROME_PALETTE + 4)($0)
-        liw $A, DARKER
-        sw $A, (MONOCHROME_PALETTE + 8)($0)
-        liw $A, DARKEST
-        sw $A, (MONOCHROME_PALETTE + 0xC)($0)
+        liw $t0, LIGHTEST
+        sw $t0, MONOCHROME_PALETTE($0)
+        liw $t0, LIGHTER
+        sw $t0, (MONOCHROME_PALETTE + 4)($0)
+        liw $t0, DARKER
+        sw $t0, (MONOCHROME_PALETTE + 8)($0)
+        liw $t0, DARKEST
+        sw $t0, (MONOCHROME_PALETTE + 0xC)($0)
     1:
 
     addi $RECTANGLE_COUNTER, $0, BATCH_COUNT
@@ -160,10 +160,10 @@ main:
         # for those pixels
         .whileHasPixels:
             # put a pixel into a register
-            lw $A, 0($PIXEL_ADDRESS)
+            lw $t0, 0($PIXEL_ADDRESS)
 
             # Pixels are 16 bit, not 32, so get the uppper bit first.
-            srl $A, $A, 16
+            srl $t0, $t0, 16
 
             # massage it from gameboy format to n64 format.
             beq $IS_COLOUR, $0, 1f
@@ -175,11 +175,11 @@ main:
             nop
 
             # push massaged colour on to the out-buffer
-            sw $A, 0($N64_BUFFER_POINTER)
+            sw $t0, 0($N64_BUFFER_POINTER)
 
             # Repeat for the lower bit.
-            lw $A, 0($PIXEL_ADDRESS)
-            andi $A, $A, 0xFFFF
+            lw $t0, 0($PIXEL_ADDRESS)
+            andi $t0, $t0, 0xFFFF
 
             # massage it from gameboy format to n64 format.
             beq $IS_COLOUR, $0, 1f
@@ -193,10 +193,10 @@ main:
             # smoosh the two 16bit colours together into a 32bit word.
             lw $t1, 0($N64_BUFFER_POINTER)
             sll $t1, $t1, 16
-            or $A, $A, $t1
+            or $t0, $t0, $t1
             
             # and push on to the buffer.
-            sw $A, 0($N64_BUFFER_POINTER)
+            sw $t0, 0($N64_BUFFER_POINTER)
 
             # increment all the things.
             addi $PIXEL_ADDRESS, $PIXEL_ADDRESS, 0x04
@@ -255,8 +255,8 @@ main:
     # Gotta zero out IS_COLOUR too because of the way values are packed.
     sw $0, RspIn_IS_COLOUR
 
-    liw $A, RSP_INTERFACE_ADDRESS
-    dmaOut DMEM_GB_BASE, $A, INTERFACE_SIZE
+    liw $t0, RSP_INTERFACE_ADDRESS
+    dmaOut DMEM_GB_BASE, $t0, INTERFACE_SIZE
 
 # job done
 stall:

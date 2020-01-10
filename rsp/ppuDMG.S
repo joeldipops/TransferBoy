@@ -94,27 +94,27 @@
 ###
 
 # Address to store massaged pixels where they will be picked up by the RDP
-.set $OUT_BUFFER_ADDRESS, $18
+.set $OUT_BUFFER_ADDRESS, $s0
 
 # Number of pixels left to render in current iteration.
-.set $PIXEL_COUNTER, $19
+.set $PIXEL_COUNTER, $s1
 
 # Address to place next processed gameboy pixel in DMEM
-.set $N64_BUFFER_POINTER, $20
+.set $N64_BUFFER_POINTER, $s2
 
 # Cached Height may not be necessary
-.set $RECTANGLE_HEIGHT, $21
+.set $RECTANGLE_HEIGHT, $s3
 
 # Cached value of LCDC bit 2 flag
-.set $IS_8x16_MODE, $22
+.set $IS_8x16_MODE, $s4
 
 # Left and Top position of line to render.
-.set $START_POSITION, $23
+.set $START_POSITION, $s5
 
 # Length & Width of the line to draw in N64 pixels so it can be scaled.
-.set $RECTANGLE_SIZE, $24
+.set $RECTANGLE_SIZE, $s6
 
-.set $SCAN_LINE, $25
+.set $SCAN_LINE, $s7
 
 
 
@@ -126,12 +126,11 @@
 ###
 massageMonochrome:
     # zero out irrelevant bits
-    andi $A, $A, 3
+    andi $t0, $t0, 3
     # and multiply by four since we deal with 32bit addresses
-    sll $A, $A, 2
-    lw $A, MONOCHROME_PALETTE($A)
+    sll $t0, $t0, 2
+    lw $t0, MONOCHROME_PALETTE($t0)
     jr $ra
-    
 
 ###
 # Sets the RDP to draw red rectangles.
@@ -139,8 +138,8 @@ main:
     # Initialise this task
 
     ## Bring in the configuration.
-    liw $A, RSP_INTERFACE_ADDRESS
-    dmaIn $A, DMEM_GB_BASE, INTERFACE_SIZE
+    liw $t0, RSP_INTERFACE_ADDRESS
+    dmaIn $t0, DMEM_GB_BASE, INTERFACE_SIZE
 
     ## Stash config in some registers so whole memory space is available.
     lw $OUT_BUFFER_ADDRESS, RspIn_OUT_ADDRESS($0)
@@ -149,18 +148,18 @@ main:
     andi $RECTANGLE_HEIGHT, $RECTANGLE_SIZE, 0x0000FFFF
 
     ## Set up monochrome colour palette in memory
-    liw $A, LIGHTEST
-    sw $A, MONOCHROME_PALETTE($0)
-    liw $A, LIGHTER
-    sw $A, (MONOCHROME_PALETTE + 4)($0)
-    liw $A, DARKER
-    sw $A, (MONOCHROME_PALETTE + 8)($0)
-    liw $A, DARKEST
-    sw $A, (MONOCHROME_PALETTE + 0xC)($0)
+    liw $t0, LIGHTEST
+    sw $t0, MONOCHROME_PALETTE($0)
+    liw $t0, LIGHTER
+    sw $t0, (MONOCHROME_PALETTE + 4)($0)
+    liw $t0, DARKER
+    sw $t0, (MONOCHROME_PALETTE + 8)($0)
+    liw $t0, DARKEST
+    sw $t0, (MONOCHROME_PALETTE + 0xC)($0)
 
     # Load and cache the gameboy LCD registers.
-    lw $A, (RSP_INTERFACE_ADDRESS + RspIn_PPU_SETTINGS_ADDRESS)($0)
-    dmaIn $A, PPU_SETTINGS, PPU_SETTINGS_SIZE
+    lw $t0, (RSP_INTERFACE_ADDRESS + RspIn_PPU_SETTINGS_ADDRESS)($0)
+    dmaIn $t0, PPU_SETTINGS, PPU_SETTINGS_SIZE
 
     ## Cache the current scan line.
     lw $SCAN_LINE, (PPU_SETTINGS + Ppu_CURRENT_LINE)($0)
@@ -174,53 +173,59 @@ main:
 
     ## Find the sprites relevant to the current scanline so we don't have to loop through 40 sprites every pixel.
 
-    lw $A, (INPUT + RspIn_OAM_ADDRESS)($0)
-    dmaIn $A, OAM_MIRROR, OAM_SIZE
+    lw $t0, (INPUT + RspIn_OAM_ADDRESS)($0)
+    dmaIn $t0, OAM_MIRROR, OAM_SIZE
 
-    addi $t1, $0, SPRITE_COUNT
-    addi $t2, $0, SPRITE_LIMIT
+    # Name temporary registers for this block
+    .set $screenSpritesRemaining, $t1
+    .set $lineSpritesRemaining, $t2
+    .set $y1, $t3
+    .set $y2, $t4
+    .set $entry, $t5
+
+    addi $screenSpritesRemaining, $0, SPRITE_COUNT
+    addi $lineSpritesRemaining, $0, SPRITE_LIMIT
     .whileHasSprites:
         # Load the OAM for the current sprite
 
         ## Figure out what sprite we are on.
-        addi $A, $0, SPRITE_COUNT
-        sub $A, $A, $t1
+        addi $t0, $0, SPRITE_COUNT
+        sub $t0, $t0, $screenSpritesRemaining
         ## Multiply by four to get the address offset.
-        sll $A, $A, 2
-        ## OAM is 4bytes long, so fits in one register. (where not calling any routines, so tis safe to use $a0
-        lw $a0, OAM_MIRROR($A)
+        sll $t0, $t0, 2
+        lw $entry, OAM_MIRROR($t0)
 
         ## We care about the Y position, which is the lowest byte
-        andi $a0, $a0, 0x000000FF
+        andi $y1, $entry, 0x000000FF
 
         ## Multiply by 8 since a tile is 8 pixels tall.
-        sll $a0, $a0, 3
+        sll $y1, $y1, 3
 
         # Test that the sprite will appear on this scanline
 
-        ## $a0 is lower bound, $A is upper bound.  Double it if 8x16 mode is on.
-        addi $A, $a0, 8
+        ## $t3 is lower bound, $t0 is upper bound.  Double it if 8x16 mode is on.
+        addi $y2, $y1, 8
         beq $IS_8x16_MODE, $0, 1f
-            addi $A, $a0, 8
+            addi $y2, $y2, 8
         1:
 
         ## if bottom of the sprite is greater than the current scan line, we don't need to render it here.
-        sub $a1, $a0, $SCAN_LINE
-        bgtz $a1, .irrelevantSprite
+        sub $t0, $y1, $SCAN_LINE
+        bgtz $t0, .irrelevantSprite
 
         ## if top of the sprite is less than the current scan line, skip that too.
-        sub $a1, $SCAN_LINE, $A
-        bgtz $a1, .irrelevantSprite
+        sub $t0, $SCAN_LINE, $y2
+        bgtz $t0, .irrelevantSprite
 
             # Cache a sprite that exists on this scan line.
 
             ## Calculate the destination offset to cache at.
-            addi $A, $0, SPRITE_LIMIT
-            sub $A, $A, $t2
-            sll $A, $A, 2
+            addi $t0, $0, SPRITE_LIMIT
+            sub $t0, $t0, $lineSpritesRemaining
+            sll $t0, $t0, 2
 
             ## And cache it
-            sw $a0, OAM_CACHE($A)
+            sw $entry, OAM_CACHE($t0)
 
             # There is a limit of 10 sprites per scanline.
             ## Once we've found that many relevant sprites, we're done.
@@ -228,15 +233,21 @@ main:
             ## The limit should actually be done from left to right (i think), but assumption is most 
             ## code won't break the limit anyway.
             ## Will create a job to improve accuracy of this once general case is working.
-            addi $t2, $t2, -1
-            bgtz $t2, .whileHasSprites_break
+            addi $lineSpritesRemaining, $lineSpritesRemaining, -1
+            bgtz $lineSpritesRemaining, .whileHasSprites_break
 
         .irrelevantSprite:
 
-        addi $A, $A, 4
-        addi $t1, $t1, -1
-        bgtz $t1, .whileHasSprites
+        addi $screenSpritesRemaining, $screenSpritesRemaining, -1
+        bgtz $screenSpritesRemaining, .whileHasSprites
     .whileHasSprites_break:
+
+    # Set them all to 0 so we'll error if try to use them as registers.
+    .set $screenSpritesRemaining, 0
+    .set $lineSpritesRemaining, 0
+    .set $y1, 0
+    .set $y2, 0
+    .set $entry, 0
 
 
     addi $PIXEL_COUNTER, $0, GB_LCD_WIDTH
@@ -314,8 +325,8 @@ main:
     ## Reset DRAM flag that says we're done with this work.
     sw $0, RspIn_IS_BUSY($0)
 
-    liw $A, RSP_INTERFACE_ADDRESS
-    dmaOut DMEM_GB_BASE, $A, INTERFACE_SIZE
+    liw $t0, RSP_INTERFACE_ADDRESS
+    dmaOut DMEM_GB_BASE, $t0, INTERFACE_SIZE
 
 # job done
 stall:

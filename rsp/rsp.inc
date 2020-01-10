@@ -1,5 +1,7 @@
-#ifndef RSP_DEFS_INCLUDED
-#define RSP_DEFS_INCLUDED
+# https://www.zeuthen.desy.de/unix/unixguide/infohtml/binutils/docs/as/Pseudo-Ops.html
+
+#ifndef RSP_INC_INCLUDED
+#define RSP_INC_INCLUDED
 
 # co-processor 0 registers
 .set $c0,  $0
@@ -42,15 +44,50 @@
 .equ RDP_DMA_BUSY, 0x0100
 
 # primary accumulator
-.set $A, $8
+.set $zero, $0
+.set $at,   $1
 
-.set $a0, $4
-.set $a1, $5
-.set $a2, $6
-.set $a3, $7
+# function return values
+.set $r0,   $2
+.set $r1,   $3
 
-.set $t1, $9
-.set $t2, $10
+# function arguments
+.set $a0,   $4
+.set $a1,   $5
+.set $a2,   $6
+.set $a3,   $7
+
+.set $t0,   $8
+.set $t1,   $9
+.set $t2,   $10
+.set $t3,   $11
+.set $t4,   $12
+.set $t5,   $13
+.set $t6,   $14
+.set $t7,   $15
+
+.set $s0,   $16
+.set $s1,   $17
+.set $s2,   $18
+.set $s3,   $19
+.set $s4,   $20
+.set $s5,   $21
+.set $s6,   $22
+.set $s7,   $23
+
+# We have so little memory, so intead of more temporary regs, a few more saved regs go a long way.
+.set $s8,   $24
+.set $s9,   $25
+
+# There's no kernal, so no need for kernal reigsters
+.set $s10,  $26
+.set $s11,  $27
+
+# We'll keep a stack pointer just in case, but other pointers aren't gonna be used.
+.set $s12,  $28
+.set $s13,  $29
+.set $sp,   $30
+.set $ra,   $31
 
 ###
 # Load Immediate Word
@@ -63,18 +100,19 @@
     ori \reg, \reg, \word & 0xFFFF
 .endm
 
+
 ###
 # See dmaIn macro below
 ###
 _dmaIn:
     # Don't do anything until DMA is no longer busy
     1:
-        mfc0 $A, $RSP_RESERVED
-    bne $A, $0, 1b
+        mfc0 $t0, $RSP_RESERVED
+    bne $t0, $0, 1b
 
     2:
-        mfc0 $A, $DMA_FULL
-    bne $A, $0, 2b
+        mfc0 $t0, $DMA_FULL
+    bne $t0, $0, 2b
 
     # Set source.
     mtc0 $a0, $DMA_DRAM
@@ -88,8 +126,8 @@ _dmaIn:
 
     # wait for DMA to complete
     3:
-        mfc0 $A, $DMA_BUSY
-    bne $A, $0, 3b
+        mfc0 $t0, $DMA_BUSY
+    bne $t0, $0, 3b
 
     # release the flag
     mtc0 $0, $RSP_RESERVED
@@ -117,12 +155,12 @@ _dmaIn:
 _dmaOut:
     # Don't do anything until DMA is not busy.
     1:
-        mfc0 $A, $RSP_RESERVED
-    bne $A, $0, 1b
+        mfc0 $t0, $RSP_RESERVED
+    bne $t0, $0, 1b
 
     2:
-        mfc0 $A, $DMA_FULL
-    bne $A, $0, 2b
+        mfc0 $t0, $DMA_FULL
+    bne $t0, $0, 2b
 
     # Set source.
     mtc0 $a0, $DMA_DMEM
@@ -136,8 +174,8 @@ _dmaOut:
 
     # wait for DMA to complete
     3:
-        mfc0 $A, $DMA_BUSY
-    bne $A, $0, 3b
+        mfc0 $t0, $DMA_BUSY
+    bne $t0, $0, 3b
 
     # release the flag
     mtc0 $0, $RSP_RESERVED
@@ -156,14 +194,6 @@ _dmaOut:
     add $a1, $0, \dest
     addi $a2, $0, \length
     jal _dmaOut
-.endm
-
-.macro memcpy source, dest, length
-    1:
-        lw $A, source($0)
-        sw $A, dest($0)
-        addi \length, \length, -1
-    bgtz \length, 1b
 .endm
 
 #endif
