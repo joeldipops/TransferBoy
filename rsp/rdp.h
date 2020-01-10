@@ -1,4 +1,4 @@
-#include "rsp.h"
+#include "rsp.inc"
 
 # TODO: execRdp needs to be changed from a macro to a routine to save on space.
 
@@ -19,15 +19,15 @@
 ###
 _execRdp:
     1:
-        mfc0 $A, $RDP_CMD_STATUS
+        mfc0 $t0, $RDP_CMD_STATUS
         # bit 8 of $RDP_CMD_STATUS = RDP DMA is busy
-        andi $A, $A, RDP_DMA_BUSY
-    bne $A, $0, 1b
+        andi $t0, $t0, RDP_DMA_BUSY
+    bne $t0, $0, 1b
 
     # send 2 to RDP_CMD_STATUS
     # in order to DMA from RSP memory (DMEM)
-    addi $A, $0, DMEM_RDP_DMA
-    mtc0 $A, $RDP_CMD_STATUS
+    addi $t0, $0, DMEM_RDP_DMA
+    mtc0 $t0, $RDP_CMD_STATUS
 
     # Kick off the DMA by setting both start and end.
     mtc0 $0, $RDP_CMD_START
@@ -51,8 +51,8 @@ _execRdp:
 # Command 0x27
 ###
 .macro syncPipe
-    lui $A, 0xE700
-    sw $A, 0x000($0)
+    lui $t0, 0xE700
+    sw $t0, 0x000($0)
     execRdp 1
 .endm
 
@@ -61,8 +61,8 @@ _execRdp:
 # Command 0x27
 ###
 .macro syncFull
-    lui $A, 0xE900
-    sw $A, 0x000($0)
+    lui $t0, 0xE900
+    sw $t0, 0x000($0)
     execRdp 1
 .endm
 
@@ -74,18 +74,18 @@ _execRdp:
 ###
 .macro setFillColour upper, lower
     # "0x37 Set Fill Color"
-    lui $A, 0xF700
-    sw $A, 0x000($0)
+    lui $t0, 0xF700
+    sw $t0, 0x000($0)
 
     ## Second Byte - Packed Color
-    lui $A, \upper
+    lui $t0, \upper
 
     .ifb lower
-        ori $A, \lower
+        ori $t0, \lower
     .else
-        ori $A, \upper
+        ori $t0, \upper
     .endif
-    sw $A, 0x004($0)
+    sw $t0, 0x004($0)
 
     execRdp 2
 .endm
@@ -102,23 +102,23 @@ _execRdp:
     # (yes for some reason the numbers we set
     # are divided by 4 to get the numbers that
     # are displayed. ?)
-    lui $A, 0x3D80
+    lui $t0, 0x3D80
 
     add $t1, $0, \x2
     sll $t1, $t1, 12
-    or $A, $A, $t1
-    or $A, $A, \y2
+    or $t0, $t0, $t1
+    or $t0, $t0, \y2
 
-    sll $A, $A, 2
+    sll $t0, $t0, 2
 
-    sw $A, 0x000($0)
+    sw $t0, 0x000($0)
 
-    add $A, \x1, $0
-    sll $A, $A, 12
-    or $A, $A, \y1
-    sll $A, $A, 2
+    add $t0, \x1, $0
+    sll $t0, $t0, 12
+    or $t0, $t0, \y1
+    sll $t0, $t0, 2
 
-    sw $A, 0x004($0)
+    sw $t0, 0x004($0)
 
     execRdp 2
 .endm
@@ -137,7 +137,7 @@ _execRdp:
 # @input dt change in t / y
 ###
 .macro textureRectangle tileIndex x1 y1 x2 y2 s t ds dt
-    lui $A, 0xE400
+    lui $t0, 0xE400
 
     # We multiply these by four.  why I don't know at this point.
     sll \x1, \x1, 2
@@ -148,29 +148,29 @@ _execRdp:
     add $t1, $0, \x2
     sll $t1, $t1, 12
     or $t1, $t1, \y2
-    or $A, $A, $t1
+    or $t0, $t0, $t1
 
-    sw $A, 0x000($0)
+    sw $t0, 0x000($0)
 
-    lui $A, \tileIndex
-    sll $A, $A, 8
+    lui $t0, \tileIndex
+    sll $t0, $t0, 8
 
     add $t1, $0, \x1
     sll $t1, $t1, 12
     or $t1, $t1, \y1
-    or $A, $A, $t1
+    or $t0, $t0, $t1
 
-    sw $A, 0x004($0)
+    sw $t0, 0x004($0)
 
-    lui $A, \s
-    ori $A, $A, \t
+    lui $t0, \s
+    ori $t0, $t0, \t
 
-    sw $A, 0x008($0)
+    sw $t0, 0x008($0)
 
-    lui $A, \ds
-    ori $A, $A, \dt
+    lui $t0, \ds
+    ori $t0, $t0, \dt
 
-    sw $A, 0x00C($0)
+    sw $t0, 0x00C($0)
     execRdp 4
 .endm
 
@@ -185,32 +185,32 @@ _execRdp:
 ###
 .macro loadTile tile, sl, tl, sh, th
     # Command 0x34
-    lui $A, 0xF400
+    lui $t0, 0xF400
 
     addi $t1, $0, \sl
     # multiply by 4, then shift 12.
     sll $t1, $t1, 12 + 2
     
-    or $A, $A, $t1
+    or $t0, $t0, $t1
 
     addi $t1, $0, \tl
     # Multiply by 4 because the RDP says so.
     sll $t1, $t1, 2
-    or $A, $A, $t1
+    or $t0, $t0, $t1
 
-    sw $A, 0x000($0)
+    sw $t0, 0x000($0)
 
-    lui $A, \tile
-    sll $A, $A, 8
+    lui $t0, \tile
+    sll $t0, $t0, 8
     # subtract 1 for the high values (again, because RDP says so)
     addi $t1, $0, \sh - 1
     sll $t1, $t1, 12 + 2
-    or $A, $A, $t1
+    or $t0, $t0, $t1
     addi $t1, $0, \th -1
     sll $t1, $t1, 2
-    or $A, $A, $t1
+    or $t0, $t0, $t1
 
-    sw $A, 0x004($0)
+    sw $t0, 0x004($0)
 
     execRdp 2
 .endm
@@ -232,63 +232,63 @@ _execRdp:
     shiftT clampS mirrorS maskS shiftS
 
     # Command 0x35
-    lui $A, 0xF500
+    lui $t0, 0xF500
 
     lui $t1, \format
     lui $t2, \depth
     sll $t1, $t1, 5
     sll $t2, $t2, 3
     or $t1, $t1, $t2
-    or $A, $A, $t1
+    or $t0, $t0, $t1
 
     addi $t1, $0, \size
     sll $t1, $t1, 9
     ori $t1, $t1, \tmem
 
-    or $A, $A, $t1
+    or $t0, $t0, $t1
 
-    sw $A, 0x000($0)
+    sw $t0, 0x000($0)
 
-    lui $A, \tileIndex
-    sll $A, $A, 8
+    lui $t0, \tileIndex
+    sll $t0, $t0, 8
 
         # All this is a waste of time & space for now since I'm setting it all to zero.
         # But can stay until it becomes a problem or I learn mips macros a bit better.
         lui $t1, \palette
         sll $t1, $t1, 4
-        or $A, $A, $t1
+        or $t0, $t0, $t1
 
         lui $t1, \clampT
         sll $t1, $t1, 3
-        or $A, $A, $t1
+        or $t0, $t0, $t1
 
         lui $t1, \mirrorT
         sll $t1, $t1, 2
-        or $A, $A, $t1
+        or $t0, $t0, $t1
 
         addi $t1, $0, \maskT
         sll $t1, $t1, 14
-        or $A, $A, $t1
+        or $t0, $t0, $t1
     
         addi $t1, $0, \shiftT
         sll $t1, $t1, 10
-        or $A, $A, $t1
+        or $t0, $t0, $t1
 
         addi $t1, $0, \clampS
         sll $t1, $t1, 9
-        or $A, $A, $t1
+        or $t0, $t0, $t1
 
         addi $t1, \mirrorS
         sll $t1, $t1, 8
-        or $A, $A, $t1
+        or $t0, $t0, $t1
 
         addi $t1, $0, \maskS
         sll $t1, $t1, 4
-        or $A, $A, $t1
+        or $t0, $t0, $t1
 
-        ori $A, $A, \shiftS
+        ori $t0, $t0, \shiftS
 
-    sw $A, 0x004($0)
+    sw $t0, 0x004($0)
 
     execRdp 2
 
@@ -306,22 +306,22 @@ _execRdp:
 ###
 .macro setTextureImage format depth width address
     # Command 0x3D
-    lui $A, 0xFD00
+    lui $t0, 0xFD00
 
     lui $t1, \format
     lui $t2, \depth
     sll $t1, $t1, 5
     sll $t2, $t2, 3
     or $t1, $t1, $t2
-    or $A, $A, $t1
+    or $t0, $t0, $t1
 
-    ori $A, $A, (\width - 1)
-    sw $A, 0x000($0)
+    ori $t0, $t0, (\width - 1)
+    sw $t0, 0x000($0)
 
     ##if it's a register
         sw \address, 0x004($0)
     ##else it's a constant...
-        #liw $A, \address
+        #liw $t0, \address
     ##endif
 
     execRdp 2
