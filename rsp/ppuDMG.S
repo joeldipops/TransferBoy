@@ -1,8 +1,8 @@
 #include <ucode.S>
 #include "../global.h"
 #include "init.S"
-#include "rsp.inc"
-#include "rdp.h"
+#include "rsp.mips"
+#include "rdp.mips"
 
 ###------------------------------------------
 # Renders a scan line of the gameboy screen.
@@ -185,7 +185,7 @@ main:
 
     addi $screenSpritesRemaining, $0, SPRITE_COUNT
     addi $lineSpritesRemaining, $0, SPRITE_LIMIT
-    .whileHasSprites:
+    .whileHasOam:
         # Load the OAM for the current sprite
 
         ## Figure out what sprite we are on.
@@ -234,13 +234,17 @@ main:
             ## code won't break the limit anyway.
             ## Will create a job to improve accuracy of this once general case is working.
             addi $lineSpritesRemaining, $lineSpritesRemaining, -1
-            bgtz $lineSpritesRemaining, .whileHasSprites_break
+            bgtz $lineSpritesRemaining, .whileHasOam_break
 
         .irrelevantSprite:
 
         addi $screenSpritesRemaining, $screenSpritesRemaining, -1
-        bgtz $screenSpritesRemaining, .whileHasSprites
-    .whileHasSprites_break:
+        bgtz $screenSpritesRemaining, .whileHasOam
+    .whileHasOam_break:
+
+    .set $t1 $spriteCount
+    addi $t0, $0, SPRITE_LIMIT
+    sub $spriteCount, $t0, $lineSpritesRemaining
 
     # Set them all to 0 so we'll error if try to use them as registers.
     .set $screenSpritesRemaining, 0
@@ -253,26 +257,30 @@ main:
     addi $PIXEL_COUNTER, $0, GB_LCD_WIDTH
     .whileHasPixels:
         ## First draw any sprites.
-        
+
         ### Loop through the sprite cache
-        
-        ### Does this sprite appear in this x position?
-        
-        ### Is the tile in the tile cache?
-        
-            ### Set up a cache entry
-        
-            ### DMA the tile into the cache
-            
-        ### Find the pixel that correlates to this x position.
-        
-        ### Check it against the palette
-        
-            ### Unless it's transparent, mark this pixel as filled
-        
-            ### convert to a 16bit N64 colour
-        
-            ### add it to the output buffer.
+        .whileHasSprites
+            addi $spriteCount, $spriteCount, -1
+
+            ### Does this sprite appear in this x position?
+
+                ### Is the tile in the tile cache?
+
+                ### Set up a cache entry
+
+                ### DMA the tile into the cache
+                dmaIn $t0
+
+            ### Find the pixel that correlates to this x position.
+
+            ### Check it against the palette
+
+                ### Unless it's transparent, mark this pixel as filled
+
+                ### convert to a 16bit N64 colour
+
+                ### add it to the output buffer.
+        bgtz $spriteCount, .whileHasSprites
 
         ## Then the window
 
