@@ -1,7 +1,7 @@
 #include <ucode.S>
 #include "../global.h"
-#include "init.S"
-#include "rdp.h"
+#include "init.rsp"
+#include "rdp.rsp"
 
 .set noat
 

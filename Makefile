@@ -89,9 +89,10 @@ $(PROG_NAME).elf : $(CURDIR)/rsp/rsp.o $(PROG_NAME).o $(LD_FILE)
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/sound.o $(CURDIR)/sound.c
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/tpakio.o $(CURDIR)/tpakio.c
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/superGameboy.o $(CURDIR)/superGameboy.c
-	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/controller.o $(CURDIR)/controller.c	
-	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/c_gbz80ops.o $(CURDIR)/gbz80ops.c	
-	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/s_gbz80ops.o $(CURDIR)/gbz80ops.S
+	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/controller.o $(CURDIR)/controller.c
+	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/c_gbz80ops.o $(CURDIR)/gbz80ops.c
+	$(CC) $(CFLAGS) -c -x assembler-with-cpp \
+					   -o $(CURDIR)/obj/s_gbz80ops.o $(CURDIR)/gbz80ops.mips
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/cpu.o $(CURDIR)/cpu.c
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/emu.o $(CURDIR)/emu.c
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/lcd.o $(CURDIR)/lcd.c

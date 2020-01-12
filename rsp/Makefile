@@ -11,8 +11,8 @@ clean: rsp-clean
 
 rsp: rsp.o
 
-rsp.bin: rsp.S
-	$(CC) -c -o tmp.o rsp.S
+rsp.bin: rsp.rsp
+	$(CC) -x assembler-with-cpp -c -o tmp.o rsp.rsp
 	$(OBJCOPY) -O binary -j .text tmp.o rsp.bin
 
 rsp.o: rsp.bin
