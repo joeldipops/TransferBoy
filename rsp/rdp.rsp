@@ -1,4 +1,4 @@
-#include "rsp.mips"
+#include "rspIncludes.rsp"
 
 # TODO: execRdp needs to be changed from a macro to a routine to save on space.
 

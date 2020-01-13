@@ -19,5 +19,4 @@ test.sh
 *.eeprom
 *.exe
 *.dll
-*.mips
 .vscode/*

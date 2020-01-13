@@ -1,8 +1,8 @@
 #include <ucode.S>
 #include "../global.h"
-#include "init.S"
-#include "rsp.mips"
-#include "rdp.mips"
+#include "init.rsp"
+#include "rspIncludes.rsp"
+#include "rdp.rsp"
 
 ###------------------------------------------
 # Renders a scan line of the gameboy screen.
@@ -24,7 +24,12 @@
 .eqv Oam_Y_FLIP,    0b01000000
 .eqv Oam_X_FLIP,    0b00100000
 
+.eqv OAM_X_OFFSET, 0x08
+.eqv OAM_Y_OFFSET, 0x10
+
 .eqv OAM_SIZE, 0xA0
+.eqv TILE_WIDTH, 0x08
+.eqv TILE_SIZE, 0x10 # 8x8 2b pixels is 16B
 .eqv SPRITE_COUNT, OAM_SIZE / 4 # 40 sprites in OAM
 .eqv SPRITE_LIMIT, 0x0A # 10 sprites per scanline
 
@@ -69,6 +74,13 @@
 
 .eqv DMEM_SIZE, 0x1000
 .eqv BUFFER_SIZE, GB_LCD_WIDTH * 2 # ( x2 for 16bit colours)
+
+
+.eqv CacheEntry_HEADER, 0x00
+.eqv CacheEntry_DATA, 0x04
+.eqv CACHE_ENTRY_SIZE, 0x14
+
+.eqv TILE_CACHE_ENTRIES, 50
 
 ###
 # Memory Map
@@ -116,26 +128,247 @@
 
 .set $SCAN_LINE, $s7
 
+.set $CACHE_POINTER, $s8
 
+.set $VRAM_TILE_DATA_ADDRESS, $s9
+
+.set $GB_BUFFER_POINTER, $s10
 
 ###
 # Takes a 2bit DMG colour index and converts to a 16bit n64 colour.
 #
-# @input reg the dmg colour index (0 - 3)
-# @output reg the 16bit dmg colour.
+# @input a0 the dmg colour index (0 - 3)
+# @output r0 the 16bit dmg colour.
 ###
 massageMonochrome:
     # zero out irrelevant bits
-    andi $t0, $t0, 3
+    andi $a0, $a0, 3
     # and multiply by four since we deal with 32bit addresses
-    sll $t0, $t0, 2
-    lw $t0, MONOCHROME_PALETTE($t0)
+    sll $a0, $a0, 2
+    lw $r0, MONOCHROME_PALETTE($a0)
     jr $ra
+
+###
+# Gets the address of a tile.
+# Either from the cache or the tile is DMA'd in and cached.
+# @input $a0 The tile ID.
+# @output $r0 Pointer to the tile data.
+###
+cacheGetTile:
+    .set $tileId, $a0
+    .set $pointer, $a1
+    .set $entry, $a2
+
+    # Start at the current end of the cache and work back to the start.
+    add $pointer, $0, $CACHE_POINTER
+
+    .whileNotFound:
+        addi $pointer, $0, -1 * CACHE_ENTRY_SIZE
+
+        # Check if tile id matches cache entry header.
+        lw $t0, 0($pointer)
+        bne $t0, $tileId, .whileNotFound_continue
+
+            # We've found it. Return a pointer to the data.
+            addi $r0, $pointer, 0x04
+            jr $ra
+
+        .whileNotFound_continue:
+        # Check that $pointer is still greater than the bottom of the cache
+        addi $t0, $pointer, -1 * TILE_CACHE
+    bgtz $t0, .whileNotFound
+
+    # Tile isn't in the cache yet, so we need to DMA it in.
+
+    ## Set the tile id at the cache pointer then increment it
+    sw $tileId, 0($CACHE_POINTER)
+    addi $CACHE_POINTER, $CACHE_POINTER, 0x04
+
+    ## Multiply tile ID by 16 to get address offset.
+    sll $tileId, $tileId, 4
+    ## Which is added to the address base.
+    add $tileId, $tileId, $VRAM_TILE_DATA_ADDRESS
+
+    dmaIn_destR $a0, $CACHE_POINTER, TILE_SIZE
+
+    ## Increment cache pointer to the next empty entry.
+    addi $CACHE_POINTER, $CACHE_POINTER, TILE_SIZE
+
+    add $r0, $a0, $0
+    jr $ra
+
+.set $tileId, 0
+.set $pointer, 0
+
+###
+# Sets in DMEM up to 10 OAM entries for sprites that will appear on this scan line.
+###
+.macro transferOAM
+    .set $screenSpritesRemaining, $t1
+    .set $lineSpritesRemaining, $t2
+    .set $y1, $t3
+    .set $y2, $t4
+    .set $entry, $t5
+
+    ## Find the sprites relevant to the current scanline so we don't have to loop through 40 sprites every pixel.
+
+    lw $t0, (INPUT + RspIn_OAM_ADDRESS)($0)
+    dmaIn $t0, OAM_MIRROR, OAM_SIZE
+
+    addi $screenSpritesRemaining, $0, SPRITE_COUNT
+    addi $lineSpritesRemaining, $0, SPRITE_LIMIT
+    .whileHasOam:
+        # Load the OAM for the current sprite
+
+        ## Figure out what sprite we are on.
+        addi $t0, $0, SPRITE_COUNT
+        sub $t0, $t0, $screenSpritesRemaining
+        ## Multiply by four to get the address offset.
+        sll $t0, $t0, 2
+        lw $entry, OAM_MIRROR($t0)
+
+        ## We care about the Y position, which is the lowest byte
+        andi $y1, $entry, 0x000000FF
+
+        # Test that the sprite will appear on this scanline
+        addi $y1, $0, OAM_Y_OFFSET
+
+        ## $t3 is lower bound, $t0 is upper bound.  Double it if 8x16 mode is on.
+        addi $y2, $y1, 8
+        beq $IS_8x16_MODE, $0, 1f
+            addi $y2, $y2, 8
+        1:
+
+        ## if bottom of the sprite is greater than the current scan line, we don't need to render it here.
+        sub $t0, $y1, $SCAN_LINE
+        # Gotta shift by 16 both times because OAM starts at scan line -16
+        addi $t0, $t0, -1 * OAM_Y_OFFSET
+        bgtz $t0, .whileHasOam_continue
+
+        ## if top of the sprite is less than the current scan line, skip that too.
+        sub $t0, $SCAN_LINE, $y2
+        addi $t0, $t0, OAM_Y_OFFSET
+        bgtz $t0, .whileHasOam_continue
+
+            # Cache a sprite that exists on this scan line.
+
+            ## Calculate the destination offset to cache at.
+            addi $t0, $0, SPRITE_LIMIT
+            sub $t0, $t0, $lineSpritesRemaining
+            sll $t0, $t0, 2
+
+            ## And cache it
+            sw $entry, OAM_CACHE($t0)
+
+            # There is a limit of 10 sprites per scanline.
+            ## Once we've found that many relevant sprites, we're done.
+
+            ## I believe that the limit should actually be done from left to right (i think), but assumption is most 
+            ## code won't break the limit anyway.
+            ## Will create a job to improve accuracy of this once general case is working.
+            addi $lineSpritesRemaining, $lineSpritesRemaining, -1
+            bgtz $lineSpritesRemaining, .whileHasOam_break
+
+        .whileHasOam_continue:
+
+        addi $screenSpritesRemaining, $screenSpritesRemaining, -1
+        bgtz $screenSpritesRemaining, .whileHasOam
+    .whileHasOam_break:
+
+    .set $spriteCounter, $t1
+    .set $spriteCount, $t2
+    addi $t0, $0, SPRITE_LIMIT
+    sub $spriteCount, $t0, $lineSpritesRemaining
+    add $spriteCounter, $0, $spriteCount
+
+    # Set them all to 0 so we'll error if try to use them as registers.
+    .set $screenSpritesRemaining, 0
+    .set $lineSpritesRemaining, 0
+    .set $y1, 0
+    .set $y2, 0
+.endm
+
+###
+# Draws pixels for the window if it appears on this scanline.
+###
+.macro processWindow
+    nop
+.endm
+
+### Draws pixels for the background.
+.macro processBackground
+    nop
+.endm
+
+
+###
+# Draws any sprites that apear on this scanline
+###
+.macro processSprites
+    .set $entry, $t3
+    .set $x1, $t4
+    .set $x2, $t5
+
+    # Loop through the oam cache
+    .whileHasSprites:
+        # Get the relevant OAM entry
+        sub $t0, $spriteCount, $spriteCounter
+        ## Multiply by 4 to get the address offset.
+        sll $t0, $t0, 2
+        lw $entry, OAM_CACHE($t0)
+
+        # Does this sprite appear in this x position?
+        andi $x1, $t0, OAM_X_OFFSET
+        addi $x2, $x1, TILE_WIDTH
+
+        ## if left of the sprite is greater than the current pixel, we're not interested right now.
+        sub $t0, $x1, $PIXEL_COUNTER
+        ## Gotta shift by 8, OAM starts at x-loc -8
+        addi $t0, $t0, -1 * OAM_X_OFFSET
+        bgtz $t0, .whileHasSprites_continue
+
+        ## if right of the sprite is less than the current pixel, skip that too.
+        sub $t0, $PIXEL_COUNTER, $x2
+        add $t0, $t0, OAM_X_OFFSET
+        bgtz $t0, .whileHasSprites_continue
+
+            # Get the tile index from the OAM entry.
+            liw $t0, 0x00FF0000
+            and $t0, $entry, $t0
+            srl $t0, $t0, 16
+            # And the tile data from the cache.
+            add $a0, $0, $entry
+            jal cacheGetTile
+
+            # For the visible width of this sprite
+                # Find the pixel that correlates to this x position.
+                # Check it against the palette
+                # Check it against priority
+
+                # add it to the buffer.
+                sw $r0, 0($GB_BUFFER_POINTER)
+
+                # update indices
+                addi $GB_BUFFER_POINTER, $GB_BUFFER_POINTER, 0x02
+                addi $PIXEL_COUNTER, $PIXEL_COUNTER, -1
+
+        .whileHasSprites_continue:
+        addi $spriteCounter, $spriteCounter, -1
+    bgtz $spriteCounter, .whileHasSprites
+
+    .set $entry, 0
+    .set $x1, 0
+    .set $x2, 0
+.endm
 
 ###
 # Sets the RDP to draw red rectangles.
 main:
-    # Initialise this task
+    # Initialise rendering of the line.
+
+    ## Initialise some registers with constants.
+    ## TODO - allow this cache to persist across scan-lines.
+    addi $CACHE_POINTER, $0, TILE_CACHE
 
     ## Bring in the configuration.
     liw $t0, RSP_INTERFACE_ADDRESS
@@ -171,120 +404,18 @@ main:
 
     # Build up this scanline to a buffer than can be rendered as a texture.
 
-    ## Find the sprites relevant to the current scanline so we don't have to loop through 40 sprites every pixel.
-
-    lw $t0, (INPUT + RspIn_OAM_ADDRESS)($0)
-    dmaIn $t0, OAM_MIRROR, OAM_SIZE
-
-    # Name temporary registers for this block
-    .set $screenSpritesRemaining, $t1
-    .set $lineSpritesRemaining, $t2
-    .set $y1, $t3
-    .set $y2, $t4
-    .set $entry, $t5
-
-    addi $screenSpritesRemaining, $0, SPRITE_COUNT
-    addi $lineSpritesRemaining, $0, SPRITE_LIMIT
-    .whileHasOam:
-        # Load the OAM for the current sprite
-
-        ## Figure out what sprite we are on.
-        addi $t0, $0, SPRITE_COUNT
-        sub $t0, $t0, $screenSpritesRemaining
-        ## Multiply by four to get the address offset.
-        sll $t0, $t0, 2
-        lw $entry, OAM_MIRROR($t0)
-
-        ## We care about the Y position, which is the lowest byte
-        andi $y1, $entry, 0x000000FF
-
-        ## Multiply by 8 since a tile is 8 pixels tall.
-        sll $y1, $y1, 3
-
-        # Test that the sprite will appear on this scanline
-
-        ## $t3 is lower bound, $t0 is upper bound.  Double it if 8x16 mode is on.
-        addi $y2, $y1, 8
-        beq $IS_8x16_MODE, $0, 1f
-            addi $y2, $y2, 8
-        1:
-
-        ## if bottom of the sprite is greater than the current scan line, we don't need to render it here.
-        sub $t0, $y1, $SCAN_LINE
-        bgtz $t0, .irrelevantSprite
-
-        ## if top of the sprite is less than the current scan line, skip that too.
-        sub $t0, $SCAN_LINE, $y2
-        bgtz $t0, .irrelevantSprite
-
-            # Cache a sprite that exists on this scan line.
-
-            ## Calculate the destination offset to cache at.
-            addi $t0, $0, SPRITE_LIMIT
-            sub $t0, $t0, $lineSpritesRemaining
-            sll $t0, $t0, 2
-
-            ## And cache it
-            sw $entry, OAM_CACHE($t0)
-
-            # There is a limit of 10 sprites per scanline.
-            ## Once we've found that many relevant sprites, we're done.
-
-            ## The limit should actually be done from left to right (i think), but assumption is most 
-            ## code won't break the limit anyway.
-            ## Will create a job to improve accuracy of this once general case is working.
-            addi $lineSpritesRemaining, $lineSpritesRemaining, -1
-            bgtz $lineSpritesRemaining, .whileHasOam_break
-
-        .irrelevantSprite:
-
-        addi $screenSpritesRemaining, $screenSpritesRemaining, -1
-        bgtz $screenSpritesRemaining, .whileHasOam
-    .whileHasOam_break:
-
-    .set $t1 $spriteCount
-    addi $t0, $0, SPRITE_LIMIT
-    sub $spriteCount, $t0, $lineSpritesRemaining
-
-    # Set them all to 0 so we'll error if try to use them as registers.
-    .set $screenSpritesRemaining, 0
-    .set $lineSpritesRemaining, 0
-    .set $y1, 0
-    .set $y2, 0
-    .set $entry, 0
-
+    transferOAM
 
     addi $PIXEL_COUNTER, $0, GB_LCD_WIDTH
     .whileHasPixels:
-        ## First draw any sprites.
-
-        ### Loop through the sprite cache
-        .whileHasSprites
-            addi $spriteCount, $spriteCount, -1
-
-            ### Does this sprite appear in this x position?
-
-                ### Is the tile in the tile cache?
-
-                ### Set up a cache entry
-
-                ### DMA the tile into the cache
-                dmaIn $t0
-
-            ### Find the pixel that correlates to this x position.
-
-            ### Check it against the palette
-
-                ### Unless it's transparent, mark this pixel as filled
-
-                ### convert to a 16bit N64 colour
-
-                ### add it to the output buffer.
-        bgtz $spriteCount, .whileHasSprites
-
-        ## Then the window
+        ## Draw the window
+        processWindow
 
         ## Then the background
+        processBackground
+
+        # Finally draw sprites
+        processSprites
 
 
         # .................. Go through VRAM...
@@ -343,4 +474,4 @@ stall:
 
 break
 # Fill remainder with break instruction
-.org 2048, 0x0000000D
+#.org 2048, 0x0000000D

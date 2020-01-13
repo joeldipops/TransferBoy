@@ -1,6 +1,6 @@
-#include <ucode.S>
+#include <ucode.rsp>
 #include "../global.h"
-#include "init.S"
+#include "init.rsp"
 #include "rsp.inc"
 #include "rdp.h"
 

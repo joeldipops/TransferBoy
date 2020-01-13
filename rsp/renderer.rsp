@@ -1,7 +1,7 @@
 #include <ucode.S>
 #include "../global.h"
-#include "init.S"
-#include "rdp.mips"
+#include "init.rsp"
+#include "rdp.rsp"
 
 .set noat
 
@@ -265,4 +265,4 @@ stall:
 
 break
 # Fill remainder with break instruction
-.org 2048, 0x0000000D
+#.org 2048, 0x0000000D

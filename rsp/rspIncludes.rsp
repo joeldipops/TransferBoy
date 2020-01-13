@@ -149,6 +149,14 @@ _dmaIn:
     jal _dmaIn
 .endm
 
+.macro dmaIn_destR source, dest, length
+    add $a0, $0, \source
+    add $a1, $0, \dest
+    addi $a2, $0, \length
+    jal _dmaIn
+.endm
+
+
 ###
 # See dmaOut macro below
 ###

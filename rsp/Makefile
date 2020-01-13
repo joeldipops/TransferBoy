@@ -15,15 +15,15 @@ ppuDMG: ppuDMG.o
 
 renderer: renderer.o
 
-ppuDMG.bin: ppuDMG.S
-	$(CC) -c -o tmp.o ppuDMG.S
+ppuDMG.bin: ppuDMG.rsp
+	$(CC) -x assembler-with-cpp -c -o tmp.o ppuDMG.rsp
 	$(OBJCOPY) -O binary -j .text tmp.o ppuDMG.bin
 
 ppuDMG.o: ppuDMG.bin
 	$(OBJCOPY) -I binary -O elf32-bigmips -B mips4300 --redefine-sym _binary_ppuDMG_bin_start=ppuDMG_code_start --redefine-sym _binary_ppuDMG_bin_end=ppuDMG_code_end --redefine-sym _binary_ppuDMG_bin_size=ppuDMG_code_size --rename-section .text=.data ppuDMG.bin ppuDMG.o
 
-renderer.bin: renderer.S
-	$(CC) -c -o tmp.o renderer.S
+renderer.bin: renderer.rsp
+	$(CC) -x assembler-with-cpp -c -o tmp.o renderer.rsp
 	$(OBJCOPY) -O binary -j .text tmp.o renderer.bin
 
 renderer.o: renderer.bin
