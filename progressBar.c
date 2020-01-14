@@ -52,8 +52,7 @@ static void onLoadProgressTimer(int ovfl) {
 
 /**
  * Sets up handlers to display a progress bar for the cartridge load.
- * @param Address of the global state so it can be referenced in a callback.
- * @param Number identifying player that will load a cartridge.
+ * @param playerNumber identifies player loading a cartridge.
  */
 void startLoadProgressTimer(const byte playerNumber) {
     _isLoading[playerNumber] = true;
@@ -64,13 +63,13 @@ void startLoadProgressTimer(const byte playerNumber) {
 }
 
 /**
- * Cleans up handlers for displaying the cartridge load progress bar.
- * @param timer timer to close.
+ * Cleans up timer once a cartridge is loaded
+ * @param playerNumber player no longer using the progress bar
  */
 void closeLoadProgressTimer(const byte playerNumber) {
     _isLoading[playerNumber] = false;
 
-    // Check if this was the last time.
+    // Check if there are any other players still using the timer.
     bool isDone = true;
     for (byte i = 0; i < MAX_PLAYERS; i++) {
         if (_isLoading[i]) {
@@ -78,11 +77,11 @@ void closeLoadProgressTimer(const byte playerNumber) {
         }
     }
 
-    // If so, clean up.
+    // If this was the last one, clean up.
     if (isDone) {
         delete_timer(_timer);
         _timer = null;
-}
+    }
 }
 
 
