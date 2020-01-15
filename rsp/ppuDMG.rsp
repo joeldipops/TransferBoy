@@ -34,14 +34,13 @@
 .eqv SPRITE_LIMIT, 0x0A # 10 sprites per scanline
 
 # RSP Interface Structure
-.eqv RspIn_OAM_ADDRESS, 0x00
-.eqv RspIn_VRAM_TILE_DATA_ADDRESS, 0x04
-.eqv RspIn_VRAM_TILE_INDEX_ADDRESS, 0x08
-.eqv RspIn_PPU_SETTINGS_ADDRESS, 0x0C
-.eqv RspIn_OUT_ADDRESS, 0x10
-.eqv RspIn_SCREEN_POSITION, 0x14
-.eqv RspIn_RECTANGLE_SIZE, 0x18
-.eqv RspIn_IS_BUSY, 0x1C
+.eqv RspIn_VRAM_BASE, 0x00
+.eqv RspIn_HRAM_BASE, 0x04
+.eqv RspIn_OAM_BASE, 0x08
+.eqv RspIn_OUT_ADDRESS, 0x0C
+.eqv RspIn_SCREEN_POSITION, 0x10
+.eqv RspIn_RECTANGLE_SIZE, 0x14
+.eqv RspIn_IS_BUSY, 0x18
 
 .eqv INTERFACE_SIZE, 0x20
 
@@ -82,10 +81,15 @@
 
 .eqv TILE_CACHE_ENTRIES, 50
 
+.eqv TILE_MAP_0_OFFSET, 0x1800
+.eqv TILE_MAP_1_OFFSET, 0x1C00
+.eqv PPU_SETTINGS_OFFSET, 0x0040
+
 ###
 # Memory Map
 ###
-.eqv TILE_CACHE, 0xBD0      # 50 possible tiles with 16B/tile assuming 2b colour.
+.eqv LINE_TILE_MAP, 0xAE8      # 32B 1 for each tile across the background (though we only see 20 tiles at a time.)
+.eqv TILE_CACHE, 0xB08      # 50 possible tiles with 20B cache entries (4B header + 16B/tile with 2b colours).
 .eqv PPU_SETTINGS, 0x0EF0
 .eqv INPUT, 0x0F00
 .eqv OAM_CACHE, 0x0F40      # 10 OAM entries per scanline at 4B/entry
@@ -255,7 +259,7 @@ cacheGetTile:
             ## Calculate the destination offset to cache at.
             addi $t0, $0, SPRITE_LIMIT
             sub $t0, $t0, $lineSpritesRemaining
-            sll $t0, $t0, 2
+            sll $t0, $t0, 2 # x4 since OAM entry is 4B 
 
             ## And cache it
             sw $entry, OAM_CACHE($t0)
@@ -297,7 +301,65 @@ cacheGetTile:
 
 ### Draws pixels for the background.
 .macro processBackground
-    nop
+    .set $tileMap, $t1
+    .set $currentPixel, $t2
+
+    # TODO: Check Lcdc_LCD_PRIORITY. If it's 0, skip all of this and just draw white pixels.
+
+    # Find the bit of VRAM that corresponds to the tiles on this line.
+    lw $t0, PPU_SETTINGS + Ppu_LCD_CONTROL($0)
+    andi $t0, $t0, Lcdc_BACKGROUND_TILE_MAP
+    bne $t0, $0, 1f
+        addi $tileMap, $0, TILE_MAP_0_OFFSET
+        j 2f
+    1:
+        addi $tileMap, $0, TILE_MAP_1_OFFSET
+    2:
+
+    # Figure out what line of the background we need to start with by adding the SCY register
+    lw $t0, (PPU_SETTINGS + Ppu_BACKGROUND_SCROLL_Y)($0)
+    # TODO - This needs to wrap around on 256. Is there an easy way to do that?
+    add $t0, $t0, $SCAN_LINE
+
+    # DMA in a line of the tile map, 
+    ## Divide by 8 and then multiply by 32 to get the tile line.
+    ### Yes I'm trying to wrap my head around why I can't just << 2, but for scan-line 1, this would be tile 4 when it should be tile 0...
+    srl $t0, $t0, 3
+    sll $t0, $t0, 5
+
+    # add to tile map to get the address in GB Memory.
+    add $tileMap, $tileMap, $t0
+
+    ## And add to this to get the location in N64 memory.
+    lw $t0, (INPUT + RspIn_VRAM_BASE)($0)
+    add $tileMap, $tileMap, $t0
+
+    # DMA it in.
+    dmaIn $tileMap, LINE_TILES, 0x20
+
+    # Find starting pixel
+    lw $currentPixel, (PPU_SETTINGS + Ppu_BACKGROUND_SCROLL_X)($0)
+
+    # TODO - Deal with part tile...
+    
+    .whileBgHasPixels:
+        # Divide by 8 to get the tile.
+        srl $t0, $currentPixel, 3
+
+        add $t0, $t0, $tileMap
+        lw $a0, 0($tileMap)
+        jal cacheGetTile
+
+        .whileTileHasPixels:
+
+            # Haven't figured out the loop condition yet.
+            j .whileTileHasPixels
+
+        # Or this one.
+        j .whileBgHasPixels
+
+
+    .set $tileMap, 0
 .endm
 
 
@@ -364,6 +426,16 @@ cacheGetTile:
 ###
 # Sets the RDP to draw red rectangles.
 main:
+    # Load and cache the gameboy LCD registers.
+    lw $t0, (RSP_INTERFACE_ADDRESS + RspIn_PPU_SETTINGS_ADDRESS)($0)
+    dmaIn $t0, PPU_SETTINGS, PPU_SETTINGS_SIZE
+
+    # Check whether the LCD is turned on, and if not, skip all this shebang.
+    lw $t0, (PPU_SETTINGS + Ppu_LCD_CONTROL)($0)
+    srl $t0, $t0, 7
+        beq $t0, $0, stall
+
+
     # Initialise rendering of the line.
 
     ## Initialise some registers with constants.
@@ -389,10 +461,6 @@ main:
     sw $t0, (MONOCHROME_PALETTE + 8)($0)
     liw $t0, DARKEST
     sw $t0, (MONOCHROME_PALETTE + 0xC)($0)
-
-    # Load and cache the gameboy LCD registers.
-    lw $t0, (RSP_INTERFACE_ADDRESS + RspIn_PPU_SETTINGS_ADDRESS)($0)
-    dmaIn $t0, PPU_SETTINGS, PPU_SETTINGS_SIZE
 
     ## Cache the current scan line.
     lw $SCAN_LINE, (PPU_SETTINGS + Ppu_CURRENT_LINE)($0)
