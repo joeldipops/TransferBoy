@@ -136,7 +136,7 @@ If you just want to be able to use the TPak, all you need to know is:
 * 0x081, 0x8D, 0x89 - access to the cart is enabled
 
 #### Bit 0
-has been referred to in a few places as the "Access Mode" flag.  Writing 0x00 sets Access mode 0, and 0x01 sets access mode 1
+has been referred to in a few places as the "Access Mode" flag.  Writing 0x00 sets Access mode 0, and 0x01 sets access mode 1. I believe that this flag may indicate that the *cartridge* is powered on, as opposed to bit 7 which refers to the *Transfer Pak*'s power state.
 
 *Values*
 * 0x00 - In Mode 0, all reads from Cartridge space (ie 0xC000 - 0xFFFF) are 0. *Todo - double check that writing is also disabled*
@@ -147,6 +147,8 @@ In all my tests so far, this has always been 0
 
 #### Bits 2 & 3
 These bits are used to detect if the cartridge has been reset. I gather that 'resetting' the cartridge involves setting the access mode to 0 and then to 1 again.  After a byte with these bits set has been read, they will be reset again.
+
+I believe that **Bit 2** indicates that the cartridge is currently in the process of being reset, whereas **Bit 3** indicates that it is either resetting or was reset in the recent past.
 
 The cen64 source will set bit 2 if this is the first time reading from 0xB000 after bit 0 is flipped.  Otherwise it will be reset.  My tests show different behaviour.
 
@@ -176,7 +178,7 @@ I have never seen these bits as anything other than 0.
 This bit is set if there is no Cartridge detected in the Transfer Pak.
 
 #### Bit 7
-This bit is set if power to the cartridge is enabled.
+This bit is set if power to the device is enabled.
 
 ### 0xC000 - 0xFFFF *Cartridge Memory Access*
 
