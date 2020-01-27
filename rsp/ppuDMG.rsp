@@ -375,7 +375,7 @@ cacheGetTile:
 
         addi $currentPixel, $currentPixel, 8 # TODO - part tile
 
-    bne $currentPixel, $tileEndPtr, .whileBgHasPixels
+    bne $currentPixel, $endLinePixel, .whileBgHasPixels
 
     .set $tileMap, 0
     .set $currentPixel, 0
