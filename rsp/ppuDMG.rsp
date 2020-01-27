@@ -29,9 +29,11 @@
 
 .eqv OAM_SIZE, 0xA0
 .eqv TILE_WIDTH, 0x08
+.eqv TILES_PER_WIDTH, 0x20
 .eqv TILE_SIZE, 0x10 # 8x8 2b pixels is 16B
 .eqv SPRITE_COUNT, OAM_SIZE / 4 # 40 sprites in OAM
 .eqv SPRITE_LIMIT, 0x0A # 10 sprites per scanline
+
 
 # RSP Interface Structure
 .eqv RspIn_VRAM_BASE, 0x00
@@ -303,6 +305,8 @@ cacheGetTile:
 .macro processBackground
     .set $tileMap, $t1
     .set $currentPixel, $t2
+    .set $gbBufferCursor, $t3
+    .set $endLinePixel, $t4
 
     # TODO: Check Lcdc_LCD_PRIORITY. If it's 0, skip all of this and just draw white pixels.
 
@@ -337,11 +341,11 @@ cacheGetTile:
     # DMA it in.
     dmaIn $tileMap, LINE_TILES, 0x20
 
+    add $gbBufferCursor, $0, GB_BUFFER_POINTER
+
     # Find starting pixel
     lw $currentPixel, (PPU_SETTINGS + Ppu_BACKGROUND_SCROLL_X)($0)
-
-    # TODO - Deal with part tile...
-    
+    addi $endLinePixel, $currentPixel, TILE_WIDTH * TILES_PER_WIDTH
     .whileBgHasPixels:
         # Divide by 8 to get the tile.
         srl $t0, $currentPixel, 3
@@ -350,16 +354,33 @@ cacheGetTile:
         lw $a0, 0($tileMap)
         jal cacheGetTile
 
-        .whileTileHasPixels:
+        # which line of the tile are we on
 
-            # Haven't figured out the loop condition yet.
-            j .whileTileHasPixels
+        ## a % b == a & ( b -1 ) if b is a power of 2
+        and $t0, $SCAN_LINE, TILE_WIDTH - 1
+        ## Multiply by two to get the number of bytes to skip.
+        srl $t0, $t0, 2
+        ## $r0 now points to the line of the tile we want.
+        add $r0, $r0, $t0
 
-        # Or this one.
-        j .whileBgHasPixels
+        # Grab two bytes from the tile (8 pixels).
+        lw $t0, 0($r0)
 
+        # TODO - shift as needed for part tiles
+        # sll $t0, $t0, ???
+        andi $t0, $t0, 0xFFFF
+        sw $t0, 0($gbBufferCursor)
+
+        addi $gbBufferCursor, $gbBufferCursor, 16 # TODO - part tile
+
+        addi $currentPixel, $currentPixel, 8 # TODO - part tile
+
+    bne $currentPixel, $tileEndPtr, .whileBgHasPixels
 
     .set $tileMap, 0
+    .set $currentPixel, 0
+    .set $gbBufferCursor, 0
+    .set $endLinePixel, 0
 .endm
 
 
