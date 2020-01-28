@@ -72,7 +72,7 @@ byte _progress[MAX_PLAYERS] = {0};
  * @returns true if RTC present, false otherwise.
  */
 static bool hasRealTimeClock(CartridgeHeader* header) {
-    switch (header->CartridgeType) {
+    switch (header->cartridge_type) {
         case MBC3_TIMER_BATTERY:
         case MBC3_TIMER_RAM_BATTERY:
             return true;
@@ -120,36 +120,7 @@ static natural mapAddress(const natural address) {
  * @returns Error Code
  */
 static sByte initialiseTPak(const byte controllerNumber) {
-    int accessory = identify_accessory(controllerNumber);
-
-    if (accessory != ACCESSORY_MEMPAK) {
-        return TPAK_ERR_NO_TPAK;
-    }
-
-    byte block[BLOCK_SIZE];
-
-    sByte result = 0;
-
-    // Wake up the transfer pak and send power to the cartridge.
-    result = setTpakValue(controllerNumber, CARTRIDGE_POWER_ADDRESS, CARTRIDGE_POWER_ON);
-    if (result) {
-        return TPAK_ERR_SYSTEM_ERROR;
-    }
-
-    // Enable cartridge access.
-    setTpakValue(controllerNumber, TPAK_STATUS_ADDRESS, TPAK_STATUS_ACCESS_ON);
-
-    // Check there is a cartridge plugged in.
-    read_mempak_address(controllerNumber, TPAK_STATUS_ADDRESS, block);
-    if (block[0] & TPAK_STATUS_CARTRIDGE_ABSENT) {
-        return TPAK_ERR_NO_TPAK;
-    }
-
-    // And that we have correctly set the access mode.
-    read_mempak_address(controllerNumber, TPAK_STATUS_ADDRESS, block);
-    if (!(block[0] & TPAK_STATUS_ACCESS_ON)) {
-        return TPAK_ERR_UNKNOWN_BEHAVIOUR;
-    }
+    tpak_init(controllerNumber);
 
     // Enable Cartridge ram
     setTpakValue(controllerNumber, mapAddress(ENABLE_GB_RAM_ADDRESS), ENABLE_GB_RAM);
@@ -172,25 +143,6 @@ static natural writeCRC(natural address) {
         }
     }
     return address | checksum;
-}
-
-/**
- * Calculates and checks the gameboy header checksum.
- * @param header The header to check.
- * @returns true if checksum passes, false otherwise.
- */
-static bool checkHeader(const CartridgeHeader* header) {
-    byte sum = 0;
-    byte* data = (byte*) header;
-
-    // sum values from 0x0134 (title) to 0x014C (version number)
-    const byte start = 0x34;
-    const byte end = 0x4C;
-    for(byte i = start; i <= end; i++) {
-        sum = sum - data[i] - 1;
-    }
-
-    return sum == header->HeaderChecksum;
 }
 
 /**
@@ -325,36 +277,6 @@ static sByte switchBank(const byte controllerNumber, const natural bank, const C
     return 0;
 }
 
-
-/**
- * Reads the gameboy header so we know what banks to switch etc.
- * Call after initialise TPak
- * @param controllerNumber controller slot the T-Pak is plugge in to.
- * @out header header data will be populated here.
- * @returns ErrorCode
- ** 0 - Successful
- */
-static sByte getHeader(const byte controllerNumber, CartridgeHeader* header) {
-    // Set tpak bank to 0 since the header is at 0x0100
-    switchBank(controllerNumber, 0, ROM_ONLY);
-    
-    // Header starts at 0x0100 and goes for 80 bytes (rounded up to 96)
-    natural address = ROM_ADDRESS_OFFSET + 0x0100;
-    
-    byte offset = 0;
-    byte* headerData = (byte*) header;
-
-    for(byte i = 0; i < 3; i++) {
-        sByte result = read_mempak_address(controllerNumber, address + offset, headerData + offset);
-        if (result) {
-            return TPAK_ERR_SYSTEM_ERROR;
-        }
-        offset += BLOCK_SIZE;
-    }
-
-    return 0;
-}
-
 /**
  * Determines the number of rom banks from the Rom Size Code
  * in the cartridge header.
@@ -371,10 +293,10 @@ static sByte getHeader(const byte controllerNumber, CartridgeHeader* header) {
  ** 05h - 64 KBytes (8 banks of 8KBytes each)
  */
 static sShort getNumberOfRomBanks(const CartridgeHeader* header) {
-    if (header->RomSizeCode <= 8) {
-        return pow(2, header->RomSizeCode + 1);
+    if (header->rom_size_code <= 8) {
+        return pow(2, header->rom_size_code + 1);
     } else {
-        switch(header->RomSizeCode) {
+        switch(header->rom_size_code) {
             case 0x52: return 72;
             case 0x53: return 80;
             case 0x54: return 96;
@@ -394,7 +316,7 @@ static sByte getNumberOfRamBanks(const CartridgeHeader* header, const CartridgeT
     if (type == MBC2) {
         return 1;
     }
-    switch(header->RamSizeCode) {
+    switch(header->ram_size_code) {
         case 0: return 0;
         case 1: return 1;
         case 2: return 1;
@@ -412,7 +334,7 @@ static sByte getNumberOfRamBanks(const CartridgeHeader* header, const CartridgeT
  * @returns the size of each ram bank.
  */
 static natural getRamBankSize(const CartridgeHeader* header, const CartridgeType type) {
-    switch(header->RamSizeCode) {
+    switch(header->ram_size_code) {
         case 0: 
             if (type == MBC2) {
                 return 512;
@@ -694,17 +616,17 @@ sByte getCartridgeMetadata(const byte controllerNumber, GameBoyCartridge* cartri
     }
 
     CartridgeHeader header;
-    result = getHeader(controllerNumber, &header);
+    result = tpak_get_cartridge_header(controllerNumber, &header);
     if (result) {
         return result;
     }
 
-    if (!checkHeader(&header) && VALIDATE_CHECKSUMS) {
+    if (VALIDATE_CHECKSUMS && !tpak_check_header(&header)) {
         return TPAK_ERR_CORRUPT_HEADER;
     }
 
-    cartridge->IsGbcSupported = header.CGBTitle.GbcSupport == GBC_DMG_SUPPORTED || header.CGBTitle.GbcSupport == GBC_ONLY_SUPPORTED;
-    cartridge->Type = getPrimaryType(header.CartridgeType);
+    cartridge->IsGbcSupported = header.new_title.gbc_support == GBC_DMG_SUPPORTED || header.new_title.gbc_support == GBC_ONLY_SUPPORTED;
+    cartridge->Type = getPrimaryType(header.cartridge_type);
 
     if (cartridge->Type == UNKNOWN_CARTRIDGE_TYPE) {
         return TPAK_ERR_UNSUPPORTED_CARTRIDGE;
@@ -759,7 +681,7 @@ sByte importCartridge(const byte controllerNumber, GameBoyCartridge* cartridge) 
         return result;
     }
 
-    if (!checkRom(cartridge->Header.GlobalChecksum, &cartridge->Rom) && VALIDATE_CHECKSUMS) 
+    if (!checkRom(cartridge->Header.global_checksum, &cartridge->Rom) && VALIDATE_CHECKSUMS) 
     {
         return TPAK_ERR_CORRUPT_DATA;
     }

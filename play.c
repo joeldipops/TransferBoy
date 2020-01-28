@@ -160,7 +160,7 @@ void playLogic(const byte playerNumber) {
 
     emu_step(playerState);
 
-    if (IS_SGB_ENABLED && s->Cartridge.Header.IsSgbSupported) {
+    if (IS_SGB_ENABLED && s->Cartridge.Header.is_sgb_supported) {
         processSGBData(playerState);
         performSGBFunctions(playerState);
     }
@@ -178,7 +178,7 @@ void playLogic(const byte playerNumber) {
             playerState->WasFrameSkipped = false;
         }
 
-        if (IS_SGB_ENABLED && s->Cartridge.Header.IsSgbSupported) {
+        if (IS_SGB_ENABLED && s->Cartridge.Header.is_sgb_supported) {
             applySGBPalettes(
                 &playerState->SGBState, 
                 s->NextBuffer
@@ -242,7 +242,7 @@ void playDraw(const byte playerNumber) {
     PaletteType palette = GameboyPalette;
     if (rootState.Players[playerNumber].EmulationState.Cartridge.IsGbcSupported) {
         palette = GameboyColorPalette;
-    } else if (IS_SGB_ENABLED && rootState.Players[playerNumber].EmulationState.Cartridge.Header.IsSgbSupported) {
+    } else if (IS_SGB_ENABLED && rootState.Players[playerNumber].EmulationState.Cartridge.Header.is_sgb_supported) {
         palette = SuperGameboyPalette;
     }
 

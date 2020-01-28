@@ -15,7 +15,7 @@ static sByte setInfo(GbState* s) {
         return LOAD_ERR_TOO_SMALL;
     }
 
-    switch (s->Cartridge.Header.CartridgeType) {
+    switch (s->Cartridge.Header.cartridge_type) {
         case 0x00: s->mbc = 0;                                                     break;
         case 0x01: s->mbc = 1;                                                     break;
         case 0x02: s->mbc = 1; s->hasSRAM = 1;                                     break;
