@@ -3,6 +3,7 @@
 
 #include "state.h"
 
+void ppuInit(PlayerState* state);
 void ppuStep(PlayerState* state);
 
 #endif

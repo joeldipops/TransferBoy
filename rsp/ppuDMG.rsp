@@ -36,31 +36,31 @@
 
 
 # RSP Interface Structure
-.eqv RspIn_VRAM_BASE, 0x00
-.eqv RspIn_HRAM_BASE, 0x04
-.eqv RspIn_OAM_BASE, 0x08
-.eqv RspIn_OUT_ADDRESS, 0x0C
-.eqv RspIn_SCREEN_POSITION, 0x10
-.eqv RspIn_RECTANGLE_SIZE, 0x14
-.eqv RspIn_IS_BUSY, 0x18
+.eqv RspIn_IS_BUSY, 0x00
+.eqv RspIn_VRAM_BASE, 0x04
+.eqv RspIn_HRAM_BASE, 0x08
+.eqv RspIn_OAM_BASE, 0x0C
+.eqv RspIn_OUT_ADDRESS, 0x10
+.eqv RspIn_SCREEN_POSITION, 0x14
+.eqv RspIn_RECTANGLE_SIZE, 0x18
 
 .eqv INTERFACE_SIZE, 0x20
 
 # PPU Settings Structure
 ## These are the gameboy LCD registers.
 
-.eqv Ppu_LCD_CONTROL, 0x00
-.eqv Ppu_LCD_STATUS, 0x01
-.eqv Ppu_BACKGROUND_SCROLL_Y, 0x02
-.eqv Ppu_BACKGROUND_SCROLL_X, 0x03
-.eqv Ppu_CURRENT_LINE, 0x04         # This is the line we're drawing.
-.eqv Ppu_NEXT_INTERRUPT_LINE, 0x05  # Probably not important.  Interrupts to be handled elsewhere?
-.eqv Ppu_DMA_SOURCE, 0x06
-.eqv Ppu_BACKGROUND_PALETTE, 0x07
-.eqv Ppu_SPRITE_PALETTE_0, 0x08
-.eqv Ppu_SPRITE_PALETTE_1, 0x09
-.eqv Ppu_WINDOW_TOP, 0x0A
-.eqv Ppu_WINDOW_LEFT, 0x0B
+.eqv Ppu_LCD_CONTROL, 0x0
+.eqv Ppu_LCD_STATUS, 0x1
+.eqv Ppu_BACKGROUND_SCROLL_Y, 0x2
+.eqv Ppu_BACKGROUND_SCROLL_X, 0x3
+.eqv Ppu_CURRENT_LINE, 0x4         # This is the line we're drawing.
+.eqv Ppu_NEXT_INTERRUPT_LINE, 0x5  # Probably not important.  Interrupts to be handled elsewhere?
+.eqv Ppu_DMA_SOURCE, 0x6
+.eqv Ppu_BACKGROUND_PALETTE, 0x7
+.eqv Ppu_SPRITE_PALETTE_0, 0x8
+.eqv Ppu_SPRITE_PALETTE_1, 0x9
+.eqv Ppu_WINDOW_TOP, 0xA
+.eqv Ppu_WINDOW_LEFT, 0xB
 .eqv PPU_SETTINGS_SIZE, 0x10
 
 # LCDC Flags structure
@@ -90,6 +90,7 @@
 ###
 # Memory Map
 ###
+
 .eqv LINE_TILE_MAP, 0xAE8      # 32B 1 for each tile across the background (though we only see 20 tiles at a time.)
 .eqv TILE_CACHE, 0xB08      # 50 possible tiles with 20B cache entries (4B header + 16B/tile with 2b colours).
 .eqv PPU_SETTINGS, 0x0EF0
@@ -447,8 +448,13 @@ cacheGetTile:
 ###
 # Sets the RDP to draw red rectangles.
 main:
+    # Bring in the configuration.
+    liw $t0, RSP_INTERFACE_ADDRESS
+    dmaIn $t0, INPUT, INTERFACE_SIZE
+
     # Load and cache the gameboy LCD registers.
-    lw $t0, (RSP_INTERFACE_ADDRESS + RspIn_PPU_SETTINGS_ADDRESS)($0)
+    lw $t0, (INPUT + RspIn_HRAM_BASE)($0)
+    addi $t0, $t0, PPU_SETTINGS_OFFSET
     dmaIn $t0, PPU_SETTINGS, PPU_SETTINGS_SIZE
 
     # Check whether the LCD is turned on, and if not, skip all this shebang.
@@ -462,10 +468,6 @@ main:
     ## Initialise some registers with constants.
     ## TODO - allow this cache to persist across scan-lines.
     addi $CACHE_POINTER, $0, TILE_CACHE
-
-    ## Bring in the configuration.
-    liw $t0, RSP_INTERFACE_ADDRESS
-    dmaIn $t0, DMEM_GB_BASE, INTERFACE_SIZE
 
     ## Stash config in some registers so whole memory space is available.
     lw $OUT_BUFFER_ADDRESS, RspIn_OUT_ADDRESS($0)

@@ -18,6 +18,7 @@
 #include "hwdefs.h"
 #include "logger.h"
 #include "fps.h"
+#include "ppu.h"
 
 #include <libdragon.h>
 
@@ -83,6 +84,7 @@ static void initialiseEmulator(GbState* state) {
  */
 void resetPlayState(PlayerState* state) {
     initialiseEmulator(&state->EmulationState);
+    ppuInit(state);
     state->Meta.FrameCount = 0;
     resetSGBState(&state->SGBState);
 }
@@ -160,7 +162,7 @@ void playLogic(const byte playerNumber) {
 
     emu_step(playerState);
 
-    if (IS_SGB_ENABLED && s->Cartridge.Header.IsSgbSupported) {
+    if (IS_SGB_ENABLED && s->Cartridge.Header.is_sgb_supported) {
         processSGBData(playerState);
         performSGBFunctions(playerState);
     }
@@ -178,7 +180,7 @@ void playLogic(const byte playerNumber) {
             playerState->WasFrameSkipped = false;
         }
 
-        if (IS_SGB_ENABLED && s->Cartridge.Header.IsSgbSupported) {
+        if (IS_SGB_ENABLED && s->Cartridge.Header.is_sgb_supported) {
             applySGBPalettes(
                 &playerState->SGBState, 
                 s->NextBuffer
@@ -242,7 +244,7 @@ void playDraw(const byte playerNumber) {
     PaletteType palette = GameboyPalette;
     if (rootState.Players[playerNumber].EmulationState.Cartridge.IsGbcSupported) {
         palette = GameboyColorPalette;
-    } else if (IS_SGB_ENABLED && rootState.Players[playerNumber].EmulationState.Cartridge.Header.IsSgbSupported) {
+    } else if (IS_SGB_ENABLED && rootState.Players[playerNumber].EmulationState.Cartridge.Header.is_sgb_supported) {
         palette = SuperGameboyPalette;
     }
 
@@ -273,7 +275,7 @@ void playDraw(const byte playerNumber) {
  */
 void playAfter(const byte playerNumber) {
     if (rootState.Players[playerNumber].ActiveMode != Play) {
-        haltRsp();
+        //haltRsp();
     } else {
         // Swap the pointers.
         uintptr_t temp = (uintptr_t) rootState.Players[playerNumber].EmulationState.NextBuffer;

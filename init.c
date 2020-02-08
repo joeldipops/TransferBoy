@@ -94,7 +94,7 @@ void initLogic(const byte playerNumber) {
             }
 
             s->Cartridge.Type = ROM_ONLY;
-            s->Cartridge.Header.IsSgbSupported = true;
+            s->Cartridge.Header.is_sgb_supported = true;
             s->Cartridge.IsGbcSupported = false;
             s->Cartridge.RomBankCount = s->Cartridge.Rom.Size / ROM_BANK_SIZE;
             s->Cartridge.RamBankCount = 1;

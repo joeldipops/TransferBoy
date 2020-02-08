@@ -42,13 +42,6 @@ typedef enum {
 
 } TpakError;
 
-// Must be packed into a single byte to fit in the header.
-typedef enum __attribute__ ((packed)) {
-    GBC_NOT_SUPPORTED = 0x00, 
-    GBC_DMG_SUPPORTED = 0x80,
-    GBC_ONLY_SUPPORTED = 0xC0 
-} GbcSupport;
-
 // Must be packed into a single byte to fit in the header
 typedef enum __attribute__ ((packed)) {
     // Change this if we do find a use for 0x04
@@ -100,33 +93,7 @@ typedef enum __attribute__ ((packed)) {
     HUC1_RAM_BATTERY = 0xFF
 } CartridgeType;
 
-typedef struct {
-    byte entryScript[4];
-    byte logo[48];
-    union {
-        char Title[16];
-        struct {
-            char Title[15];
-            GbcSupport GbcSupport;
-        } OldCGBTitle;
-        struct {
-            char Title[11];
-            byte ManufacturerCode[4];
-            GbcSupport GbcSupport;
-        } CGBTitle;
-    };
-    natural NewLicenseeCode;
-    bool IsSgbSupported;
-    CartridgeType CartridgeType;
-    byte RomSizeCode;
-    byte RamSizeCode;
-    byte Destination;
-    byte OldLicenseeCode;
-    byte VersionNumber;
-    byte HeaderChecksum;
-    natural GlobalChecksum;
-    byte overflow[16];
-} CartridgeHeader;
+typedef struct gameboy_cartridge_header CartridgeHeader;
 
 typedef struct {
     ByteArray Rom;

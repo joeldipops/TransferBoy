@@ -14,14 +14,8 @@ extern const char ppuDMG_code_end __attribute((section(".data")));
 extern const char ppuDMG_code_size __attribute((section(".data")));
 
 typedef struct {
-    uintptr_t InAddress;
-    uintptr_t OutAddress;
-    Rectangle Screen;
-    bool IsColour;
-    byte IsColourPadding[3];
-    bool IsBusy;
-    byte IsBusyPadding[3];
-    uint32_t WordPadding[2];
+    u32 IsBusy;
+    u32 Settings[5];
 } RspInterface;
 
 /**
@@ -33,8 +27,9 @@ volatile RspInterface rspInterface __attribute__ ((section (".rspInterface"))) _
  * Called if the RSP hits a break instruction.
  */
 static void onRSPException() {
-    printSegmentToFrame(2, "RSP Exception Raised - dumping rspInterface", (byte*) &rspInterface);
-    printSegmentToFrame(rootState.Frame, "RSP Exception Raised - dumping output", (byte*) rspInterface.OutAddress);
+    logAndPauseFrame(2, "RSP Exception Raised");
+    //printSegmentToFrame(2, "RSP Exception Raised - dumping rspInterface", (byte*) &rspInterface);
+    //printSegmentToFrame(rootState.Frame, "RSP Exception Raised - dumping output", (byte*) rspInterface.OutAddress);
 }
 
 // Following taken from libdragon source since it doesn't provide direct access to these registers.
@@ -88,14 +83,6 @@ s8 prepareMicrocode(const Microcode code) {
 
     // Zero out the padding.
     rspInterface.IsBusy = false;
-    rspInterface.IsColourPadding[0] = 0;
-    rspInterface.IsColourPadding[1] = 0;
-    rspInterface.IsColourPadding[2] = 0;
-    rspInterface.IsBusyPadding[0] = 0;
-    rspInterface.IsBusyPadding[1] = 0;
-    rspInterface.IsBusyPadding[2] = 0;
-    rspInterface.WordPadding[0] = 0;
-    rspInterface.WordPadding[1] = 0;
 
     return RSP_SUCCESS;
 }
@@ -113,6 +100,7 @@ void haltRsp() {
  * @returns True if the RSP is working, false if it's idle.
  */
 bool isRspBusy() {
+    data_cache_hit_invalidate(&rspInterface, sizeof(RspInterface));
     return rspInterface.IsBusy;
 }
 
@@ -124,27 +112,4 @@ bool isRspBusy() {
  * @param isColour if true, inBuffer words represent 2 bit DMG pixels.  Otherwise they are 16bit GBC pixels
  */
 void renderFrame(uintptr_t inBuffer, uintptr_t outBuffer, Rectangle* screen, bool isColour) {
-    data_cache_hit_invalidate(&rspInterface, sizeof(RspInterface));
-    // Let the RSP finish it's current frame & skip this one.
-    if (rspInterface.IsBusy) {
-        return;
-    }
-
-    if (rootState.Frame) {
-        rdp_detach_display();
-        display_show(rootState.Frame);
-    }
-    while(!(rootState.Frame = display_lock()));
-    rdp_attach_display(rootState.Frame);
-
-    haltRsp();
-    rspInterface.InAddress = inBuffer;
-    rspInterface.OutAddress = outBuffer;
-    rspInterface.Screen = *screen;
-    rspInterface.IsColour = isColour;
-    rspInterface.IsBusy = true;
-
-    data_cache_hit_writeback(&rspInterface, sizeof(RspInterface));
-
-    run_ucode();
 }
