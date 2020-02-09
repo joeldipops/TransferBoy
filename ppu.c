@@ -44,7 +44,7 @@ void ppuStep(PlayerState* state) {
 
     haltRsp();
     ppuInterface.IsBusy = true;
-    logAndPauseFrame(2, "LCDC Val = %08x", state->EmulationState.LcdControl);
+    //logAndPauseFrame(2, "LY Val = %08x", state->EmulationState.BackgroundPalette);
     data_cache_hit_writeback(&ppuInterface, sizeof(PpuInterface));
     run_ucode();
 }
