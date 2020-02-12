@@ -94,6 +94,10 @@
 # Memory Map
 ###
 
+
+.eqv STACK_BOTTOM, 0xA00 # Adjust the stack size as neccessary
+.eqv STACK_TOP, 0xAC0
+
 .eqv GB_BUFFER, 0xAC0          # 160 2bit pixels per scan-line = 40bytes
 .eqv LINE_TILE_MAP, 0xAE8      # 32B 1 for each tile across the background (though we only see 20 tiles at a time.)
 .eqv TILE_CACHE, 0xB08      # 50 possible tiles with 20B cache entries (4B header + 16B/tile with 2b colours).
@@ -168,8 +172,8 @@ cacheGetTile:
     .set $pointer, $a1
 
     # when there's nothing in the cache, short-circuit.
-    addi $t0, TILE_CACHE
-    beq $t0, $CACHE_POINTER, .notFound
+    addi $t0, $0, TILE_CACHE
+    beq $t0, $CACHE_POINTER, notFound
 
     # Set the flag so we're not comparing 0 to 0.
     lui $t0, 0x8000
@@ -193,7 +197,7 @@ cacheGetTile:
         # Check that $pointer is still greater than the bottom of the cache
         addi $t0, $pointer, -1 * TILE_CACHE
     bltz $t0, .whileNotFound
-    .notFound:
+    notFound:
 
     # Tile isn't in the cache yet, so we need to DMA it in.
 
@@ -210,12 +214,15 @@ cacheGetTile:
     ## Which is added to the address base.
     add $tileId, $tileId, $VRAM_TILE_DATA_ADDRESS
 
-    dmaIn_destR $a0, $CACHE_POINTER, TILE_SIZE
+    stackPush 2
+    dmaIn_destR $tileId, $CACHE_POINTER, TILE_SIZE
+    stackPop 2
+
+    # Now that data has been loaded, return a pointer to it.
+    add $r0, $0, $CACHE_POINTER
 
     ## Increment cache pointer to the next empty entry.
     addi $CACHE_POINTER, $CACHE_POINTER, TILE_SIZE
-
-    add $r0, $a0, $0
     jr $ra
 
 .set $tileId, 0
@@ -380,6 +387,7 @@ cacheGetTile:
         # Grab two bytes from the tile (8 pixels).
         lw $t0, 0($r0)
 
+
         # TODO - shift as needed for part tiles
         # sll $t0, $t0, ???
         andi $t0, $t0, 0xFFFF
@@ -461,6 +469,9 @@ cacheGetTile:
 ###
 # Sets the RDP to draw red rectangles.
 main:
+    # init stack pointer.
+    addi $sp, $0, STACK_TOP
+
     # Bring in the configuration.
     liw $t0, RSP_INTERFACE_ADDRESS
     dmaIn $t0, INPUT, INTERFACE_SIZE
@@ -514,6 +525,8 @@ main:
     1:
         addi $VRAM_TILE_DATA_ADDRESS, $0, TILE_DATA_1_OFFSET
     2:
+    lw $t0, INPUT + RspIn_VRAM_BASE
+    add $VRAM_TILE_DATA_ADDRESS, $VRAM_TILE_DATA_ADDRESS, $t0
 
     # Build up this scanline to a buffer than can be rendered as a texture.
     transferOAM

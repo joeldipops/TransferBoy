@@ -42,8 +42,10 @@ _execRdp:
 ###
 .macro execRdp words
     # + 4 because end expects the next address after data ends.
+    stackPush 1
     addi $a0, $0, (\words * 4) + 4
     jal _execRdp
+    stackPop 1
 .endm
 
 ###

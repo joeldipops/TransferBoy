@@ -90,6 +90,58 @@
 .set $ra,   $31
 
 ###
+# Push the previous function call details on to the stack.
+# @param argCount number of arguments to keep track of.
+# @note supports up to 4 arguments.
+###
+.macro stackPush argCount
+    sw $ra, 0($sp)
+    addi $sp, $sp, -4
+    .if \argCount > 0
+        sw $a0, 0($sp)
+        addi $sp, $sp, -4
+    .endif
+    .if \argCount > 1
+        sw $a1, 0($sp)
+        addi $sp, $sp, -4
+    .endif
+    .if \argCount > 2
+        sw $a2, 0($sp)
+        addi $sp, $sp, -4
+    .endif
+    .if \argCount > 3
+        sw $a3, 0($sp)
+        addi $sp, $sp, -4
+    .endif
+.endm
+
+###
+# Pop the top function call details off the stack.
+# @param argCount number of arguments expected with the call.
+# @note supports up to 4 arguments.
+###
+.macro stackPop argCount
+    .if \argCount > 3
+        addi $sp, $sp, 4
+        lw $a30, 0($sp)
+    .endif
+    .if \argCount > 2
+        addi $sp, $sp, 4
+        lw $a2, 0($sp)
+    .endif
+    .if \argCount > 1
+        addi $sp, $sp, 4
+        lw $a1, 0($sp)
+    .endif
+    .if \argCount > 0
+        addi $sp, $sp, 4
+        lw $a0, 0($sp)
+    .endif
+    addi $sp, $sp, 4
+    lw $ra, 0($sp)
+.endm
+
+###
 # Load Immediate Word
 # loads a 32bit immediate value into register.
 # @input \reg Register to load.
@@ -98,6 +150,14 @@
 .macro liw reg word
     lui \reg, \word >> 16
     ori \reg, \reg, \word & 0xFFFF
+.endm
+
+###
+# Store Immediate Word
+###
+.macro siw const addr reg
+    addi $at, $0, \const
+    sw $at, \addr(\reg)
 .endm
 
 
