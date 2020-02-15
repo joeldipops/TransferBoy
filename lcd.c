@@ -8,6 +8,7 @@
 #include "config.h"
 #include "lcd.h"
 #include "hwdefs.h"
+#include "ppu.h"
 
 struct __attribute__((__packed__)) OAMentry {
     u8 y;
@@ -357,5 +358,6 @@ void lcd_step(PlayerState* state) {
     s->IsCurrentLineLYC = (s->CurrentLine == s->NextInterruptLine);
 
     if (s->lcd_entered_hblank)
-        lcd_render_current_line(state);
+        //lcd_render_current_line(state);
+        ppuStep(state);
 }

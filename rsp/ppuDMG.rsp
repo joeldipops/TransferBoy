@@ -95,17 +95,17 @@
 ###
 
 
-.eqv STACK_BOTTOM, 0xA00 # Adjust the stack size as neccessary
-.eqv STACK_TOP, 0xAC0
-
-.eqv GB_BUFFER, 0xAC0          # 160 2bit pixels per scan-line = 40bytes
-.eqv LINE_TILE_MAP, 0xAE8      # 32B 1 for each tile across the background (though we only see 20 tiles at a time.)
-.eqv TILE_CACHE, 0xB08      # 50 possible tiles with 20B cache entries (4B header + 16B/tile with 2b colours).
-.eqv PPU_SETTINGS, 0x0EF0
-.eqv INPUT, 0x0F00
-.eqv OAM_CACHE, 0x0F40      # 10 OAM entries per scanline at 4B/entry
-.eqv OAM_MIRROR, 0x0F50
-.eqv MONOCHROME_PALETTE, 0x0FF0
+.eqv STACK_BOTTOM,  0x800 # Adjust the stack size as neccessary
+.eqv STACK_TOP,     0x840
+.eqv N64_BUFFER,    0x840 # 160 42bit pixels per scan-line.
+.eqv GB_BUFFER,     0xAC0 # 160 2bit pixels per scan-line = 40bytes
+.eqv LINE_TILE_MAP, 0xAE8 # 32B 1 for each tile across the background (though we only see 20 tiles at a time.)
+.eqv TILE_CACHE,    0xB08 # 50 possible tiles with 20B cache entries (4B header + 16B/tile with 2b colours).
+.eqv PPU_SETTINGS,  0xEF0
+.eqv INPUT,         0xF00
+.eqv OAM_CACHE,     0xF40 # 10 OAM entries per scanline at 4B/entry
+.eqv OAM_MIRROR,    0xF50
+.eqv MONOCHROME_PALETTE, 0xFF0
 
 ### Palette Values
 
@@ -126,26 +126,23 @@
 # Number of pixels left to render in current iteration.
 .set $PIXEL_COUNTER, $s1
 
-# Address to place next processed gameboy pixel in DMEM
-.set $N64_BUFFER_POINTER, $s2
-
 # Cached Height may not be necessary
-.set $RECTANGLE_HEIGHT, $s3
+.set $RECTANGLE_HEIGHT, $s2
 
 # Cached value of LCDC bit 2 flag
-.set $IS_8x16_MODE, $s4
+.set $IS_8x16_MODE, $s3
 
 # Left and Top position of line to render.
-.set $START_POSITION, $s5
+.set $START_POSITION, $s4
 
 # Length & Width of the line to draw in N64 pixels so it can be scaled.
-.set $RECTANGLE_SIZE, $s6
+.set $RECTANGLE_SIZE, $s5
 
-.set $SCAN_LINE, $s7
+.set $SCAN_LINE, $s6
 
-.set $CACHE_POINTER, $s8
+.set $CACHE_POINTER, $s7
 
-.set $VRAM_TILE_DATA_ADDRESS, $s9
+.set $VRAM_TILE_DATA_ADDRESS, $s8
 
 ###
 # Takes a 2bit DMG colour index and converts to a 16bit n64 colour.
@@ -367,7 +364,8 @@ cacheGetTile:
     # Find starting pixel
     lbu $currentPixel, (PPU_SETTINGS + Ppu_BACKGROUND_SCROLL_X)($0)
     addi $endLinePixel, $currentPixel, TILE_WIDTH * TILES_PER_WIDTH
-    .whileBgHasPixels:
+
+    3: #.whileBgHasPixels:
         # Divide by 8 to get the tile.
         srl $t0, $currentPixel, 3
 
@@ -396,8 +394,7 @@ cacheGetTile:
         addi $gbBufferCursor, $gbBufferCursor, 16 # TODO: part tiles
 
         addi $currentPixel, $currentPixel, 8 # TODO: part tiles
-
-    bne $currentPixel, $endLinePixel, .whileBgHasPixels
+    bne $currentPixel, $endLinePixel, 3b # .whileBgHasPixels
 
     .set $tileMap, 0
     .set $currentPixel, 0
@@ -447,8 +444,11 @@ cacheGetTile:
 
             # For the visible width of this sprite
                 # Find the pixel that correlates to this x position.
-                # Check it against the palette
+                # Run it through the palette
                 # Check it against priority
+
+                # A test
+                addi $r0, $0, %00010010
 
                 # add it to the buffer.
                 sw $r0, 0($GB_BUFFER_POINTER)
@@ -464,6 +464,52 @@ cacheGetTile:
     .set $entry, 0
     .set $x1, 0
     .set $x2, 0
+.endm
+
+.macro massagePixels
+    .set $n64Cursor, $t2
+    .set $gbCursor, $t3
+    .set $pixelCounter, $t4
+
+    addi $pixelCounter, $0, GB_LCD_WIDTH
+    add $gbCursor, $0, $0
+    add $n64Cursor, $0, $0
+    1: # whileHasPixels
+        # put a pixel into a register
+        lw $t0, GB_BUFFER($gbCursor)
+
+        # Pixels are 16 bit, not 32, so get the uppper bit first.
+        srl $t0, $t0, 16
+
+        # massage it from gameboy format to n64 format.
+        jal massageMonochrome
+        # push massaged colour on to the out-buffer
+        sw $t0, N64_BUFFER($n64Cursor)
+
+        # Repeat for the lower 16b
+        lw $t0, 0($pixelCounter)
+        andi $t0, $t0, 0xFFFF
+        jal massageMonochrome
+
+        # smoosh the two 16bit colours together into a 32bit word.
+        lw $t1, N64_BUFFER($n64Cursor)
+        sll $t1, $t1, 16
+        or $t0, $t0, $t1
+
+        # and push on to the buffer.
+        sw $t0, N64_BUFFER($n64Cursor)
+
+        # increment all the things.
+        addi $gbCursor, $gbCursor, 0x04
+        addi $n64Cursor, $n64Cursor, 0x04
+        addi $pixelCounter, $pixelCounter, -2
+
+    # end loop
+    bgtz $pixelCounter, 1b # whileHasPixels
+
+    .set $n64Cursor, 0
+    .set $gbCursor, 0
+    .set $pixelCounter, 0
 .endm
 
 ###
@@ -495,6 +541,7 @@ main:
 
     ## Stash config in some registers so whole memory space is available.
     lw $OUT_BUFFER_ADDRESS, INPUT + RspIn_OUT_ADDRESS($0)
+
     lw $START_POSITION, INPUT + RspIn_SCREEN_POSITION($0)
     lw $RECTANGLE_SIZE, INPUT + RspIn_RECTANGLE_SIZE($0)
     andi $RECTANGLE_HEIGHT, $RECTANGLE_SIZE, 0x0000FFFF
@@ -531,26 +578,17 @@ main:
     # Build up this scanline to a buffer than can be rendered as a texture.
     transferOAM
 
-    addi $PIXEL_COUNTER, $0, GB_LCD_WIDTH
-    .whileHasPixels:
-        ## Draw the window
-        processWindow
+    ## Draw the window
+    processWindow
 
-        ## Then the background
-        processBackground
+    ## Then the background
+    processBackground
 
-        # Finally draw sprites
-        #processSprites
+    # Finally draw sprites
+    #processSprites
 
-
-        # .................. Go through VRAM...
-        # .....................Massage the colours to n64 16bit colours.
-
-        addi $PIXEL_COUNTER, $PIXEL_COUNTER, -1
-
-    # end loop
-    bgtz $PIXEL_COUNTER, .whileHasPixels
-
+    # Massage the colours to n64 16bit colours.
+    massagePixels
 
     # Ask the RDP to render the line we just built.
 
@@ -558,7 +596,7 @@ main:
     syncPipe
 
     ## DMA the data back to DRAM so that the RDP can pick it up.
-    dmaOut DMEM_GB_BASE, $OUT_BUFFER_ADDRESS, BUFFER_SIZE
+    dmaOut $N64_BUFFER_POINTER, $OUT_BUFFER_ADDRESS, BUFFER_SIZE
 
     ## Tell RDP where to look for texture data.
     setTextureImage RGBA_FORMAT, COLOUR_DEPTH_16, GB_LCD_WIDTH, $OUT_BUFFER_ADDRESS
@@ -588,10 +626,9 @@ main:
 
     ## Reset DRAM flag that says we're done with this work.
 done:
-    sw $0, RspIn_IS_BUSY($0)
-
+    sw $0, (INPUT + RspIn_IS_BUSY)($0)
     liw $t0, RSP_INTERFACE_ADDRESS
-    dmaOut DMEM_GB_BASE, $t0, INTERFACE_SIZE
+    dmaOut INPUT, $t0, INTERFACE_SIZE
 
 # job done
 stall:

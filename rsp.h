@@ -37,6 +37,11 @@ s8 prepareMicrocode(const Microcode code);
 void haltRsp();
 
 /**
+ * Extend interface
+ */
+void* allocRspInterface(size_t size);
+
+/**
  * Checks the RSP interface to determine what it's doing.
  * @returns True if the RSP is working, false if it's idle.
  */

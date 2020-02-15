@@ -15,7 +15,7 @@ extern const char ppuDMG_code_size __attribute((section(".data")));
 
 typedef struct {
     u32 IsBusy;
-    u32 Settings[5];
+    u32 Settings[8];
 } RspInterface;
 
 /**
@@ -23,13 +23,28 @@ typedef struct {
  */
 volatile RspInterface rspInterface __attribute__ ((section (".rspInterface"))) __attribute__ ((__used__));
 
+
+
 /**
  * Called if the RSP hits a break instruction.
  */
 static void onRSPException() {
-    logAndPauseFrame(2, "RSP Exception Raised");
-    //printSegmentToFrame(2, "RSP Exception Raised - dumping rspInterface", (byte*) &rspInterface);
+    data_cache_hit_invalidate(&rspInterface, sizeof(RspInterface));
+    printSegmentToFrame(2, "RSP Exception Raised - dumping rspInterface", (byte*) &rspInterface);
     //printSegmentToFrame(rootState.Frame, "RSP Exception Raised - dumping output", (byte*) rspInterface.OutAddress);
+}
+
+/**
+ * Extend interface
+ */
+void* allocRspInterface(size_t size) {
+    if (size != sizeof(RspInterface)) {
+        // Raise some sort of exception.
+
+        return null;
+    }
+
+    return (void*) &rspInterface;
 }
 
 // Following taken from libdragon source since it doesn't provide direct access to these registers.
@@ -81,7 +96,6 @@ s8 prepareMicrocode(const Microcode code) {
             return RSP_ERR_INVALID_UCODE;
     }
 
-    // Zero out the padding.
     rspInterface.IsBusy = false;
 
     return RSP_SUCCESS;
