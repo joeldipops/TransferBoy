@@ -13,8 +13,8 @@ static const char TEXT_WIDTH = 10;
 static const float TEXT_SCALE_FACTOR = 0.210 / 100.0;
 
 typedef struct {
-    u16 Top;
     u16 Left;
+    u16 Top;
     u16 Width;
     u16 Height;
 } Rectangle;

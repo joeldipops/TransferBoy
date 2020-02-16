@@ -1,17 +1,18 @@
+#include "global.h"
 #include "rsp.h"
+
 #include "logger.h"
 
 typedef struct { // Extends ppuInterface
     u32 IsBusy;
     union {
-        u32 Settings[8];
+        u32 Settings[6];
         struct {
             uintptr_t VRamAddress;
             uintptr_t HRamAddress;
             uintptr_t OAMAddress;
             uintptr_t OutBuffer;
             Rectangle Screen;
-            Rectangle Line;
         };
     };
 } PpuInterface;
@@ -24,8 +25,7 @@ void ppuInit(PlayerState* state) {
 
     ppuInterface = allocRspInterface(sizeof(PpuInterface));
 
-    ppuInterface->Screen = screen;
-    ppuInterface->Line = (Rectangle) { screen.Left, screen.Top, 320, 4 };
+    ppuInterface->Screen = (Rectangle) { screen.Left, screen.Top, 320, 2 };
 
     ppuInterface->IsBusy = false;
     ppuInterface->VRamAddress = (uintptr_t) state->EmulationState.VRAM;
@@ -47,6 +47,9 @@ void ppuStep(PlayerState* state) {
 
         haltRsp();
         ppuInterface->IsBusy = true;
+        Rectangle screen;
+        getScreenPosition(0, &screen);
+        ppuInterface->Screen.Top = screen.Top + (state->EmulationState.CurrentLine * (screen.Height / GB_LCD_HEIGHT));
         //logAndPauseFrame(2, "LY Val = %08x", state->EmulationState.BackgroundPalette);
         data_cache_hit_writeback(ppuInterface, sizeof(PpuInterface));
         run_ucode();

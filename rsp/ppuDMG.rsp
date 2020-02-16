@@ -320,89 +320,6 @@ cacheGetTile:
     nop
 .endm
 
-### Draws pixels for the background.
-.macro processBackground
-    .set $tileMap, $t1
-    .set $currentPixel, $t2
-    .set $gbBufferCursor, $t3
-    .set $endLinePixel, $t4
-
-    # TODO: Check Lcdc_LCD_PRIORITY. If it's 0, skip all of this and just draw white pixels.
-
-    # Find the bit of VRAM that corresponds to the tiles on this line.
-    lb $t0, PPU_SETTINGS + Ppu_LCD_CONTROL($0)
-    andi $t0, $t0, Lcdc_BACKGROUND_TILE_MAP
-    bne $t0, $0, 1f
-        addi $tileMap, $0, TILE_MAP_0_OFFSET
-        j 2f
-    1:
-        addi $tileMap, $0, TILE_MAP_1_OFFSET
-    2:
-
-    # Figure out what line of the background we need to start with by adding the SCY register
-    lbu $t0, (PPU_SETTINGS + Ppu_BACKGROUND_SCROLL_Y)($0)
-    # TODO - This needs to wrap around on 256. Is there an easy way to do that?
-    add $t0, $t0, $SCAN_LINE
-
-    # DMA in a line of the tile map, 
-    ## Divide by 8 to get the tile line, then multiply by 32
-    ### Yes I'm trying to wrap my head around why I can't just << 2, but for scan-line 1, this would be tile 4 when it should be tile 0...
-    srl $t0, $t0, 3
-    sll $t0, $t0, 5
-
-    # add to tile map to get the address in GB Memory.
-    add $tileMap, $tileMap, $t0
-
-    ## And add to this to get the location in N64 memory.
-    lw $t0, (INPUT + RspIn_VRAM_BASE)($0)
-    add $tileMap, $tileMap, $t0
-
-    # DMA it in.
-    dmaIn $tileMap, LINE_TILE_MAP, 0x20
-    addi $gbBufferCursor, $0, GB_BUFFER
-
-    # Find starting pixel
-    lbu $currentPixel, (PPU_SETTINGS + Ppu_BACKGROUND_SCROLL_X)($0)
-    addi $endLinePixel, $currentPixel, TILE_WIDTH * TILES_PER_WIDTH
-
-    3: #.whileBgHasPixels:
-        # Divide by 8 to get the tile.
-        srl $t0, $currentPixel, 3
-
-        add $t0, $t0, $tileMap
-        lw $a0, 0($tileMap)
-        jal cacheGetTile
-
-        # which line of the tile are we on
-
-        ## a % b == a & ( b -1 ) if b is a power of 2
-        and $t0, $SCAN_LINE, TILE_WIDTH - 1
-        ## Multiply by two to get the number of bytes to skip.
-        srl $t0, $t0, 2
-        ## $r0 now points to the line of the tile we want.
-        add $r0, $r0, $t0
-
-        # Grab two bytes from the tile (8 pixels).
-        lw $t0, 0($r0)
-
-
-        # TODO - shift as needed for part tiles
-        # sll $t0, $t0, ???
-        andi $t0, $t0, 0xFFFF
-        sw $t0, 0($gbBufferCursor)
-
-        addi $gbBufferCursor, $gbBufferCursor, 16 # TODO: part tiles
-
-        addi $currentPixel, $currentPixel, 8 # TODO: part tiles
-    bne $currentPixel, $endLinePixel, 3b # .whileBgHasPixels
-
-    .set $tileMap, 0
-    .set $currentPixel, 0
-    .set $gbBufferCursor, 0
-    .set $endLinePixel, 0
-.endm
-
-
 ###
 # Draws any sprites that apear on this scanline
 ###
@@ -447,9 +364,6 @@ cacheGetTile:
                 # Run it through the palette
                 # Check it against priority
 
-                # A test
-                addi $r0, $0, %00010010
-
                 # add it to the buffer.
                 sw $r0, 0($GB_BUFFER_POINTER)
 
@@ -464,6 +378,91 @@ cacheGetTile:
     .set $entry, 0
     .set $x1, 0
     .set $x2, 0
+.endm
+
+
+### Draws pixels for the background.
+.macro processBackground
+    .set $tileMap, $t1
+    .set $currentPixel, $t2
+    .set $gbBufferCursor, $t3
+    .set $endLinePixel, $t4
+
+    # TODO: Check Lcdc_LCD_PRIORITY. If it's 0, skip all of this and just draw white pixels.
+
+    # Find the bit of VRAM that corresponds to the tiles on this line.
+    lb $t0, PPU_SETTINGS + Ppu_LCD_CONTROL($0)
+    andi $t0, $t0, Lcdc_BACKGROUND_TILE_MAP
+    bne $t0, $0, 1f
+        addi $tileMap, $0, TILE_MAP_0_OFFSET
+        j 2f
+    1:
+        addi $tileMap, $0, TILE_MAP_1_OFFSET
+    2:
+
+    # Figure out what line of the background we need to start with by adding the SCY register
+    lbu $t0, (PPU_SETTINGS + Ppu_BACKGROUND_SCROLL_Y)($0)
+    # TODO - This needs to wrap around on 256. Is there an easy way to do that?
+    add $t0, $t0, $SCAN_LINE
+
+    # DMA in a line of the tile map, 
+    ## Divide by 8 to get the tile line, then multiply by 32
+    ### Yes I'm trying to wrap my head around why I can't just << 2, but for scan-line 1, this would be tile 4 when it should be tile 0...
+    srl $t0, $t0, 3
+    sll $t0, $t0, 5
+
+    # add to tile map to get the address in GB Memory.
+    add $tileMap, $tileMap, $t0
+
+    ## And add to this to get the location in N64 memory.
+    lw $t0, (INPUT + RspIn_VRAM_BASE)($0)
+    add $tileMap, $tileMap, $t0
+
+    # DMA it in.
+    dmaIn $tileMap, LINE_TILE_MAP, 0x20
+    add $gbBufferCursor, $0, $0
+
+    # Find starting pixel
+    lbu $currentPixel, (PPU_SETTINGS + Ppu_BACKGROUND_SCROLL_X)($0)
+    addi $endLinePixel, $currentPixel, TILE_WIDTH * TILES_PER_WIDTH
+
+    3: #.whileBgHasPixels:
+        # Divide by 8 to get the tile.
+        srl $t0, $currentPixel, 3
+
+        add $t0, $t0, $tileMap
+        lw $a0, 0($tileMap)
+        jal cacheGetTile
+
+        # which line of the tile are we on
+
+        ## a % b == a & ( b -1 ) if b is a power of 2
+        and $t0, $SCAN_LINE, TILE_WIDTH - 1
+        ## Multiply by two to get the number of bytes to skip.
+        srl $t0, $t0, 2
+        ## $r0 now points to the line of the tile we want.
+        add $r0, $r0, $t0
+
+        # Grab two bytes from the tile (8 pixels).
+        lh $t0, 0($r0)
+
+
+        # TODO - shift as needed for part tiles
+        # sll $t0, $t0, ???
+        #andi $t0, $t0, 0xFFFF
+        sh $t0, (GB_BUFFER)($gbBufferCursor)
+
+        # Advance buffer two bytes
+        addi $gbBufferCursor, $gbBufferCursor, 2 # TODO: part tiles
+
+        # Which is 8 pixels.
+        addi $currentPixel, $currentPixel, 8 # TODO: part tiles
+    bne $currentPixel, $endLinePixel, 3b # .whileBgHasPixels
+
+    .set $tileMap, 0
+    .set $currentPixel, 0
+    .set $gbBufferCursor, 0
+    .set $endLinePixel, 0
 .endm
 
 .macro massagePixels
@@ -484,6 +483,7 @@ cacheGetTile:
         # massage it from gameboy format to n64 format.
         jal massageMonochrome
         # push massaged colour on to the out-buffer
+
         sw $t0, N64_BUFFER($n64Cursor)
 
         # Repeat for the lower 16b
@@ -596,7 +596,7 @@ main:
     syncPipe
 
     ## DMA the data back to DRAM so that the RDP can pick it up.
-    dmaOut $N64_BUFFER_POINTER, $OUT_BUFFER_ADDRESS, BUFFER_SIZE
+    dmaOut N64_BUFFER, $OUT_BUFFER_ADDRESS, BUFFER_SIZE
 
     ## Tell RDP where to look for texture data.
     setTextureImage RGBA_FORMAT, COLOUR_DEPTH_16, GB_LCD_WIDTH, $OUT_BUFFER_ADDRESS
@@ -621,7 +621,6 @@ main:
     ## Draw a rectangle with the texture we have set up
     textureRectangle 1, $a0, $a1, $a2, $a3, 0, 0, 2048, 512
 
-
     # Clean-up now that we're done.
 
     ## Reset DRAM flag that says we're done with this work.
@@ -634,6 +633,7 @@ done:
 stall:
     nop
     j stall
+    nop
 
 break
 # Fill remainder with break instruction

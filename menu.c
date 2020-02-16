@@ -60,7 +60,7 @@ static void drawMenuItem(
     }
 
     if (drawCursor) {
-        Rectangle border = {top, left, xOffset, menuItemOffset };
+        Rectangle border = {left, top, xOffset, menuItemOffset };
         drawSolidBorder(frame, &border, 2, SELECTED_MENU_ITEM_COLOUR);
     }
 }

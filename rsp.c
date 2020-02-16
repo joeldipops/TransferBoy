@@ -15,7 +15,7 @@ extern const char ppuDMG_code_size __attribute((section(".data")));
 
 typedef struct {
     u32 IsBusy;
-    u32 Settings[8];
+    u32 Settings[6];
 } RspInterface;
 
 /**

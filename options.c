@@ -204,7 +204,7 @@ static void drawOptionRow(const byte playerNumber, const string text, const Rect
     // draw border if selected.
     if (rootState.Players[playerNumber].OptionsCursorRow == row) {
         // TODO: draw left & right arrows.
-        Rectangle border = { top, screen->Left, screen->Width, menuItemOffset };
+        Rectangle border = { screen->Left, top, screen->Width, menuItemOffset };
         drawSolidBorder(rootState.Frame, &border, 2, SELECTED_OPTIONS_ITEM_COLOUR);
     }
 }
