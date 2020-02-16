@@ -95,6 +95,7 @@
 ###
 
 
+.eqv PALETTE_2_BIT, 0x7F0 # Temp DMG Palette register values.
 .eqv STACK_BOTTOM,  0x800 # Adjust the stack size as neccessary
 .eqv STACK_TOP,     0x840
 .eqv N64_BUFFER,    0x840 # 160 42bit pixels per scan-line.
@@ -104,7 +105,7 @@
 .eqv PPU_SETTINGS,  0xEF0
 .eqv INPUT,         0xF00
 .eqv OAM_CACHE,     0xF40 # 10 OAM entries per scanline at 4B/entry
-.eqv OAM_MIRROR,    0xF50
+.eqv OAM_MIRROR,    0xF50 # GB - N64 Colour translation.
 .eqv MONOCHROME_PALETTE, 0xFF0
 
 ### Palette Values
@@ -143,6 +144,33 @@
 .set $CACHE_POINTER, $s7
 
 .set $VRAM_TILE_DATA_ADDRESS, $s8
+
+###
+# Lays a DMG palette out in an easily referencable table in memory.
+#
+# @input a0 The palette to set.
+###
+setPalette:
+    .set $palette, $a0
+
+    andi $t0, $palette, 0b00000011
+    sb $t0, PALETTE_2_BIT($0)
+
+    srl $t0, $palette, 2
+    andi $t0, $palette, 0b00000011
+    sb $t0, (PALETTE_2_BIT + 1)($0)
+
+    srl $t0, $palette, 4
+    andi $t0, $palette, 0b00000011
+    sb $t0, (PALETTE_2_BIT + 2)($0)
+
+    srl $t0, $palette, 6
+    andi $t0, $palette, 0b00000011
+    sb $t0, (PALETTE_2_BIT + 3)($0)
+
+    .set $palette, 0
+    jr $ra
+
 
 ###
 # Takes a 2bit DMG colour index and converts to a 16bit n64 colour.
@@ -387,6 +415,8 @@ cacheGetTile:
     .set $currentPixel, $t2
     .set $gbBufferCursor, $t3
     .set $endLinePixel, $t4
+    .set $shiftBy, $t5
+    .set $tileLine, $t6
 
     # TODO: Check Lcdc_LCD_PRIORITY. If it's 0, skip all of this and just draw white pixels.
 
@@ -443,14 +473,35 @@ cacheGetTile:
         ## $r0 now points to the line of the tile we want.
         add $r0, $r0, $t0
 
-        # Grab two bytes from the tile (8 pixels).
-        lh $t0, 0($r0)
+        # Set the palette
+        lb $a0, (PPU_SETTINGS + Ppu_BACKGROUND_PALETTE)($0)
+        jal setPalette
 
+        addi $shiftBy, $0, 16
+        add $tileLine, $0, $0
+
+        .whileHasPixels:
+            addi $shiftBy, $shiftBy, -2
+
+            # Grab two bytes from the tile (8 pixels).
+            lh $t0, 0($r0)
+            # Shift so that $t0 only contains the single pixel we care about.
+            srlv $t0, $t0, $shiftBy
+            andi $t0, $t0, 0b00000011
+
+            # Look up the palette
+            lb $t0, PALETTE_2_BIT($t0)
+
+            # Patch it back to $tileLine somehow.......
+            sllv $t0, $t0, $shiftBy
+            or $tileLine, $tileLine, $t0
+
+        bgtz $shiftBy, .whileHasPixels
 
         # TODO - shift as needed for part tiles
         # sll $t0, $t0, ???
         #andi $t0, $t0, 0xFFFF
-        sh $t0, (GB_BUFFER)($gbBufferCursor)
+        sh $tileLine, (GB_BUFFER)($gbBufferCursor)
 
         # Advance buffer two bytes
         addi $gbBufferCursor, $gbBufferCursor, 2 # TODO: part tiles
@@ -463,6 +514,8 @@ cacheGetTile:
     .set $currentPixel, 0
     .set $gbBufferCursor, 0
     .set $endLinePixel, 0
+    .set $shiftBy, 0
+    .set $tileLine, 0
 .endm
 
 .macro massagePixels

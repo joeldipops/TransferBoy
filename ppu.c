@@ -50,7 +50,6 @@ void ppuStep(PlayerState* state) {
         Rectangle screen;
         getScreenPosition(0, &screen);
         ppuInterface->Screen.Top = screen.Top + (state->EmulationState.CurrentLine * (screen.Height / GB_LCD_HEIGHT));
-        //logAndPauseFrame(2, "LY Val = %08x", state->EmulationState.BackgroundPalette);
         data_cache_hit_writeback(ppuInterface, sizeof(PpuInterface));
         run_ucode();
     }
