@@ -432,8 +432,9 @@ cacheGetTile:
 
     # Figure out what line of the background we need to start with by adding the SCY register
     lbu $t0, (PPU_SETTINGS + Ppu_BACKGROUND_SCROLL_Y)($0)
-    # TODO - This needs to wrap around on 256. Is there an easy way to do that?
     add $t0, $t0, $SCAN_LINE
+    # wrap around on 256
+    andi $t0, $t0, 0xFF
 
     # DMA in a line of the tile map, 
     ## Divide by 8 to get the tile line, then multiply by 32
@@ -474,7 +475,7 @@ cacheGetTile:
         add $r0, $r0, $t0
 
         # Set the palette
-        lb $a0, (PPU_SETTINGS + Ppu_BACKGROUND_PALETTE)($0)
+        lbu $a0, (PPU_SETTINGS + Ppu_BACKGROUND_PALETTE)($0)
         jal setPalette
 
         addi $shiftBy, $0, 16
@@ -492,7 +493,7 @@ cacheGetTile:
             # Look up the palette
             lb $t0, PALETTE_2_BIT($t0)
 
-            # Patch it back to $tileLine somehow.......
+            # Patch it back to $tileLine
             sllv $t0, $t0, $shiftBy
             or $tileLine, $tileLine, $t0
 
@@ -521,48 +522,44 @@ cacheGetTile:
 .macro massagePixels
     .set $n64Cursor, $t2
     .set $gbCursor, $t3
-    .set $pixelCounter, $t4
+    .set $shiftBy, $t4
+    .set $wordCounter, $t5
+    .set $currentWord, $t6
 
-    addi $pixelCounter, $0, GB_LCD_WIDTH
+    addi $wordCounter, $0, GB_LCD_WIDTH / 0x10
     add $gbCursor, $0, $0
     add $n64Cursor, $0, $0
     1: # whileHasPixels
-        # put a pixel into a register
-        lw $t0, GB_BUFFER($gbCursor)
+        # get a word from memory (16 pixels)
+        lw $currentWord, GB_BUFFER($gbCursor)
+        addi $shiftBy, $0, 0x20
+        .whileInWord:
+            addi $shiftBy, $shiftBy, -2
 
-        # Pixels are 16 bit, not 32, so get the uppper bit first.
-        srl $t0, $t0, 16
+            # Shift so that $a0 only contains the single pixel we care about.
+            srlv $a0, $currentWord, $shiftBy
+            andi $a0, $a0, 0b00000011
 
-        # massage it from gameboy format to n64 format.
-        jal massageMonochrome
-        # push massaged colour on to the out-buffer
+            # massage it from gameboy format to n64 format.
+            jal massageMonochrome
 
-        sw $t0, N64_BUFFER($n64Cursor)
+            # and push on to the buffer.
+            sh $r0, N64_BUFFER($n64Cursor)
+            addi $n64Cursor, $n64Cursor, 0x02
 
-        # Repeat for the lower 16b
-        lw $t0, 0($pixelCounter)
-        andi $t0, $t0, 0xFFFF
-        jal massageMonochrome
+        bgtz $shiftBy, .whileInWord # whileInWord
 
-        # smoosh the two 16bit colours together into a 32bit word.
-        lw $t1, N64_BUFFER($n64Cursor)
-        sll $t1, $t1, 16
-        or $t0, $t0, $t1
-
-        # and push on to the buffer.
-        sw $t0, N64_BUFFER($n64Cursor)
-
-        # increment all the things.
+        # increment the cursor and decrement the counter.
         addi $gbCursor, $gbCursor, 0x04
-        addi $n64Cursor, $n64Cursor, 0x04
-        addi $pixelCounter, $pixelCounter, -2
+        addi $wordCounter, $wordCounter, -1
 
-    # end loop
-    bgtz $pixelCounter, 1b # whileHasPixels
+    bgtz $wordCounter, 1b # whileHasPixels
 
     .set $n64Cursor, 0
     .set $gbCursor, 0
-    .set $pixelCounter, 0
+    .set $wordCounter, 0
+    .set $shiftBy, 0
+    .set $currentWord, 0
 .endm
 
 ###
