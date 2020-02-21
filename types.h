@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include "tpakio.h"
 #include "core.h"
+#include "hwdefs.h"
 
 typedef uint8_t  u8;
 typedef uint16_t u16;
@@ -188,7 +189,7 @@ typedef struct gb_state {
 
     // $ff00 - ff7f: IO registers and HRAM
     union __attribute__((packed)){
-        byte HRAM[0x100];
+        byte HRAM[HRAM_SIZE];
         struct __attribute__((packed)) {
             // FF00 - P1 - JoypadIo
             union __attribute__((packed)) {

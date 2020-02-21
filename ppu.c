@@ -1,5 +1,6 @@
 #include "global.h"
 #include "rsp.h"
+#include "hwdefs.h"
 
 #include "logger.h"
 
@@ -41,16 +42,21 @@ void ppuInit(PlayerState* state) {
 void ppuStep(PlayerState* state) {
     if (state->EmulationState.lcd_entered_hblank) {
         // Let the RSP finish its current job & skip this one.
-        if (isRspBusy()) {
-            return;
-        }
+        //if (isRspBusy()) {
+            //return;
+        //}
 
         haltRsp();
         ppuInterface->IsBusy = true;
         Rectangle screen;
         getScreenPosition(0, &screen);
         ppuInterface->Screen.Top = screen.Top + (state->EmulationState.CurrentLine * (screen.Height / GB_LCD_HEIGHT));
+
         data_cache_hit_writeback(ppuInterface, sizeof(PpuInterface));
+        data_cache_hit_writeback(state->EmulationState.OAM, OAM_SIZE);
+        data_cache_hit_writeback(state->EmulationState.HRAM, HRAM_SIZE);
+        data_cache_hit_writeback(state->EmulationState.VRAM, VRAM_BANK_SIZE);
+
         run_ucode();
     }
 }

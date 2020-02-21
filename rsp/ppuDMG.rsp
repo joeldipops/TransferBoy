@@ -200,7 +200,7 @@ cacheGetTile:
     addi $t0, $0, TILE_CACHE
     beq $t0, $CACHE_POINTER, notFound
 
-    # Set the flag so we're not comparing 0 to 0.
+    # Set the flag so we're never comparing 0 to 0.
     lui $t0, 0x8000
     or $tileId, $tileId, $t0
 
@@ -451,6 +451,7 @@ cacheGetTile:
 
     # DMA it in.
     dmaIn $tileMap, LINE_TILE_MAP, 0x20
+
     add $gbBufferCursor, $0, $0
 
     # Find starting pixel
@@ -461,8 +462,7 @@ cacheGetTile:
         # Divide by 8 to get the tile.
         srl $t0, $currentPixel, 3
 
-        add $t0, $t0, $tileMap
-        lw $a0, 0($tileMap)
+        lbu $a0, LINE_TILE_MAP($t0)
         jal cacheGetTile
 
         # which line of the tile are we on
@@ -579,7 +579,7 @@ main:
 
     # Check whether the LCD is turned on, and if not, skip all this shebang.
     lb $t0, (PPU_SETTINGS + Ppu_LCD_CONTROL)($0)
-    ## LCDC is highest byte
+
     andi $t0, $t0, Lcdc_LCD_SWITCH
         beq $t0, $0, done
 

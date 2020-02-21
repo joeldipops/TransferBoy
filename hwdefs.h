@@ -29,6 +29,7 @@ static const unsigned ROM_BANK_SIZE      = 0x4000; /* 16K */
 static const unsigned WRAM_BANK_SIZE     = 0x1000; /* 4K */
 static const unsigned VRAM_BANK_SIZE     = 0x2000; /* 8K */
 static const unsigned SRAM_BANK_SIZE    = 0x2000; /* 8K */
+#define HRAM_SIZE 0x0100
 
 static const unsigned OAM_SIZE          = 0xa0;
 
