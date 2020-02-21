@@ -49,7 +49,17 @@ _execRdp:
 .endm
 
 ###
-# Executes the syncPipe RDP command
+# Executes the No Op RDP command.
+# Used to pad command buffers.
+# Command 0x00
+###
+.macro rdpNoOp
+    sw $0, 0($0)
+    execRdp 1
+.endm
+
+###
+# Executes the Sync Pipe RDP command
 # Command 0x27
 ###
 .macro syncPipe
@@ -59,13 +69,49 @@ _execRdp:
 .endm
 
 ###
+# Executes the syncTile RDP command
+# Command 0x28
+###
+.macro syncTile
+    lui $t0, 0xE800
+    sw $t0, 0($0)
+    execRdp 1
+.endm
+
+###
 # Executes the syncFull RDP command
-# Command 0x27
+# Command 0x29
 ###
 .macro syncFull
     lui $t0, 0xE900
     sw $t0, 0x000($0)
     execRdp 1
+.endm
+
+###
+# Execute the syncLoad RDP command
+# Command 0x31
+###
+.macro syncLoad
+    lui $t0, 0xF100
+    sw $t0, 0($0)
+    execRdp 1
+.endm
+
+
+###
+# Executes the Set Primitive Depth command
+# Command 0x2E
+# @input z Primitive Z, whatever that means.
+# @input dz Primitive Delta Z...presumably change in Z?
+.macro setPrimDepth z, dz
+    lui $t0 0x2E00
+    sw $t0, 0($0)
+    lui $t0, \z
+    or $t0, $t0, \dz
+    sw $t0, 4($0)
+
+    execRdp 2
 .endm
 
 ###
@@ -217,6 +263,7 @@ _execRdp:
     execRdp 2
 .endm
 
+###
 #
 # Command 0x35 Set Tile
 # @input format
@@ -297,6 +344,22 @@ _execRdp:
 .endm
 
 ###
+# Executes the Set Z Image RDP command
+# aka set mask image.
+# Command 0x3e
+# @input address in DRAM of texture.
+###
+.macro setZImage address
+    lui $t0, 0xFE00
+    sw $t0, 0($0)
+    sw \address, 4($0)
+
+    execRdp 2
+.endm
+
+###
+# Executes the Set Texture Image RDP command
+# Used to point the RDP to an image in DRAM.  The next set tile will use this image data.
 #
 # Command 0x3D
 # @input format
