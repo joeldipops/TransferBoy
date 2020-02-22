@@ -594,9 +594,6 @@ typedef struct gb_state {
     u16* LastBuffer;
     u16* NextBuffer;
 
-    bool isSRAMDisabled; //Writing 0 to MBC 1 turns off access to external RAM 
-    bool isSRAMDirty; // Write battery-backed RAM periodically when dirty.
-
     // The duration of the last intruction. Normally just
     // the CPU executing the instruction, but the MMU could
     // take longer in the case of some DMA ops.
@@ -644,7 +641,13 @@ typedef struct gb_state {
     bool hasBattery;
     bool hasRumble;
     bool hasRTC;
+
+    // Misc flags.
     bool isRTCLatched;
+    bool isVramDirty;
+    bool isSRAMDisabled; //Writing 0 to MBC 1 turns off access to external RAM 
+    bool isSRAMDirty; // Write battery-backed RAM periodically when dirty.
+
     byte controllerSlot;
 
     struct emu_cpu_state *emu_cpu_state;

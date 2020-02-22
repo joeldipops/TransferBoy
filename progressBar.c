@@ -2,7 +2,6 @@
 #include "types.h"
 #include "screen.h"
 #include "text.h"
-#include "logger.h"
 #include "resources.h"
 #include <stdio.h>
 #include <libdragon.h>

@@ -3,7 +3,6 @@
 #include "play.h"
 #include "menu.h"
 #include "options.h"
-#include "logger.h"
 #include "text.h"
 #include "init.h"
 #include "controller.h"

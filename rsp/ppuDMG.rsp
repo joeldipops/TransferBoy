@@ -411,12 +411,12 @@ cacheGetTile:
 
 ### Draws pixels for the background.
 .macro processBackground
-    .set $tileMap, $t1
-    .set $currentPixel, $t2
-    .set $gbBufferCursor, $t3
-    .set $endLinePixel, $t4
-    .set $shiftBy, $t5
-    .set $tileLine, $t6
+    .set $tileMap, $t2
+    .set $currentPixel, $t3
+    .set $gbBufferCursor, $t4
+    .set $endLinePixel, $t5
+    .set $shiftBy, $t6
+    .set $tileLine, $t7
 
     # TODO: Check Lcdc_LCD_PRIORITY. If it's 0, skip all of this and just draw white pixels.
 
@@ -478,20 +478,39 @@ cacheGetTile:
         lbu $a0, (PPU_SETTINGS + Ppu_BACKGROUND_PALETTE)($0)
         jal setPalette
 
-        addi $shiftBy, $0, 16
+        addi $shiftBy, $0, 8
         add $tileLine, $0, $0
 
+        # gb tile data is NOT stored with the pixels in order like:
+        # 11001001 01011101
+        # 00112233 44556677
+
+        # but with the pixels spread across two bytes like:
+        # 11001001 01011101
+        # 01234567 01234567
+
         .whileHasPixels:
-            addi $shiftBy, $shiftBy, -2
+            addi $shiftBy, $shiftBy, -1
 
             # Grab two bytes from the tile (8 pixels).
-            lh $t0, 0($r0)
-            # Shift so that $t0 only contains the single pixel we care about.
+            lhu $t0, 0($r0)
+            # Shift so that the two bits are in bit 0 of both pixels.
             srlv $t0, $t0, $shiftBy
-            andi $t0, $t0, 0b00000011
+
+            # Put both pixels next to each other.
+            andi $t1, $t0, 0x100
+            andi $t0, $t0, 0x001
+            srl $t1, $t1, 7
+            or $t0, $t0, $t1
 
             # Look up the palette
-            lb $t0, PALETTE_2_BIT($t0)
+            # TODO - this is just making everything 0x00 :(
+            #lb $t0, PALETTE_2_BIT($t0)
+
+            sll $t1, $t0, 7
+            andi $t1, $t1, 0x100
+            andi $t0, $t0, 0x001
+            or $t0, $t0, $t1
 
             # Patch it back to $tileLine
             sllv $t0, $t0, $shiftBy
@@ -523,22 +542,27 @@ cacheGetTile:
     .set $n64Cursor, $t2
     .set $gbCursor, $t3
     .set $shiftBy, $t4
-    .set $wordCounter, $t5
+    .set $pixelCounter, $t5
     .set $currentWord, $t6
 
-    addi $wordCounter, $0, GB_LCD_WIDTH / 0x10
+    addi $pixelCounter, $0, GB_LCD_WIDTH
     add $gbCursor, $0, $0
     add $n64Cursor, $0, $0
     1: # whileHasPixels
-        # get a word from memory (16 pixels)
-        lw $currentWord, GB_BUFFER($gbCursor)
-        addi $shiftBy, $0, 0x20
+        # get 8 pixels from memory
+        lhu $currentWord, GB_BUFFER($gbCursor)
+        addi $shiftBy, $0, 0x8
         .whileInWord:
-            addi $shiftBy, $shiftBy, -2
-
-            # Shift so that $a0 only contains the single pixel we care about.
+            addi $shiftBy, $shiftBy, -1
             srlv $a0, $currentWord, $shiftBy
-            andi $a0, $a0, 0b00000011
+
+            # Shift so that the two bits are in bit 0 of both pixels.
+            srlv $a0, $a0, $shiftBy
+            # Put both pixels next to each other.
+            andi $t0, $a0, 0x100
+            andi $a0, $a0, 0x001
+            srl $t0, $t0, 7
+            or $a0, $a0, $t0
 
             # massage it from gameboy format to n64 format.
             jal massageMonochrome
@@ -547,17 +571,17 @@ cacheGetTile:
             sh $r0, N64_BUFFER($n64Cursor)
             addi $n64Cursor, $n64Cursor, 0x02
 
-        bgtz $shiftBy, .whileInWord # whileInWord
+        bgtz $shiftBy, .whileInWord
 
         # increment the cursor and decrement the counter.
-        addi $gbCursor, $gbCursor, 0x04
-        addi $wordCounter, $wordCounter, -1
+        addi $gbCursor, $gbCursor, 0x02
+        addi $pixelCounter, $pixelCounter, -8
 
-    bgtz $wordCounter, 1b # whileHasPixels
+    bgtz $pixelCounter, 1b # whileHasPixels
 
     .set $n64Cursor, 0
     .set $gbCursor, 0
-    .set $wordCounter, 0
+    .set $pixelCounter, 0
     .set $shiftBy, 0
     .set $currentWord, 0
 .endm

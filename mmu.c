@@ -132,7 +132,7 @@ static void writeGbcRamBankSelect(GbState* s, byte offset, byte value) {
         value++;
     }
 
-    s->WRAMX = s->WRAMBanks + (value * WRAM_BANK_SIZE);     
+    s->WRAMX = s->WRAMBanks + (value * WRAM_BANK_SIZE);
 }
 
 
@@ -433,7 +433,8 @@ static void hasRTCwriteRom67(GbState* s, u16 location, byte value) {
  * 0x8000 - 0x9FFF: VRAM
  */
 static void writeVRAM(GbState* s, u16 location, byte value) {
-    s->VRAM[location - 0x8000] = value;    
+    s->isVramDirty = true;
+    s->VRAM[location - 0x8000] = value;
 }
 
 /**
@@ -442,7 +443,7 @@ static void writeVRAM(GbState* s, u16 location, byte value) {
  * Also there're only 0x0200 available addresses.
  */
 static void mbc2writeSRAM(GbState* s, u16 location, byte value) {
-    s->SRAM[(location - 0xA000) % 0x200] = value | 0xF0;    
+    s->SRAM[(location - 0xA000) % 0x200] = value | 0xF0;
     s->isSRAMDirty = 1;
 }
 

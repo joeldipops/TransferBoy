@@ -1,9 +1,9 @@
 #include <libdragon.h>
 #include <stdlib.h>
 #include "core.h"
-#include "logger.h"
 #include "rsp.h"
 #include "global.h"
+#include "logger.h"
 
 extern const char renderer_code_start __attribute((section(".data")));
 extern const char renderer_code_end __attribute((section(".data")));

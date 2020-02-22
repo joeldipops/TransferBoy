@@ -1,6 +1,7 @@
 #include "global.h"
 #include "rsp.h"
 #include "hwdefs.h"
+#include "config.h"
 
 #include "logger.h"
 
@@ -41,6 +42,15 @@ void ppuInit(PlayerState* state) {
 
 void ppuStep(PlayerState* state) {
     if (state->EmulationState.lcd_entered_hblank) {
+
+        if (state->EmulationState.CurrentLine >= GB_LCD_HEIGHT) { /* VBlank */
+            return;
+        }
+
+        if (FRAMES_TO_SKIP && ((state->Meta.FrameCount + 1) % (FRAMES_TO_SKIP + 1))) {
+            return;
+        }
+
         // Let the RSP finish its current job & skip this one.
         //if (isRspBusy()) {
             //return;
@@ -55,7 +65,10 @@ void ppuStep(PlayerState* state) {
         data_cache_hit_writeback(ppuInterface, sizeof(PpuInterface));
         data_cache_hit_writeback(state->EmulationState.OAM, OAM_SIZE);
         data_cache_hit_writeback(state->EmulationState.HRAM, HRAM_SIZE);
-        data_cache_hit_writeback(state->EmulationState.VRAM, VRAM_BANK_SIZE);
+        if (state->EmulationState.isVramDirty) {
+            data_cache_hit_writeback(state->EmulationState.VRAM, VRAM_BANK_SIZE);
+            state->EmulationState.isVramDirty = false;
+        }
 
         run_ucode();
     }
