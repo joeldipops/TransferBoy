@@ -248,17 +248,6 @@ void playDraw(const byte playerNumber) {
         palette = SuperGameboyPalette;
     }
 
-    screen = (Rectangle) { screen.Left, screen.Top, 320, 12 };
-
-    renderFrame(
-        (uintptr_t)rootState.Players[playerNumber].EmulationState.NextBuffer,
-        (uintptr_t)rootState.Players[playerNumber].EmulationState.TextureBuffer,
-        // TODO Calculate block height
-        // But 6 lines of 160 16bit pixels can fit in 4kB of DMEM at a time.
-        &screen,
-        palette == GameboyColorPalette
-    );
-
     if (SHOW_FRAME_COUNT) {
         string text = "";
 

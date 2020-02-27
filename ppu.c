@@ -52,9 +52,9 @@ void ppuStep(PlayerState* state) {
         }
 
         // Let the RSP finish its current job & skip this one.
-        //if (isRspBusy()) {
-            //return;
-        //}
+        if (isRspBusy()) {
+            return;
+        }
 
         haltRsp();
         ppuInterface->IsBusy = true;

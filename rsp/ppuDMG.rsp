@@ -157,15 +157,15 @@ setPalette:
     sb $t0, PALETTE_2_BIT($0)
 
     srl $t0, $palette, 2
-    andi $t0, $palette, 0b00000011
+    andi $t0, $t0, 0b00000011
     sb $t0, (PALETTE_2_BIT + 1)($0)
 
     srl $t0, $palette, 4
-    andi $t0, $palette, 0b00000011
+    andi $t0, $t0, 0b00000011
     sb $t0, (PALETTE_2_BIT + 2)($0)
 
     srl $t0, $palette, 6
-    andi $t0, $palette, 0b00000011
+    andi $t0, $t0, 0b00000011
     sb $t0, (PALETTE_2_BIT + 3)($0)
 
     .set $palette, 0
@@ -504,8 +504,7 @@ cacheGetTile:
             or $t0, $t0, $t1
 
             # Look up the palette
-            # TODO - this is just making everything 0x00 :(
-            #lb $t0, PALETTE_2_BIT($t0)
+            lb $t0, PALETTE_2_BIT($t0)
 
             sll $t1, $t0, 7
             andi $t1, $t1, 0x100
