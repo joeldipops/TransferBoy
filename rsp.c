@@ -14,7 +14,7 @@ extern const char ppuDMG_code_end __attribute((section(".data")));
 extern const char ppuDMG_code_size __attribute((section(".data")));
 
 typedef struct {
-    u32 IsBusy;
+    u32 Status;
     u32 Settings[6];
 } RspInterface;
 
@@ -22,30 +22,6 @@ typedef struct {
  * Memory Address that RSP will read from to get data shared between the two processors.
  */
 volatile RspInterface rspInterface __attribute__ ((section (".rspInterface"))) __attribute__ ((__used__));
-
-
-
-/**
- * Called if the RSP hits a break instruction.
- */
-static void onRSPException() {
-    data_cache_hit_invalidate(&rspInterface, sizeof(RspInterface));
-    printSegmentToFrame(2, "RSP Exception Raised - dumping rspInterface", (byte*) &rspInterface);
-    //printSegmentToFrame(rootState.Frame, "RSP Exception Raised - dumping output", (byte*) rspInterface.OutAddress);
-}
-
-/**
- * Extend interface
- */
-void* allocRspInterface(size_t size) {
-    if (size != sizeof(RspInterface)) {
-        // Raise some sort of exception.
-
-        return null;
-    }
-
-    return (void*) &rspInterface;
-}
 
 // Following taken from libdragon source since it doesn't provide direct access to these registers.
 typedef struct SP_regs_s {
@@ -70,7 +46,30 @@ typedef struct SP_regs_s {
 static volatile struct SP_regs_s* const SP_regs = (struct SP_regs_s *)0xa4040000;
 
 #define SP_DMA_IMEM 0x04001000
-#define SP_STATUS_SET_HALT 0x00002
+#define SP_STATUS_GET_IS_BUSY 0x80
+
+
+/**
+ * Called if the RSP hits a break instruction.
+ */
+static void onRSPException() {
+    data_cache_hit_invalidate(&rspInterface, sizeof(RspInterface));
+    logAndPauseFrame(rootState.Frame, "status=%04x", SP_regs->status);
+    printSegmentToFrame(rootState.Frame, "RSP Exception Raised - dumping rspInterface", (byte*) &rspInterface);
+}
+
+/**
+ * Extend interface
+ */
+void* allocRspInterface(size_t size) {
+    if (size != sizeof(RspInterface)) {
+        // Raise some sort of exception.
+
+        return null;
+    }
+
+    return (void*) &rspInterface;
+}
 
 /**
  * DMAs a fixed set of instructions to the RSP ready to be run when we call run_ucode()
@@ -96,7 +95,7 @@ s8 prepareMicrocode(const Microcode code) {
             return RSP_ERR_INVALID_UCODE;
     }
 
-    rspInterface.IsBusy = false;
+    SP_regs->status = SP_STATUS_BUSY_OFF;
 
     return RSP_SUCCESS;
 }
@@ -105,8 +104,7 @@ s8 prepareMicrocode(const Microcode code) {
  * Sets the RSP halt status so that it stops executing while we reload IMEM/DMEM
  */
 void haltRsp() {
-    SP_regs->status = SP_STATUS_SET_HALT;
-    rspInterface.IsBusy = false;
+    SP_regs->status = SP_STATUS_HALT_ON | SP_STATUS_BUSY_OFF;
 }
 
 /**
@@ -114,8 +112,7 @@ void haltRsp() {
  * @returns True if the RSP is working, false if it's idle.
  */
 bool isRspBusy() {
-    data_cache_hit_invalidate(&rspInterface, sizeof(RspInterface));
-    return rspInterface.IsBusy;
+    return SP_regs->status & SP_STATUS_GET_IS_BUSY;
 }
 
 /**

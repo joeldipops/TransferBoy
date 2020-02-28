@@ -6,7 +6,7 @@
 #include "logger.h"
 
 typedef struct { // Extends ppuInterface
-    u32 IsBusy;
+    u32 Status;
     union {
         u32 Settings[6];
         struct {
@@ -29,7 +29,6 @@ void ppuInit(PlayerState* state) {
 
     ppuInterface->Screen = (Rectangle) { screen.Left, screen.Top, 320, 2 };
 
-    ppuInterface->IsBusy = false;
     ppuInterface->VRamAddress = (uintptr_t) state->EmulationState.VRAM;
     ppuInterface->HRamAddress = (uintptr_t) state->EmulationState.HRAM;
     ppuInterface->OAMAddress = (uintptr_t) state->EmulationState.OAM;
@@ -57,7 +56,7 @@ void ppuStep(PlayerState* state) {
         }
 
         haltRsp();
-        ppuInterface->IsBusy = true;
+
         Rectangle screen;
         getScreenPosition(0, &screen);
         ppuInterface->Screen.Top = screen.Top + (state->EmulationState.CurrentLine * (screen.Height / GB_LCD_HEIGHT));

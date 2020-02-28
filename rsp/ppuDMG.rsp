@@ -393,10 +393,10 @@ cacheGetTile:
                 # Check it against priority
 
                 # add it to the buffer.
-                sw $r0, 0($GB_BUFFER_POINTER)
+                #sw $r0, 0($GB_BUFFER_POINTER)
 
                 # update indices
-                addi $GB_BUFFER_POINTER, $GB_BUFFER_POINTER, 0x02
+                #addi $GB_BUFFER_POINTER, $GB_BUFFER_POINTER, 0x02
                 addi $PIXEL_COUNTER, $PIXEL_COUNTER, -1
 
         .whileHasSprites_continue:
@@ -588,6 +588,10 @@ cacheGetTile:
 ###
 # Sets the RDP to draw red rectangles.
 main:
+    # Set the RSP busy flag.
+    addi $t0, SP_STATUS_BUSY_ON
+    mtc0 $t0, $RSP_STATUS
+
     # init stack pointer.
     addi $sp, $0, STACK_TOP
 
@@ -698,9 +702,9 @@ main:
 
     ## Reset DRAM flag that says we're done with this work.
 done:
-    sw $0, (INPUT + RspIn_IS_BUSY)($0)
-    liw $t0, RSP_INTERFACE_ADDRESS
-    dmaOut INPUT, $t0, INTERFACE_SIZE
+    # Lift the IsBusy flag
+    addi $t0, $0, SP_STATUS_BUSY_OFF
+    mtc0 $t0, $RSP_STATUS
 
 # job done
 stall:
