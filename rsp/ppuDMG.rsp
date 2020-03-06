@@ -589,7 +589,7 @@ cacheGetTile:
 # Sets the RDP to draw red rectangles.
 main:
     # Set the RSP busy flag.
-    addi $t0, SP_STATUS_BUSY_ON
+    addi $t0, $0, SP_STATUS_BUSY_ON
     mtc0 $t0, $RSP_STATUS
 
     # init stack pointer.
@@ -653,10 +653,10 @@ main:
     add $VRAM_TILE_DATA_ADDRESS, $VRAM_TILE_DATA_ADDRESS, $t0
 
     # Build up this scanline to a buffer than can be rendered as a texture.
-    transferOAM
+    #transferOAM
 
     ## Draw the window
-    processWindow
+    #processWindow
 
     ## Then the background
     processBackground
