@@ -420,6 +420,10 @@ cacheGetTile:
 
     # TODO: Check Lcdc_LCD_PRIORITY. If it's 0, skip all of this and just draw white pixels.
 
+    # Set the palette
+    lbu $a0, (PPU_SETTINGS + Ppu_BACKGROUND_PALETTE)($0)
+    jal setPalette
+
     # Find the bit of VRAM that corresponds to the tiles on this line.
     lb $t0, PPU_SETTINGS + Ppu_LCD_CONTROL($0)
     andi $t0, $t0, Lcdc_BACKGROUND_TILE_MAP
@@ -463,6 +467,7 @@ cacheGetTile:
         srl $t0, $currentPixel, 3
 
         lbu $a0, LINE_TILE_MAP($t0)
+
         jal cacheGetTile
 
         # which line of the tile are we on
@@ -470,13 +475,9 @@ cacheGetTile:
         ## a % b == a & ( b -1 ) if b is a power of 2
         and $t0, $SCAN_LINE, TILE_WIDTH - 1
         ## Multiply by two to get the number of bytes to skip.
-        srl $t0, $t0, 2
+        sll $t0, $t0, 1
         ## $r0 now points to the line of the tile we want.
         add $r0, $r0, $t0
-
-        # Set the palette
-        lbu $a0, (PPU_SETTINGS + Ppu_BACKGROUND_PALETTE)($0)
-        jal setPalette
 
         addi $shiftBy, $0, 8
         add $tileLine, $0, $0
@@ -494,12 +495,14 @@ cacheGetTile:
 
             # Grab two bytes from the tile (8 pixels).
             lhu $t0, 0($r0)
+
             # Shift so that the two bits are in bit 0 of both pixels.
             srlv $t0, $t0, $shiftBy
 
             # Put both pixels next to each other.
             andi $t1, $t0, 0x100
             andi $t0, $t0, 0x001
+
             srl $t1, $t1, 7
             or $t0, $t0, $t1
 
@@ -520,7 +523,7 @@ cacheGetTile:
         # TODO - shift as needed for part tiles
         # sll $t0, $t0, ???
         #andi $t0, $t0, 0xFFFF
-        sh $tileLine, (GB_BUFFER)($gbBufferCursor)
+        sh $tileLine, GB_BUFFER($gbBufferCursor)
 
         # Advance buffer two bytes
         addi $gbBufferCursor, $gbBufferCursor, 2 # TODO: part tiles
@@ -550,13 +553,14 @@ cacheGetTile:
     1: # whileHasPixels
         # get 8 pixels from memory
         lhu $currentWord, GB_BUFFER($gbCursor)
-        addi $shiftBy, $0, 0x8
+
+        addi $shiftBy, $0, 8
         .whileInWord:
             addi $shiftBy, $shiftBy, -1
-            srlv $a0, $currentWord, $shiftBy
 
             # Shift so that the two bits are in bit 0 of both pixels.
-            srlv $a0, $a0, $shiftBy
+            srlv $a0, $currentWord, $shiftBy
+
             # Put both pixels next to each other.
             andi $t0, $a0, 0x100
             andi $a0, $a0, 0x001
@@ -653,10 +657,10 @@ main:
     add $VRAM_TILE_DATA_ADDRESS, $VRAM_TILE_DATA_ADDRESS, $t0
 
     # Build up this scanline to a buffer than can be rendered as a texture.
-    #transferOAM
+    transferOAM
 
     ## Draw the window
-    #processWindow
+    processWindow
 
     ## Then the background
     processBackground

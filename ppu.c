@@ -50,10 +50,8 @@ void ppuStep(PlayerState* state) {
             return;
         }
 
-        // Let the RSP finish its current job & skip this one.
-        if (isRspBusy()) {
-            return;
-        }
+        // Let the RSP finish its current job.
+        while(isRspBusy());
 
         haltRsp();
 
