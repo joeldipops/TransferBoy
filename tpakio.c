@@ -120,12 +120,12 @@ static natural mapAddress(const natural address) {
  * @returns Error Code
  */
 static sByte initialiseTPak(const byte controllerNumber) {
-    tpak_init(controllerNumber);
+    sByte result = tpak_init(controllerNumber);
 
     // Enable Cartridge ram
     setTpakValue(controllerNumber, mapAddress(ENABLE_GB_RAM_ADDRESS), ENABLE_GB_RAM);
 
-    return TPAK_SUCCESS;
+    return result ? result : TPAK_SUCCESS;
 }
 
 /**
