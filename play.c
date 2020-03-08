@@ -238,16 +238,6 @@ void playLogic(const byte playerNumber) {
  * @param playerNumber player in play mode.
  */
 void playDraw(const byte playerNumber) {
-    Rectangle screen = {};
-    getScreenPosition(playerNumber, &screen);
-
-    PaletteType palette = GameboyPalette;
-    if (rootState.Players[playerNumber].EmulationState.Cartridge.IsGbcSupported) {
-        palette = GameboyColorPalette;
-    } else if (IS_SGB_ENABLED && rootState.Players[playerNumber].EmulationState.Cartridge.Header.is_sgb_supported) {
-        palette = SuperGameboyPalette;
-    }
-
     if (SHOW_FRAME_COUNT) {
         string text = "";
 
@@ -264,7 +254,7 @@ void playDraw(const byte playerNumber) {
  */
 void playAfter(const byte playerNumber) {
     if (rootState.Players[playerNumber].ActiveMode != Play) {
-        //haltRsp();
+        haltRsp();
     } else {
         // Swap the pointers.
         uintptr_t temp = (uintptr_t) rootState.Players[playerNumber].EmulationState.NextBuffer;

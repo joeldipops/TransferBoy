@@ -97,7 +97,7 @@
 
 .eqv PALETTE_2_BIT, 0x7F0 # Temp DMG Palette register values.
 .eqv STACK_BOTTOM,  0x800 # Adjust the stack size as neccessary
-.eqv STACK_TOP,     0x840
+.eqv STACK_TOP,     0x830
 .eqv N64_BUFFER,    0x840 # 160 42bit pixels per scan-line.
 .eqv GB_BUFFER,     0xAC0 # 160 2bit pixels per scan-line = 40bytes
 .eqv LINE_TILE_MAP, 0xAE8 # 32B 1 for each tile across the background (though we only see 20 tiles at a time.)
@@ -550,6 +550,7 @@ cacheGetTile:
     addi $pixelCounter, $0, GB_LCD_WIDTH
     add $gbCursor, $0, $0
     add $n64Cursor, $0, $0
+
     1: # whileHasPixels
         # get 8 pixels from memory
         lhu $currentWord, GB_BUFFER($gbCursor)
@@ -572,6 +573,7 @@ cacheGetTile:
 
             # and push on to the buffer.
             sh $r0, N64_BUFFER($n64Cursor)
+
             addi $n64Cursor, $n64Cursor, 0x02
 
         bgtz $shiftBy, .whileInWord

@@ -54,7 +54,6 @@ static volatile struct SP_regs_s* const SP_regs = (struct SP_regs_s *)0xa4040000
  */
 static void onRSPException() {
     data_cache_hit_invalidate(&rspInterface, sizeof(RspInterface));
-    logAndPauseFrame(rootState.Frame, "status=%04x", SP_regs->status);
     printSegmentToFrame(rootState.Frame, "RSP Exception Raised - dumping rspInterface", (byte*) &rspInterface);
 }
 
