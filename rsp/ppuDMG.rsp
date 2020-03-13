@@ -73,9 +73,12 @@
 .eqv BUFFER_SIZE, GB_LCD_WIDTH * 2 # ( x2 for 16bit colours)
 
 
+# We don't need anywhere NEAR 8 bytes for the cache header, but it keeps the 8byte alignment needed to DMA.
+.eqv CACHE_HEADER_SIZE, 0x08
+.eqv CACHE_ENTRY_SIZE, 0x18
 .eqv CacheEntry_HEADER, 0x00
-.eqv CacheEntry_DATA, 0x04
-.eqv CACHE_ENTRY_SIZE, 0x14
+.eqv CacheEntry_DATA, CacheEntry_HEADER + CACHE_HEADER_SIZE
+
 
 .eqv TILE_CACHE_ENTRIES, 50
 
@@ -97,7 +100,7 @@
 .eqv N64_BUFFER_SIZE,   0x280 # 160 42bit pixels per scan-line.
 .eqv GB_BUFFER_SIZE,    0x028 # 160 2bit pixels per scan-line = 40bytes
 .eqv LINE_TILE_MAP_SIZE,0x020 # 32B 1 for each tile across the background (though we only see 20 tiles at a time)
-.eqv TILE_CACHE_SIZE,   0x3E8 # 50 possible tiles with 20B cache entries (4B header + 16B/tile with 2b colours).
+.eqv TILE_CACHE_SIZE,   CACHE_ENTRY_SIZE * 50   # 50 possible tiles
 .eqv PPU_SETTINGS_SIZE, 0x010 # 10 1byte registers.
 .eqv INPUT_SIZE,        0x020 # 8 32bit words.
 .eqv OAM_CACHE_SIZE,    0x028 # 10 OAM entries per scanline at 4B/entry
@@ -224,7 +227,7 @@ cacheGetTile:
         bne $t0, $tileId, .whileNotFound_continue
 
             # We've found it. Return a pointer to the data.
-            addi $r0, $pointer, 0x04
+            addi $r0, $pointer, CACHE_HEADER_SIZE
             jr $ra
 
         .whileNotFound_continue:
@@ -241,7 +244,7 @@ cacheGetTile:
     or $tileId, $tileId, $t0
     sw $tileId, 0($CACHE_POINTER)
     ### Increment cache pointer so we can add data.
-    addi $CACHE_POINTER, $CACHE_POINTER, 0x04
+    addi $CACHE_POINTER, $CACHE_POINTER, CACHE_HEADER_SIZE
 
     ## Multiply tile ID by 16 to get address offset.
     sll $tileId, $tileId, 4
