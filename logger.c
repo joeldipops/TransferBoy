@@ -31,7 +31,7 @@ void debug(GbState *s, string pnemonic) {
             if (!input.c[0].start) {
                 isPaused = false;
             }
-        }        
+        }
     }
 }
 
@@ -65,7 +65,7 @@ void printSegmentToFrame(display_context_t frame, const string caption, const by
     }    
 
     graphics_fill_screen(frame, GLOBAL_BACKGROUND_COLOUR);
-    graphics_draw_text(frame, 10, 10, caption);
+    graphics_draw_text(frame, 30, 10, caption);
     
     string text = "";
     sprintf(
@@ -74,7 +74,7 @@ void printSegmentToFrame(display_context_t frame, const string caption, const by
         *start, *(start + 1), *(start + 2), *(start + 3), *(start + 4), *(start + 5), *(start + 6), *(start + 7),
         *(start + 8), *(start + 9), *(start + 10), *(start + 11), *(start + 12), *(start + 13), *(start + 14), *(start + 15)
     );
-    graphics_draw_text(frame, 10, 20, text);
+    graphics_draw_text(frame, 30, 20, text);
     start += 16;
     sprintf(
         text,
@@ -82,7 +82,7 @@ void printSegmentToFrame(display_context_t frame, const string caption, const by
         *start, *(start + 1), *(start + 2), *(start + 3), *(start + 4), *(start + 5), *(start + 6), *(start + 7),
         *(start + 8), *(start + 9), *(start + 10), *(start + 11), *(start + 12), *(start + 13), *(start + 14), *(start + 15)
     );
-    graphics_draw_text(frame, 10, 30, text);
+    graphics_draw_text(frame, 30, 30, text);
     start += 16;
     sprintf(
         text,
@@ -90,7 +90,7 @@ void printSegmentToFrame(display_context_t frame, const string caption, const by
         *start, *(start + 1), *(start + 2), *(start + 3), *(start + 4), *(start + 5), *(start + 6), *(start + 7),
         *(start + 8), *(start + 9), *(start + 10), *(start + 11), *(start + 12), *(start + 13), *(start + 14), *(start + 15)
     );
-    graphics_draw_text(frame, 10, 40, text);
+    graphics_draw_text(frame, 30, 40, text);
     start += 16;
     sprintf(
         text,
@@ -98,7 +98,7 @@ void printSegmentToFrame(display_context_t frame, const string caption, const by
         *start, *(start + 1), *(start + 2), *(start + 3), *(start + 4), *(start + 5), *(start + 6), *(start + 7),
         *(start + 8), *(start + 9), *(start + 10), *(start + 11), *(start + 12), *(start + 13), *(start + 14), *(start + 15)
     );
-    graphics_draw_text(frame, 10, 50, text);
+    graphics_draw_text(frame, 30, 50, text);
 
     bool isPaused = true;
     while(isPaused) {

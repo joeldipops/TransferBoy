@@ -27,7 +27,6 @@
 .eqv OAM_X_OFFSET, 0x08
 .eqv OAM_Y_OFFSET, 0x10
 
-.eqv OAM_SIZE, 0xA0
 .eqv TILE_WIDTH, 0x08
 .eqv TILES_PER_WIDTH, 0x20
 .eqv TILE_SIZE, 0x10 # 8x8 2b pixels is 16B
@@ -44,8 +43,6 @@
 .eqv RspIn_SCREEN_POSITION, 0x14
 .eqv RspIn_RECTANGLE_SIZE, 0x18
 
-.eqv INTERFACE_SIZE, 0x20
-
 # PPU Settings Structure
 ## These are the gameboy LCD registers.
 
@@ -61,7 +58,6 @@
 .eqv Ppu_SPRITE_PALETTE_1, 0x9
 .eqv Ppu_WINDOW_TOP, 0xA
 .eqv Ppu_WINDOW_LEFT, 0xB
-.eqv PPU_SETTINGS_SIZE, 0x10
 
 # LCDC Flags structure
 .eqv Lcdc_LCD_SWITCH,           0b10000000
@@ -93,20 +89,33 @@
 ###
 # Memory Map
 ###
+# Sizes aligned to 8byte boundaries
+.eqv RDP_BUFFER_SIZE,   0x010 # max command length = ...?
+.eqv STACK_SIZE,        0x040 # Arbitrary length. Hopefully 64bytes is enough.
+.eqv GB_PALETTE_SIZE,   0x008 # 4 2 bit colours across four bytes for easy lookup.
+.eqv N64_PALETTE_SIZE,  0x008 # 4 16bit colours.
+.eqv N64_BUFFER_SIZE,   0x280 # 160 42bit pixels per scan-line.
+.eqv GB_BUFFER_SIZE,    0x028 # 160 2bit pixels per scan-line = 40bytes
+.eqv LINE_TILE_MAP_SIZE,0x020 # 32B 1 for each tile across the background (though we only see 20 tiles at a time)
+.eqv TILE_CACHE_SIZE,   0x3E8 # 50 possible tiles with 20B cache entries (4B header + 16B/tile with 2b colours).
+.eqv PPU_SETTINGS_SIZE, 0x010 # 10 1byte registers.
+.eqv INPUT_SIZE,        0x020 # 8 32bit words.
+.eqv OAM_CACHE_SIZE,    0x028 # 10 OAM entries per scanline at 4B/entry
+.eqv OAM_SIZE,          0x0A0 # This OAM stuff is probably wrong and will need to be revisited.
 
-
-.eqv PALETTE_2_BIT, 0x7F0 # Temp DMG Palette register values.
-.eqv STACK_BOTTOM,  0x800 # Adjust the stack size as neccessary
-.eqv STACK_TOP,     0x830
-.eqv N64_BUFFER,    0x840 # 160 42bit pixels per scan-line.
-.eqv GB_BUFFER,     0xAC0 # 160 2bit pixels per scan-line = 40bytes
-.eqv LINE_TILE_MAP, 0xAE8 # 32B 1 for each tile across the background (though we only see 20 tiles at a time.)
-.eqv TILE_CACHE,    0xB08 # 50 possible tiles with 20B cache entries (4B header + 16B/tile with 2b colours).
-.eqv PPU_SETTINGS,  0xEF0
-.eqv INPUT,         0xF00
-.eqv OAM_CACHE,     0xF40 # 10 OAM entries per scanline at 4B/entry
-.eqv OAM_MIRROR,    0xF50 # GB - N64 Colour translation.
-.eqv MONOCHROME_PALETTE, 0xFF0
+.eqv RDP_BUFFER, 0x000                                 # RDP Commands staged here before being sent.
+.eqv STACK_BOTTOM, RDP_BUFFER + RDP_BUFFER_SIZE + 8    # Call Stack
+.eqv STACK_TOP, STACK_BOTTOM + STACK_SIZE + 8
+.eqv GB_PALETTE, STACK_TOP + 8                         # Index table to DMG palette register values.
+.eqv N64_PALETTE, GB_PALETTE + GB_PALETTE_SIZE + 8     # Index of four 16bit colours analogous to gameboy screen.
+.eqv GB_BUFFER, N64_PALETTE + N64_PALETTE_SIZE + 8     # scan line of 2bit gameboy pixels built up here.
+.eqv N64_BUFFER, GB_BUFFER + GB_BUFFER_SIZE + 8        # scan line of 16bit n64 pixels built up here.
+.eqv LINE_TILE_MAP, N64_BUFFER + N64_BUFFER_SIZE + 8   # list of VRAM tile indices in the current scan-line.
+.eqv TILE_CACHE, LINE_TILE_MAP + LINE_TILE_MAP_SIZE + 8# Cache tiles we have previously DMAd to cut down on future DMAs.
+.eqv PPU_SETTINGS, TILE_CACHE + TILE_CACHE_SIZE + 8    # Copy of relevant gameboy LCD registers.
+.eqv INPUT, PPU_SETTINGS + PPU_SETTINGS_SIZE + 8       # Config passed in from CPU
+.eqv OAM_CACHE, INPUT + INPUT_SIZE + 8                 # Need to revisit what this actually is...
+.eqv OAM, OAM_CACHE + OAM_CACHE_SIZE + 8               # Copy of gameboy OAM (sprite memory)
 
 ### Palette Values
 
@@ -154,19 +163,19 @@ setPalette:
     .set $palette, $a0
 
     andi $t0, $palette, 0b00000011
-    sb $t0, PALETTE_2_BIT($0)
+    sb $t0, GB_PALETTE($0)
 
     srl $t0, $palette, 2
     andi $t0, $t0, 0b00000011
-    sb $t0, (PALETTE_2_BIT + 1)($0)
+    sb $t0, (GB_PALETTE + 1)($0)
 
     srl $t0, $palette, 4
     andi $t0, $t0, 0b00000011
-    sb $t0, (PALETTE_2_BIT + 2)($0)
+    sb $t0, (GB_PALETTE + 2)($0)
 
     srl $t0, $palette, 6
     andi $t0, $t0, 0b00000011
-    sb $t0, (PALETTE_2_BIT + 3)($0)
+    sb $t0, (GB_PALETTE + 3)($0)
 
     .set $palette, 0
     jr $ra
@@ -183,7 +192,7 @@ massageMonochrome:
     andi $a0, $a0, 3
     # and multiply by four since we deal with 32bit addresses
     sll $a0, $a0, 2
-    lw $r0, MONOCHROME_PALETTE($a0)
+    lw $r0, N64_PALETTE($a0)
     jr $ra
 
 ###
@@ -257,6 +266,7 @@ cacheGetTile:
 # Sets in DMEM up to 10 OAM entries for sprites that will appear on this scan line.
 ###
 .macro transferOAM
+    /*
     .set $screenSpritesRemaining, $t1
     .set $lineSpritesRemaining, $t2
     .set $y1, $t3
@@ -266,7 +276,7 @@ cacheGetTile:
     ## Find the sprites relevant to the current scanline so we don't have to loop through 40 sprites every pixel.
 
     lw $t0, (INPUT + RspIn_OAM_ADDRESS)($0)
-    dmaIn $t0, OAM_MIRROR, OAM_SIZE
+    dmaIn $t0, OAM, OAM_SIZE
 
     addi $screenSpritesRemaining, $0, SPRITE_COUNT
     addi $lineSpritesRemaining, $0, SPRITE_LIMIT
@@ -278,7 +288,7 @@ cacheGetTile:
         sub $t0, $t0, $screenSpritesRemaining
         ## Multiply by four to get the address offset.
         sll $t0, $t0, 2
-        lw $entry, OAM_MIRROR($t0)
+        lw $entry, OAM($t0)
 
         ## We care about the Y position, which is the lowest byte
         andi $y1, $entry, 0x000000FF
@@ -339,6 +349,7 @@ cacheGetTile:
     .set $lineSpritesRemaining, 0
     .set $y1, 0
     .set $y2, 0
+    */
 .endm
 
 ###
@@ -507,7 +518,7 @@ cacheGetTile:
             or $t0, $t0, $t1
 
             # Look up the palette
-            lb $t0, PALETTE_2_BIT($t0)
+            lb $t0, GB_PALETTE($t0)
 
             sll $t1, $t0, 7
             andi $t1, $t1, 0x100
@@ -603,7 +614,7 @@ main:
 
     # Bring in the configuration.
     liw $t0, RSP_INTERFACE_ADDRESS
-    dmaIn $t0, INPUT, INTERFACE_SIZE
+    dmaIn $t0, INPUT, INPUT_SIZE
 
     # Load and cache the gameboy LCD registers.
     lw $t0, (INPUT + RspIn_HRAM_BASE)($0)
@@ -631,13 +642,13 @@ main:
 
     ## Set up monochrome colour palette in memory
     liw $t0, LIGHTEST
-    sw $t0, MONOCHROME_PALETTE($0)
+    sw $t0, N64_PALETTE($0)
     liw $t0, LIGHTER
-    sw $t0, (MONOCHROME_PALETTE + 4)($0)
+    sw $t0, (N64_PALETTE + 4)($0)
     liw $t0, DARKER
-    sw $t0, (MONOCHROME_PALETTE + 8)($0)
+    sw $t0, (N64_PALETTE + 8)($0)
     liw $t0, DARKEST
-    sw $t0, (MONOCHROME_PALETTE + 0xC)($0)
+    sw $t0, (N64_PALETTE + 0xC)($0)
 
     ## Cache the current scan line.
     lbu $SCAN_LINE, (PPU_SETTINGS + Ppu_CURRENT_LINE)($0)
@@ -659,7 +670,7 @@ main:
     add $VRAM_TILE_DATA_ADDRESS, $VRAM_TILE_DATA_ADDRESS, $t0
 
     # Build up this scanline to a buffer than can be rendered as a texture.
-    transferOAM
+    #transferOAM
 
     ## Draw the window
     processWindow
