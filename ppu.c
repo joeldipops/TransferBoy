@@ -37,6 +37,9 @@ void ppuInit(PlayerState* state) {
     data_cache_hit_writeback(ppuInterface, sizeof(PpuInterface));
 
     prepareMicrocode(UCODE_DMG_PPU);
+
+    setDataReady(false);
+    run_ucode();
 }
 
 void ppuStep(PlayerState* state) {
@@ -53,8 +56,6 @@ void ppuStep(PlayerState* state) {
         // Let the RSP finish its current job.
         while(isRspBusy());
 
-        haltRsp();
-
         Rectangle screen;
         getScreenPosition(0, &screen);
         ppuInterface->Screen.Top = screen.Top + (state->EmulationState.CurrentLine * (screen.Height / GB_LCD_HEIGHT));
@@ -67,6 +68,6 @@ void ppuStep(PlayerState* state) {
             state->EmulationState.isVramDirty = false;
         }
 
-        run_ucode();
+        setDataReady(true);
     }
 }

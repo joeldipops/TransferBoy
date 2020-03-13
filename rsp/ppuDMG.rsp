@@ -79,7 +79,6 @@
 .eqv CacheEntry_HEADER, 0x00
 .eqv CacheEntry_DATA, CacheEntry_HEADER + CACHE_HEADER_SIZE
 
-
 .eqv TILE_CACHE_ENTRIES, 50
 
 .eqv TILE_MAP_0_OFFSET, 0x1800
@@ -608,12 +607,36 @@ cacheGetTile:
 ###
 # Sets the RDP to draw red rectangles.
 main:
-    # Set the RSP busy flag.
-    addi $t0, $0, SP_STATUS_BUSY_ON
-    mtc0 $t0, $RSP_STATUS
-
     # init stack pointer.
     addi $sp, $0, STACK_TOP
+
+    # Bring in the configuration.
+    liw $t0, RSP_INTERFACE_ADDRESS
+    dmaIn $t0, INPUT, INPUT_SIZE
+
+    ## Stash config in some registers so whole memory space is available.
+    lw $OUT_BUFFER_ADDRESS, INPUT + RspIn_OUT_ADDRESS($0)
+
+    ## Set up monochrome colour palette in memory
+    liw $t0, LIGHTEST
+    sw $t0, N64_PALETTE($0)
+    liw $t0, LIGHTER
+    sw $t0, (N64_PALETTE + 4)($0)
+    liw $t0, DARKER
+    sw $t0, (N64_PALETTE + 8)($0)
+    liw $t0, DARKEST
+    sw $t0, (N64_PALETTE + 0xC)($0)
+
+    whilePending:
+        mfc0 $t0, $RSP_STATUS
+        andi $t0, $t0, SP_STATUS_GET_IS_READY
+    beq $t0, $0, whilePending
+
+    # Set the Busy flag but lift the Ready flag.
+    liw $t0, SP_DATA_PENDING
+    ori $t0, $t0, SP_STATUS_BUSY_ON
+
+    mtc0 $t0, $RSP_STATUS
 
     # Bring in the configuration.
     liw $t0, RSP_INTERFACE_ADDRESS
@@ -630,28 +653,15 @@ main:
     andi $t0, $t0, Lcdc_LCD_SWITCH
         beq $t0, $0, done
 
-    # Initialise rendering of the line.
-
     ## Initialise some registers with constants.
     ## TODO - allow this cache to persist across scan-lines.
     addi $CACHE_POINTER, $0, TILE_CACHE
 
-    ## Stash config in some registers so whole memory space is available.
-    lw $OUT_BUFFER_ADDRESS, INPUT + RspIn_OUT_ADDRESS($0)
+    # Initialise rendering of the line.
 
     lw $START_POSITION, INPUT + RspIn_SCREEN_POSITION($0)
     lw $RECTANGLE_SIZE, INPUT + RspIn_RECTANGLE_SIZE($0)
     andi $RECTANGLE_HEIGHT, $RECTANGLE_SIZE, 0x0000FFFF
-
-    ## Set up monochrome colour palette in memory
-    liw $t0, LIGHTEST
-    sw $t0, N64_PALETTE($0)
-    liw $t0, LIGHTER
-    sw $t0, (N64_PALETTE + 4)($0)
-    liw $t0, DARKER
-    sw $t0, (N64_PALETTE + 8)($0)
-    liw $t0, DARKEST
-    sw $t0, (N64_PALETTE + 0xC)($0)
 
     ## Cache the current scan line.
     lbu $SCAN_LINE, (PPU_SETTINGS + Ppu_CURRENT_LINE)($0)
@@ -725,6 +735,9 @@ done:
     # Lift the IsBusy flag
     addi $t0, $0, SP_STATUS_BUSY_OFF
     mtc0 $t0, $RSP_STATUS
+
+    # Start again and wait for more data.
+    j whilePending
 
 # job done
 stall:

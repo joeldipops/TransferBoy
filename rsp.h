@@ -47,5 +47,16 @@ void* allocRspInterface(size_t size);
  */
 bool isRspBusy();
 
+/**
+ * Signals to the RSP whether there is more data to be processed.
+ * @param value to set.
+ */
+void setDataReady(bool value);
+
+/**
+ * Gets whether the RSP has more data to be processed.
+ */
+bool getDataReady();
+
 
 #endif

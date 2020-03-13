@@ -21,10 +21,12 @@
 #define SP_STATUS_INTERRUPT_ON   0b00010000
 
 // aka signal 0
-#define SP_STATUS_BUSY_OFF 0b010 << 8
-#define SP_STATUS_BUSY_ON  0b100 << 8
+#define SP_STATUS_BUSY_OFF 0b00000010 << 8
+#define SP_STATUS_BUSY_ON  0b00000100 << 8
+#define SP_DATA_PENDING    0b00001000 << 8
+#define SP_DATA_READY      0b00010000 << 8
 
-
+#define SP_STATUS_GET_IS_READY  0x100
 
 
 #endif

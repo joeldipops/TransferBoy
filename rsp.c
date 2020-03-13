@@ -43,10 +43,11 @@ typedef struct SP_regs_s {
     uint32_t rsp_semaphore;
 } SP_regs_t;
 
-static volatile struct SP_regs_s* const SP_regs = (struct SP_regs_s *)0xa4040000;
+static volatile struct SP_regs_s* const SP_regs = (struct SP_regs_s *)0xA4040000;
 
 #define SP_DMA_IMEM 0x04001000
-#define SP_STATUS_GET_IS_BUSY 0x80
+#define SP_STATUS_GET_IS_BUSY   0x080
+
 
 
 /**
@@ -97,6 +98,21 @@ s8 prepareMicrocode(const Microcode code) {
     SP_regs->status = SP_STATUS_BUSY_OFF;
 
     return RSP_SUCCESS;
+}
+
+/**
+ * Signals to the RSP whether there is more data to be processed.
+ * @param value to set.
+ */
+void setDataReady(bool value) {
+    SP_regs->status = value ? SP_DATA_READY : SP_DATA_PENDING;
+}
+
+/**
+ * Gets whether the RSP has more data to be processed.
+ */
+bool getDataReady() {
+    return SP_regs->status & SP_STATUS_GET_IS_READY;
 }
 
 /**
