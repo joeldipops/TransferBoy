@@ -18,6 +18,7 @@
 .eqv Oam_X_BLOCK, 0x01
 .eqv Oam_TILE_INDEX, 0x02
 .eqv Oam_FLAGS, 0x03
+.eqv OAM_ENTRY_SIZE, 0x04
 
 # Oam_FLAGS Structure
 .eqv Oam_PRIORITY,  0b10000000
@@ -30,8 +31,8 @@
 .eqv TILE_WIDTH, 0x08
 .eqv TILES_PER_WIDTH, 0x20
 .eqv TILE_SIZE, 0x10 # 8x8 2b pixels is 16B
-.eqv SPRITE_COUNT, OAM_SIZE / 4 # 40 sprites in OAM
-.eqv SPRITE_LIMIT, 0x0A # 10 sprites per scanline
+.eqv SPRITE_COUNT, 40 # 40 sprites in OAM
+.eqv SPRITE_LIMIT, 10 # 10 sprites per scanline
 
 
 # RSP Interface Structure
@@ -102,8 +103,8 @@
 .eqv TILE_CACHE_SIZE,   CACHE_ENTRY_SIZE * 50   # 50 possible tiles
 .eqv PPU_SETTINGS_SIZE, 0x010 # 10 1byte registers.
 .eqv INPUT_SIZE,        0x020 # 8 32bit words.
-.eqv OAM_CACHE_SIZE,    0x028 # 10 OAM entries per scanline at 4B/entry
-.eqv OAM_SIZE,          0x0A0 # This OAM stuff is probably wrong and will need to be revisited.
+.eqv LINE_OAM_SIZE,     OAM_ENTRY_SIZE * SPRITE_LIMIT # 10 OAM entries per scanline at 4B/entry
+.eqv OAM_SIZE,          OAM_ENTRY_SIZE * SPRITE_COUNT # 40 Sprites per screen.
 
 .eqv RDP_BUFFER, 0x000                                 # RDP Commands staged here before being sent.
 .eqv STACK_BOTTOM, RDP_BUFFER + RDP_BUFFER_SIZE + 8    # Call Stack
@@ -116,8 +117,8 @@
 .eqv TILE_CACHE, LINE_TILE_MAP + LINE_TILE_MAP_SIZE + 8# Cache tiles we have previously DMAd to cut down on future DMAs.
 .eqv PPU_SETTINGS, TILE_CACHE + TILE_CACHE_SIZE + 8    # Copy of relevant gameboy LCD registers.
 .eqv INPUT, PPU_SETTINGS + PPU_SETTINGS_SIZE + 8       # Config passed in from CPU
-.eqv OAM_CACHE, INPUT + INPUT_SIZE + 8                 # Need to revisit what this actually is...
-.eqv OAM, OAM_CACHE + OAM_CACHE_SIZE + 8               # Copy of gameboy OAM (sprite memory)
+.eqv LINE_OAM, INPUT + INPUT_SIZE + 8                 # Need to revisit what this actually is...
+.eqv OAM, LINE_OAM + LINE_OAM_SIZE + 8               # Copy of gameboy OAM (sprite memory)
 
 ### Palette Values
 
@@ -323,7 +324,7 @@ cacheGetTile:
             sll $t0, $t0, 2 # x4 since OAM entry is 4B 
 
             ## And cache it
-            sw $entry, OAM_CACHE($t0)
+            sw $entry, LINE_OAM($t0)
 
             # There is a limit of 10 sprites per scanline.
             ## Once we've found that many relevant sprites, we're done.
