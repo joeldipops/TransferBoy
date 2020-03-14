@@ -53,9 +53,6 @@ void ppuStep(PlayerState* state) {
             return;
         }
 
-        // Let the RSP finish its current job.
-        while(isRspBusy());
-
         Rectangle screen;
         getScreenPosition(0, &screen);
         ppuInterface->Screen.Top = screen.Top + (state->EmulationState.CurrentLine * (screen.Height / GB_LCD_HEIGHT));
@@ -68,6 +65,8 @@ void ppuStep(PlayerState* state) {
             state->EmulationState.isVramDirty = false;
         }
 
+        // Let the RSP finish its current job.
+        while(isRspBusy());
         setDataReady(true);
     }
 }
