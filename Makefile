@@ -32,10 +32,10 @@ all: $(PROG_NAME)$(ROM_EXTENSION)
 $(CURDIR)/rsp/rsp.o:
 	make -C $(CURDIR)/rsp rsp
 
-$(PROG_NAME)$(ROM_EXTENSION): $(PROG_NAME).elf transferboy.dfs
+$(PROG_NAME)$(ROM_EXTENSION): $(PROG_NAME).elf $(PROG_NAME).dfs
 	$(OBJCOPY) $(PROG_NAME).elf $(PROG_NAME).bin -O binary
 	rm -f $(PROG_NAME)$(ROM_EXTENSION)
-	$(N64TOOL) $(N64_FLAGS) -t "transferboy" -s 1M transferboy.dfs
+	$(N64TOOL) $(N64_FLAGS) -t "$(PROG_NAME)" -s 1M $(PROG_NAME).dfs
 	$(CHKSUM64PATH) $(PROG_NAME)$(ROM_EXTENSION)
 
 LD_OFILES =  $(CURDIR)/obj/core.o
@@ -105,8 +105,10 @@ $(PROG_NAME).elf : $(CURDIR)/rsp/rsp.o $(PROG_NAME).o $(LD_FILE)
 $(LD_FILE) : $(PRE_LD_FILE)
 	cpp $(PRE_LD_FILE) | grep -v '^#'	>>$(LD_FILE)
 
-transferboy.dfs:
-	$(MKDFSPATH) transferboy.dfs ./filesystem/
+$(PROG_NAME).dfs:
+	./mksprite.sh
+	cp ./assets/*.gb ./filesystem/
+	$(MKDFSPATH) $(PROG_NAME).dfs ./filesystem/
 
 clean:
 	rm -f *.v64 *.z64 *.elf *.o *.bin *.dfs $(LD_FILE)
