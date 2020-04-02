@@ -381,7 +381,7 @@ typedef struct gb_state {
                 struct __attribute__((packed)) {
                     bool AudioChannel4IsSoundReset:1;
                     SoundTimingMode AudioChannel4TimingMode:1;
-                    const const byte unusedF:6;
+                    const byte unusedF:6;
                 };
             };
             // FF24 - NR50 - Audio Speaker Control

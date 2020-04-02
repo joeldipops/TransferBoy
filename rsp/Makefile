@@ -1,4 +1,4 @@
-N64_INST = /home/joeldipops/Projects/tools/n64inst
+N64_INST = /usr/local
 N64PREFIX = $(N64_INST)/bin/mips64-elf-
 CC = $(N64PREFIX)gcc
 AS = $(N64PREFIX)as

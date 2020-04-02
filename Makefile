@@ -1,10 +1,9 @@
-N64_INST = /home/joeldipops/Projects/tools/n64inst
-ROOTDIR = $(N64_INST)
+ROOTDIR = /usr/local
 GCCN64PREFIX = $(ROOTDIR)/bin/mips64-elf-
-CHKSUM64PATH = /home/joeldipops/Projects/tools/libdragon/tools/chksum64
-MKDFSPATH = /home/joeldipops/Projects/tools/libdragon/tools/mkdfs/mkdfs
+CHKSUM64PATH = $(ROOTDIR)/bin/chksum64
+MKDFSPATH = $(ROOTDIR)/bin/mkdfs
 HEADERPATH = $(ROOTDIR)/mips64-elf/lib
-N64TOOL = /home/joeldipops/Projects/tools/libdragon/tools/n64tool
+N64TOOL = $(ROOTDIR)/bin/n64tool
 HEADERNAME = header
 PRE_LD_FILE = $(PROG_NAME).ld
 LD_FILE = $(PROG_NAME)_generated.ld
@@ -12,7 +11,7 @@ LINK_FLAGS = -L$(ROOTDIR)/mips64-elf/lib -ldragon -lm -lc -ldragonsys -T./$(LD_F
 PROG_NAME = transferboy
 #O3FLAGS = -fgcse-after-reload -finline-functions -fipa-cp-clone -floop-interchange -floop-unroll-and-jam -fpredictive-commoning -fsplit-paths -ftree-loop-distribute-patterns -ftree-loop-distribution -ftree-loop-vectorize -ftree-partial-pre -ftree-slp-vectorize -funswitch-loops -fvect-cost-model -fversion-loops-for-strides
 OPTIMISATION_FLAGS = -Os
-CFLAGS = -std=gnu99 -march=vr4300 -mtune=vr4300 $(OPTIMISATION_FLAGS) -Wall -Wno-unused -Werror -I$(CURDIR) -I$(ROOTDIR)/mips64-elf/include 
+CFLAGS = -std=gnu99 -march=vr4300 -mtune=vr4300 $(OPTIMISATION_FLAGS) -Wno-unused -Werror -I$(CURDIR) -I$(ROOTDIR)/mips64-elf/include 
 ASFLAGS = -mtune=vr4300 -march=vr4300
 CC = $(GCCN64PREFIX)gcc
 AS = $(GCCN64PREFIX)as
