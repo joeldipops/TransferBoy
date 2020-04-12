@@ -483,7 +483,6 @@ xFlip:
 
     bgtz $shiftBy, .whileSpriteHasPixels
 
-
     # Divide x1 by 8
     srl $t9, $x1, 3
     # Add any remainder.
@@ -514,9 +513,6 @@ xFlip:
     # DMA in the entire OAM
     lw $t0, (INPUT + RspIn_OAM_BASE)($0)
     dmaIn $t0, OAM, OAM_SIZE
-
-    #lw $t0, OAM($0)
-    #beq $t0, $0, skippy
 
     addi $screenSpritesRemaining, $0, SPRITE_COUNT
     addi $lineSpritesRemaining, $0, SPRITE_LIMIT
@@ -565,7 +561,6 @@ xFlip:
     .set $lineSpritesRemaining, 0
     .set $y1, 0
     .set $y2, 0
-    skippy:
 .endm
 
 ###
