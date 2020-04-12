@@ -9,6 +9,7 @@
 #
 ###------------------------------------------
 
+.data
 ###
 # Constants
 ###
@@ -24,6 +25,7 @@
 .eqv Oam_PRIORITY,  0b10000000
 .eqv Oam_Y_FLIP,    0b01000000
 .eqv Oam_X_FLIP,    0b00100000
+.eqv Oam_PALETTE,   0b00010000
 
 .eqv OAM_X_OFFSET, 0x08
 .eqv OAM_Y_OFFSET, 0x10
@@ -70,6 +72,14 @@
 .eqv Lcdc_SPRITE_SWITCH,        0b00000010
 .eqv Lcdc_LCD_PRIORITY,         0b00000001
 
+
+# N64 Palette Values
+.eqv LIGHTEST,0x0000FFFF
+.eqv LIGHTER, 0x0000A529
+.eqv DARKER,  0x00005295
+.eqv DARKEST, 0x00000001
+
+
 .eqv DMEM_SIZE, 0x1000
 .eqv BUFFER_SIZE, GB_LCD_WIDTH * 2 # ( x2 for 16bit colours)
 
@@ -96,38 +106,69 @@
 .eqv RDP_BUFFER_SIZE,   0x010 # max command length = ...?
 .eqv STACK_SIZE,        0x040 # Arbitrary length. Hopefully 64bytes is enough.
 .eqv GB_PALETTE_SIZE,   0x008 # 4 2 bit colours across four bytes for easy lookup.
-.eqv N64_PALETTE_SIZE,  0x008 # 4 16bit colours.
+.eqv N64_PALETTE_SIZE,  0x010 # 4 32bit colours. # TODO - make these 16bit colours
 .eqv N64_BUFFER_SIZE,   0x280 # 160 42bit pixels per scan-line.
 .eqv GB_BUFFER_SIZE,    0x028 # 160 2bit pixels per scan-line = 40bytes
 .eqv LINE_TILE_MAP_SIZE,0x020 # 32B 1 for each tile across the background (though we only see 20 tiles at a time)
 .eqv TILE_CACHE_SIZE,   CACHE_ENTRY_SIZE * 50   # 50 possible tiles
 .eqv PPU_SETTINGS_SIZE, 0x010 # 10 1byte registers.
 .eqv INPUT_SIZE,        0x020 # 8 32bit words.
-.eqv LINE_OAM_SIZE,     OAM_ENTRY_SIZE * SPRITE_LIMIT # 10 OAM entries per scanline at 4B/entry
 .eqv OAM_SIZE,          OAM_ENTRY_SIZE * SPRITE_COUNT # 40 Sprites per screen.
+.eqv TEMP_TILE_SIZE,    TILE_SIZE # A single tile is 16B
 
-.eqv RDP_BUFFER, 0x000                                 # RDP Commands staged here before being sent.
-.eqv STACK_BOTTOM, RDP_BUFFER + RDP_BUFFER_SIZE + 8    # Call Stack
-.eqv STACK_TOP, STACK_BOTTOM + STACK_SIZE + 8
-.eqv GB_PALETTE, STACK_TOP + 8                         # Index table to DMG palette register values.
-.eqv N64_PALETTE, GB_PALETTE + GB_PALETTE_SIZE + 8     # Index of four 16bit colours analogous to gameboy screen.
-.eqv GB_BUFFER, N64_PALETTE + N64_PALETTE_SIZE + 8     # scan line of 2bit gameboy pixels built up here.
-.eqv N64_BUFFER, GB_BUFFER + GB_BUFFER_SIZE + 8        # scan line of 16bit n64 pixels built up here.
-.eqv LINE_TILE_MAP, N64_BUFFER + N64_BUFFER_SIZE + 8   # list of VRAM tile indices in the current scan-line.
-.eqv TILE_CACHE, LINE_TILE_MAP + LINE_TILE_MAP_SIZE + 8# Cache tiles we have previously DMAd to cut down on future DMAs.
-.eqv PPU_SETTINGS, TILE_CACHE + TILE_CACHE_SIZE + 8    # Copy of relevant gameboy LCD registers.
-.eqv INPUT, PPU_SETTINGS + PPU_SETTINGS_SIZE + 8       # Config passed in from CPU
-.eqv LINE_OAM, INPUT + INPUT_SIZE + 8                 # Need to revisit what this actually is...
-.eqv OAM, LINE_OAM + LINE_OAM_SIZE + 8               # Copy of gameboy OAM (sprite memory)
+.data
+# RDP Commands staged here before being sent.
+RDP_BUFFER:
+    .space RDP_BUFFER_SIZE
 
-### Palette Values
+# Call Stack
+STACK_BOTTOM:
+    .space STACK_SIZE
+STACK_TOP:
+    .space 8
 
-.eqv LIGHTEST,0x0000FFFF
-.eqv LIGHTER, 0x0000A529
-.eqv DARKER,  0x00005295
-.eqv DARKEST, 0x00000001
+# Index table to DMG palette register values.
+GB_PALETTE:
+    .space GB_PALETTE_SIZE
+
+# Index of four 16bit colours analogous to gameboy screen.
+N64_PALETTE:
+    .space N64_PALETTE_SIZE
+
+# scan line of 2bit gameboy pixels built up here.
+GB_BUFFER:
+    .space GB_BUFFER_SIZE
+
+# scan line of 16bit n64 pixels built up here.
+N64_BUFFER:
+    .space N64_BUFFER_SIZE
+
+# list of VRAM tile indices in the current scan-line.
+LINE_TILE_MAP:
+    .space LINE_TILE_MAP_SIZE
+
+# Cache tiles we have previously DMAd to cut down on future DMAs.
+TILE_CACHE:
+    .space TILE_CACHE_SIZE
+
+# Copy of relevant gameboy LCD registers.
+PPU_SETTINGS:
+    .space PPU_SETTINGS_SIZE
+
+# Config passed in from CPU
+INPUT:
+    .space INPUT_SIZE
+
+# Copy of gameboy OAM (sprite memory)
+OAM:
+    .space OAM_SIZE
+
+# Can stash a tile here temporarily while yflipping it.
+TEMP_TILE:
+    .space TEMP_TILE_SIZE
 
 
+.text
 
 ###
 # Register aliases
@@ -135,9 +176,6 @@
 
 # Address to store massaged pixels where they will be picked up by the RDP
 .set $OUT_BUFFER_ADDRESS, $s0
-
-# Number of pixels left to render in current iteration.
-.set $PIXEL_COUNTER, $s1
 
 # Cached Height may not be necessary
 .set $RECTANGLE_HEIGHT, $s2
@@ -203,6 +241,8 @@ massageMonochrome:
 # Either from the cache or the tile is DMA'd in and cached.
 # @input $a0 The tile ID.
 # @output $r0 Pointer to the tile data.
+#
+# TODO: Cache header should allow flipped tiles to be cached separately from normal.
 ###
 cacheGetTile:
     .set $tileId, $a0
@@ -232,7 +272,11 @@ cacheGetTile:
 
         .whileNotFound_continue:
         # Check that $pointer is still greater than the bottom of the cache
-        addi $t0, $pointer, -1 * TILE_CACHE
+        addi $t0, $0, TILE_CACHE
+        sub $t0, $pointer, $t0
+
+        # This is better than above, but gives me error ` Error: invalid operands (*ABS* and .data sections) for `*'`
+        #addi $t0, $pointer, -1 * TILE_CACHE
     bltz $t0, .whileNotFound
     notFound:
 
@@ -266,20 +310,213 @@ cacheGetTile:
 .set $pointer, 0
 
 ###
+# Reverses the order of the 8 half-words following $a0
+# @param $a0 the address of the tile to flip.
+# @returns $r0 the address of the flipped data.
+# TODO: Make it work.
+###
+yFlip:
+    # may be able to do some combination of:
+    # lqv $v01, 0, 0, $a0
+    # srv $v01, 0, 16, $r0
+
+    # Store the entire tile into a 128bit vector register.
+    lqv $v01, 0, 0, $a0
+    addi $r0, $0, TEMP_TILE # set this while waiting for 3 delay slot vector load.
+    lrv $v01, 0, 0, $a0 # not sure if this line is necessary.
+
+    # Spit out the 16bit lines in reverse order.
+    mfc2 t0, $v01, 7
+    sh $t0, TEMP_TILE($0)
+    mfc2 t0, $v01, 6
+    sh $t0, (TEMP_TILE + 2)($0)
+    mfc2 t0, $v01, 5
+    sh $t0, (TEMP_TILE + 4)($0)
+    mfc2 t0, $v01, 4
+    sh $t0, (TEMP_TILE + 6)($0)
+    mfc2 t0, $v01, 3
+    sh $t0, (TEMP_TILE + 8)($0)
+    mfc2 t0, $v01, 2
+    sh $t0, (TEMP_TILE + 10)($0)
+    mfc2 t0, $v01, 1
+    sh $t0, (TEMP_TILE + 12)($0)
+    mfc2 t0, $v01, 0
+    sh $t0, (TEMP_TILE + 14)($0)
+
+    jr $ra
+
+
+xFlip:
+    jr $ra
+
+###
+#
+# @param entry The OAM entry defining this sprite.
+# @isSecondTile If specified, the tile to draw is the second of a double height sprite.
+###
+.macro processSprite $entry isSecondTile
+    .set $y1, $t4
+    .set $x1, $t5 # overloaded with y2 since it's just to check we're on screen.
+    .set $x2, $t6
+    .set $flags, $t6 # overloaded since x2 is just to check we're on screen
+    .set $shiftBy, $t4 # overloaded
+    .set $spriteLine, $t7
+    .set $bgLine, $t8
+
+    # Check this sprite is on screen.
+    srl $t0, $entry, 16
+    andi $t0, $t0, 0x00FF # X loc is second byte.
+    addi $x1, $t0, -1 * OAM_X_OFFSET
+    addi $x2, $x1, TILE_WIDTH
+
+    # off the left of the screen.
+    bltz $x2, processSprite_continue
+
+    # off the right of the screen.
+    addi $t0, $0, GB_LCD_WIDTH - 1
+    bgt $x1, $t0, processSprite_continue
+
+    # Get the tile index from the OAM entry.
+    srl $t0, \$entry, 8
+    andi $t0, $t0, 0x00FF
+
+    .ifb isSecondTile
+        addi $t0, $0, 1
+    .endif
+
+    # Get the tile from the cache.
+    add $a0, $0, $t0
+    jal cacheGetTile
+
+    # Get the flags
+    andi $flags, $entry, 0x00FF
+
+    # is y flipped
+    andi $t0, $flags, Oam_Y_FLIP
+    beq $t0, $0, .noYFlip
+        add $a0, $0, $r0
+        jal yFlip
+    .noYFlip:
+
+    # is x flipped.
+    andi $t0, $flags, Oam_X_FLIP
+    beq $t0, $0, .noXFlip
+        add $a0, $0, $r0
+        jal xFlip
+    .noXFlip:
+
+    # when priority flag is set, need to grab the overlapping background pixels.
+    add $bgLine, $0, $0
+    andi $t0, $flags, Oam_PRIORITY
+    beq $t0, $0, hasPriority
+        # Divide x1 by 8
+        # srl $t0, $x1, 3
+        # lw $bgTile, GB_BUFFER($x1)
+
+        # convert all (up to 2) tiles that ma/ overlap with our sprite into
+        # 'two bits are next to each other' mode.
+
+        # Identify which two bits represent colour 0 with the current BGP
+
+        # Set $bgline with colour 0 bits set and all others 0.
+
+    hasPriority:
+
+    # TODO - just have all three palettes available in DMEM each line.
+    # instead of resetting the palette each sprite.
+    andi $t0, $flags, Oam_PALETTE
+    bne $t0, $0, usePalette1
+        lbu $a0, (PPU_SETTINGS + Ppu_SPRITE_PALETTE_0)($0)
+        j paletteDone
+    usePalette1:
+        lbu $a0, (PPU_SETTINGS + Ppu_SPRITE_PALETTE_1)($0)
+    paletteDone:
+    jal setPalette
+
+    # Find the line of the tile we want to draw.
+    sub $t0, $SCAN_LINE, $y1
+    ## a % b == a & ( b -1 ) if b is a power of 2
+    and $t0, $t0, TILE_WIDTH - 1
+    ## Multiply by two to get the number of bytes to skip.
+    sll $t0, $t0, 1
+    ## $r0 now points to the line of the tile we want.
+    add $r0, $r0, $t0
+
+    addi $shiftBy, $0, 8
+    add $spriteLine, $0, $0
+
+    # gb tile data is NOT stored with the pixels in order like:
+    # 11001001 01011101
+    # 00112233 44556677
+
+    # but with the pixels spread across two bytes like:
+    # 11001001 01011101
+    # 01234567 01234567
+
+    .whileSpriteHasPixels:
+        addi $shiftBy, $shiftBy, -1
+
+        # Grab two bytes from the tile (8 pixels).
+        lhu $t0, 0($r0)
+
+        # Shift so that the two bits are in bit 0 of both pixels.
+        srlv $t0, $t0, $shiftBy
+
+        # Put both pixels next to each other.
+        andi $a0, $t0, 0x100
+        andi $t0, $t0, 0x001
+
+        srl $a0, $a0, 7
+        or $t0, $t0, $a0
+
+        # Look up the palette
+        lb $t0, GB_PALETTE($t0)
+
+        sll $a0, $t0, 7
+        andi $a0, $a0, 0x100
+        andi $t0, $t0, 0x001
+        or $t0, $t0, $a0
+
+        # Patch it back to $spriteLine
+        sllv $t0, $t0, $shiftBy
+        or $spriteLine, $spriteLine, $t0
+
+    bgtz $shiftBy, .whileSpriteHasPixels
+
+
+    # Divide x1 by 8
+    srl $t9, $x1, 3
+    # Add any remainder.
+    # This line is $t0 = $x1 % TILE_WIDTH
+    and $t0, $x1, TILE_WIDTH - 1
+    # Add together and times by 2 to get the position in the buffer.
+    add $t0, $t0, $t9
+    sll $t0, $t0, 1
+    sh $spriteLine, GB_BUFFER($t0)
+
+    .set $x1, 0
+    .set $x2, 0
+    processSprite_continue:
+.endm
+
+###
 # Sets in DMEM up to 10 OAM entries for sprites that will appear on this scan line.
 ###
-.macro transferOAM
-    /*
-    .set $screenSpritesRemaining, $t1
-    .set $lineSpritesRemaining, $t2
-    .set $y1, $t3
-    .set $y2, $t4
-    .set $entry, $t5
+.macro processSprites
+    .set $entry, $t1
+    .set $screenSpritesRemaining, $t2
+    .set $lineSpritesRemaining, $t3
+    .set $y1, $t4
+    .set $y2, $t5
 
     ## Find the sprites relevant to the current scanline so we don't have to loop through 40 sprites every pixel.
 
-    lw $t0, (INPUT + RspIn_OAM_ADDRESS)($0)
+    # DMA in the entire OAM
+    lw $t0, (INPUT + RspIn_OAM_BASE)($0)
     dmaIn $t0, OAM, OAM_SIZE
+
+    #lw $t0, OAM($0)
+    #beq $t0, $0, skippy
 
     addi $screenSpritesRemaining, $0, SPRITE_COUNT
     addi $lineSpritesRemaining, $0, SPRITE_LIMIT
@@ -293,11 +530,11 @@ cacheGetTile:
         sll $t0, $t0, 2
         lw $entry, OAM($t0)
 
-        ## We care about the Y position, which is the lowest byte
-        andi $y1, $entry, 0x000000FF
+        ## We care about the Y position, which is at the top
+        srl $y1, $entry, 24
 
         # Test that the sprite will appear on this scanline
-        addi $y1, $0, OAM_Y_OFFSET
+        addi $y1, $y1, -1 * OAM_Y_OFFSET
 
         ## $t3 is lower bound, $t0 is upper bound.  Double it if 8x16 mode is on.
         addi $y2, $y1, 8
@@ -307,52 +544,28 @@ cacheGetTile:
 
         ## if bottom of the sprite is greater than the current scan line, we don't need to render it here.
         sub $t0, $y1, $SCAN_LINE
-        # Gotta shift by 16 both times because OAM starts at scan line -16
-        addi $t0, $t0, -1 * OAM_Y_OFFSET
         bgtz $t0, .whileHasOam_continue
 
         ## if top of the sprite is less than the current scan line, skip that too.
-        sub $t0, $SCAN_LINE, $y2
-        addi $t0, $t0, OAM_Y_OFFSET
-        bgtz $t0, .whileHasOam_continue
+        sub $t0, $y2, $SCAN_LINE
+        bltz $t0, .whileHasOam_continue
+            processSprite $entry
 
-            # Cache a sprite that exists on this scan line.
-
-            ## Calculate the destination offset to cache at.
-            addi $t0, $0, SPRITE_LIMIT
-            sub $t0, $t0, $lineSpritesRemaining
-            sll $t0, $t0, 2 # x4 since OAM entry is 4B 
-
-            ## And cache it
-            sw $entry, LINE_OAM($t0)
-
-            # There is a limit of 10 sprites per scanline.
-            ## Once we've found that many relevant sprites, we're done.
-
-            ## I believe that the limit should actually be done from left to right (i think), but assumption is most 
-            ## code won't break the limit anyway.
-            ## Will create a job to improve accuracy of this once general case is working.
+            # There is a limit of 10 sprites per scanline. Once we've found that many relevant sprites, we're done.
             addi $lineSpritesRemaining, $lineSpritesRemaining, -1
-            bgtz $lineSpritesRemaining, .whileHasOam_break
-
+            bltz $lineSpritesRemaining, .whileHasOam_break
         .whileHasOam_continue:
 
         addi $screenSpritesRemaining, $screenSpritesRemaining, -1
         bgtz $screenSpritesRemaining, .whileHasOam
     .whileHasOam_break:
 
-    .set $spriteCounter, $t1
-    .set $spriteCount, $t2
-    addi $t0, $0, SPRITE_LIMIT
-    sub $spriteCount, $t0, $lineSpritesRemaining
-    add $spriteCounter, $0, $spriteCount
-
     # Set them all to 0 so we'll error if try to use them as registers.
     .set $screenSpritesRemaining, 0
     .set $lineSpritesRemaining, 0
     .set $y1, 0
     .set $y2, 0
-    */
+    skippy:
 .endm
 
 ###
@@ -361,67 +574,6 @@ cacheGetTile:
 .macro processWindow
     nop
 .endm
-
-###
-# Draws any sprites that apear on this scanline
-###
-.macro processSprites
-    .set $entry, $t3
-    .set $x1, $t4
-    .set $x2, $t5
-
-    # Loop through the oam cache
-    .whileHasSprites:
-        # Get the relevant OAM entry
-        sub $t0, $spriteCount, $spriteCounter
-        ## Multiply by 4 to get the address offset.
-        sll $t0, $t0, 2
-        lw $entry, OAM_CACHE($t0)
-
-        # Does this sprite appear in this x position?
-        andi $x1, $t0, OAM_X_OFFSET
-        addi $x2, $x1, TILE_WIDTH
-
-        ## if left of the sprite is greater than the current pixel, we're not interested right now.
-        sub $t0, $x1, $PIXEL_COUNTER
-        ## Gotta shift by 8, OAM starts at x-loc -8
-        addi $t0, $t0, -1 * OAM_X_OFFSET
-        bgtz $t0, .whileHasSprites_continue
-
-        ## if right of the sprite is less than the current pixel, skip that too.
-        sub $t0, $PIXEL_COUNTER, $x2
-        add $t0, $t0, OAM_X_OFFSET
-        bgtz $t0, .whileHasSprites_continue
-
-            # Get the tile index from the OAM entry.
-            liw $t0, 0x00FF0000
-            and $t0, $entry, $t0
-            srl $t0, $t0, 16
-            # And the tile data from the cache.
-            add $a0, $0, $entry
-            jal cacheGetTile
-
-            # For the visible width of this sprite
-                # Find the pixel that correlates to this x position.
-                # Run it through the palette
-                # Check it against priority
-
-                # add it to the buffer.
-                #sw $r0, 0($GB_BUFFER_POINTER)
-
-                # update indices
-                #addi $GB_BUFFER_POINTER, $GB_BUFFER_POINTER, 0x02
-                addi $PIXEL_COUNTER, $PIXEL_COUNTER, -1
-
-        .whileHasSprites_continue:
-        addi $spriteCounter, $spriteCounter, -1
-    bgtz $spriteCounter, .whileHasSprites
-
-    .set $entry, 0
-    .set $x1, 0
-    .set $x2, 0
-.endm
-
 
 ### Draws pixels for the background.
 .macro processBackground
@@ -485,7 +637,6 @@ cacheGetTile:
         jal cacheGetTile
 
         # which line of the tile are we on
-
         ## a % b == a & ( b -1 ) if b is a power of 2
         and $t0, $SCAN_LINE, TILE_WIDTH - 1
         ## Multiply by two to get the number of bytes to skip.
@@ -693,7 +844,7 @@ main:
     processBackground
 
     # Finally draw sprites
-    #processSprites
+    processSprites
 
     # Massage the colours to n64 16bit colours.
     massagePixels

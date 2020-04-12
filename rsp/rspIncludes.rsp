@@ -84,8 +84,8 @@
 .set $s11,  $27
 
 # We'll keep a stack pointer just in case, but other pointers aren't gonna be used.
-.set $s12,  $28
-.set $s13,  $29
+.set $t8,  $28
+.set $t9,  $29
 .set $sp,   $30
 .set $ra,   $31
 
