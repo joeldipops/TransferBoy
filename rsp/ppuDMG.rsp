@@ -95,7 +95,8 @@
 .eqv TILE_MAP_0_OFFSET, 0x1800
 .eqv TILE_MAP_1_OFFSET, 0x1C00
 
-.eqv TILE_DATA_0_OFFSET, 0x0800
+# In mode 0, indices are signed and data actually starts at $8800.
+.eqv TILE_DATA_0_OFFSET, 0x1000
 .eqv TILE_DATA_1_OFFSET, 0x0000
 .eqv PPU_SETTINGS_OFFSET, 0x0040
 
@@ -176,6 +177,8 @@ TEMP_TILE:
 
 # Address to store massaged pixels where they will be picked up by the RDP
 .set $OUT_BUFFER_ADDRESS, $s0
+
+.set $IS_TILE_INDEX_SIGNED, $s1
 
 # Cached Height may not be necessary
 .set $RECTANGLE_HEIGHT, $s2
@@ -627,8 +630,12 @@ xFlip:
         # Divide by 8 to get the tile.
         srl $t0, $currentPixel, 3
 
-        lbu $a0, LINE_TILE_MAP($t0)
-
+        bne $IS_TILE_INDEX_SIGNED, $0, 1f
+            lbu $a0, LINE_TILE_MAP($t0)
+            j 2f
+        1:
+            lb $a0, LINE_TILE_MAP($t0)
+        2:
         jal cacheGetTile
 
         # which line of the tile are we on
@@ -774,117 +781,123 @@ main:
     liw $t0, DARKEST
     sw $t0, (N64_PALETTE + 0xC)($0)
 
-    whilePending:
-        mfc0 $t0, $RSP_STATUS
-        andi $t0, $t0, SP_STATUS_GET_IS_READY
-    beq $t0, $0, whilePending
+    mainLoop:
+        whilePending:
+            mfc0 $t0, $RSP_STATUS
+            andi $t0, $t0, SP_STATUS_GET_IS_READY
+        beq $t0, $0, whilePending
 
-    # Set the Busy flag but lift the Ready flag.
-    liw $t0, SP_DATA_PENDING
-    ori $t0, $t0, SP_STATUS_BUSY_ON
+        # Set the Busy flag but lift the Ready flag.
+        liw $t0, SP_DATA_PENDING
+        ori $t0, $t0, SP_STATUS_BUSY_ON
 
-    mtc0 $t0, $RSP_STATUS
+        mtc0 $t0, $RSP_STATUS
 
-    # Bring in the configuration.
-    liw $t0, RSP_INTERFACE_ADDRESS
-    dmaIn $t0, INPUT, INPUT_SIZE
+        # Bring in the configuration.
+        liw $t0, RSP_INTERFACE_ADDRESS
+        dmaIn $t0, INPUT, INPUT_SIZE
 
-    # Load and cache the gameboy LCD registers.
-    lw $t0, (INPUT + RspIn_HRAM_BASE)($0)
-    addi $t0, $t0, PPU_SETTINGS_OFFSET
-    dmaIn $t0, PPU_SETTINGS, PPU_SETTINGS_SIZE
+        # Load and cache the gameboy LCD registers.
+        lw $t0, (INPUT + RspIn_HRAM_BASE)($0)
+        addi $t0, $t0, PPU_SETTINGS_OFFSET
+        dmaIn $t0, PPU_SETTINGS, PPU_SETTINGS_SIZE
 
-    # Check whether the LCD is turned on, and if not, skip all this shebang.
-    lb $t0, (PPU_SETTINGS + Ppu_LCD_CONTROL)($0)
+        # Check whether the LCD is turned on, and if not, skip all this shebang.
+        lb $t0, (PPU_SETTINGS + Ppu_LCD_CONTROL)($0)
 
-    andi $t0, $t0, Lcdc_LCD_SWITCH
-        beq $t0, $0, done
+        andi $t0, $t0, Lcdc_LCD_SWITCH
+            beq $t0, $0, done
 
-    ## Initialise some registers with constants.
-    ## TODO - allow this cache to persist across scan-lines.
-    addi $CACHE_POINTER, $0, TILE_CACHE
+        ## Initialise some registers with constants.
+        ## TODO - allow this cache to persist across scan-lines.
+        addi $CACHE_POINTER, $0, TILE_CACHE
 
-    # Initialise rendering of the line.
+        # Initialise rendering of the line.
 
-    lw $START_POSITION, INPUT + RspIn_SCREEN_POSITION($0)
-    lw $RECTANGLE_SIZE, INPUT + RspIn_RECTANGLE_SIZE($0)
-    andi $RECTANGLE_HEIGHT, $RECTANGLE_SIZE, 0x0000FFFF
+        lw $START_POSITION, INPUT + RspIn_SCREEN_POSITION($0)
+        lw $RECTANGLE_SIZE, INPUT + RspIn_RECTANGLE_SIZE($0)
+        andi $RECTANGLE_HEIGHT, $RECTANGLE_SIZE, 0x0000FFFF
 
-    ## Cache the current scan line.
-    lbu $SCAN_LINE, (PPU_SETTINGS + Ppu_CURRENT_LINE)($0)
+        ## Cache the current scan line.
+        lbu $SCAN_LINE, (PPU_SETTINGS + Ppu_CURRENT_LINE)($0)
 
-    ## Cache if we're in 8x16 sprite mode.
-    lbu $IS_8x16_MODE, (PPU_SETTINGS + Ppu_LCD_CONTROL)($0)
-    andi $IS_8x16_MODE, $IS_8x16_MODE, Lcdc_SPRITE_SIZE
+        ## Cache if we're in 8x16 sprite mode.
+        lbu $IS_8x16_MODE, (PPU_SETTINGS + Ppu_LCD_CONTROL)($0)
+        andi $IS_8x16_MODE, $IS_8x16_MODE, Lcdc_SPRITE_SIZE
 
-    ## Cache VRAM tile data address
-    lb $t0, PPU_SETTINGS + Ppu_LCD_CONTROL($0)
-    andi $t0, Lcdc_TILE_DATA
-    bne $t0, $0, 1f
-        addi $VRAM_TILE_DATA_ADDRESS, $0, TILE_DATA_0_OFFSET
-        j 2f
-    1:
-        addi $VRAM_TILE_DATA_ADDRESS, $0, TILE_DATA_1_OFFSET
-    2:
-    lw $t0, INPUT + RspIn_VRAM_BASE
-    add $VRAM_TILE_DATA_ADDRESS, $VRAM_TILE_DATA_ADDRESS, $t0
+        ## Cache VRAM tile data address
+        ## window & background data can be at 2 different addresses in VRAM
 
-    # Build up this scanline to a buffer than can be rendered as a texture.
-    #transferOAM
+        lw $VRAM_TILE_DATA_ADDRESS, (INPUT + RspIn_VRAM_BASE)($0)
 
-    ## Draw the window
-    processWindow
+        lbu $t0, PPU_SETTINGS + Ppu_LCD_CONTROL($0)
+        andi $t0, Lcdc_TILE_DATA
+        bne $t0, $0, 1f
+            addi $VRAM_TILE_DATA_ADDRESS, $VRAM_TILE_DATA_ADDRESS, TILE_DATA_0_OFFSET
+            addi $IS_TILE_INDEX_SIGNED, $0, 1
+            j 2f
+        1:
+            add $IS_TILE_INDEX_SIGNED, $0, $0
+        2:
 
-    ## Then the background
-    processBackground
+        # Build up this scanline to a buffer than can be rendered as a texture.
 
-    # Finally draw sprites
-    processSprites
+        ## Draw the window
+        processWindow
 
-    # Massage the colours to n64 16bit colours.
-    massagePixels
+        ## Then the background
+        processBackground
 
-    # Ask the RDP to render the line we just built.
+        # Finally draw sprites
+        ## Sprite data is always at VRAM base.
+        lw $VRAM_TILE_DATA_ADDRESS, (INPUT + RspIn_VRAM_BASE)($0)
+        add $IS_TILE_INDEX_SIGNED, $0, $0
+        processSprites
 
-    ## Sync before loading a new texture.
-    syncPipe
+        # Massage the colours to n64 16bit colours.
+        massagePixels
 
-    ## DMA the data back to DRAM so that the RDP can pick it up.
-    dmaOut N64_BUFFER, $OUT_BUFFER_ADDRESS, BUFFER_SIZE
+        # Ask the RDP to render the line we just built.
 
-    ## Tell RDP where to look for texture data.
-    setTextureImage RGBA_FORMAT, COLOUR_DEPTH_16, GB_LCD_WIDTH, $OUT_BUFFER_ADDRESS
+        ## Sync before loading a new texture.
+        syncPipe
 
-    ## Set up a tile now that the RDP has the data.
-    setTile 1, RGBA_FORMAT, COLOUR_DEPTH_16, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ## DMA the data back to DRAM so that the RDP can pick it up.
+        dmaOut N64_BUFFER, $OUT_BUFFER_ADDRESS, BUFFER_SIZE
 
-    ## Give tile a size & shape
-    loadTile 1, 0, 0, GB_LCD_WIDTH, 1
+        ## Tell RDP where to look for texture data.
+        setTextureImage RGBA_FORMAT, COLOUR_DEPTH_16, GB_LCD_WIDTH, $OUT_BUFFER_ADDRESS
 
-    # Calculate where to draw the line.
-    add $a0, $START_POSITION, $0
-    srl $a0, $a0, 16
-    andi $a1, $START_POSITION, 0x0000FFFF
+        ## Set up a tile now that the RDP has the data.
+        setTile 1, RGBA_FORMAT, COLOUR_DEPTH_16, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 
-    add $a2, $RECTANGLE_SIZE, $0
-    srl $a2, $a2, 16
+        ## Give tile a size & shape
+        loadTile 1, 0, 0, GB_LCD_WIDTH, 1
 
-    add $a2, $a2, $a0
-    add $a3, $RECTANGLE_HEIGHT, $a1
+        # Calculate where to draw the line.
+        add $a0, $START_POSITION, $0
+        srl $a0, $a0, 16
+        andi $a1, $START_POSITION, 0x0000FFFF
 
-    ## Draw a rectangle with the texture we have set up
-    textureRectangle 1, $a0, $a1, $a2, $a3, 0, 0, 2048, 512
+        add $a2, $RECTANGLE_SIZE, $0
+        srl $a2, $a2, 16
 
-    # Clean-up now that we're done.
+        add $a2, $a2, $a0
+        add $a3, $RECTANGLE_HEIGHT, $a1
 
-    ## Reset DRAM flag that says we're done with this work.
-done:
-    # Lift the IsBusy flag
-    addi $t0, $0, SP_STATUS_BUSY_OFF
-    mtc0 $t0, $RSP_STATUS
+        ## Draw a rectangle with the texture we have set up
+        textureRectangle 1, $a0, $a1, $a2, $a3, 0, 0, 2048, 512
+
+        # Clean-up now that we're done.
+
+        ## Reset DRAM flag that says we're done with this work.
+    done:
+        # Lift the IsBusy flag
+        addi $t0, $0, SP_STATUS_BUSY_OFF
+        mtc0 $t0, $RSP_STATUS
 
     # Start again and wait for more data.
-    j whilePending
+    j mainLoop
 
 # job done
 stall:
