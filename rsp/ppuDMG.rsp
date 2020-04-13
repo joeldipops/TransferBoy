@@ -348,8 +348,51 @@ yFlip:
 
     jr $ra
 
-
+###
+# Takes a 16bit tile row and flips it horizontally
+# @param $a0 Address of the tile row.
+# @returns $r0 New address of the flipped tile row.
+#
+# This is the long and unrolled way.
+# There's likely a better way, especially with the VU on our side.
+###
 xFlip:
+    lhu $a0, 0($a0)
+
+    andi $a1, $a0, 0b1000000010000000
+    srl $a2, $a1, 7
+
+    andi $a1, $a0, 0b0100000001000000
+    srl $a1, $a1, 5
+    or $a2, $a2, $a1
+
+    andi $a1, $a0, 0b0010000000100000
+    srl $a1, $a1, 3
+    or $a2, $a2, $a1
+
+    andi $a1, $a0, 0b0001000000010000
+    srl $a1, $a1, 1
+    or $a2, $a2, $a1
+
+    andi $a1, $a0, 0b0000100000001000
+    sll $a1, $a1, 1
+    or $a2, $a2, $a1
+
+    andi $a1, $a0, 0b0000010000000100
+    sll $a1, $a1, 3
+    or $a2, $a2, $a1
+
+    andi $a1, $a0, 0b0000001000000010
+    sll $a1, $a1, 5
+    or $a2, $a2, $a1
+
+    andi $a1, $a0, 0b0000000100000001
+    sll $a1, $a1, 7
+    or $a2, $a2, $a1
+
+    addi $r0, $0, TEMP_TILE
+    sh $a2, 0($r0)
+
     jr $ra
 
 ###
@@ -401,13 +444,6 @@ xFlip:
         jal yFlip
     .noYFlip:
 
-    # is x flipped.
-    andi $t0, $flags, Oam_X_FLIP
-    beq $t0, $0, .noXFlip
-        add $a0, $0, $r0
-        jal xFlip
-    .noXFlip:
-
     # when priority flag is set, need to grab the overlapping background pixels.
     add $bgLine, $0, $0
     andi $t0, $flags, Oam_PRIORITY
@@ -444,6 +480,13 @@ xFlip:
     sll $t0, $t0, 1
     ## $r0 now points to the line of the tile we want.
     add $r0, $r0, $t0
+
+    # is x flipped.
+    andi $t0, $flags, Oam_X_FLIP
+    beq $t0, $0, .noXFlip
+        add $a0, $0, $r0
+        jal xFlip
+    .noXFlip:
 
     addi $shiftBy, $0, 8
     add $spriteLine, $0, $0
@@ -851,7 +894,6 @@ main:
         # Finally draw sprites
         ## Sprite data is always at VRAM base.
         lw $VRAM_TILE_DATA_ADDRESS, (INPUT + RspIn_VRAM_BASE)($0)
-        add $IS_TILE_INDEX_SIGNED, $0, $0
         processSprites
 
         # Massage the colours to n64 16bit colours.
