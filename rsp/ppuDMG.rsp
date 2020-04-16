@@ -518,25 +518,24 @@ xFlip:
         # Look up the palette
         lb $t0, GB_PALETTE($t0)
 
-        sll $a0, $t0, 7
-        andi $a0, $a0, 0x100
-        andi $t0, $t0, 0x001
-        or $t0, $t0, $a0
+        # Patch it back to $spriteLine, now in 'bits next to each other format.
 
-        # Patch it back to $spriteLine
+        ## We are now moving two bits at a time, hence we we temporarily double shiftBy.
+        sll $shiftBy, $shiftBy, 1
         sllv $t0, $t0, $shiftBy
+        srl $shiftBy, $shiftBy, 1
         or $spriteLine, $spriteLine, $t0
 
     bgtz $shiftBy, .whileSpriteHasPixels
 
-    # Divide x1 by 8
-    srl $t9, $x1, 3
-    # Add any remainder.
+
+    # TODO - shift by the remainder and patch as needed.
     # This line is $t0 = $x1 % TILE_WIDTH
-    and $t0, $x1, TILE_WIDTH - 1
-    # Add together and times by 2 to get the position in the buffer.
-    add $t0, $t0, $t9
-    sll $t0, $t0, 1
+    # and $t0, $x1, TILE_WIDTH - 1
+
+
+    # Divide x1 by 4 to get the position in the buffer of these 8 2b pixels
+    srl $t0, $x1, 2
     sh $spriteLine, GB_BUFFER($t0)
 
     .set $x1, 0
@@ -719,13 +718,10 @@ xFlip:
             # Look up the palette
             lb $t0, GB_PALETTE($t0)
 
-            sll $t1, $t0, 7
-            andi $t1, $t1, 0x100
-            andi $t0, $t0, 0x001
-            or $t0, $t0, $t1
-
-            # Patch it back to $tileLine
+            # Patch it back to result tile line, now in 'bits are next to each other' format.
+            sll $shiftBy, $shiftBy, 1
             sllv $t0, $t0, $shiftBy
+            srl $shiftBy, $shiftBy, 1
             or $tileLine, $tileLine, $t0
 
         bgtz $shiftBy, .whileHasPixels
@@ -765,18 +761,13 @@ xFlip:
         # get 8 pixels from memory
         lhu $currentWord, GB_BUFFER($gbCursor)
 
-        addi $shiftBy, $0, 8
+        addi $shiftBy, $0, 16
         .whileInWord:
-            addi $shiftBy, $shiftBy, -1
+            addi $shiftBy, $shiftBy, -2
 
-            # Shift so that the two bits are in bit 0 of both pixels.
+            # Shift so that the two bits are in bit 0 and 1.
             srlv $a0, $currentWord, $shiftBy
-
-            # Put both pixels next to each other.
-            andi $t0, $a0, 0x100
-            andi $a0, $a0, 0x001
-            srl $t0, $t0, 7
-            or $a0, $a0, $t0
+            andi $a0, $a0, 0b00000011
 
             # massage it from gameboy format to n64 format.
             jal massageMonochrome
