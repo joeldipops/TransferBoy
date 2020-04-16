@@ -528,15 +528,24 @@ xFlip:
 
     bgtz $shiftBy, processSprite_whileHasPixels
 
-
-    # TODO - shift by the remainder and patch as needed.
-    # This line is $t0 = $x1 % TILE_WIDTH
-    # and $t0, $x1, TILE_WIDTH - 1
-
-
     # Divide x1 by 4 to get the position in the buffer of these 8 2b pixels
     srl $t0, $x1, 2
-    sh $spriteLine, GB_BUFFER($t0)
+
+    # Shift to the right by the remainder.
+    # This line is $t0 = $x1 % TILE_WIDTH
+    and $shiftBy, $x1, TILE_WIDTH - 1
+    beq $shiftBy, $0, processSprite_noOffset
+        lw $bgLine, GB_BUFFER($t0)
+        sll $spriteLine, $spriteLine, 16
+        srlv $spriteLine, $spriteLine, $shiftBy
+        # Huge over-simplification. We actually need to go pixel by pixel, laying down only the non index-0 pixels, but this'll do for now.
+        or $spriteLine, $spriteLine, $bgLine
+        sw $spriteLine, GB_BUFFER($t0)
+        j 1f
+    processSprite_noOffset:
+        sh $spriteLine, GB_BUFFER($t0)
+    1:
+
 
     .set $x1, 0
     .set $x2, 0
