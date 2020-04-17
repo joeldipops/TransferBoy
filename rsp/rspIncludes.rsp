@@ -3,6 +3,8 @@
 #ifndef RSP_INC_INCLUDED
 #define RSP_INC_INCLUDED
 
+.set noreorder
+
 # co-processor 0 registers
 .set $c0,  $0
 .set $c1,  $1
@@ -160,7 +162,6 @@
     sw $at, \addr(\reg)
 .endm
 
-
 ###
 # See dmaIn macro below
 ###
@@ -169,10 +170,12 @@ _dmaIn:
     1:
         mfc0 $t0, $RSP_RESERVED
     bne $t0, $0, 1b
+      nop
 
     2:
         mfc0 $t0, $DMA_FULL
     bne $t0, $0, 2b
+      nop
 
     # Set source.
     mtc0 $a0, $DMA_DRAM
@@ -188,11 +191,11 @@ _dmaIn:
     3:
         mfc0 $t0, $DMA_BUSY
     bne $t0, $0, 3b
+    nop
 
     # release the flag
-    mtc0 $0, $RSP_RESERVED
     jr $ra
-
+      mtc0 $0, $RSP_RESERVED # delay slot
 
 ###
 # Writes to the three DMA registers to kick off a transfer
@@ -207,6 +210,7 @@ _dmaIn:
     addi $a1, $0, \dest
     addi $a2, $0, \length
     jal _dmaIn
+      nop
 .endm
 
 .macro dmaIn_destR source, dest, length
@@ -214,7 +218,9 @@ _dmaIn:
     add $a1, $0, \dest
     addi $a2, $0, \length
     jal _dmaIn
+      nop
 .endm
+
 
 
 ###
@@ -225,10 +231,12 @@ _dmaOut:
     1:
         mfc0 $t0, $RSP_RESERVED
     bne $t0, $0, 1b
+      nop
 
     2:
         mfc0 $t0, $DMA_FULL
     bne $t0, $0, 2b
+      nop
 
     # Set source.
     mtc0 $a0, $DMA_DMEM
@@ -244,10 +252,12 @@ _dmaOut:
     3:
         mfc0 $t0, $DMA_BUSY
     bne $t0, $0, 3b
+      nop
 
-    # release the flag
-    mtc0 $0, $RSP_RESERVED
     jr $ra
+      # release the flag
+      mtc0 $0, $RSP_RESERVED # delay slot.
+
 
 ###
 # Writes to the three DMA registers to kick off a transfer
@@ -262,6 +272,6 @@ _dmaOut:
     add $a1, $0, \dest
     addi $a2, $0, \length
     jal _dmaOut
+      nop
 .endm
-
 #endif

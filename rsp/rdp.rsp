@@ -1,5 +1,7 @@
 #include "rspIncludes.rsp"
 
+.set noreorder
+
 # TODO: execRdp needs to be changed from a macro to a routine to save on space.
 
 .eqv RGBA_FORMAT, 0
@@ -23,6 +25,7 @@ _execRdp:
         # bit 8 of $RDP_CMD_STATUS = RDP DMA is busy
         andi $t0, $t0, RDP_DMA_BUSY
     bne $t0, $0, 1b
+      nop
 
     # send 2 to RDP_CMD_STATUS
     # in order to DMA from RSP memory (DMEM)
@@ -31,9 +34,8 @@ _execRdp:
 
     # Kick off the DMA by setting both start and end.
     mtc0 $0, $RDP_CMD_START
-    mtc0 $a0, $RDP_CMD_END
     jr $ra
-
+      mtc0 $a0, $RDP_CMD_END # delay slot
 
 ###
 # Sends an RDP command by writing to the RDP registers.
@@ -44,7 +46,9 @@ _execRdp:
     # + 4 because end expects the next address after data ends.
     stackPush 1
     addi $a0, $0, (\words * 4) + 4
+    nop # TODO - figure out why the code breaks and jumps to some random address without this NOP
     jal _execRdp
+      nop
     stackPop 1
 .endm
 
@@ -391,3 +395,4 @@ _execRdp:
 
     execRdp 2
 .endm
+.set reorder # TODO - YTF is THIS necessary???

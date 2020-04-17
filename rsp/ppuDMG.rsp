@@ -9,7 +9,6 @@
 #
 ###------------------------------------------
 
-.data
 ###
 # Constants
 ###
@@ -170,6 +169,7 @@ TEMP_TILE:
 
 
 .text
+.set reorder
 
 ###
 # Register aliases
