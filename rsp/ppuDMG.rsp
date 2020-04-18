@@ -397,6 +397,23 @@ xFlip:
 
 ###
 #
+# @param a0 $bgLine
+# @param a1 $shiftBy
+###
+/*
+alignBackground:
+    .set $bgLine, $a0
+    .set $shiftBy, $a1
+    sll $shiftBy, $shiftBy, 1
+    srlv $a1, $bgLine, $shiftBy
+    andi $a1, $a1, 0b00000011
+    srl $shiftBy, $shiftBy, 1
+    jr $ra
+    .set $bgLine, 0
+    .set $shiftBy, 0
+*/
+###
+#
 # @param entry The OAM entry defining this sprite.
 # @isSecondTile If specified, the tile to draw is the second of a double height sprite.
 ###
@@ -408,6 +425,7 @@ xFlip:
     .set $shiftBy, $t4 # overloaded
     .set $spriteLine, $t7
     .set $bgLine, $t8
+    .set $offset, $t9
 
     # Check this sprite is on screen.
     srl $t0, $entry, 16
@@ -444,23 +462,6 @@ xFlip:
         jal yFlip
     1:
 
-    # when priority flag is set, need to grab the overlapping background pixels.
-    add $bgLine, $0, $0
-    andi $t0, $flags, Oam_PRIORITY
-    beq $t0, $0, processSprite_hasPriority
-        # Divide x1 by 8
-        # srl $t0, $x1, 3
-        # lw $bgTile, GB_BUFFER($x1)
-
-        # convert all (up to 2) tiles that ma/ overlap with our sprite into
-        # 'two bits are next to each other' mode.
-
-        # Identify which two bits represent colour 0 with the current BGP
-
-        # Set $bgline with colour 0 bits set and all others 0.
-
-    processSprite_hasPriority:
-
     # TODO - just have all three palettes available in DMEM each line.
     # instead of resetting the palette each sprite.
     andi $t0, $flags, Oam_PALETTE
@@ -488,8 +489,20 @@ xFlip:
         jal xFlip
     1:
 
-    addi $shiftBy, $0, 8
-    add $spriteLine, $0, $0
+    # Get existing layer this sprite may be in front of or behind.
+    ## Divide x1 by 4 to get the position in the buffer of these 8 2b pixels
+    srl $t0, $x1, 2
+    lw $bgLine, GB_BUFFER($t0)
+    and $offset, $x1, TILE_WIDTH - 1
+
+    ## Adjust so sprite will line up if there's an offset.
+    sllv $bgLine, $bgLine, $offset
+    srl $bgLine, $bgLine, 16
+
+    # This is the last time we need the flags, so change the name.
+    .set $hasPriority, $flags
+    andi $hasPriority, $flags, Oam_PRIORITY
+    .set $flags, 0
 
     # gb tile data is NOT stored with the pixels in order like:
     # 11001001 01011101
@@ -498,6 +511,9 @@ xFlip:
     # but with the pixels spread across two bytes like:
     # 11001001 01011101
     # 01234567 01234567
+
+    addi $shiftBy, $0, 8
+    add $spriteLine, $0, $0
 
     processSprite_whileHasPixels:
         addi $shiftBy, $shiftBy, -1
@@ -513,42 +529,88 @@ xFlip:
         andi $t0, $t0, 0x001
 
         srl $a0, $a0, 7
-        or $t0, $t0, $a0
+        or $a0, $a0, $t0
 
-        # Look up the palette
-        lb $t0, GB_PALETTE($t0)
+        # move two bits at a time so temporarily  double shiftBy
+        sll $shiftBy, $shiftBy, 1
+        srlv $a1, $bgLine, $shiftBy
+        andi $a1, $a1, 0b00000011
+
+        # $a0 now contains the two bits from the sprite
+        # $a1 contains the two bits from the background.
+
+        bne $hasPriority, $0, processSprite_hasPriority
+            # draw sprite on top
+            beq $a0, $0, processSprite_drawBackground
+            j processSprite_drawSprite
+        processSprite_hasPriority: # draw sprite first (underneath)
+            # TODO - check against background palette and only draw if colour is in position 0
+            beq $a1, $0, processSprite_drawSprite
+
+        processSprite_drawBackground:
+            #jal alignBackground
+            or $t0, $0, $a1
+            j processSprite_patchBack
+        processSprite_drawSprite:
+            # Look up the palette
+            lb $t0, GB_PALETTE($a0)
+
+        processSprite_patchBack:
 
         # Patch it back to $spriteLine, now in 'bits next to each other format.
-
-        ## We are now moving two bits at a time, hence we we temporarily double shiftBy.
-        sll $shiftBy, $shiftBy, 1
         sllv $t0, $t0, $shiftBy
-        srl $shiftBy, $shiftBy, 1
         or $spriteLine, $spriteLine, $t0
+
+        srl $shiftBy, $shiftBy, 1
 
     bgtz $shiftBy, processSprite_whileHasPixels
 
-    # Divide x1 by 4 to get the position in the buffer of these 8 2b pixels
-    srl $t0, $x1, 2
+    beq $offset, $0, processSprite_noOffset
+        .set $mask, $hasPriority
+        .set $hasPriority, 0
 
-    # Shift to the right by the remainder.
-    # This line is $t0 = $x1 % TILE_WIDTH
-    and $shiftBy, $x1, TILE_WIDTH - 1
-    beq $shiftBy, $0, processSprite_noOffset
+        # let's say offset = 3
+
+        # double it since a pixel is two bits.
+        sll $offset, $offset, 1
+        addi $mask, $0, 0xFFFF
+        # mask: 000003FF
+        srlv $mask, $mask, $offset 
+
+        # Subtrack from 16 to move in the other direction.
+        addi $t0, $0, 16
+        sub $shiftBy, $t0, $shiftBy
+        # mask: FFFF03FF
+        lui $t0, 0xFFFF
+        sllv $t0, $t0, $shiftBy
+        # mask = FC0003FF
+        or $mask, $mask, $t0
+
+        # Divide x1 by 4 to get the position in the buffer of these 8 2b pixels
+        srl $t0, $x1, 2
         lw $bgLine, GB_BUFFER($t0)
+        and $bgLine, $bgLine, $mask
+
         sll $spriteLine, $spriteLine, 16
-        srlv $spriteLine, $spriteLine, $shiftBy
-        # Huge over-simplification. We actually need to go pixel by pixel, laying down only the non index-0 pixels, but this'll do for now.
+        srlv $spriteLine, $spriteLine, $offset
         or $spriteLine, $spriteLine, $bgLine
-        sw $spriteLine, GB_BUFFER($t0)
+
+        srl $offset, $spriteLine, 16
+        sh $offset, GB_BUFFER($t0)
+        addi $t0, $t0, 2
+        andi $spriteLine, $spriteLine, 0xFFFF
+        sh $spriteLine, GB_BUFFER($t0)
+
         j 1f
     processSprite_noOffset:
+        srl $t0, $x1, 2
         sh $spriteLine, GB_BUFFER($t0)
     1:
 
 
     .set $x1, 0
     .set $x2, 0
+    .set $mask, 0
     processSprite_continue:
 .endm
 
