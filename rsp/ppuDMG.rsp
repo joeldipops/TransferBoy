@@ -108,7 +108,6 @@
 .eqv GB_PALETTE_SIZE,   0x008 # 4 2 bit colours across four bytes for easy lookup.
 .eqv N64_PALETTE_SIZE,  0x010 # 4 32bit colours. # TODO - make these 16bit colours
 .eqv N64_BUFFER_SIZE,   0x280 # 160 42bit pixels per scan-line.
-.eqv GB_BUFFER_SIZE,    0x028 # 160 2bit pixels per scan-line = 40bytes
 .eqv LINE_TILE_MAP_SIZE,0x020 # 32B 1 for each tile across the background (though we only see 20 tiles at a time)
 .eqv TILE_CACHE_SIZE,   CACHE_ENTRY_SIZE * 50   # 50 possible tiles
 .eqv PPU_SETTINGS_SIZE, 0x010 # 10 1byte registers.
@@ -134,10 +133,6 @@ GB_PALETTE:
 # Index of four 16bit colours analogous to gameboy screen.
 N64_PALETTE:
     .space N64_PALETTE_SIZE
-
-# scan line of 2bit gameboy pixels built up here.
-GB_BUFFER:
-    .space GB_BUFFER_SIZE
 
 # scan line of 16bit n64 pixels built up here.
 N64_BUFFER:
@@ -421,11 +416,9 @@ alignBackground:
     .set $y1, $t4
     .set $x1, $t5 # overloaded with y2 since it's just to check we're on screen.
     .set $x2, $t6
-    .set $flags, $t6 # overloaded since x2 is just to check we're on screen
     .set $shiftBy, $t4 # overloaded
     .set $spriteLine, $t7
-    .set $bgLine, $t8
-    .set $offset, $t9
+    .set $bufferIndex, $t8
 
     # Check this sprite is on screen.
     srl $t0, $entry, 16
@@ -434,11 +427,15 @@ alignBackground:
     addi $x2, $x1, TILE_WIDTH
 
     # off the left of the screen.
-    bltz $x2, processSprite_continue
+    bltz $x2, processSprite_done
+
+    # $x2 not used after this point
+    .set $flags, $x2 
+    .set $x2, 0
 
     # off the right of the screen.
     addi $t0, $0, GB_LCD_WIDTH - 1
-    bgt $x1, $t0, processSprite_continue
+    bgt $x1, $t0, processSprite_done
 
     # Get the tile index from the OAM entry.
     srl $t0, \$entry, 8
@@ -453,7 +450,7 @@ alignBackground:
     jal cacheGetTile
 
     # Get the flags
-    andi $flags, $entry, 0x00FF
+    andi $flags, \$entry, 0x00FF
 
     # is y flipped
     andi $t0, $flags, Oam_Y_FLIP
@@ -489,15 +486,7 @@ alignBackground:
         jal xFlip
     1:
 
-    # Get existing layer this sprite may be in front of or behind.
-    ## Divide x1 by 4 to get the position in the buffer of these 8 2b pixels
-    srl $t0, $x1, 2
-    lw $bgLine, GB_BUFFER($t0)
-    and $offset, $x1, TILE_WIDTH - 1
-
-    ## Adjust so sprite will line up if there's an offset.
-    sllv $bgLine, $bgLine, $offset
-    srl $bgLine, $bgLine, 16
+    or $spriteLine, $0, $r0
 
     # This is the last time we need the flags, so change the name.
     .set $hasPriority, $flags
@@ -512,14 +501,15 @@ alignBackground:
     # 11001001 01011101
     # 01234567 01234567
 
+    or $bufferIndex, $0, $x1
+    sll $bufferIndex, $bufferIndex, 1
     addi $shiftBy, $0, 8
-    add $spriteLine, $0, $0
 
     processSprite_whileHasPixels:
         addi $shiftBy, $shiftBy, -1
 
         # Grab two bytes from the tile (8 pixels).
-        lhu $t0, 0($r0)
+        lhu $t0, 0($spriteLine)
 
         # Shift so that the two bits are in bit 0 of both pixels.
         srlv $t0, $t0, $shiftBy
@@ -531,87 +521,42 @@ alignBackground:
         srl $a0, $a0, 7
         or $a0, $a0, $t0
 
-        # move two bits at a time so temporarily  double shiftBy
-        sll $shiftBy, $shiftBy, 1
-        srlv $a1, $bgLine, $shiftBy
-        andi $a1, $a1, 0b00000011
-
         # $a0 now contains the two bits from the sprite
-        # $a1 contains the two bits from the background.
 
+        ## if priority flag == 0 and sprite colour == 0
         bne $hasPriority, $0, processSprite_hasPriority
-            # draw sprite on top
-            beq $a0, $0, processSprite_drawBackground
+            # Then this pixel is transparent.  Leave the background as it is and move on to next pixel.
+            beq $a0, $0, processSprite_continue
             j processSprite_drawSprite
-        processSprite_hasPriority: # draw sprite first (underneath)
-            # TODO - check against background palette and only draw if colour is in position 0
-            beq $a1, $0, processSprite_drawSprite
 
-        processSprite_drawBackground:
-            #jal alignBackground
-            or $t0, $0, $a1
-            j processSprite_patchBack
+        ## if priority flag is 1
+        processSprite_hasPriority:
+            lh $t0, N64_BUFFER($bufferIndex)
+            # check opacity bit of 
+            and $t0, $t0, 1
+            beq $t0, $0, processSprite_drawSprite
+
+            j processSprite_continue
+
         processSprite_drawSprite:
             # Look up the palette
             lb $t0, GB_PALETTE($a0)
 
-        processSprite_patchBack:
+            # massage it from gameboy format to n64 format.
+            jal massageMonochrome
 
-        # Patch it back to $spriteLine, now in 'bits next to each other format.
-        sllv $t0, $t0, $shiftBy
-        or $spriteLine, $spriteLine, $t0
+            # and push on to the buffer.
+            sh $r0, N64_BUFFER($bufferIndex)
 
-        srl $shiftBy, $shiftBy, 1
 
+        processSprite_continue:
+        addi $bufferIndex, $bufferIndex, 2
     bgtz $shiftBy, processSprite_whileHasPixels
 
-    beq $offset, $0, processSprite_noOffset
-        .set $mask, $hasPriority
-        .set $hasPriority, 0
-
-        # let's say offset = 3
-
-        # double it since a pixel is two bits.
-        sll $offset, $offset, 1
-        addi $mask, $0, 0xFFFF
-        # mask: 000003FF
-        srlv $mask, $mask, $offset 
-
-        # Subtrack from 16 to move in the other direction.
-        addi $t0, $0, 16
-        sub $shiftBy, $t0, $shiftBy
-        # mask: FFFF03FF
-        lui $t0, 0xFFFF
-        sllv $t0, $t0, $shiftBy
-        # mask = FC0003FF
-        or $mask, $mask, $t0
-
-        # Divide x1 by 4 to get the position in the buffer of these 8 2b pixels
-        srl $t0, $x1, 2
-        lw $bgLine, GB_BUFFER($t0)
-        and $bgLine, $bgLine, $mask
-
-        sll $spriteLine, $spriteLine, 16
-        srlv $spriteLine, $spriteLine, $offset
-        or $spriteLine, $spriteLine, $bgLine
-
-        srl $offset, $spriteLine, 16
-        sh $offset, GB_BUFFER($t0)
-        addi $t0, $t0, 2
-        andi $spriteLine, $spriteLine, 0xFFFF
-        sh $spriteLine, GB_BUFFER($t0)
-
-        j 1f
-    processSprite_noOffset:
-        srl $t0, $x1, 2
-        sh $spriteLine, GB_BUFFER($t0)
-    1:
-
-
     .set $x1, 0
-    .set $x2, 0
-    .set $mask, 0
-    processSprite_continue:
+    .set $shiftBy, 0
+    .set $bufferIndex, 0
+    processSprite_done:
 .endm
 
 ###
@@ -690,10 +635,10 @@ alignBackground:
 .macro processBackground
     .set $tileMap, $t2
     .set $currentPixel, $t3
-    .set $gbBufferCursor, $t4
+    .set $tileLine, $t4
     .set $endLinePixel, $t5
     .set $shiftBy, $t6
-    .set $tileLine, $t7
+    .set $n64Cursor, $t7
 
     # TODO: Check Lcdc_LCD_PRIORITY. If it's 0, skip all of this and just draw white pixels.
 
@@ -733,7 +678,7 @@ alignBackground:
     # DMA it in.
     dmaIn $tileMap, LINE_TILE_MAP, 0x20
 
-    add $gbBufferCursor, $0, $0
+    add $n64Cursor, $0, $0
 
     # Find starting pixel
     lbu $currentPixel, (PPU_SETTINGS + Ppu_BACKGROUND_SCROLL_X)($0)
@@ -757,10 +702,9 @@ alignBackground:
         ## Multiply by two to get the number of bytes to skip.
         sll $t0, $t0, 1
         ## $r0 now points to the line of the tile we want.
-        add $r0, $r0, $t0
+        add $tileLine, $r0, $t0
 
         addi $shiftBy, $0, 8
-        add $tileLine, $0, $0
 
         # gb tile data is NOT stored with the pixels in order like:
         # 11001001 01011101
@@ -774,7 +718,7 @@ alignBackground:
             addi $shiftBy, $shiftBy, -1
 
             # Grab two bytes from the tile (8 pixels).
-            lhu $t0, 0($r0)
+            lhu $t0, 0($tileLine)
 
             # Shift so that the two bits are in bit 0 of both pixels.
             srlv $t0, $t0, $shiftBy
@@ -786,85 +730,43 @@ alignBackground:
             srl $t1, $t1, 7
             or $t0, $t0, $t1
 
+            # Cache whether this is the palette 0 position
+            or $t1, $t0, $0
+
             # Look up the palette
-            lb $t0, GB_PALETTE($t0)
-
-            # Patch it back to result tile line, now in 'bits are next to each other' format.
-            sll $shiftBy, $shiftBy, 1
-            sllv $t0, $t0, $shiftBy
-            srl $shiftBy, $shiftBy, 1
-            or $tileLine, $tileLine, $t0
-
-        bgtz $shiftBy, processBackground_whileHasPixels
-
-        # TODO - shift as needed for part tiles
-        # sll $t0, $t0, ???
-        #andi $t0, $t0, 0xFFFF
-        sh $tileLine, GB_BUFFER($gbBufferCursor)
-
-        # Advance buffer two bytes
-        addi $gbBufferCursor, $gbBufferCursor, 2 # TODO: part tiles
-
-        # Which is 8 pixels.
-        addi $currentPixel, $currentPixel, 8 # TODO: part tiles
-    bne $currentPixel, $endLinePixel, processBackground_whileHasTiles
-
-    .set $tileMap, 0
-    .set $currentPixel, 0
-    .set $gbBufferCursor, 0
-    .set $endLinePixel, 0
-    .set $shiftBy, 0
-    .set $tileLine, 0
-.endm
-
-.macro massagePixels
-    .set $n64Cursor, $t2
-    .set $gbCursor, $t3
-    .set $shiftBy, $t4
-    .set $pixelCounter, $t5
-    .set $currentWord, $t6
-
-    addi $pixelCounter, $0, GB_LCD_WIDTH
-    add $gbCursor, $0, $0
-    add $n64Cursor, $0, $0
-
-    massagePixels_whileHasPixels:
-        # get 8 pixels from memory
-        lhu $currentWord, GB_BUFFER($gbCursor)
-
-        addi $shiftBy, $0, 16
-        massagePixels_whileInWord:
-            addi $shiftBy, $shiftBy, -2
-
-            # Shift so that the two bits are in bit 0 and 1.
-            srlv $a0, $currentWord, $shiftBy
-            andi $a0, $a0, 0b00000011
+            lb $a0, GB_PALETTE($t0)
 
             # massage it from gameboy format to n64 format.
             jal massageMonochrome
+
+            bne $t1, $0, 1f
+                # Reset the transparency bit
+                addi $t1, $0, -2
+                and $r0, $r0, $t1
+            1:
 
             # and push on to the buffer.
             sh $r0, N64_BUFFER($n64Cursor)
 
             addi $n64Cursor, $n64Cursor, 0x02
 
-        bgtz $shiftBy, massagePixels_whileInWord
+        bgtz $shiftBy, processBackground_whileHasPixels
 
-        # increment the cursor and decrement the counter.
-        addi $gbCursor, $gbCursor, 0x02
-        addi $pixelCounter, $pixelCounter, -8
+        # Which is 8 pixels.
+        addi $currentPixel, $currentPixel, 8 # TODO: part tiles
+    bne $currentPixel, $endLinePixel, processBackground_whileHasTiles
 
-    bgtz $pixelCounter, massagePixels_whileHasPixels
-
-    .set $n64Cursor, 0
-    .set $gbCursor, 0
-    .set $pixelCounter, 0
+    .set $tileMap, 0
+    .set $tileLine, 0
+    .set $currentPixel, 0
+    .set $endLinePixel, 0
     .set $shiftBy, 0
-    .set $currentWord, 0
+    .set $n64Cursor, 0
 .endm
 
 ###
-# Sets the RDP to draw red rectangles.
+# 
+###
 main:
     # init stack pointer.
     addi $sp, $0, STACK_TOP
@@ -959,8 +861,16 @@ main:
         lw $VRAM_TILE_DATA_ADDRESS, (INPUT + RspIn_VRAM_BASE)($0)
         processSprites
 
-        # Massage the colours to n64 16bit colours.
-        massagePixels
+        # Ensure the transparency bit is set for all pixels.
+        .set $index, $t1
+        addi $index, $0, GB_LCD_WIDTH * 2
+        main_whileHasPixels:
+            addi $index, $index, -2
+            lhu $t0, N64_BUFFER($index)
+            ori $t0, $t0, 1
+            sh $t0, N64_BUFFER($index)
+        bgtz $index, main_whileHasPixels
+        .set $index, 0
 
         # Ask the RDP to render the line we just built.
 
