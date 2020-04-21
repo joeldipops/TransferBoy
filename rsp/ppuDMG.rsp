@@ -638,7 +638,6 @@ alignBackground:
     .set $tileLine, $t4
     .set $endLinePixel, $t5
     .set $shiftBy, $t6
-    .set $n64Cursor, $t7
 
     # TODO: Check Lcdc_LCD_PRIORITY. If it's 0, skip all of this and just draw white pixels.
 
@@ -678,11 +677,15 @@ alignBackground:
     # DMA it in.
     dmaIn $tileMap, LINE_TILE_MAP, 0x20
 
-    add $n64Cursor, $0, $0
-
     # Find starting pixel
     lbu $currentPixel, (PPU_SETTINGS + Ppu_BACKGROUND_SCROLL_X)($0)
     addi $endLinePixel, $currentPixel, TILE_WIDTH * TILES_PER_WIDTH
+
+    # $t0 = $currentPixel % TILE_WIDTH
+    and $t0, $currentPixel, TILE_WIDTH - 1
+    addi $shiftBy, $0, 8
+    # subtract the offset for part tiles at the beginning.
+    sub $shiftBy, $shiftBy, $t0
 
     processBackground_whileHasTiles:
         # Divide by 8 to get the tile.
@@ -702,9 +705,7 @@ alignBackground:
         ## Multiply by two to get the number of bytes to skip.
         sll $t0, $t0, 1
         ## $r0 now points to the line of the tile we want.
-        add $tileLine, $r0, $t0
-
-        addi $shiftBy, $0, 8
+        add $tileLine, $t0, $r0 
 
         # gb tile data is NOT stored with the pixels in order like:
         # 11001001 01011101
@@ -746,22 +747,25 @@ alignBackground:
             1:
 
             # and push on to the buffer.
-            sh $r0, N64_BUFFER($n64Cursor)
+            andi $t0, $currentPixel, 0xFF
+            sll $t0, $t0, 1
+            sh $r0, N64_BUFFER($t0)
 
-            addi $n64Cursor, $n64Cursor, 0x02
-
+            addi $currentPixel, $currentPixel, 1
+            # If the background was offset from a tile boundary, break out before we overrun it
+            beq $currentPixel, $endLinePixel, processBackground_break
         bgtz $shiftBy, processBackground_whileHasPixels
 
-        # Which is 8 pixels.
-        addi $currentPixel, $currentPixel, 8 # TODO: part tiles
-    bne $currentPixel, $endLinePixel, processBackground_whileHasTiles
+        # Subsequent tiles have the full 8 pixels.
+        addi $shiftBy, $0, 8
+    j processBackground_whileHasTiles
+    processBackground_break:
 
     .set $tileMap, 0
     .set $tileLine, 0
     .set $currentPixel, 0
     .set $endLinePixel, 0
     .set $shiftBy, 0
-    .set $n64Cursor, 0
 .endm
 
 ###
