@@ -249,7 +249,7 @@ cacheGetTile:
     # when there's nothing in the cache, short-circuit.
     addi $t0, $0, TILE_CACHE
     beq $t0, $CACHE_POINTER, cacheGetTile_notFound
-
+    
     # Set the flag so we're never comparing 0 to 0.
     lui $t0, 0x8000
     or $tileId, $tileId, $t0
@@ -390,23 +390,6 @@ xFlip:
 
     jr $ra
 
-###
-#
-# @param a0 $bgLine
-# @param a1 $shiftBy
-###
-/*
-alignBackground:
-    .set $bgLine, $a0
-    .set $shiftBy, $a1
-    sll $shiftBy, $shiftBy, 1
-    srlv $a1, $bgLine, $shiftBy
-    andi $a1, $a1, 0b00000011
-    srl $shiftBy, $shiftBy, 1
-    jr $ra
-    .set $bgLine, 0
-    .set $shiftBy, 0
-*/
 ###
 #
 # @param entry The OAM entry defining this sprite.
@@ -645,7 +628,7 @@ alignBackground:
     lbu $a0, (PPU_SETTINGS + Ppu_BACKGROUND_PALETTE)($0)
     jal setPalette
 
-    # Find the bit of VRAM that corresponds to the tiles on this line.
+    # Find the chunk of VRAM that corresponds to the tiles on this line.
     lb $t0, PPU_SETTINGS + Ppu_LCD_CONTROL($0)
     andi $t0, $t0, Lcdc_BACKGROUND_TILE_MAP
     bne $t0, $0, 1f
@@ -747,7 +730,9 @@ alignBackground:
             1:
 
             # and push on to the buffer.
-            andi $t0, $currentPixel, 0xFF
+            lbu $t0, (PPU_SETTINGS + Ppu_BACKGROUND_SCROLL_X)($0)            
+            sub $t0, $currentPixel, $t0
+            andi $t0, $t0, 0xFF
             sll $t0, $t0, 1
             sh $r0, N64_BUFFER($t0)
 
