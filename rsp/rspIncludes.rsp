@@ -3,6 +3,8 @@
 #ifndef RSP_INC_INCLUDED
 #define RSP_INC_INCLUDED
 
+#include "vectorShifts.rsp"
+
 .set noreorder
 
 # co-processor 0 registers

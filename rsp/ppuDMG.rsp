@@ -162,6 +162,10 @@ OAM:
 TEMP_TILE:
     .space TEMP_TILE_SIZE
 
+SHIFT_CONSTS:
+    vsll_data
+    vsll8_data
+
 
 .text
 .set reorder
@@ -192,6 +196,9 @@ TEMP_TILE:
 .set $CACHE_POINTER, $s7
 
 .set $VRAM_TILE_DATA_ADDRESS, $s8
+
+.set $VSR_CONSTS, $v29
+.set $VSL_CONSTS, $v30
 
 ###
 # Lays a DMG palette out in an easily referencable table in memory.
@@ -730,7 +737,7 @@ xFlip:
             1:
 
             # and push on to the buffer.
-            lbu $t0, (PPU_SETTINGS + Ppu_BACKGROUND_SCROLL_X)($0)            
+            lbu $t0, (PPU_SETTINGS + Ppu_BACKGROUND_SCROLL_X)($0)
             sub $t0, $currentPixel, $t0
             andi $t0, $t0, 0xFF
             sll $t0, $t0, 1
@@ -754,11 +761,59 @@ xFlip:
 .endm
 
 ###
+# TODO - LOAD DATA SECTION PROPERLY AND AVOID THE SW etc
+###
+.macro setupVectorShifts
+    setup_vsll8 $v29
+    setup_vsll $v30
+
+    lui $t0, 0x8000
+    ori $t0, $t0, 0x4000
+    sw $t0, SHIFT_CONSTS($0)
+
+    lui $t0, 0x2000
+    ori $t0, $t0, 0x1000
+    sw $t0, (SHIFT_CONSTS + 4)($0)
+
+    lui $t0, 0x0800
+    ori $t0, $t0, 0x0400
+    sw $t0, (SHIFT_CONSTS + 8)($0)
+
+    lui $t0, 0x0200
+    ori $t0, $t0, 0x0100
+    sw $t0, (SHIFT_CONSTS + 0xC)($0)
+
+    addi $t0, $0, SHIFT_CONSTS
+      lqv $v29, 0, 0, $8 # $v29 = vrl shift consts $8 = t0
+
+    lui $t0, 0x0080
+    ori $t0, $t0, 0x0040
+    sw $t0, SHIFT_CONSTS($0)
+
+    lui $t0, 0x0020
+    ori $t0, $t0, 0x0010
+    sw $t0, (SHIFT_CONSTS + 4)($0)
+
+    lui $t0, 0x0008
+    ori $t0, $t0, 0x0004
+    sw $t0, (SHIFT_CONSTS + 8)($0)
+
+    lui $t0, 0x0002
+    ori $t0, $t0, 0x0001
+    sw $t0, (SHIFT_CONSTS + 0xC)($0)
+
+    addi $t0, $0, SHIFT_CONSTS
+      lqv $v30, 0, 0, $8 # $v30 = shift consts $8 = t0
+.endm
+
+###
 # 
 ###
 main:
     # init stack pointer.
     addi $sp, $0, STACK_TOP
+
+    #setupVectorShifts
 
     # Bring in the configuration.
     liw $t0, RSP_INTERFACE_ADDRESS
@@ -840,7 +895,7 @@ main:
         # Build up this scanline to a buffer than can be rendered as a texture.
 
         ## Draw the window
-        processWindow
+        #processWindow
 
         ## Then the background
         processBackground

@@ -33,6 +33,8 @@ all: $(PROG_NAME)$(ROM_EXTENSION)
 $(CURDIR)/rsp/ppuDMG.o:
 	make -C $(CURDIR)/rsp rsp
 
+$(CURDIR)/rsp/ppuDMGData.o: $(CURDIR)/rsp/ppuDMG.o
+
 $(CURDIR)/rsp/renderer.o:
 	make -C $(CURDIR)/rsp rsp
 
@@ -72,7 +74,7 @@ LD_OFILES += $(CURDIR)/obj/polyfill.o
 LD_OFILES += $(CURDIR)/obj/rtc.o
 LD_OFILES += $(CURDIR)/obj/rsp.o
 
-$(PROG_NAME).elf : $(CURDIR)/rsp/renderer.o $(CURDIR)/rsp/ppuDMG.o $(PROG_NAME).o $(LD_FILE)
+$(PROG_NAME).elf : $(CURDIR)/rsp/renderer.o $(CURDIR)/rsp/ppuDMG.o $(CURDIR)/rsp/ppuDMGData.o $(PROG_NAME).o $(LD_FILE)
 
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/ppu.o $(CURDIR)/ppu.c
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/progressBar.o $(CURDIR)/progressBar.c
@@ -106,7 +108,7 @@ $(PROG_NAME).elf : $(CURDIR)/rsp/renderer.o $(CURDIR)/rsp/ppuDMG.o $(PROG_NAME).
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/rsp.o $(CURDIR)/rsp.c
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/transferboy.o $(CURDIR)/transferboy.c
 
-	$(LD) -o $(PROG_NAME).elf $(CURDIR)/rsp/renderer.o $(CURDIR)/rsp/ppuDMG.o  $(CURDIR)/obj/$(PROG_NAME).o $(LD_OFILES) $(LINK_FLAGS)
+	$(LD) -o $(PROG_NAME).elf $(CURDIR)/rsp/renderer.o $(CURDIR)/rsp/ppuDMG.o $(CURDIR)/rsp/ppuDMGData.o $(CURDIR)/obj/$(PROG_NAME).o $(LD_OFILES) $(LINK_FLAGS)
 
 $(LD_FILE) : $(PRE_LD_FILE)
 	cpp $(PRE_LD_FILE) | grep -v '^#'	>>$(LD_FILE)
