@@ -109,8 +109,8 @@
 .eqv STACK_SIZE,        0x040 # Arbitrary length. Hopefully 64bytes is enough.
 .eqv GB_PALETTE_SIZE,   0x008 # 4 2 bit colours across four bytes for easy lookup.
 .eqv N64_PALETTE_SIZE,  0x010 # 4 32bit colours. # TODO - make these 16bit colours
-.eqv N64_BUFFER_SIZE,   0x280 # 160 42bit pixels per scan-line.
-.eqv GB_CHUNK_SIZE,     0x010 # 8 16bit tile segments.
+.eqv N64_BUFFER_SIZE,   0x280 # 160 32bit pixels per scan-line.
+.eqv WINDOW_BUFFER_SIZE,0x040 # 160 2bit pixels per scan-line
 .eqv LINE_TILE_MAP_SIZE,0x020 # 32B 1 for each tile across the background (though we only see 20 tiles at a time)
 .eqv TILE_CACHE_SIZE,   CACHE_ENTRY_SIZE * 50   # 50 possible tiles
 .eqv PPU_SETTINGS_SIZE, 0x010 # 10 1byte registers.
@@ -141,9 +141,8 @@ N64_PALETTE:
 N64_BUFFER:
     .space N64_BUFFER_SIZE
 
-# 8 x 8 
-GB_CHUNK:
-    .space GB_CHUNK_SIZE
+WINDOW_BUFFER:
+    .space WINDOW_BUFFER_SIZE
 
 # list of VRAM tile indices in the current scan-line.
 LINE_TILE_MAP:
@@ -635,23 +634,27 @@ xFlip:
     .set $tileIndex, $t6
     .set $loadIndex, $t7
     .set $maxLoadIndex, $t8
+    .set $offset, $t9
 
-    # TODO - is disabled
+    # If window is disabled, there's nothing to draw.
+    lbu $t0, (PPU_SETTINGS + Ppu_LCD_CONTROL)($0)
+    and $t0, $t0, Lcdc_WINDOW_SWITCH
+        beq $t0, $0, processWindow_done
 
     # When window starts after the current scanline, there's nothing to draw.
     lbu $top, (PPU_SETTINGS + Ppu_WINDOW_TOP)($0)
     sub $topOffset, $top, $SCAN_LINE
-    bltz $topOffset, processWindow_done
+        bltz $topOffset, processWindow_done
 
     # When window starts off the end of the screen, there's nothing to draw.
     lbu $left, (PPU_SETTINGS + Ppu_WINDOW_LEFT)($0)
     addi $t0, $0, GB_LCD_WIDTH + WINDOW_X_OFFSET
     sub $leftOffset, $t0, $left
-    bltz $leftOffset, processWindow_done
+        bltz $leftOffset, processWindow_done
 
-    .set $maxLoadIndex, $leftOffset
+    .set $maxTileIndex, $leftOffset
     .set $leftOffset, 0
-    addi $maxLoadIndex, $0, (GB_LCD_WIDTH + WINDOW_X_OFFSET) / TILE_WIDTH
+    addi $maxTileIndex, $0, (GB_LCD_WIDTH + WINDOW_X_OFFSET) / TILE_WIDTH
 
     lbu $a0, (PPU_SETTINGS + Ppu_BACKGROUND_PALETTE)($0)
     jal setPalette
@@ -677,7 +680,7 @@ xFlip:
     add $tileMap, $tileMap, $VRAM_BASE
 
     .set $tileLine, $topOffset
-    .set $topOffse, 0
+    .set $topOffset, 0
 
     dmaIn $tileMap, LINE_TILE_MAP, 0x20
 
@@ -704,6 +707,9 @@ xFlip:
 
     processWindow_whileHasPixels:
         add $loadIndex, $0, $0
+        # Divid by 4 to get the number of bytes to skip.
+        srl $offset, $tileIndex, 2
+
         # get 8 tiles and put the line of pixels in a buffer
         processWindow_whileLoadData:
 
@@ -720,14 +726,16 @@ xFlip:
 
             # add this line to the buffer.
             lhu $t0, 0($tileLine)
-            sh $t0, GB_CHUNK($loadIndex)
+            add $t0, $offset, $loadIndex
+            sh $t0, WINDOW_BUFFER($t0)
 
             # increment
             addi $loadIndex, $loadIndex, 2
+            addi $tileIndex, $tileIndex, 1
         bne $loadIndex, $maxLoadIndex, processWindow_whileLoadData
 
         ## Shouldn't need to do this, but macros don't quite there yet.
-        addi $t0, $0, GB_CHUNK
+        addi $t0, $offset, WINDOW_BUFFER
 
         # Load our 8 tile lines into a bunch of vector registers
         # Each vector represents the nth pixel in each tile.
@@ -751,39 +759,137 @@ xFlip:
 
         # Both pixels bits are now in bit 0 of their respective bytes
         # And away any other bits and shift them next to each other.
-          vand $v00, $v00, $v28, 8
-          vand $v09, $v00, $v27, 8
+          vand $v00, $v00, $v28, 0b1111
+          vxor $v09, $v09, $v09, 0
+          vand $v09, $v00, $v27, 0b1111
           vsrl $v09, $v09, 7
           vor $v00, $v00, $v09, 0
 
+          vand $v01, $v01, $v28, 0b1111
+          vxor $v09, $v09, $v09, 0
+          vand $v09, $v01, $v27, 0b1111
+          vsrl $v09, $v09, 7
+          vor $v01, $v01, $v09, 0
 
-          sqv $v00, 0, 0, $8
+          vand $v02, $v02, $v28, 0b1111
+          vxor $v09, $v09, $v09, 0
+          vand $v09, $v02, $v27, 0b1111
+          vsrl $v09, $v09, 7
+          vor $v02, $v02, $v09, 0
 
-        # Repeat for the other 7 registers.
+          vand $v03, $v03, $v28, 0b1111
+          vxor $v09, $v09, $v09, 0
+          vand $v09, $v03, $v27, 0b1111
+          vsrl $v09, $v09, 7
+          vor $v03, $v03, $v09, 0
 
+          vand $v04, $v04, $v28, 0b1111
+          vxor $v09, $v09, $v09, 0
+          vand $v09, $v04, $v27, 0b1111
+          vsrl $v09, $v09, 7
+          vor $v04, $v04, $v09, 0
 
+          vand $v05, $v05, $v28, 0b1111
+          vxor $v09, $v09, $v09, 0
+          vand $v09, $v05, $v27, 0b1111
+          vsrl $v09, $v09, 7
+          vor $v05, $v05, $v09, 0
 
+          vand $v06, $v06, $v28, 0b1111
+          vxor $v09, $v09, $v09, 0
+          vand $v09, $v06, $v27, 0b1111
+          vsrl $v09, $v09, 7
+          vor $v06, $v06, $v09, 0
 
+          vand $v07, $v07, $v28, 0b1111
+          vxor $v09, $v09, $v09, 0
+          vand $v09, $v07, $v27, 0b1111
+        # Double index since a tile row is 2 bytes
+        sll $offset, $offset, 3
+          vsrl $v09, $v09, 7
+        # Here's the address to smoosh our massaged data.
+        addi $offset, $offset, WINDOW_BUFFER
+          vor $v07, $v07, $v09, 0
 
+        # remember $8 is $t0 until I can get better macros.
+        # shv should take our two bits and put them into a byte instead of two.
+        # but because shv takes bits 14-7 ??? need to shift first.
 
+          vsll $v07, $v07, 7
+          shv $v07, 0, 0   , $8
 
+          vsll $v06, $v06, 7
+          shv $v06, 0, 0x10, $8
 
-        addi $tileIndex, $tileIndex, 1
-    bgtz $tileIndex, processWindow_whileHasPixels
+          vsll $v05, $v05, 7
+          shv $v05, 0, 0x20, $8
 
+          vsll $v04, $v04, 7
+          shv $v04, 0, 0x30, $8
 
+          vsll $v03, $v03, 7
+          shv $v03, 0, 0x40, $8
 
+          vsll $v02, $v02, 7
+          shv $v02, 0, 0x50, $8
 
+          vsll $v01, $v01, 7
+          shv $v01, 0, 0x60, $8
 
+          vsll $v00, $v00, 7
+          shv $v00, 0, 0x70, $8
 
+        # Data now looks like this in DMEM
+        #   0   8   16  24...
+        #   1   9   17  25...
+    bne $tileIndex, $maxTileIndex, processWindow_whileHasPixels
 
+    # Iterate through our now ordered pixels.
 
+    .set $pixelIndex, $loadIndex
+    addi $pixelIndex, $left, WINDOW_BUFFER
+    .set $loadIndex, 0
 
+    .set $maxPixelIndex, $maxLoadIndex
+    addi $maxPixelIndex, TILE_WIDTH * TILES_PER_WIDTH
+    .set $maxLoadIndex, 0
 
+    .set $innerIndex, $left
+    .set $left, 0
 
+    .set $maxInnerIndex, $offset
+    .set $offset, 0
 
+    .set $outerIndex, $tileIndex
+    .set $tileIndex, 0
+
+    .set $maxOuterIndex, $maxTileIndex
+    .set $maxTileIndex, 0
+ 
+    processWindow_whileHasChunks:
+        add $outerIndex, $0, $0
+        addi $maxOuterIndex, $0, 8
+        processWindow_forOuterLoop:
+            add $innerIndex, $outerIndex, $0
+            addi $maxInnerIndex, $outerIndex, 8 * 8
+            processWindow_forInnerLoop:
+                add $t0, $pixelIndex, $innerIndex
+                lb $a0, WINDOW_BUFFER($t0)
+                lb $a0, GB_PALETTE($a0)
+                jal massageMonochrome
+
+                sll $t0, $t0, 1
+                sh $r0, N64_BUFFER($t0)
+
+                addi $innerIndex, $innerIndex, 8
+            bne $innerIndex, $maxInnerIndex, processWindow_forInnerLoop
+            addi $outerIndex, $outerIndex, 1
+        bne $outerIndex, $maxOuterIndex, processWindow_forOuterLoop
+        addi $pixelIndex, $pixelIndex, 64
+
+        sub $t0, $maxPixelIndex, $pixelIndex
+    bgtz $t0, processWindow_whileHasChunks
     processWindow_done:
-
 .endm
 
 ### Draws pixels for the background.
@@ -1024,8 +1130,24 @@ main:
         # Check whether the LCD is turned on, and if not, skip all this shebang.
         lb $t0, (PPU_SETTINGS + Ppu_LCD_CONTROL)($0)
 
-        andi $t0, $t0, Lcdc_LCD_SWITCH
+        andi $t1, $t0, Lcdc_LCD_SWITCH
             beq $t0, $0, main_continue
+
+        ## Cache VRAM tile data address
+        ## window & background data can be at 2 different addresses in VRAM
+
+        andi $t1, $t0, Lcdc_TILE_DATA
+        bne $t1, $0, 1f
+            addi $VRAM_TILE_DATA_ADDRESS, $VRAM_BASE, TILE_DATA_0_OFFSET
+            addi $IS_TILE_INDEX_SIGNED, $0, 1
+            j 2f
+        1:
+            add $VRAM_TILE_DATA_ADDRESS, $0, $VRAM_BASE
+            add $IS_TILE_INDEX_SIGNED, $0, $0
+        2:
+
+        ## Cache if we're in 8x16 sprite mode.
+        andi $IS_8x16_MODE, $t0, Lcdc_SPRITE_SIZE
 
         ## Initialise some registers with constants.
         ## TODO - allow this cache to persist across scan-lines.
@@ -1040,31 +1162,13 @@ main:
         ## Cache the current scan line.
         lbu $SCAN_LINE, (PPU_SETTINGS + Ppu_CURRENT_LINE)($0)
 
-        ## Cache if we're in 8x16 sprite mode.
-        lbu $IS_8x16_MODE, (PPU_SETTINGS + Ppu_LCD_CONTROL)($0)
-        andi $IS_8x16_MODE, $IS_8x16_MODE, Lcdc_SPRITE_SIZE
-
-        ## Cache VRAM tile data address
-        ## window & background data can be at 2 different addresses in VRAM
-
-        lbu $t0, PPU_SETTINGS + Ppu_LCD_CONTROL($0)
-        andi $t0, Lcdc_TILE_DATA
-        bne $t0, $0, 1f
-            addi $VRAM_TILE_DATA_ADDRESS, $VRAM_BASE, TILE_DATA_0_OFFSET
-            addi $IS_TILE_INDEX_SIGNED, $0, 1
-            j 2f
-        1:
-            add $VRAM_TILE_DATA_ADDRESS, $0, $VRAM_BASE
-            add $IS_TILE_INDEX_SIGNED, $0, $0
-        2:
-
         # Build up this scanline to a buffer than can be rendered as a texture.
-
-        ## Draw the window
-        #processWindow
 
         ## Then the background
         processBackground
+
+        ## Draw the window
+        processWindow
 
         # Finally draw sprites
         ## Sprite data is always at VRAM base.
