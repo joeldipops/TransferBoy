@@ -725,9 +725,9 @@ xFlip:
             add $tileLine, $lineNumber, $r0 
 
             # add this line to the buffer.
-            lhu $t0, 0($tileLine)
+            lhu $a0, 0($tileLine)
             add $t0, $offset, $loadIndex
-            sh $t0, WINDOW_BUFFER($t0)
+            sh $a0, WINDOW_BUFFER($t0)
 
             # increment
             addi $loadIndex, $loadIndex, 2
@@ -759,56 +759,48 @@ xFlip:
 
         # Both pixels bits are now in bit 0 of their respective bytes
         # And away any other bits and shift them next to each other.
-          vand $v00, $v00, $v28, 0b1111
-          vxor $v09, $v09, $v09, 0
-          vand $v09, $v00, $v27, 0b1111
+          vand $v09, $v00, $v27, 0b1000
+          vand $v00, $v00, $v28, 0b1000
           vsrl $v09, $v09, 7
           vor $v00, $v00, $v09, 0
 
-          vand $v01, $v01, $v28, 0b1111
-          vxor $v09, $v09, $v09, 0
-          vand $v09, $v01, $v27, 0b1111
+          vand $v09, $v01, $v27, 0b1000
+          vand $v01, $v01, $v28, 0b1000
           vsrl $v09, $v09, 7
           vor $v01, $v01, $v09, 0
 
-          vand $v02, $v02, $v28, 0b1111
-          vxor $v09, $v09, $v09, 0
-          vand $v09, $v02, $v27, 0b1111
+          vand $v09, $v02, $v27, 0b1000
+          vand $v02, $v02, $v28, 0b1000
           vsrl $v09, $v09, 7
           vor $v02, $v02, $v09, 0
 
-          vand $v03, $v03, $v28, 0b1111
-          vxor $v09, $v09, $v09, 0
-          vand $v09, $v03, $v27, 0b1111
+          vand $v09, $v03, $v27, 0b1000
+          vand $v03, $v03, $v28, 0b1000
           vsrl $v09, $v09, 7
           vor $v03, $v03, $v09, 0
 
-          vand $v04, $v04, $v28, 0b1111
-          vxor $v09, $v09, $v09, 0
-          vand $v09, $v04, $v27, 0b1111
+          vand $v09, $v04, $v27, 0b1000
+          vand $v04, $v04, $v28, 0b1000
           vsrl $v09, $v09, 7
           vor $v04, $v04, $v09, 0
 
-          vand $v05, $v05, $v28, 0b1111
-          vxor $v09, $v09, $v09, 0
-          vand $v09, $v05, $v27, 0b1111
+          vand $v09, $v05, $v27, 0b1000
+          vand $v05, $v05, $v28, 0b1000
           vsrl $v09, $v09, 7
           vor $v05, $v05, $v09, 0
 
-          vand $v06, $v06, $v28, 0b1111
-          vxor $v09, $v09, $v09, 0
-          vand $v09, $v06, $v27, 0b1111
+          vand $v09, $v06, $v27, 0b1000
+          vand $v06, $v06, $v28, 0b1000
           vsrl $v09, $v09, 7
           vor $v06, $v06, $v09, 0
 
-          vand $v07, $v07, $v28, 0b1111
-          vxor $v09, $v09, $v09, 0
-          vand $v09, $v07, $v27, 0b1111
+          vand $v09, $v07, $v27, 0b1000
+          vand $v07, $v07, $v28, 0b1000
         # Double index since a tile row is 2 bytes
         sll $offset, $offset, 3
           vsrl $v09, $v09, 7
         # Here's the address to smoosh our massaged data.
-        addi $offset, $offset, WINDOW_BUFFER
+        addi $t0, $offset, WINDOW_BUFFER
           vor $v07, $v07, $v09, 0
 
         # remember $8 is $t0 until I can get better macros.
@@ -816,28 +808,28 @@ xFlip:
         # but because shv takes bits 14-7 ??? need to shift first.
 
           vsll $v07, $v07, 7
-          shv $v07, 0, 0   , $8
+          suv $v07, 0, 0,    $8
 
           vsll $v06, $v06, 7
-          shv $v06, 0, 0x10, $8
+          suv $v06, 0, 0x10, $8
 
           vsll $v05, $v05, 7
-          shv $v05, 0, 0x20, $8
+          suv $v05, 0, 0x20, $8
 
           vsll $v04, $v04, 7
-          shv $v04, 0, 0x30, $8
+          suv $v04, 0, 0x30, $8
 
           vsll $v03, $v03, 7
-          shv $v03, 0, 0x40, $8
+          suv $v03, 0, 0x40, $8
 
           vsll $v02, $v02, 7
-          shv $v02, 0, 0x50, $8
+          suv $v02, 0, 0x50, $8
 
           vsll $v01, $v01, 7
-          shv $v01, 0, 0x60, $8
+          suv $v01, 0, 0x60, $8
 
           vsll $v00, $v00, 7
-          shv $v00, 0, 0x70, $8
+          suv $v00, 0, 0x70, $8
 
         # Data now looks like this in DMEM
         #   0   8   16  24...
