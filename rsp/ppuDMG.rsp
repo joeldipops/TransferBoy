@@ -739,6 +739,7 @@ xFlip:
 
         # Load our 8 tile lines into a bunch of vector registers
         # Each vector represents the nth pixel in each tile.
+          lqv $v00, 0, 0, $8
           lqv $v01, 0, 0, $8
           lqv $v02, 0, 0, $8
           lqv $v03, 0, 0, $8
@@ -746,9 +747,9 @@ xFlip:
           lqv $v05, 0, 0, $8
           lqv $v06, 0, 0, $8
           lqv $v07, 0, 0, $8
-          lqv $v00, 0, 0, $8
 
         # Shift and mask each so that the two bits relevant to a pixel are next to each other.
+          # vsrl $v00, $v00, 0  - for completeness.
           vsrl $v01, $v01, 1
           vsrl $v02, $v02, 2
           vsrl $v03, $v03, 3
@@ -880,6 +881,7 @@ xFlip:
 
         sub $t0, $maxPixelIndex, $pixelIndex
     bgtz $t0, processWindow_whileHasChunks
+
     processWindow_done:
 .endm
 
