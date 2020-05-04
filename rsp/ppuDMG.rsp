@@ -644,7 +644,7 @@ xFlip:
     # When window starts after the current scanline, there's nothing to draw.
     lbu $top, (PPU_SETTINGS + Ppu_WINDOW_TOP)($0)
     sub $topOffset, $top, $SCAN_LINE
-        bltz $topOffset, processWindow_done
+        bgtz $topOffset, processWindow_done
 
     # When window starts off the end of the screen, there's nothing to draw.
     lbu $left, (PPU_SETTINGS + Ppu_WINDOW_LEFT)($0)
@@ -846,16 +846,15 @@ xFlip:
 
     # Iterate through our now ordered pixels.
 
-    .set $pixelIndex, $loadIndex
-    addi $pixelIndex, $left, WINDOW_BUFFER
-    .set $loadIndex, 0
+    .set $pixelIndex, $left
+    .set $left, 0
 
     .set $maxPixelIndex, $maxLoadIndex
     addi $maxPixelIndex, TILE_WIDTH * TILES_PER_WIDTH
     .set $maxLoadIndex, 0
 
-    .set $innerIndex, $left
-    .set $left, 0
+    .set $innerIndex, $loadIndex
+    .set $loadIndex, 0
 
     .set $maxInnerIndex, $offset
     .set $offset, 0
@@ -865,7 +864,7 @@ xFlip:
 
     .set $maxOuterIndex, $maxTileIndex
     .set $maxTileIndex, 0
- 
+
     processWindow_whileHasChunks:
         add $outerIndex, $0, $0
         addi $maxOuterIndex, $0, 8
