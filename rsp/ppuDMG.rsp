@@ -110,7 +110,7 @@
 .eqv GB_PALETTE_SIZE,   0x008 # 4 2 bit colours across four bytes for easy lookup.
 .eqv N64_PALETTE_SIZE,  0x010 # 4 32bit colours. # TODO - make these 16bit colours
 .eqv N64_BUFFER_SIZE,   0x280 # 160 32bit pixels per scan-line.
-.eqv WINDOW_BUFFER_SIZE,0x040 # 160 2bit pixels per scan-line
+.eqv WINDOW_BUFFER_SIZE,0x200 # 160 2bit pixels per scan-line
 .eqv LINE_TILE_MAP_SIZE,0x020 # 32B 1 for each tile across the background (though we only see 20 tiles at a time)
 .eqv TILE_CACHE_SIZE,   CACHE_ENTRY_SIZE * 50   # 50 possible tiles
 .eqv PPU_SETTINGS_SIZE, 0x010 # 10 1byte registers.
@@ -630,7 +630,7 @@ xFlip:
     .set $top, $t2
     .set $left, $t3
     .set $topOffset, $t4
-    .set $leftOffset, $t5
+    .set $maxTileIndex, $t5
     .set $tileIndex, $t6
     .set $loadIndex, $t7
     .set $maxLoadIndex, $t8
@@ -649,12 +649,10 @@ xFlip:
     # When window starts off the end of the screen, there's nothing to draw.
     lbu $left, (PPU_SETTINGS + Ppu_WINDOW_LEFT)($0)
     addi $t0, $0, GB_LCD_WIDTH + WINDOW_X_OFFSET
-    sub $leftOffset, $t0, $left
-        bltz $leftOffset, processWindow_done
+    sub $t0, $t0, $left
+        bltz $t0, processWindow_done
 
-    .set $maxTileIndex, $leftOffset
-    .set $leftOffset, 0
-    addi $maxTileIndex, $0, (GB_LCD_WIDTH + WINDOW_X_OFFSET) / TILE_WIDTH
+    addi $maxTileIndex, $0, 32 # This actually only needs to be 20, but keeping it at 32 till I sort the way shit is structured
 
     lbu $a0, (PPU_SETTINGS + Ppu_BACKGROUND_PALETTE)($0)
     jal setPalette
@@ -687,9 +685,6 @@ xFlip:
     .set $lineNumber, $tileMap
     .set $tileMap, 0
 
-    ## divide by 8 to get the first tile.
-    srl $tileIndex, $left, 3
-
     # which line of the tile are we on
     ## a % b == a & ( b -1 ) if b is a power of 2
     and $lineNumber, $SCAN_LINE, TILE_WIDTH - 1
@@ -702,13 +697,14 @@ xFlip:
     addi $t0, $0, 0x0100
       mtc2 t0, $v27, 0
 
+
+
     # When $loadIndex gets to 16, exit the loop.
     addi $maxLoadIndex, $0, 16
 
+    addi $tileIndex, $0, 0
     processWindow_whileHasPixels:
         add $loadIndex, $0, $0
-        # Divid by 4 to get the number of bytes to skip.
-        srl $offset, $tileIndex, 2
 
         # get 8 tiles and put the line of pixels in a buffer
         processWindow_whileLoadData:
@@ -719,6 +715,7 @@ xFlip:
             1:
                 lb $a0, LINE_TILE_MAP($tileIndex)
             2:
+
             jal cacheGetTile
 
             # $tileLine now points to the line of the tile we want.
@@ -726,8 +723,7 @@ xFlip:
 
             # add this line to the buffer.
             lhu $a0, 0($tileLine)
-            add $t0, $offset, $loadIndex
-            sh $a0, WINDOW_BUFFER($t0)
+            sh $a0, WINDOW_BUFFER($loadIndex)
 
             # increment
             addi $loadIndex, $loadIndex, 2
@@ -735,7 +731,7 @@ xFlip:
         bne $loadIndex, $maxLoadIndex, processWindow_whileLoadData
 
         ## Shouldn't need to do this, but macros don't quite there yet.
-        addi $t0, $offset, WINDOW_BUFFER
+        addi $t0, $0, WINDOW_BUFFER
 
         # Load our 8 tile lines into a bunch of vector registers
         # Each vector represents the nth pixel in each tile.
@@ -797,16 +793,12 @@ xFlip:
 
           vand $v09, $v07, $v27, 0b1000
           vand $v07, $v07, $v28, 0b1000
-        # Double index since a tile row is 2 bytes
-        sll $offset, $offset, 3
           vsrl $v09, $v09, 7
-        # Here's the address to smoosh our massaged data.
-        addi $t0, $offset, WINDOW_BUFFER
           vor $v07, $v07, $v09, 0
 
         # remember $8 is $t0 until I can get better macros.
-        # shv should take our two bits and put them into a byte instead of two.
-        # but because shv takes bits 14-7 ??? need to shift first.
+        # suv should take our two bits and put them into a byte instead of two.
+        # but because suv takes bits 14-7 ??? need to shift first.
 
           vsll $v07, $v07, 7
           suv $v07, 0, 0,    $8
