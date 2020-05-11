@@ -730,8 +730,11 @@ xFlip:
             addi $tileIndex, $tileIndex, 1
         bne $loadIndex, $maxLoadIndex, processWindow_whileLoadData
 
+
+        # double tile index since we work with 16bit tile lines.
+        sll $t0, $tileIndex, 1
         ## Shouldn't need to do this, but macros don't quite there yet.
-        addi $t0, $0, WINDOW_BUFFER
+        addi $t0, $t0, WINDOW_BUFFER
 
         # Load our 8 tile lines into a bunch of vector registers
         # Each vector represents the nth pixel in each tile.
@@ -801,28 +804,40 @@ xFlip:
         # but because suv takes bits 14-7 ??? need to shift first.
 
           vsll $v07, $v07, 7
-          suv $v07, 0, 0,    $8
+          suv $v07, 0, 0,  $8
 
+        # Dunno if this is a cen bug, a libdragon bug or I'm just using this wrong,
+        # but instead of providing a constant offset, I'm having to increment $t0
+        # to get suv to store to the right address.
+        # thankfully, this shouldn't add actual overhead due to SU/VU concurrency afaik
+        # but WTF
+        addi $t0, $t0, 0x08
           vsll $v06, $v06, 7
-          suv $v06, 0, 0x10, $8
+          suv $v06, 0, 0x0, $8
 
+        addi $t0, $t0, 0x08
           vsll $v05, $v05, 7
-          suv $v05, 0, 0x20, $8
+          suv $v05, 0, 0x0, $8
 
+        addi $t0, $t0, 0x08
           vsll $v04, $v04, 7
-          suv $v04, 0, 0x30, $8
+          suv $v04, 0, 0x00, $8
 
+        addi $t0, $t0, 0x08
           vsll $v03, $v03, 7
-          suv $v03, 0, 0x40, $8
+          suv $v03, 0, 0x00, $8
 
+        addi $t0, $t0, 0x08
           vsll $v02, $v02, 7
-          suv $v02, 0, 0x50, $8
+          suv $v02, 0, 0x00, $8
 
+        addi $t0, $t0, 0x08
           vsll $v01, $v01, 7
-          suv $v01, 0, 0x60, $8
+          suv $v01, 0, 0x00, $8
 
+        addi $t0, $t0, 0x08
           vsll $v00, $v00, 7
-          suv $v00, 0, 0x70, $8
+          suv $v00, 0, 0x00, $8
 
         # Data now looks like this in DMEM
         #   0   8   16  24...
@@ -831,8 +846,9 @@ xFlip:
 
     # Iterate through our now ordered pixels.
 
-    .set $pixelIndex, $left
-    .set $left, 0
+    .set $pixelIndex, $top
+    add $pixelIndex, $0, $0
+    .set $top, 0
 
     .set $maxPixelIndex, $maxLoadIndex
     addi $maxPixelIndex, TILE_WIDTH * TILES_PER_WIDTH
@@ -862,6 +878,10 @@ xFlip:
                 lb $a0, GB_PALETTE($a0)
                 jal massageMonochrome
 
+                # Move window to the left if WX is non-zero.
+                add $t0, $t0, $left
+                
+                # N64 Pixels are 16bit
                 sll $t0, $t0, 1
                 sh $r0, N64_BUFFER($t0)
 
