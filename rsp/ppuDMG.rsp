@@ -759,9 +759,9 @@ xFlip:
             addi $tileIndex, $tileIndex, 1
         bne $loadIndex, $maxLoadIndex, processWindow_whileLoadData
 
-
         # double tile index since we work with 16bit tile lines.
-        sll $t0, $tileIndex, 1
+        addi $t0, $tileIndex, -16
+        sll $t0, $t0, 1
         ## Shouldn't need to do this, but macros don't quite there yet.
         addi $t0, $t0, WINDOW_BUFFER
 
