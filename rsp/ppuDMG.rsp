@@ -249,6 +249,32 @@ massageMonochrome:
     lw $r0, N64_PALETTE($a0)
     jr $ra
 
+#ifndef USE_CACHE
+
+###
+# Cache is a big waste of time because DMA probably faster than iterating
+# through the cache.
+###
+cacheGetTile:
+    .set $tileId, $a0
+
+    ## Multiply tile ID by 16 to get address offset.
+    sll $tileId, $tileId, 4
+    ## Which is added to the address base.
+    add $tileId, $tileId, $VRAM_TILE_DATA_ADDRESS
+
+    stackPush 2
+    dmaIn $tileId, TILE_CACHE, TILE_SIZE
+    stackPop 2
+
+    # Now that data has been loaded, return a pointer to it.
+    addi $r0, $0, TILE_CACHE
+    jr $ra
+
+    .set $tileId, 0
+
+#else
+
 ###
 # Gets the address of a tile.
 # Either from the cache or the tile is DMA'd in and cached.
@@ -257,6 +283,7 @@ massageMonochrome:
 #
 # TODO: Cache header should allow flipped tiles to be cached separately from normal.
 ###
+
 cacheGetTile:
     .set $tileId, $a0
     .set $pointer, $a1
@@ -321,6 +348,8 @@ cacheGetTile:
 
 .set $tileId, 0
 .set $pointer, 0
+
+#endif
 
 ###
 # Reverses the order of the 8 half-words following $a0
