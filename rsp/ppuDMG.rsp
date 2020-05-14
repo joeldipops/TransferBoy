@@ -110,6 +110,7 @@
 .eqv GB_PALETTE_SIZE,   0x008 # 4 2 bit colours across four bytes for easy lookup.
 .eqv N64_PALETTE_SIZE,  0x010 # 4 32bit colours. # TODO - make these 16bit colours
 .eqv N64_BUFFER_SIZE,   0x280 # 160 32bit pixels per scan-line.
+.eqv WINDOW_LINE_BUFFER_SIZE, 0x010 # 8x16bit tile lines.
 .eqv WINDOW_BUFFER_SIZE,0x200 # 160 2bit pixels per scan-line
 .eqv LINE_TILE_MAP_SIZE,0x020 # 32B 1 for each tile across the background (though we only see 20 tiles at a time)
 .eqv TILE_CACHE_SIZE,   CACHE_ENTRY_SIZE * 50   # 50 possible tiles
@@ -140,6 +141,9 @@ N64_PALETTE:
 # scan line of 16bit n64 pixels built up here.
 N64_BUFFER:
     .space N64_BUFFER_SIZE
+
+WINDOW_LINE_BUFFER:
+    .space WINDOW_LINE_BUFFER_SIZE
 
 WINDOW_BUFFER:
     .space WINDOW_BUFFER_SIZE
@@ -717,6 +721,7 @@ xFlip:
     # which line of the tile are we on
     ## a % b == a & ( b -1 ) if b is a power of 2
     and $lineNumber, $SCAN_LINE, TILE_WIDTH - 1
+
     ## Multiply by two to get the number of bytes to skip.
     sll $lineNumber, $lineNumber, 1
 
@@ -725,8 +730,6 @@ xFlip:
 
     addi $t0, $0, 0x0100
       mtc2 t0, $v27, 0
-
-
 
     # When $loadIndex gets to 16, exit the loop.
     addi $maxLoadIndex, $0, 16
@@ -752,18 +755,15 @@ xFlip:
 
             # add this line to the buffer.
             lhu $a0, 0($tileLine)
-            sh $a0, WINDOW_BUFFER($loadIndex)
+            sh $a0, WINDOW_LINE_BUFFER($loadIndex)
 
             # increment
             addi $loadIndex, $loadIndex, 2
             addi $tileIndex, $tileIndex, 1
         bne $loadIndex, $maxLoadIndex, processWindow_whileLoadData
 
-        # double tile index since we work with 16bit tile lines.
-        addi $t0, $tileIndex, -8
-        sll $t0, $t0, 1
         ## Shouldn't need to do this, but macros don't quite there yet.
-        addi $t0, $t0, WINDOW_BUFFER
+        addi $t0, $t0, WINDOW_LINE_BUFFER
 
         # Load our 8 tile lines into a bunch of vector registers
         # Each vector represents the nth pixel in each tile.
@@ -825,13 +825,15 @@ xFlip:
 
           vand $v09, $v07, $v27, 0b1000
           vand $v07, $v07, $v28, 0b1000
+        # double tile index since we work with 16bit tile lines.
+        addi $t0, $tileIndex, -8
           vsrl $v09, $v09, 7
+        sll $t0, $t0, 1
           vor $v07, $v07, $v09, 0
+        addi $t0, $t0, WINDOW_BUFFER
 
         # remember $8 is $t0 until I can get better macros.
         # suv should take our two bits and put them into a byte instead of two.
-        # but because suv takes bits 14-7 ??? need to shift first.
-
           vsll $v07, $v07, 7
           suv $v07, 0, 0,  $8
 
