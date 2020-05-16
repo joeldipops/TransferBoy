@@ -679,6 +679,8 @@ xFlip:
     sub $topOffset, $top, $SCAN_LINE
         bgtz $topOffset, processWindow_done
 
+    sub $topOffset, $SCAN_LINE, $top
+
     # When window starts off the end of the screen, there's nothing to draw.
     lbu $left, (PPU_SETTINGS + Ppu_WINDOW_LEFT)($0)
     addi $t0, $0, GB_LCD_WIDTH + WINDOW_X_OFFSET
@@ -689,6 +691,13 @@ xFlip:
 
     lbu $a0, (PPU_SETTINGS + Ppu_BACKGROUND_PALETTE)($0)
     jal setPalette
+
+    # which line of the tile are we on
+    ## a % b == a & ( b -1 ) if b is a power of 2
+    and $lineNumber, $SCAN_LINE, TILE_WIDTH - 1
+
+    ## Multiply by two to get the number of bytes to skip.
+    sll $lineNumber, $lineNumber, 1
 
     # Find the chunk of VRAM that corresponds to the tiles on this line.
     lb $t0, (PPU_SETTINGS + Ppu_LCD_CONTROL)($0)
@@ -710,26 +719,20 @@ xFlip:
     ## And add that to get the location in n64 memory.
     add $tileMap, $tileMap, $VRAM_BASE
 
-    .set $tileLine, $topOffset
+    .set $lineNumber, $topOffset
     .set $topOffset, 0
 
     dmaIn $tileMap, LINE_TILE_MAP, 0x20
 
-    .set $lineNumber, $tileMap
-    .set $tileMap, 0
-
-    # which line of the tile are we on
-    ## a % b == a & ( b -1 ) if b is a power of 2
-    and $lineNumber, $SCAN_LINE, TILE_WIDTH - 1
-
-    ## Multiply by two to get the number of bytes to skip.
-    sll $lineNumber, $lineNumber, 1
 
     addi $t0, $0, 0x0001
       mtc2 t0, $v28, 0
 
     addi $t0, $0, 0x0100
       mtc2 t0, $v27, 0
+
+    .set $tileLine, $tileMap
+    .set $tileMap, 0
 
     # When $loadIndex gets to 16, exit the loop.
     addi $maxLoadIndex, $0, 16
@@ -740,7 +743,6 @@ xFlip:
 
         # get 8 tiles and put the line of pixels in a buffer
         processWindow_whileLoadData:
-
             bne $IS_TILE_INDEX_SIGNED, $0, 1f
                 lbu $a0, LINE_TILE_MAP($tileIndex)
                 j 2f
@@ -897,6 +899,8 @@ xFlip:
     .set $maxOuterIndex, $maxTileIndex
     .set $maxTileIndex, 0
 
+    addi $left, $left, -WINDOW_X_OFFSET
+
     processWindow_whileHasChunks:
         add $outerIndex, $0, $0
         addi $maxOuterIndex, $0, 8
@@ -907,11 +911,12 @@ xFlip:
                 add $t0, $pixelIndex, $innerIndex
                 lb $a0, WINDOW_BUFFER($t0)
                 lb $a0, GB_PALETTE($a0)
+
                 jal massageMonochrome
 
                 # Move window to the left if WX is non-zero.
                 add $t0, $t0, $left
-                
+
                 # N64 Pixels are 16bit
                 sll $t0, $t0, 1
                 sh $r0, N64_BUFFER($t0)
