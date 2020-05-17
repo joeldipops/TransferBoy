@@ -693,13 +693,6 @@ xFlip:
     lbu $a0, (PPU_SETTINGS + Ppu_BACKGROUND_PALETTE)($0)
     jal setPalette
 
-    # which line of the tile are we on
-    ## a % b == a & ( b -1 ) if b is a power of 2
-    and $lineNumber, $SCAN_LINE, TILE_WIDTH - 1
-
-    ## Multiply by two to get the number of bytes to skip.
-    sll $lineNumber, $lineNumber, 1
-
     # Find the chunk of VRAM that corresponds to the tiles on this line.
     lb $t0, (PPU_SETTINGS + Ppu_LCD_CONTROL)($0)
     andi $t0, $t0, Lcdc_WINDOW_TILE_MAP
@@ -723,8 +716,14 @@ xFlip:
     .set $lineNumber, $topOffset
     .set $topOffset, 0
 
-    dmaIn $tileMap, LINE_TILE_MAP, 0x20
+    # which line of the tile are we on
+    ## a % b == a & ( b -1 ) if b is a power of 2
+    and $lineNumber, $SCAN_LINE, TILE_WIDTH - 1
 
+    ## Multiply by two to get the number of bytes to skip.
+    sll $lineNumber, $lineNumber, 1
+
+    dmaIn $tileMap, LINE_TILE_MAP, 0x20
 
     addi $t0, $0, 0x0001
       mtc2 t0, $v28, 0
@@ -754,7 +753,7 @@ xFlip:
             jal cacheGetTile
 
             # $tileLine now points to the line of the tile we want.
-            add $tileLine, $lineNumber, $r0 
+            add $tileLine, $lineNumber, $r0
 
             # add this line to the buffer.
             lhu $a0, 0($tileLine)
@@ -916,7 +915,7 @@ xFlip:
 
                 # Short circuit if we're off the right edge of the screen
                 sub $temp, $maxPixelIndex, $t0
-                bltz $temp, processWindow_forInnerLoop_continue
+                    bltz $temp, processWindow_forInnerLoop_continue
 
                 lb $a0, WINDOW_BUFFER($a0)
                 lb $a0, GB_PALETTE($a0)
