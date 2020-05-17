@@ -31,6 +31,7 @@
 
 .eqv TILE_WIDTH, 0x08
 .eqv TILES_PER_WIDTH, 0x20
+.eqv TILES_PER_SCREEN, 0x14  # 20 tiles appear on screen at a time.
 .eqv TILE_SIZE, 0x10 # 8x8 2b pixels is 16B
 .eqv SPRITE_COUNT, 40 # 40 sprites in OAM
 .eqv SPRITE_LIMIT, 10 # 10 sprites per scanline
@@ -827,12 +828,15 @@ xFlip:
 
           vand $v09, $v07, $v27, 0b1000
           vand $v07, $v07, $v28, 0b1000
-        # double tile index since we work with 16bit tile lines.
+
+        # Find the start of this set of tiles.
         addi $t0, $tileIndex, -8
           vsrl $v09, $v09, 7
-        sll $t0, $t0, 1
+        # multiply $tileIndex by 4, since we split 8 two bit pixels across 16bits in to a byte each.
+        sll $t0, $t0, 2
           vor $v07, $v07, $v09, 0
         addi $t0, $t0, WINDOW_BUFFER
+
 
         # remember $8 is $t0 until I can get better macros.
         # suv should take our two bits and put them into a byte instead of two.
@@ -884,7 +888,8 @@ xFlip:
     .set $top, 0
 
     .set $maxPixelIndex, $maxLoadIndex
-    addi $maxPixelIndex, TILE_WIDTH * TILES_PER_WIDTH
+    addi $maxPixelIndex, $0, (TILE_WIDTH * TILES_PER_SCREEN)
+
     .set $maxLoadIndex, 0
 
     .set $innerIndex, $loadIndex
@@ -908,16 +913,20 @@ xFlip:
             add $innerIndex, $outerIndex, $0
             addi $maxInnerIndex, $outerIndex, 8 * 8
             processWindow_forInnerLoop:
-                add $t0, $pixelIndex, $innerIndex
-                lb $a0, WINDOW_BUFFER($t0)
+                add $a0, $pixelIndex, $innerIndex
+
+                # Move window to the left if WX is non-zero.
+                add $t0, $a0, $left
+
+                # Short circuit if we're off the right edge of the screen
+                beq $t0, $maxPixelIndex, processWindow_done
+
+                lb $a0, WINDOW_BUFFER($a0)
                 lb $a0, GB_PALETTE($a0)
 
                 jal massageMonochrome
 
-                # Move window to the left if WX is non-zero.
-                add $t0, $t0, $left
-
-                # N64 Pixels are 16bit
+                # We're using 16b N64 Pixels, so double pixel idx to get the buffer address
                 sll $t0, $t0, 1
                 sh $r0, N64_BUFFER($t0)
 
@@ -925,11 +934,10 @@ xFlip:
             bne $innerIndex, $maxInnerIndex, processWindow_forInnerLoop
             addi $outerIndex, $outerIndex, 1
         bne $outerIndex, $maxOuterIndex, processWindow_forOuterLoop
-        addi $pixelIndex, $pixelIndex, 64
 
+        addi $pixelIndex, $pixelIndex, 64
         sub $t0, $maxPixelIndex, $pixelIndex
     bgtz $t0, processWindow_whileHasChunks
-
     processWindow_done:
 .endm
 
