@@ -714,11 +714,10 @@ xFlip:
     add $tileMap, $tileMap, $VRAM_BASE
 
     .set $lineNumber, $topOffset
-    .set $topOffset, 0
-
     # which line of the tile are we on
     ## a % b == a & ( b -1 ) if b is a power of 2
-    and $lineNumber, $SCAN_LINE, TILE_WIDTH - 1
+    and $lineNumber, $topOffset, TILE_WIDTH - 1
+    .set $topOffset, 0
 
     ## Multiply by two to get the number of bytes to skip.
     sll $lineNumber, $lineNumber, 1
