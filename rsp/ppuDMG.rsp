@@ -668,7 +668,7 @@ xFlip:
     .set $tileIndex, $t6
     .set $loadIndex, $t7
     .set $maxLoadIndex, $t8
-    .set $offset, $t9
+    .set $maxInnerIndex, $t9
 
     # If window is disabled, there's nothing to draw.
     lbu $t0, (PPU_SETTINGS + Ppu_LCD_CONTROL)($0)
@@ -895,20 +895,16 @@ xFlip:
     .set $innerIndex, $loadIndex
     .set $loadIndex, 0
 
-    .set $maxInnerIndex, $offset
-    .set $offset, 0
-
     .set $outerIndex, $tileIndex
     .set $tileIndex, 0
 
-    .set $maxOuterIndex, $maxTileIndex
+    .set $temp, $maxTileIndex
     .set $maxTileIndex, 0
 
     addi $left, $left, -WINDOW_X_OFFSET
 
     processWindow_whileHasChunks:
         add $outerIndex, $0, $0
-        addi $maxOuterIndex, $0, 8
         processWindow_forOuterLoop:
             add $innerIndex, $outerIndex, $0
             addi $maxInnerIndex, $outerIndex, 8 * 8
@@ -919,7 +915,8 @@ xFlip:
                 add $t0, $a0, $left
 
                 # Short circuit if we're off the right edge of the screen
-                beq $t0, $maxPixelIndex, processWindow_done
+                sub $temp, $maxPixelIndex, $t0
+                bltz $temp, processWindow_forInnerLoop_continue
 
                 lb $a0, WINDOW_BUFFER($a0)
                 lb $a0, GB_PALETTE($a0)
@@ -930,12 +927,16 @@ xFlip:
                 sll $t0, $t0, 1
                 sh $r0, N64_BUFFER($t0)
 
+                processWindow_forInnerLoop_continue:
                 addi $innerIndex, $innerIndex, 8
             bne $innerIndex, $maxInnerIndex, processWindow_forInnerLoop
             addi $outerIndex, $outerIndex, 1
-        bne $outerIndex, $maxOuterIndex, processWindow_forOuterLoop
+
+            addi $t0, $0, 8
+        bne $outerIndex, $t0, processWindow_forOuterLoop
 
         addi $pixelIndex, $pixelIndex, 64
+
         sub $t0, $maxPixelIndex, $pixelIndex
     bgtz $t0, processWindow_whileHasChunks
     processWindow_done:
