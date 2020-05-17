@@ -836,7 +836,6 @@ xFlip:
           vor $v07, $v07, $v09, 0
         addi $t0, $t0, WINDOW_BUFFER
 
-
         # remember $8 is $t0 until I can get better macros.
         # suv should take our two bits and put them into a byte instead of two.
           vsll $v07, $v07, 7
@@ -882,8 +881,8 @@ xFlip:
 
     # Iterate through our now ordered pixels.
 
-    .set $pixelIndex, $top
-    add $pixelIndex, $0, $0
+    .set $pixelOffset, $top
+    add $pixelOffset, $0, $0
     .set $top, 0
 
     .set $maxPixelIndex, $maxLoadIndex
@@ -900,7 +899,11 @@ xFlip:
     .set $temp, $maxTileIndex
     .set $maxTileIndex, 0
 
-    addi $left, $left, -WINDOW_X_OFFSET
+    .set $pixelIndex, $left
+    addi $pixelIndex, $left, -WINDOW_X_OFFSET
+    # double for 16bit
+    sll $pixelIndex, $pixelIndex, 1
+    .set $left, 0
 
     processWindow_whileHasChunks:
         add $outerIndex, $0, $0
@@ -908,35 +911,33 @@ xFlip:
             add $innerIndex, $outerIndex, $0
             addi $maxInnerIndex, $outerIndex, 8 * 8
             processWindow_forInnerLoop:
-                add $a0, $pixelIndex, $innerIndex
-
-                # Move window to the left if WX is non-zero.
-                add $t0, $a0, $left
+                add $a0, $pixelOffset, $innerIndex
 
                 # Short circuit if we're off the right edge of the screen
-                sub $temp, $maxPixelIndex, $t0
-                    bltz $temp, processWindow_forInnerLoop_continue
+                addi $temp, $pixelIndex, -(TILES_PER_SCREEN * TILE_WIDTH * 2)
+                    bgez $temp, processWindow_forInnerLoop_continue
 
                 lb $a0, WINDOW_BUFFER($a0)
+
                 lb $a0, GB_PALETTE($a0)
 
                 jal massageMonochrome
 
-                # We're using 16b N64 Pixels, so double pixel idx to get the buffer address
-                sll $t0, $t0, 1
-                sh $r0, N64_BUFFER($t0)
+                sh $r0, N64_BUFFER($pixelIndex)
 
                 processWindow_forInnerLoop_continue:
                 addi $innerIndex, $innerIndex, 8
+                # +2 since n64 pixels are 16bit
+                addi $pixelIndex, $pixelIndex, 2
             bne $innerIndex, $maxInnerIndex, processWindow_forInnerLoop
             addi $outerIndex, $outerIndex, 1
 
             addi $t0, $0, 8
         bne $outerIndex, $t0, processWindow_forOuterLoop
 
-        addi $pixelIndex, $pixelIndex, 64
+        addi $pixelOffset, $pixelOffset, 64
 
-        sub $t0, $maxPixelIndex, $pixelIndex
+        sub $t0, $maxPixelIndex, $pixelOffset
     bgtz $t0, processWindow_whileHasChunks
     processWindow_done:
 .endm
