@@ -736,6 +736,9 @@ xFlip:
     # When $loadIndex gets to 16, exit the loop.
     addi $maxLoadIndex, $0, 16
 
+    # TOODOOO: Why is a third of each tile missing in scrolling test
+    # And some part of the last few tiles only missing in sgb test...
+
     addi $tileIndex, $0, 0
     processWindow_whileHasPixels:
         add $loadIndex, $0, $0
@@ -909,25 +912,22 @@ xFlip:
         processWindow_forOuterLoop:
             add $innerIndex, $outerIndex, $0
             addi $maxInnerIndex, $outerIndex, 8 * 8
+            addi $t0, $0, TILES_PER_SCREEN * TILE_WIDTH * 2
             processWindow_forInnerLoop:
                 add $a0, $pixelOffset, $innerIndex
 
-                # Short circuit if we're off the right edge of the screen
-                addi $temp, $pixelIndex, -(TILES_PER_SCREEN * TILE_WIDTH * 2)
-                    bgez $temp, processWindow_forInnerLoop_continue
-
                 lb $a0, WINDOW_BUFFER($a0)
-
                 lb $a0, GB_PALETTE($a0)
-
                 jal massageMonochrome
-
                 sh $r0, N64_BUFFER($pixelIndex)
 
-                processWindow_forInnerLoop_continue:
-                addi $innerIndex, $innerIndex, 8
                 # +2 since n64 pixels are 16bit
                 addi $pixelIndex, $pixelIndex, 2
+
+                    # Short circuit if we're off the right edge of the screen
+                    beq $pixelIndex, $t0, processWindow_done
+
+                addi $innerIndex, $innerIndex, 8
             bne $innerIndex, $maxInnerIndex, processWindow_forInnerLoop
             addi $outerIndex, $outerIndex, 1
 
