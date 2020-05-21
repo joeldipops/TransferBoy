@@ -688,7 +688,7 @@ xFlip:
     sub $t0, $t0, $left
         bltz $t0, processWindow_done
 
-    addi $maxTileIndex, $0, 32 # This actually only needs to be 20, but keeping it at 32 till I sort the way shit is structured
+    addi $maxTileIndex, $0, 24 # The actual max is 20, but we had to tileIndex 8 at a time.
 
     lbu $a0, (PPU_SETTINGS + Ppu_BACKGROUND_PALETTE)($0)
     jal setPalette
@@ -762,8 +762,8 @@ xFlip:
             sh $a0, WINDOW_LINE_BUFFER($loadIndex)
 
             # increment
-            addi $loadIndex, $loadIndex, 2
             addi $tileIndex, $tileIndex, 1
+            addi $loadIndex, $loadIndex, 2
         bne $loadIndex, $maxLoadIndex, processWindow_whileLoadData
 
         ## Shouldn't need to do this, but macros don't quite there yet.
@@ -832,9 +832,11 @@ xFlip:
 
         # Find the start of this set of tiles.
         addi $t0, $tileIndex, -8
+
           vsrl $v09, $v09, 7
-        # multiply $tileIndex by 4, since we split 8 two bit pixels across 16bits in to a byte each.
-        sll $t0, $t0, 2
+        # multiply $tileIndex by 8.  We split 8 two bit pixels across 16bits in to a byte each.
+        sll $t0, $t0, 3
+
           vor $v07, $v07, $v09, 0
         addi $t0, $t0, WINDOW_BUFFER
 
@@ -879,16 +881,15 @@ xFlip:
         # Data now looks like this in DMEM
         #   0   8   16  24...
         #   1   9   17  25...
+
     bne $tileIndex, $maxTileIndex, processWindow_whileHasPixels
+
 
     # Iterate through our now ordered pixels.
 
     .set $pixelOffset, $top
     add $pixelOffset, $0, $0
     .set $top, 0
-
-    .set $maxPixelIndex, $maxLoadIndex
-    addi $maxPixelIndex, $0, (TILE_WIDTH * TILES_PER_SCREEN)
 
     .set $maxLoadIndex, 0
 
@@ -933,11 +934,9 @@ xFlip:
 
             addi $t0, $0, 8
         bne $outerIndex, $t0, processWindow_forOuterLoop
-
         addi $pixelOffset, $pixelOffset, 64
-
-        sub $t0, $maxPixelIndex, $pixelOffset
-    bgtz $t0, processWindow_whileHasChunks
+    # We break out of this while(true) when $pixelIndex hits an edge.
+    j processWindow_whileHasChunks
     processWindow_done:
 .endm
 

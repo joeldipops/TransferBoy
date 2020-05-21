@@ -21,16 +21,16 @@
 ###
 _execRdp:
     1:
-        mfc0 $t0, $RDP_CMD_STATUS
+        mfc0 $at, $RDP_CMD_STATUS
         # bit 8 of $RDP_CMD_STATUS = RDP DMA is busy
-        andi $t0, $t0, RDP_DMA_BUSY
-    bne $t0, $0, 1b
+        andi $at, $at, RDP_DMA_BUSY
+    bne $at, $0, 1b
       nop
 
     # send 2 to RDP_CMD_STATUS
     # in order to DMA from RSP memory (DMEM)
-    addi $t0, $0, DMEM_RDP_DMA
-    mtc0 $t0, $RDP_CMD_STATUS
+    addi $at, $0, DMEM_RDP_DMA
+    mtc0 $at, $RDP_CMD_STATUS
 
     # Kick off the DMA by setting both start and end.
     mtc0 $0, $RDP_CMD_START
