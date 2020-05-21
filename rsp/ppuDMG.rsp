@@ -743,6 +743,12 @@ xFlip:
     processWindow_whileHasPixels:
         add $loadIndex, $0, $0
 
+        # when in the third iteration, only go half way.
+        addi $t0, $tileIndex, 8
+        bne $t0, $maxTileIndex, 1f
+            addi $maxLoadIndex, $0, 8
+        1:
+
         # get 8 tiles and put the line of pixels in a buffer
         processWindow_whileLoadData:
             bne $IS_TILE_INDEX_SIGNED, $0, 1f
