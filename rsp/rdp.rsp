@@ -20,6 +20,7 @@
 # @param {address} $a0 address after last word to send.
 ###
 _execRdp:
+.set noat
     1:
         mfc0 $at, $RDP_CMD_STATUS
         # bit 8 of $RDP_CMD_STATUS = RDP DMA is busy
@@ -36,7 +37,7 @@ _execRdp:
     mtc0 $0, $RDP_CMD_START
     jr $ra
       mtc0 $a0, $RDP_CMD_END # delay slot
-
+.set at
 ###
 # Sends an RDP command by writing to the RDP registers.
 # Assumes command starts at DMEM address 0
