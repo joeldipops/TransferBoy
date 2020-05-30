@@ -15,10 +15,15 @@ ppuDMG: ppuDMG.o
 
 renderer: renderer.o
 
-ppuDMG.bin: ppuDMG.rsp
-	$(CC) -x assembler-with-cpp -c -o tmp.o ppuDMG.rsp
-	$(OBJCOPY) -O binary -j .data tmp.o ppuDMGData.bin
-	$(OBJCOPY) -O binary -j .text tmp.o ppuDMG.bin
+ppuDMG.dsm: ppuDMGText.o
+	mips-linux-gnu-objdump ppuDMGText.o -m mips -D > ppuDMG.mips
+
+ppuDMGText.o:  ppuDMG.rsp
+	$(CC) -x assembler-with-cpp -c -o ppuDMGText.o ppuDMG.rsp
+
+ppuDMG.bin: ppuDMGText.o
+	$(OBJCOPY) -O binary -j .data ppuDMGText.o ppuDMGData.bin
+	$(OBJCOPY) -O binary -j .text ppuDMGText.o ppuDMG.bin
 
 ppuDMGData.o: ppuDMGData.bin
 	$(OBJCOPY) -I binary -O elf32-bigmips -B mips4300 --redefine-sym _binary_ppuDMGData_bin_start=ppuDMG_data_start --redefine-sym _binary_ppuDMGData_bin_end=ppuDMG_data_end --redefine-sym _binary_ppuDMGData_bin_size=ppuDMG_data_size ppuDMGData.bin ppuDMGData.o

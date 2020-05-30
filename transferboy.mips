@@ -12276,7 +12276,7 @@ Disassembly of section .text:
 8000bd04:	00808025 	move	s0,a0
 8000bd08:	02429023 	subu	s2,s2,v0
 8000bd0c:	92030807 	lbu	v1,2055(s0)
-8000bd10:	3252ffff 	andi	s2,s2,0xffff
+8000bd10:	325200ff 	andi	s2,s2,0xff
 8000bd14:	2e420001 	sltiu	v0,s2,1
 8000bd18:	000211c0 	sll	v0,v0,0x7
 8000bd1c:	3063007f 	andi	v1,v1,0x7f
