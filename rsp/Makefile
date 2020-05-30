@@ -16,7 +16,7 @@ ppuDMG: ppuDMG.o
 renderer: renderer.o
 
 ppuDMG.dsm: ppuDMGText.o
-	mips-linux-gnu-objdump ppuDMGText.o -m mips -D > ppuDMG.mips
+	mips-linux-gnu-objdump ppuDMGText.o -m mips -D > ppuDMG.dsm
 
 ppuDMGText.o:  ppuDMG.rsp
 	$(CC) -x assembler-with-cpp -c -o ppuDMGText.o ppuDMG.rsp

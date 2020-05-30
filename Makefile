@@ -76,7 +76,7 @@ LD_OFILES += $(CURDIR)/obj/rsp.o
 
 # Produces the disassembly, with symbols included.
 $(PROG_NAME).dsm: $(PROG_NAME).elf
-	mips-linux-gnu-objdump $(PROG_NAME).elf -m mips -D > $(PROG_NAME).mips
+	mips-linux-gnu-objdump $(PROG_NAME).elf -m mips -D > $(PROG_NAME).dsm
 
 $(PROG_NAME).elf : $(CURDIR)/rsp/renderer.o $(CURDIR)/rsp/ppuDMG.o $(CURDIR)/rsp/ppuDMGData.o $(PROG_NAME).o $(LD_FILE)
 
