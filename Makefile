@@ -28,7 +28,7 @@ ROM_EXTENSION = .z64
 N64_FLAGS = -l 2M -h $(HEADERPATH)/$(HEADERNAME) -o $(PROG_NAME)$(ROM_EXTENSION) $(PROG_NAME).bin
 endif
 
-all: $(PROG_NAME)$(ROM_EXTENSION)
+all: $(PROG_NAME)$(ROM_EXTENSION) $(PROG_NAME).mips
 
 $(CURDIR)/rsp/ppuDMG.o:
 	make -C $(CURDIR)/rsp rsp
@@ -73,6 +73,10 @@ LD_OFILES += $(CURDIR)/obj/gbc_state.o
 LD_OFILES += $(CURDIR)/obj/polyfill.o
 LD_OFILES += $(CURDIR)/obj/rtc.o
 LD_OFILES += $(CURDIR)/obj/rsp.o
+
+# Produces the disassembly, with symbols included.
+$(PROG_NAME).mips: $(PROG_NAME).elf
+	mips-linux-gnu-objdump $(PROG_NAME).elf -m mips -D > $(PROG_NAME).mips
 
 $(PROG_NAME).elf : $(CURDIR)/rsp/renderer.o $(CURDIR)/rsp/ppuDMG.o $(CURDIR)/rsp/ppuDMGData.o $(PROG_NAME).o $(LD_FILE)
 

@@ -414,7 +414,7 @@ void subAN8(GbState* s, byte op) { // debug(s, "subAN8");
     HF = ((s32)A & 0xf) - (IMM8 & 0xf) < 0;
     CF = A < IMM8;
     A = res;
-    s->pc++;    
+    s->pc++;
 }
 void subAR8(GbState* s, byte op) { // debug(s, "subAR8");
     u8 val = *REG8(0);
@@ -469,7 +469,7 @@ void andAN8(GbState* s, byte op) { // debug(s, "andAN8");
     ZF = A == 0;
     NF = 0;
     HF = 1;
-    CF = 0;    
+    CF = 0;
 }
 void andAR8(GbState* s, byte op) { // debug(s, "andAR8");
     u8 val = *REG8(0);
