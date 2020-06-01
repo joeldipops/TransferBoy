@@ -223,19 +223,19 @@ setPalette:
     .set $palette, $a0
 
     andi $t0, $palette, 0b00000011
-    sb $t0, GB_PALETTE($0)
+    sb $t0, %lo(GB_PALETTE)($0)
 
     srl $t0, $palette, 2
     andi $t0, $t0, 0b00000011
-    sb $t0, (GB_PALETTE + 1)($0)
+    sb $t0, (%lo(GB_PALETTE) + 1)($0)
 
     srl $t0, $palette, 4
     andi $t0, $t0, 0b00000011
-    sb $t0, (GB_PALETTE + 2)($0)
+    sb $t0, (%lo(GB_PALETTE) + 2)($0)
 
     srl $t0, $palette, 6
     andi $t0, $t0, 0b00000011
-    sb $t0, (GB_PALETTE + 3)($0)
+    sb $t0, (%lo(GB_PALETTE) + 3)($0)
 
     .set $palette, 0
     jr $ra
@@ -252,7 +252,7 @@ massageMonochrome:
     andi $a0, $a0, 3
     # and multiply by four since we deal with 32bit addresses
     sll $a0, $a0, 2
-    lw $r0, N64_PALETTE($a0)
+    lw $r0, %lo(N64_PALETTE)($a0)
     jr $ra
 
 #ifndef USE_CACHE
@@ -270,11 +270,11 @@ cacheGetTile:
     add $tileId, $tileId, $VRAM_TILE_DATA_ADDRESS
 
     stackPush 2
-    dmaIn $tileId, TILE_CACHE, TILE_SIZE
+    dmaIn $tileId, %lo(TILE_CACHE), TILE_SIZE
     stackPop 2
 
     # Now that data has been loaded, return a pointer to it.
-    addi $r0, $0, TILE_CACHE
+    addi $r0, $0, %lo(TILE_CACHE)
     jr $ra
 
     .set $tileId, 0
@@ -295,7 +295,7 @@ cacheGetTile:
     .set $pointer, $a1
 
     # when there's nothing in the cache, short-circuit.
-    addi $t0, $0, TILE_CACHE
+    addi $t0, $0, %lo(TILE_CACHE)
     beq $t0, $CACHE_POINTER, cacheGetTile_notFound
     
     # Set the flag so we're never comparing 0 to 0.
@@ -318,7 +318,7 @@ cacheGetTile:
 
         cacheGetTile_whileNotFound_continue:
         # Check that $pointer is still greater than the bottom of the cache
-        addi $t0, $0, TILE_CACHE
+        addi $t0, $0, %lo(TILE_CACHE)
         sub $t0, $pointer, $t0
 
         # This is better than above, but gives me error ` Error: invalid operands (*ABS* and .data sections) for `*'`
@@ -370,26 +370,26 @@ yFlip:
 
     # Store the entire tile into a 128bit vector register.
     lqv $v01, 0, 0, $a0
-    addi $r0, $0, TEMP_TILE # set this while waiting for 3 delay slot vector load.
+    addi $r0, $0, %lo(TEMP_TILE) # set this while waiting for 3 delay slot vector load.
     lrv $v01, 0, 0, $a0 # not sure if this line is necessary.
 
     # Spit out the 16bit lines in reverse order.
     mfc2 t0, $v01, 7
-    sh $t0, TEMP_TILE($0)
+    sh $t0, %lo(TEMP_TILE)($0)
     mfc2 t0, $v01, 6
-    sh $t0, (TEMP_TILE + 2)($0)
+    sh $t0, (%lo(TEMP_TILE) + 2)($0)
     mfc2 t0, $v01, 5
-    sh $t0, (TEMP_TILE + 4)($0)
+    sh $t0, (%lo(TEMP_TILE) + 4)($0)
     mfc2 t0, $v01, 4
-    sh $t0, (TEMP_TILE + 6)($0)
+    sh $t0, (%lo(TEMP_TILE) + 6)($0)
     mfc2 t0, $v01, 3
-    sh $t0, (TEMP_TILE + 8)($0)
+    sh $t0, (%lo(TEMP_TILE) + 8)($0)
     mfc2 t0, $v01, 2
-    sh $t0, (TEMP_TILE + 10)($0)
+    sh $t0, (%lo(TEMP_TILE) + 10)($0)
     mfc2 t0, $v01, 1
-    sh $t0, (TEMP_TILE + 12)($0)
+    sh $t0, (%lo(TEMP_TILE) + 12)($0)
     mfc2 t0, $v01, 0
-    sh $t0, (TEMP_TILE + 14)($0)
+    sh $t0, (%lo(TEMP_TILE) + 14)($0)
 
     jr $ra
 
@@ -435,7 +435,7 @@ xFlip:
     sll $a1, $a1, 7
     or $a2, $a2, $a1
 
-    addi $r0, $0, TEMP_TILE
+    addi $r0, $0, %lo(TEMP_TILE)
     sh $a2, 0($r0)
 
     jr $ra
@@ -496,10 +496,10 @@ xFlip:
     # instead of resetting the palette each sprite.
     andi $t0, $flags, Oam_PALETTE
     bne $t0, $0, 1f
-        lbu $a0, (PPU_SETTINGS + Ppu_SPRITE_PALETTE_0)($0)
+        lbu $a0, (%lo(PPU_SETTINGS) + Ppu_SPRITE_PALETTE_0)($0)
         j 2f
     1:
-        lbu $a0, (PPU_SETTINGS + Ppu_SPRITE_PALETTE_1)($0)
+        lbu $a0, (%lo(PPU_SETTINGS) + Ppu_SPRITE_PALETTE_1)($0)
     2:
     jal setPalette
 
@@ -564,7 +564,7 @@ xFlip:
 
         ## when priority flag is 1
         processSprite_hasPriority:
-            lh $t0, N64_BUFFER($bufferIndex)
+            lh $t0, %lo(N64_BUFFER)($bufferIndex)
             # check opacity bit of 
             and $t0, $t0, 1
             beq $t0, $0, processSprite_drawSprite
@@ -573,13 +573,13 @@ xFlip:
 
         processSprite_drawSprite:
             # Look up the palette
-            lb $t0, GB_PALETTE($a0)
+            lb $t0, %lo(GB_PALETTE)($a0)
 
             # massage it from gameboy format to n64 format.
             jal massageMonochrome
 
             # and push on to the buffer.
-            sh $r0, N64_BUFFER($bufferIndex)
+            sh $r0, %lo(N64_BUFFER)($bufferIndex)
 
 
         processSprite_continue:
@@ -605,8 +605,8 @@ xFlip:
     ## Find the sprites relevant to the current scanline so we don't have to loop through 40 sprites every pixel.
 
     # DMA in the entire OAM
-    lw $t0, (INPUT + RspIn_OAM_BASE)($0)
-    dmaIn $t0, OAM, OAM_SIZE
+    lw $t0, (%lo(INPUT) + RspIn_OAM_BASE)($0)
+    dmaIn $t0, %lo(OAM), OAM_SIZE
 
     addi $screenSpritesRemaining, $0, SPRITE_COUNT
     addi $lineSpritesRemaining, $0, SPRITE_LIMIT
@@ -618,7 +618,7 @@ xFlip:
         sub $t0, $t0, $screenSpritesRemaining
         ## Multiply by four to get the address offset.
         sll $t0, $t0, 2
-        lw $entry, OAM($t0)
+        lw $entry, %lo(OAM)($t0)
 
         ## We care about the Y position, which is at the top
         srl $y1, $entry, 24
@@ -672,30 +672,30 @@ xFlip:
     .set $maxInnerIndex, $t9
 
     # If window is disabled, there's nothing to draw.
-    lbu $t0, (PPU_SETTINGS + Ppu_LCD_CONTROL)($0)
+    lbu $t0, (%lo(PPU_SETTINGS) + Ppu_LCD_CONTROL)($0)
     and $t0, $t0, Lcdc_WINDOW_SWITCH
         beq $t0, $0, processWindow_done
 
     # When window starts after the current scanline, there's nothing to draw.
-    lbu $top, (PPU_SETTINGS + Ppu_WINDOW_TOP)($0)
+    lbu $top, (%lo(PPU_SETTINGS) + Ppu_WINDOW_TOP)($0)
     sub $topOffset, $top, $SCAN_LINE
         bgtz $topOffset, processWindow_done
 
     sub $topOffset, $SCAN_LINE, $top
 
     # When window starts off the end of the screen, there's nothing to draw.
-    lbu $left, (PPU_SETTINGS + Ppu_WINDOW_LEFT)($0)
+    lbu $left, (%lo(PPU_SETTINGS) + Ppu_WINDOW_LEFT)($0)
     addi $t0, $0, GB_LCD_WIDTH + WINDOW_X_OFFSET
     sub $t0, $t0, $left
         bltz $t0, processWindow_done
 
     addi $maxTileIndex, $0, 24 # The actual max is 20, but we had to tileIndex 8 at a time.
 
-    lbu $a0, (PPU_SETTINGS + Ppu_BACKGROUND_PALETTE)($0)
+    lbu $a0, (%lo(PPU_SETTINGS) + Ppu_BACKGROUND_PALETTE)($0)
     jal setPalette
 
     # Find the chunk of VRAM that corresponds to the tiles on this line.
-    lb $t0, (PPU_SETTINGS + Ppu_LCD_CONTROL)($0)
+    lb $t0, (%lo(PPU_SETTINGS) + Ppu_LCD_CONTROL)($0)
     andi $t0, $t0, Lcdc_WINDOW_TILE_MAP
     bne $t0, $0, 1f
         addi $tileMap, $0, TILE_MAP_0_OFFSET
@@ -723,7 +723,7 @@ xFlip:
     ## Multiply by two to get the number of bytes to skip.
     sll $lineNumber, $lineNumber, 1
 
-    dmaIn $tileMap, LINE_TILE_MAP, 0x20
+    dmaIn $tileMap, %lo(LINE_TILE_MAP), 0x20
 
     .set $tileLine, $tileMap
     .set $tileMap, 0
@@ -744,10 +744,10 @@ xFlip:
         # get 8 tiles and put the line of pixels in a buffer
         processWindow_whileLoadData:
             bne $IS_TILE_INDEX_SIGNED, $0, 1f
-                lbu $a0, LINE_TILE_MAP($tileIndex)
+                lbu $a0, %lo(LINE_TILE_MAP)($tileIndex)
                 j 2f
             1:
-                lb $a0, LINE_TILE_MAP($tileIndex)
+                lb $a0, %lo(LINE_TILE_MAP)($tileIndex)
             2:
 
             jal cacheGetTile
@@ -757,7 +757,7 @@ xFlip:
 
             # add this line to the buffer.
             lhu $a0, 0($tileLine)
-            sh $a0, UNPROCESSED_BUFFER($loadIndex)
+            sh $a0, %lo(UNPROCESSED_BUFFER)($loadIndex)
 
             # increment
             addi $tileIndex, $tileIndex, 1
@@ -765,7 +765,7 @@ xFlip:
         bne $loadIndex, $maxLoadIndex, processWindow_whileLoadData
 
         ## Shouldn't need to do this, but macros don't quite there yet.
-        addi $t0, $t0, UNPROCESSED_BUFFER
+        addi $t0, $t0, %lo(UNPROCESSED_BUFFER)
 
         # Load our 8 tile lines into a bunch of vector registers
         # Each vector represents the nth pixel in each tile.
@@ -836,7 +836,7 @@ xFlip:
         sll $t0, $t0, 3
 
           vor $v07, $v07, $v09, 0
-        addi $t0, $t0, PROCESSED_BUFFER
+        addi $t0, $t0, %lo(PROCESSED_BUFFER)
 
         # remember $8 is $t0 until I can get better macros.
         # suv should take our two bits and put them into a byte instead of two.
@@ -915,10 +915,10 @@ xFlip:
             processWindow_forInnerLoop:
                 add $a0, $pixelOffset, $innerIndex
 
-                lb $a0, PROCESSED_BUFFER($a0)
-                lb $a0, GB_PALETTE($a0)
+                lb $a0, %lo(PROCESSED_BUFFER)($a0)
+                lb $a0, %lo(GB_PALETTE)($a0)
                 jal massageMonochrome
-                sh $r0, N64_BUFFER($pixelIndex)
+                sh $r0, %lo(N64_BUFFER)($pixelIndex)
 
                 # +2 since n64 pixels are 16bit
                 addi $pixelIndex, $pixelIndex, 2
@@ -953,11 +953,11 @@ xFlip:
     .set $maxInnerIndex, $t9
 
     # Set the palette
-    lbu $a0, (PPU_SETTINGS + Ppu_BACKGROUND_PALETTE)($0)
+    lbu $a0, (%lo(PPU_SETTINGS) + Ppu_BACKGROUND_PALETTE)($0)
     jal setPalette
 
     # Find the chunk of VRAM that corresponds to the tiles on this line.
-    lb $t0, PPU_SETTINGS + Ppu_LCD_CONTROL($0)
+    lb $t0, %lo(PPU_SETTINGS) + Ppu_LCD_CONTROL($0)
     andi $t0, $t0, Lcdc_BACKGROUND_TILE_MAP
     bne $t0, $0, 1f
         addi $tileMap, $0, TILE_MAP_0_OFFSET
@@ -967,7 +967,7 @@ xFlip:
     2:
 
     # Figure out what line of the background we need to start with by adding the SCY register
-    lbu $t0, (PPU_SETTINGS + Ppu_BACKGROUND_SCROLL_Y)($0)
+    lbu $t0, (%lo(PPU_SETTINGS) + Ppu_BACKGROUND_SCROLL_Y)($0)
     add $t0, $t0, $SCAN_LINE
     # wrap around on 256
     andi $t0, $t0, 0xFF
@@ -985,7 +985,7 @@ xFlip:
     add $tileMap, $tileMap, $VRAM_BASE
 
     # DMA it in.
-    dmaIn $tileMap, LINE_TILE_MAP, 0x20
+    dmaIn $tileMap, %lo(LINE_TILE_MAP), 0x20
 
     # which line of the tile are we on
     ## a % b == a & ( b -1 ) if b is a power of 2
@@ -994,7 +994,7 @@ xFlip:
     sll $lineNumber, $lineNumber, 1
 
     # Get the x offset and then divide by 8 to get the starting tile.
-    lbu $tileIndex, (PPU_SETTINGS + Ppu_BACKGROUND_SCROLL_X)($0)
+    lbu $tileIndex, (%lo(PPU_SETTINGS) + Ppu_BACKGROUND_SCROLL_X)($0)
     srl $tileIndex, $tileIndex, 3
 
     addi $maxTileIndex, $tileIndex, 24 # Screen is actually 20 tiles wide, but we want a multiple of 8
@@ -1013,10 +1013,10 @@ xFlip:
         # get 8 tiles and put the line of pixels in a buffer
         processBackground_whileLoadData:
             bne $IS_TILE_INDEX_SIGNED, $0, 1f
-                lbu $a0, LINE_TILE_MAP($tileIndex)
+                lbu $a0, %lo(LINE_TILE_MAP)($tileIndex)
                 j 2f
             1:
-                lb $a0, LINE_TILE_MAP($tileIndex)
+                lb $a0, %lo(LINE_TILE_MAP)($tileIndex)
             2:
 
             jal cacheGetTile
@@ -1026,7 +1026,7 @@ xFlip:
 
             # add this line to the buffer.
             lhu $a0, 0($tileLine)
-            sh $a0, UNPROCESSED_BUFFER($loadIndex)
+            sh $a0, %lo(UNPROCESSED_BUFFER)($loadIndex)
 
             # increment
             addi $tileIndex, $tileIndex, 1
@@ -1034,7 +1034,7 @@ xFlip:
         bne $loadIndex, $maxLoadIndex, processBackground_whileLoadData
 
         ## Shouldn't need to do this, but macros don't quite there yet.
-        addi $t0, $t0, UNPROCESSED_BUFFER
+        addi $t0, $t0, %lo(UNPROCESSED_BUFFER)
 
         # Load our 8 tile lines into a bunch of vector registers
         # Each vector represents the nth pixel in each tile.
@@ -1105,7 +1105,7 @@ xFlip:
         sll $t0, $t0, 3
 
           vor $v07, $v07, $v09, 0
-        addi $t0, $t0, PROCESSED_BUFFER
+        addi $t0, $t0, %lo(PROCESSED_BUFFER)
 
         # remember $8 is $t0 until I can get better macros.
         # suv should take our two bits and put them into a byte instead of two.
@@ -1178,12 +1178,12 @@ xFlip:
             processBackground_forInnerLoop:
                 add $a0, $pixelOffset, $innerIndex
 
-                lb $a0, PROCESSED_BUFFER($a0)
+                lb $a0, %lo(PROCESSED_BUFFER)($a0)
 
                 # Cache whether this is the palette 0 position
                 or $a1, $a0, $0
 
-                lb $a0, GB_PALETTE($a0)
+                lb $a0, %lo(GB_PALETTE)($a0)
                 jal massageMonochrome
 
                 bne $a1, $0, 1f
@@ -1192,7 +1192,7 @@ xFlip:
                     and $r0, $r0, $a1
                 1:
 
-                sh $r0, N64_BUFFER($pixelIndex)
+                sh $r0, %lo(N64_BUFFER)($pixelIndex)
 
                 # +2 since n64 pixels are 16bit
                 addi $pixelIndex, $pixelIndex, 2
@@ -1225,11 +1225,11 @@ xFlip:
     # TODO: Check Lcdc_LCD_PRIORITY. If it's 0, skip all of this and just draw white pixels.
 
     # Set the palette
-    lbu $a0, (PPU_SETTINGS + Ppu_BACKGROUND_PALETTE)($0)
+    lbu $a0, (%lo(PPU_SETTINGS) + Ppu_BACKGROUND_PALETTE)($0)
     jal setPalette
 
     # Find the chunk of VRAM that corresponds to the tiles on this line.
-    lb $t0, PPU_SETTINGS + Ppu_LCD_CONTROL($0)
+    lb $t0, %lo(PPU_SETTINGS) + Ppu_LCD_CONTROL($0)
     andi $t0, $t0, Lcdc_BACKGROUND_TILE_MAP
     bne $t0, $0, 1f
         addi $tileMap, $0, TILE_MAP_0_OFFSET
@@ -1239,7 +1239,7 @@ xFlip:
     2:
 
     # Figure out what line of the background we need to start with by adding the SCY register
-    lbu $t0, (PPU_SETTINGS + Ppu_BACKGROUND_SCROLL_Y)($0)
+    lbu $t0, (%lo(PPU_SETTINGS) + Ppu_BACKGROUND_SCROLL_Y)($0)
     add $t0, $t0, $SCAN_LINE
     # wrap around on 256
     andi $t0, $t0, 0xFF
@@ -1257,10 +1257,10 @@ xFlip:
     add $tileMap, $tileMap, $VRAM_BASE
 
     # DMA it in.
-    dmaIn $tileMap, LINE_TILE_MAP, 0x20
+    dmaIn $tileMap, %lo(LINE_TILE_MAP), 0x20
 
     # Find starting pixel
-    lbu $currentPixel, (PPU_SETTINGS + Ppu_BACKGROUND_SCROLL_X)($0)
+    lbu $currentPixel, (%lo(PPU_SETTINGS) + Ppu_BACKGROUND_SCROLL_X)($0)
     addi $endLinePixel, $currentPixel, TILE_WIDTH * TILES_PER_WIDTH
 
     # $t0 = $currentPixel % TILE_WIDTH
@@ -1280,10 +1280,10 @@ xFlip:
         srl $t0, $currentPixel, 3
 
         bne $IS_TILE_INDEX_SIGNED, $0, 1f
-            lbu $a0, LINE_TILE_MAP($t0)
+            lbu $a0, %lo(LINE_TILE_MAP)($t0)
             j 2f
         1:
-            lb $a0, LINE_TILE_MAP($t0)
+            lb $a0, %lo(LINE_TILE_MAP)($t0)
         2:
         jal cacheGetTile
 
@@ -1318,7 +1318,7 @@ xFlip:
             or $t1, $t0, $0
 
             # Look up the palette
-            lb $a0, GB_PALETTE($t0)
+            lb $a0, %lo(GB_PALETTE)($t0)
 
             # massage it from gameboy format to n64 format.
             jal massageMonochrome
@@ -1330,11 +1330,11 @@ xFlip:
             1:
 
             # and push on to the buffer.
-            lbu $t0, (PPU_SETTINGS + Ppu_BACKGROUND_SCROLL_X)($0)
+            lbu $t0, (%lo(PPU_SETTINGS) + Ppu_BACKGROUND_SCROLL_X)($0)
             sub $t0, $currentPixel, $t0
             andi $t0, $t0, 0xFF
             sll $t0, $t0, 1
-            sh $r0, N64_BUFFER($t0)
+            sh $r0, %lo(N64_BUFFER)($t0)
 
             addi $currentPixel, $currentPixel, 1
             # When the background was offset from a tile boundary, break out before we overrun it
@@ -1362,40 +1362,40 @@ xFlip:
 
     lui $t0, 0x8000
     ori $t0, $t0, 0x4000
-    sw $t0, SHIFT_CONSTS($0)
+    sw $t0, %lo(SHIFT_CONSTS)($0)
 
     lui $t0, 0x2000
     ori $t0, $t0, 0x1000
-    sw $t0, (SHIFT_CONSTS + 4)($0)
+    sw $t0, (%lo(SHIFT_CONSTS) + 4)($0)
 
     lui $t0, 0x0800
     ori $t0, $t0, 0x0400
-    sw $t0, (SHIFT_CONSTS + 8)($0)
+    sw $t0, (%lo(SHIFT_CONSTS) + 8)($0)
 
     lui $t0, 0x0200
     ori $t0, $t0, 0x0100
-    sw $t0, (SHIFT_CONSTS + 0xC)($0)
+    sw $t0, (%lo(SHIFT_CONSTS) + 0xC)($0)
 
-    addi $t0, $0, SHIFT_CONSTS
+    addi $t0, $0, %lo(SHIFT_CONSTS)
       lqv $v29, 0, 0, $8 # $v29 = vrl shift consts $8 = t0
 
     lui $t0, 0x0080
     ori $t0, $t0, 0x0040
-    sw $t0, SHIFT_CONSTS($0)
+    sw $t0, %lo(SHIFT_CONSTS)($0)
 
     lui $t0, 0x0020
     ori $t0, $t0, 0x0010
-    sw $t0, (SHIFT_CONSTS + 4)($0)
+    sw $t0, (%lo(SHIFT_CONSTS) + 4)($0)
 
     lui $t0, 0x0008
     ori $t0, $t0, 0x0004
-    sw $t0, (SHIFT_CONSTS + 8)($0)
+    sw $t0, (%lo(SHIFT_CONSTS) + 8)($0)
 
     lui $t0, 0x0002
     ori $t0, $t0, 0x0001
-    sw $t0, (SHIFT_CONSTS + 0xC)($0)
+    sw $t0, (%lo(SHIFT_CONSTS) + 0xC)($0)
 
-    addi $t0, $0, SHIFT_CONSTS
+    addi $t0, $0, %lo(SHIFT_CONSTS)
       lqv $v30, 0, 0, $8 # $v30 = shift consts $8 = t0
 
     # These are used for converting GB pixels 
@@ -1413,27 +1413,27 @@ xFlip:
 ###
 main:
     # init stack pointer.
-    addi $sp, $0, STACK_TOP
+    addi $sp, $0, %lo(STACK_TOP)
 
     setupVectorShifts
 
     # Bring in the configuration.
     liw $t0, RSP_INTERFACE_ADDRESS
-    dmaIn $t0, INPUT, INPUT_SIZE
+    dmaIn $t0, %lo(INPUT), INPUT_SIZE
 
     # Stash config in some registers for quick reference.
-    lw $OUT_BUFFER_ADDRESS, (INPUT + RspIn_OUT_ADDRESS)($0)
-    lw $VRAM_BASE, (INPUT + RspIn_VRAM_BASE)($0)
+    lw $OUT_BUFFER_ADDRESS, (%lo(INPUT) + RspIn_OUT_ADDRESS)($0)
+    lw $VRAM_BASE, (%lo(INPUT) + RspIn_VRAM_BASE)($0)
 
     ## Set up monochrome colour palette in memory
     liw $t0, LIGHTEST
-    sw $t0, N64_PALETTE($0)
+    sw $t0, %lo(N64_PALETTE)($0)
     liw $t0, LIGHTER
-    sw $t0, (N64_PALETTE + 4)($0)
+    sw $t0, (%lo(N64_PALETTE) + 4)($0)
     liw $t0, DARKER
-    sw $t0, (N64_PALETTE + 8)($0)
+    sw $t0, (%lo(N64_PALETTE) + 8)($0)
     liw $t0, DARKEST
-    sw $t0, (N64_PALETTE + 0xC)($0)
+    sw $t0, (%lo(N64_PALETTE) + 0xC)($0)
 
     mainLoop:
         # Stall until CPU is ready for us to pick up new data.
@@ -1450,15 +1450,15 @@ main:
 
         # Bring in the configuration.
         liw $t0, RSP_INTERFACE_ADDRESS
-        dmaIn $t0, INPUT, INPUT_SIZE
+        dmaIn $t0, %lo(INPUT), INPUT_SIZE
 
         # Load and cache the gameboy LCD registers.
-        lw $t0, (INPUT + RspIn_HRAM_BASE)($0)
+        lw $t0, (%lo(INPUT) + RspIn_HRAM_BASE)($0)
         addi $t0, $t0, PPU_SETTINGS_OFFSET
-        dmaIn $t0, PPU_SETTINGS, PPU_SETTINGS_SIZE
+        dmaIn $t0, %lo(PPU_SETTINGS), PPU_SETTINGS_SIZE
 
         # Check whether the LCD is turned on, and if not, skip all this shebang.
-        lb $t0, (PPU_SETTINGS + Ppu_LCD_CONTROL)($0)
+        lb $t0, (%lo(PPU_SETTINGS) + Ppu_LCD_CONTROL)($0)
 
         andi $t1, $t0, Lcdc_LCD_SWITCH
             beq $t0, $0, main_continue
@@ -1481,16 +1481,16 @@ main:
 
         ## Initialise some registers with constants.
         ## TODO - allow this cache to persist across scan-lines.
-        addi $CACHE_POINTER, $0, TILE_CACHE
+        addi $CACHE_POINTER, $0, %lo(TILE_CACHE)
 
         # Initialise rendering of the line.
 
-        lw $START_POSITION, INPUT + RspIn_SCREEN_POSITION($0)
-        lw $RECTANGLE_SIZE, INPUT + RspIn_RECTANGLE_SIZE($0)
+        lw $START_POSITION, %lo(INPUT) + RspIn_SCREEN_POSITION($0)
+        lw $RECTANGLE_SIZE, %lo(INPUT) + RspIn_RECTANGLE_SIZE($0)
         andi $RECTANGLE_HEIGHT, $RECTANGLE_SIZE, 0x0000FFFF
 
         ## Cache the current scan line.
-        lbu $SCAN_LINE, (PPU_SETTINGS + Ppu_CURRENT_LINE)($0)
+        lbu $SCAN_LINE, (%lo(PPU_SETTINGS) + Ppu_CURRENT_LINE)($0)
 
         # Build up this scanline to a buffer than can be rendered as a texture.
 
@@ -1511,9 +1511,9 @@ main:
         addi $index, $0, GB_LCD_WIDTH * 2
         main_whileHasPixels:
             addi $index, $index, -2
-            lhu $t0, N64_BUFFER($index)
+            lhu $t0, %lo(N64_BUFFER)($index)
             ori $t0, $t0, 1
-            sh $t0, N64_BUFFER($index)
+            sh $t0, %lo(N64_BUFFER)($index)
         bgtz $index, main_whileHasPixels
         .set $index, 0
 
@@ -1523,7 +1523,7 @@ main:
         syncPipe
 
         ## DMA the data back to DRAM so that the RDP can pick it up.
-        dmaOut N64_BUFFER, $OUT_BUFFER_ADDRESS, BUFFER_SIZE
+        dmaOut %lo(N64_BUFFER), $OUT_BUFFER_ADDRESS, BUFFER_SIZE
 
         ## Tell RDP where to look for texture data.
         setTextureImage RGBA_FORMAT, COLOUR_DEPTH_16, GB_LCD_WIDTH, $OUT_BUFFER_ADDRESS
