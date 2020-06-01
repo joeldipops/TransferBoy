@@ -106,7 +106,7 @@
 # Memory Map
 ###
 # Sizes aligned to 8byte boundaries
-.eqv RDP_BUFFER_SIZE,   0x010 # max command length = ...?
+.eqv RDP_BUFFER_SIZE,   0x040 # max command length = ...?
 .eqv STACK_SIZE,        0x040 # Arbitrary length. Hopefully 64bytes is enough.
 .eqv GB_PALETTE_SIZE,   0x008 # 4 2 bit colours across four bytes for easy lookup.
 .eqv N64_PALETTE_SIZE,  0x010 # 4 32bit colours. # TODO - make these 16bit colours
@@ -1535,19 +1535,21 @@ main:
         # Ask the RDP to render the line we just built.
 
         ## Sync before loading a new texture.
-        syncPipe
+        syncPipe 0
+        execRdp 1
 
         ## DMA the data back to DRAM so that the RDP can pick it up.
         dmaOut N64_BUFFER, $OUT_BUFFER_ADDRESS, BUFFER_SIZE
 
         ## Tell RDP where to look for texture data.
-        setTextureImage RGBA_FORMAT, COLOUR_DEPTH_16, GB_LCD_WIDTH, $OUT_BUFFER_ADDRESS
+        setTextureImage 0, RGBA_FORMAT, COLOUR_DEPTH_16, GB_LCD_WIDTH, $OUT_BUFFER_ADDRESS
 
         ## Set up a tile now that the RDP has the data.
-        setTile 1, RGBA_FORMAT, COLOUR_DEPTH_16, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        setTile 8, 1, RGBA_FORMAT, COLOUR_DEPTH_16, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 
         ## Give tile a size & shape
-        loadTile 1, 0, 0, GB_LCD_WIDTH, 1
+        loadTile 16, 1, 0, 0, GB_LCD_WIDTH, 1
+        execRdp 6
 
         # Calculate where to draw the line.
         add $a0, $START_POSITION, $0
@@ -1561,11 +1563,16 @@ main:
         add $a3, $RECTANGLE_HEIGHT, $a1
 
         ## Draw a rectangle with the texture we have set up
-        textureRectangle 1, $a0, $a1, $a2, $a3, 0, 0, 2048, 512
+        textureRectangle 0, 1, $a0, $a1, $a2, $a3, 0, 0, 2048, 512
+        execRdp 4
+
+        # Dunno why it's faster to send the RPD commands in two DMAS instead of one,
+        # but it seems it is.  Keeping this here until I figure it out.
+        #textureRectangle 0x18, 1, $a0, $a1, $a2, $a3, 0, 0, 2048, 512
+        #execRdp 0x18
+
 
         # Clean-up now that we're done.
-
-        ## Reset DRAM flag that says we're done with this work.
     main_continue:
         # Lift the IsBusy flag
         addi $t0, $0, SP_STATUS_BUSY_OFF
