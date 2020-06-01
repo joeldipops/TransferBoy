@@ -5,10 +5,6 @@
 #include "global.h"
 #include "logger.h"
 
-extern const char renderer_code_start __attribute((section(".data")));
-extern const char renderer_code_end __attribute((section(".data")));
-extern const char renderer_code_size __attribute((section(".data")));
-
 extern const char ppuDMG_code_start __attribute((section(".data")));
 extern const char ppuDMG_code_end __attribute((section(".data")));
 extern const char ppuDMG_code_size __attribute((section(".data")));
@@ -84,10 +80,6 @@ s8 prepareMicrocode(const Microcode code) {
 
     unsigned long size = 0;
     switch (code) {
-        case UCODE_RENDERER:
-            size = (unsigned long)&renderer_code_size;
-            load_ucode((void*)&renderer_code_start, size);
-            break;
         case UCODE_DMG_PPU:
             size = (unsigned long) &ppuDMG_data_size;
             load_data((void*)&ppuDMG_data_start, size);

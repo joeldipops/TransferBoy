@@ -10,7 +10,7 @@ typedef enum {
     RSP_ERR_UNIMPLEMENTED_UCODE
 } RspError;
 
-typedef enum { NONE, UCODE_RENDERER, UCODE_DMG_PPU, UCODE_GBC_PPU, UCODE_SGB_PPU } Microcode;
+typedef enum { NONE, UCODE_DMG_PPU, UCODE_GBC_PPU, UCODE_SGB_PPU } Microcode;
 
 typedef void (*RspEventHandler)();
 

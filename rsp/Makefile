@@ -9,11 +9,9 @@ OBJCOPY = $(N64PREFIX)objcopy
 all: rsp
 clean: rsp-clean
 
-rsp: renderer.o ppuDMG.o ppuDMGData.o
+rsp: ppuDMG.o ppuDMGData.o
 
 ppuDMG: ppuDMG.o
-
-renderer: renderer.o
 
 ppuDMG.dsm: ppuDMGText.o
 	mips-linux-gnu-objdump ppuDMGText.o -m mips -D > ppuDMG.dsm
@@ -30,13 +28,6 @@ ppuDMGData.o: ppuDMGData.bin
 
 ppuDMG.o: ppuDMG.bin
 	$(OBJCOPY) -I binary -O elf32-bigmips -B mips4300 --redefine-sym _binary_ppuDMG_bin_start=ppuDMG_code_start --redefine-sym _binary_ppuDMG_bin_end=ppuDMG_code_end --redefine-sym _binary_ppuDMG_bin_size=ppuDMG_code_size --rename-section .text=.data ppuDMG.bin ppuDMG.o
-
-renderer.bin: renderer.rsp
-	$(CC) -x assembler-with-cpp -c -o tmp.o renderer.rsp
-	$(OBJCOPY) -O binary -j .text tmp.o renderer.bin
-
-renderer.o: renderer.bin
-	$(OBJCOPY) -I binary -O elf32-bigmips -B mips4300 --redefine-sym _binary_renderer_bin_start=renderer_code_start --redefine-sym _binary_renderer_bin_end=renderer_code_end --redefine-sym _binary_renderer_bin_size=renderer_code_size --rename-section .text=.data renderer.bin renderer.o
 
 rsp-clean:
 	rm -f *.o *.bin

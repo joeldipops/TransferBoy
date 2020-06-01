@@ -35,9 +35,6 @@ $(CURDIR)/rsp/ppuDMG.o:
 
 $(CURDIR)/rsp/ppuDMGData.o: $(CURDIR)/rsp/ppuDMG.o
 
-$(CURDIR)/rsp/renderer.o:
-	make -C $(CURDIR)/rsp rsp
-
 $(PROG_NAME)$(ROM_EXTENSION): $(PROG_NAME).elf $(PROG_NAME).dfs
 	$(OBJCOPY) $(PROG_NAME).elf $(PROG_NAME).bin -O binary
 	rm -f $(PROG_NAME)$(ROM_EXTENSION)
@@ -78,8 +75,7 @@ LD_OFILES += $(CURDIR)/obj/rsp.o
 $(PROG_NAME).dsm: $(PROG_NAME).elf
 	mips-linux-gnu-objdump $(PROG_NAME).elf -m mips -D > $(PROG_NAME).dsm
 
-$(PROG_NAME).elf : $(CURDIR)/rsp/renderer.o $(CURDIR)/rsp/ppuDMG.o $(CURDIR)/rsp/ppuDMGData.o $(PROG_NAME).o $(LD_FILE)
-
+$(PROG_NAME).elf : $(CURDIR)/rsp/ppuDMG.o $(CURDIR)/rsp/ppuDMGData.o $(PROG_NAME).o $(LD_FILE)
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/ppu.o $(CURDIR)/ppu.c
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/progressBar.o $(CURDIR)/progressBar.c
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/fps.o $(CURDIR)/fps.c
@@ -112,7 +108,7 @@ $(PROG_NAME).elf : $(CURDIR)/rsp/renderer.o $(CURDIR)/rsp/ppuDMG.o $(CURDIR)/rsp
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/rsp.o $(CURDIR)/rsp.c
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/transferboy.o $(CURDIR)/transferboy.c
 
-	$(LD) -o $(PROG_NAME).elf $(CURDIR)/rsp/renderer.o $(CURDIR)/rsp/ppuDMG.o $(CURDIR)/rsp/ppuDMGData.o $(CURDIR)/obj/$(PROG_NAME).o $(LD_OFILES) $(LINK_FLAGS)
+	$(LD) -o $(PROG_NAME).elf $(CURDIR)/rsp/ppuDMG.o $(CURDIR)/rsp/ppuDMGData.o $(CURDIR)/obj/$(PROG_NAME).o $(LD_OFILES) $(LINK_FLAGS)
 
 $(LD_FILE) : $(PRE_LD_FILE)
 	cpp $(PRE_LD_FILE) | grep -v '^#'	>>$(LD_FILE)
