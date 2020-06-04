@@ -42,8 +42,8 @@ _execRdp:
 # @input words The number of words to send
 ###
 .macro execRdp words
-    # + 4 because end expects the next address after data ends.
     stackPush 1
+    # + 4 because end expects the next address after data ends.
     addi $a0, $0, (\words * 4) + 4
     nop # TODO - figure out why the code breaks and jumps to some random address without this NOP
     jal _execRdp

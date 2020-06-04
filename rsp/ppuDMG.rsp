@@ -704,7 +704,7 @@ xFlip:
     sub $t0, $t0, $left
         bltz $t0, processWindow_done
 
-    addi $maxTileIndex, $0, 24 # The actual max is 20, but we had to tileIndex 8 at a time.
+    addi $maxTileIndex, $0, 20
 
     lbu $a0, (PPU_SETTINGS + Ppu_BACKGROUND_PALETTE)($0)
     jal setPalette
@@ -751,8 +751,8 @@ xFlip:
         add $loadIndex, $0, $0
 
         # when in the third iteration, only go half way.
-        addi $t0, $tileIndex, 8
-        bne $t0, $maxTileIndex, 1f
+        addi $a0, $tileIndex, 4
+        bne $a0, $maxTileIndex, 1f
             addi $maxLoadIndex, $0, 8
         1:
 
@@ -841,10 +841,13 @@ xFlip:
           vor $v06, $v06, $v09, 0
 
           vand $v09, $v07, $v27, 0b1000
-          vand $v07, $v07, $v28, 0b1000
 
         # Find the start of this set of tiles.
-        addi $t0, $tileIndex, -8
+        # which is half the current maxLoadIndex
+        srl $t0, $maxLoadIndex, 1
+
+          vand $v07, $v07, $v28, 0b1000
+        sub $t0, $tileIndex, $t0
 
           vsrl $v09, $v09, 7
         # multiply $tileIndex by 8.  We split 8 two bit pixels across 16bits in to a byte each.
@@ -1012,16 +1015,16 @@ xFlip:
     lbu $tileIndex, (PPU_SETTINGS + Ppu_BACKGROUND_SCROLL_X)($0)
     srl $tileIndex, $tileIndex, 3
 
-    addi $maxTileIndex, $tileIndex, 24 # Screen is actually 20 tiles wide, but we want a multiple of 8
-    
+    addi $maxTileIndex, $tileIndex, 20
+
     # We can fit 8 16b tiles at once in our vector regs.
     addi $maxLoadIndex, $0, 16
     processBackground_whileHasPixels:
         add $loadIndex, $0, $0
 
         # when in the third iteration, only go half way.
-        addi $t0, $tileIndex, 8
-        bne $t0, $maxTileIndex, 1f
+        addi $a0, $tileIndex, 4
+        bne $a0, $maxTileIndex, 1f
             addi $maxLoadIndex, $0, 8
         1:
 
@@ -1110,10 +1113,13 @@ xFlip:
           vor $v06, $v06, $v09, 0
 
           vand $v09, $v07, $v27, 0b1000
-          vand $v07, $v07, $v28, 0b1000
 
         # Find the start of this set of tiles.
-        addi $t0, $tileIndex, -8
+        # which is half the current maxLoadIndex
+        srl $t0, $maxLoadIndex, 1
+
+          vand $v07, $v07, $v28, 0b1000
+        sub $t0, $tileIndex, $t0
 
           vsrl $v09, $v09, 7
         # multiply $tileIndex by 8.  We split 8 two bit pixels across 16bits in to a byte each.
@@ -1163,12 +1169,13 @@ xFlip:
         # Data now looks like this in DMEM
         #   0   8   16  24...
         #   1   9   17  25...
-
     bne $tileIndex, $maxTileIndex, processBackground_whileHasPixels
 
     # Iterate through our now ordered pixels.
     .set $pixelOffset, $lineNumber
-    add $pixelOffset, $0, $0
+    lbu $pixelOffset, (PPU_SETTINGS + Ppu_BACKGROUND_SCROLL_X)($0)
+    .set $lineNumber, 0
+    
     .set $top, 0
 
     .set $maxLoadIndex, 0
@@ -1192,7 +1199,6 @@ xFlip:
             addi $t0, $0, TILES_PER_SCREEN * TILE_WIDTH * 2
             processBackground_forInnerLoop:
                 add $a0, $pixelOffset, $innerIndex
-
                 lb $a0, PROCESSED_BUFFER($a0)
 
                 # Cache whether this is the palette 0 position
