@@ -66,7 +66,9 @@ void ppuStep(PlayerState* state) {
         }
 
         // Let the RSP finish its current job.
-        while(isRspBusy());
+        #ifdef LOCK_CPU_TO_PPU
+            while(isRspBusy());
+        #endif
         setDataReady(true);
     }
 }
