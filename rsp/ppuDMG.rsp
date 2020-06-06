@@ -1024,7 +1024,7 @@ xFlip:
 
     # We can fit 8 16b tiles at once in our vector regs.
     addi $maxLoadIndex, $0, 16
-    processBackground_whileHasPixels:
+    processBackground_whileHasTiles:
         add $loadIndex, $0, $0
 
         # when in the third iteration, only go half way.
@@ -1178,7 +1178,7 @@ xFlip:
         # Data now looks like this in DMEM
         #   0   8   16  24...
         #   1   9   17  25...
-    bne $tileIndex, $maxTileIndex, processBackground_whileHasPixels
+    bne $tileIndex, $maxTileIndex, processBackground_whileHasTiles
 
     .set $maxLoadIndex, 0
     .set $tileIndex, 0
