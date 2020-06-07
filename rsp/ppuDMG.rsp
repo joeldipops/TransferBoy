@@ -752,7 +752,7 @@ xFlip:
     addi $maxLoadIndex, $0, 16
 
     addi $tileIndex, $0, 0
-    processWindow_whileHasPixels:
+    processWindow_whileHasTiles:
         add $loadIndex, $0, $0
 
         # when in the third iteration, only go half way.
@@ -903,61 +903,48 @@ xFlip:
         #   0   8   16  24...
         #   1   9   17  25...
 
-    bne $tileIndex, $maxTileIndex, processWindow_whileHasPixels
+    bne $tileIndex, $maxTileIndex, processWindow_whileHasTiles
 
 
     # Iterate through our now ordered pixels.
-
-    .set $pixelOffset, $top
-    add $pixelOffset, $0, $0
+    .set $tileIndex, 0
+    .set $maxTileIndex, 0
     .set $top, 0
 
+    .set $maxOutputIndex, $maxLoadIndex
     .set $maxLoadIndex, 0
+    addi $maxOutputIndex, $0, GB_LCD_WIDTH * 2 # 16bit pixels.
 
-    .set $innerIndex, $loadIndex
-    .set $loadIndex, 0
-
-    .set $outerIndex, $tileIndex
-    .set $tileIndex, 0
-
-    .set $temp, $maxTileIndex
-    .set $maxTileIndex, 0
-
-    .set $pixelIndex, $left
-    addi $pixelIndex, $left, -WINDOW_X_OFFSET
-    # double for 16bit
-    sll $pixelIndex, $pixelIndex, 1
+    .set $outputIndex, $left
+    addi $outputIndex, $left, -WINDOW_X_OFFSET
     .set $left, 0
 
-    processWindow_whileHasChunks:
-        add $outerIndex, $0, $0
-        processWindow_forOuterLoop:
-            add $innerIndex, $outerIndex, $0
-            addi $maxInnerIndex, $outerIndex, 8 * 8
-            addi $t0, $0, TILES_PER_SCREEN * TILE_WIDTH * 2
-            processWindow_forInnerLoop:
-                add $a0, $pixelOffset, $innerIndex
+    .set $inputIndex, $loadIndex
+    .set $loadIndex, 0
+    add $inputIndex, $0, $0
 
-                lb $a0, PROCESSED_BUFFER($a0)
-                lb $a0, GB_PALETTE($a0)
-                jal massageMonochrome
-                sh $r0, N64_BUFFER($pixelIndex)
+    # less than 0, start at 0 and adjust input index.
+    bgtz $outputIndex, 1f
+        sub $inputIndex, $inputIndex, $outputIndex
+        add $outputIndex, $0, $0
+    1:
 
-                # +2 since n64 pixels are 16bit
-                addi $pixelIndex, $pixelIndex, 2
+    # double for 16bit
+    sll $outputIndex, $outputIndex, 1
 
-                    # Short circuit if we're off the right edge of the screen
-                    beq $pixelIndex, $t0, processWindow_done
+    processWindow_whileHasPixels:
+        lbu $t0, PROCESSED_INDEX($inputIndex)
+        lb $t0, PROCESSED_BUFFER($t0)
 
-                addi $innerIndex, $innerIndex, 8
-            bne $innerIndex, $maxInnerIndex, processWindow_forInnerLoop
-            addi $outerIndex, $outerIndex, 1
+        lb $a0, GB_PALETTE($t0)
 
-            addi $t0, $0, 8
-        bne $outerIndex, $t0, processWindow_forOuterLoop
-        addi $pixelOffset, $pixelOffset, 64
-    # We break out of this while(true) when $pixelIndex hits an edge.
-    j processWindow_whileHasChunks
+        jal massageMonochrome
+        sh $r0, N64_BUFFER($outputIndex)
+
+        addi $inputIndex, $inputIndex, 1
+        addi $outputIndex, $outputIndex, 2
+    bne $outputIndex, $maxOutputIndex, processWindow_whileHasPixels
+
     processWindow_done:
 .endm
 
@@ -1021,6 +1008,7 @@ xFlip:
     srl $tileIndex, $tileIndex, 3
 
     addi $maxTileIndex, $tileIndex, 20
+    andi $maxTileIndex, $maxTileIndex, 0b00011111
 
     # We can fit 8 16b tiles at once in our vector regs.
     addi $maxLoadIndex, $0, 16
@@ -1029,6 +1017,7 @@ xFlip:
 
         # when in the third iteration, only go half way.
         addi $a0, $tileIndex, 4
+        andi $a0, $a0, 0b00011111
         bne $a0, $maxTileIndex, 1f
             addi $maxLoadIndex, $0, 8
         1:
@@ -1053,11 +1042,12 @@ xFlip:
 
             # increment
             addi $tileIndex, $tileIndex, 1
+            andi $tileIndex, $tileIndex, 0b00011111
             addi $loadIndex, $loadIndex, 2
         bne $loadIndex, $maxLoadIndex, processBackground_whileLoadData
 
         ## Shouldn't need to do this, but macros don't quite there yet.
-        addi $t0, $t0, UNPROCESSED_BUFFER
+        addi $t0, $0, UNPROCESSED_BUFFER
 
         # Load our 8 tile lines into a bunch of vector registers
         # Each vector represents the nth pixel in each tile.
@@ -1117,26 +1107,30 @@ xFlip:
           vsrl $v09, $v09, 7
           vor $v06, $v06, $v09, 0
 
-          vand $v09, $v07, $v27, 0b1000
-
         # Find the start of this set of tiles.
         # which is half the current maxLoadIndex
         srl $t0, $maxLoadIndex, 1
 
-          vand $v07, $v07, $v28, 0b1000
+          vand $v09, $v07, $v27, 0b1000
         sub $t0, $tileIndex, $t0
+        andi $t0, $t0, 0b00011111
+
+          vand $v07, $v07, $v28, 0b1000
+        # Blow away the remainder.
+        srl $t0, $t0, 3
 
           vsrl $v09, $v09, 7
         # multiply $tileIndex by 8.  We split 8 two bit pixels across 16bits in to a byte each.
-        sll $t0, $t0, 3
+        sll $t0, $t0, 6
 
           vor $v07, $v07, $v09, 0
         addi $t0, $t0, PROCESSED_BUFFER
 
+
         # remember $8 is $t0 until I can get better macros.
         # suv should take our two bits and put them into a byte instead of two.
           vsll $v07, $v07, 7
-          suv $v07, 0, 0,  $8
+          suv $v07, 0, 0, $8
 
         # Dunno if this is a cen bug, a libdragon bug or I'm just using this wrong,
         # but instead of providing a constant offset, I'm having to increment $t0
@@ -1181,22 +1175,27 @@ xFlip:
     bne $tileIndex, $maxTileIndex, processBackground_whileHasTiles
 
     .set $maxLoadIndex, 0
-    .set $tileIndex, 0
     .set $maxTileIndex, 0
 
     # Iterate through our now ordered pixels.
-    .set $pixelIndex, $lineNumber
+    .set $inputIndex, $lineNumber
     .set $lineNumber, 0
     # Find which pixel of a tile to start with based on SCX
-    lbu $pixelIndex, (PPU_SETTINGS + Ppu_BACKGROUND_SCROLL_X)($0)
-    and $pixelIndex, $pixelIndex, TILE_WIDTH - 1
+    lbu $inputIndex, (PPU_SETTINGS + Ppu_BACKGROUND_SCROLL_X)($0)
+    and $inputIndex, $inputIndex, TILE_WIDTH - 1
 
-    .set $maxPixelIndex, $loadIndex
-    addi $maxPixelIndex, $pixelIndex, 160
+    .set $outputIndex, $tileIndex
+    .set $tileIndex, 0
+    add $outputIndex, $0, $0
+
+    .set $maxOutputIndex, $loadIndex
     .set $loadIndex, 0
+    addi $maxOutputIndex, $0, GB_LCD_WIDTH * 2 # two bytes per pixel.
 
     processBackground_whileHasPixels:
-        lbu $t0, PROCESSED_INDEX($pixelIndex)
+        # Get the address of the next pixel since the VU has put them in a weird order
+        lbu $t0, PROCESSED_INDEX($inputIndex)
+
         lb $t0, PROCESSED_BUFFER($t0)
 
         # Cache whether this is the palette 0 position
@@ -1212,11 +1211,13 @@ xFlip:
         1:
 
         # Double pixel index for N64 colour since these are 16bit.
-        sll $t0, $pixelIndex, 1
-        sh $r0, N64_BUFFER($t0)
+        sh $r0, N64_BUFFER($outputIndex)
 
-        addi $pixelIndex, $pixelIndex, 1
-    bne $pixelIndex, $maxPixelIndex, processBackground_whileHasPixels
+        addi $inputIndex, $inputIndex, 1
+        addi $outputIndex, $outputIndex, 2
+    bne $outputIndex, $maxOutputIndex, processBackground_whileHasPixels
+
+    processBackground_done:
 .endm
 
 ###
