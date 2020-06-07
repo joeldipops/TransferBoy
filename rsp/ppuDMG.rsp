@@ -957,10 +957,10 @@ xFlip:
     .set $loadIndex, $t3
     .set $tileIndex, $t4
     .set $lineNumber, $t5
-    .set $maxTileIndex, $t6
+    .set $tilesToProcess, $t6
     .set $maxLoadIndex, $t7
     .set $pixelIndex, $t8
-    .set $maxInnerIndex, $t9
+    .set $tilesProcessed, $t9
 
     # Set the palette
     lbu $a0, (PPU_SETTINGS + Ppu_BACKGROUND_PALETTE)($0)
@@ -1007,8 +1007,8 @@ xFlip:
     lbu $tileIndex, (PPU_SETTINGS + Ppu_BACKGROUND_SCROLL_X)($0)
     srl $tileIndex, $tileIndex, 3
 
-    addi $maxTileIndex, $tileIndex, 20
-    andi $maxTileIndex, $maxTileIndex, 0b00011111
+    add $tilesProcessed, $0, $0
+    addi $tilesToProcess, $0, 20
 
     # We can fit 8 16b tiles at once in our vector regs.
     addi $maxLoadIndex, $0, 16
@@ -1016,9 +1016,8 @@ xFlip:
         add $loadIndex, $0, $0
 
         # when in the third iteration, only go half way.
-        addi $a0, $tileIndex, 4
-        andi $a0, $a0, 0b00011111
-        bne $a0, $maxTileIndex, 1f
+        addi $a0, $tilesProcessed, 4
+        bne $a0, $tilesToProcess, 1f
             addi $maxLoadIndex, $0, 8
         1:
 
@@ -1043,6 +1042,7 @@ xFlip:
             # increment
             addi $tileIndex, $tileIndex, 1
             andi $tileIndex, $tileIndex, 0b00011111
+            addi $tilesProcessed, $tilesProcessed, 1
             addi $loadIndex, $loadIndex, 2
         bne $loadIndex, $maxLoadIndex, processBackground_whileLoadData
 
@@ -1112,20 +1112,16 @@ xFlip:
         srl $t0, $maxLoadIndex, 1
 
           vand $v09, $v07, $v27, 0b1000
-        sub $t0, $tileIndex, $t0
-        andi $t0, $t0, 0b00011111
+        sub $t0, $tilesProcessed, $t0
 
           vand $v07, $v07, $v28, 0b1000
-        # Blow away the remainder.
-        srl $t0, $t0, 3
-
-          vsrl $v09, $v09, 7
         # multiply $tileIndex by 8.  We split 8 two bit pixels across 16bits in to a byte each.
-        sll $t0, $t0, 6
-
-          vor $v07, $v07, $v09, 0
+        sll $t0, $t0, 3
+ 
+          vsrl $v09, $v09, 7
         addi $t0, $t0, PROCESSED_BUFFER
-
+   
+          vor $v07, $v07, $v09, 0
 
         # remember $8 is $t0 until I can get better macros.
         # suv should take our two bits and put them into a byte instead of two.
@@ -1172,10 +1168,11 @@ xFlip:
         # Data now looks like this in DMEM
         #   0   8   16  24...
         #   1   9   17  25...
-    bne $tileIndex, $maxTileIndex, processBackground_whileHasTiles
+    bne $tilesProcessed, $tilesToProcess, processBackground_whileHasTiles
 
     .set $maxLoadIndex, 0
-    .set $maxTileIndex, 0
+    .set $tilesToProcess, 0
+    .set $tilesProcessed, 0
 
     # Iterate through our now ordered pixels.
     .set $inputIndex, $lineNumber
