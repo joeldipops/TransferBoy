@@ -554,11 +554,14 @@ xFlip:
     # 11001001 01011101
     # 01234567 01234567
 
+    
     or $bufferIndex, $0, $x1
     sll $bufferIndex, $bufferIndex, 1
     addi $shiftBy, $0, 8
 
     processSprite_whileHasPixels:
+        bltz $bufferIndex, processSprite_continue
+
         addi $shiftBy, $shiftBy, -1
 
         # Grab two bytes from the tile (8 pixels).
