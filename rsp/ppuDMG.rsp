@@ -306,8 +306,6 @@ cacheGetTile:
 # Either from the cache or the tile is DMA'd in and cached.
 # @input $a0 The tile ID.
 # @output $r0 Pointer to the tile data.
-#
-# TODO: Cache header should allow flipped tiles to be cached separately from normal.
 ###
 
 cacheGetTile:
@@ -465,7 +463,7 @@ xFlip:
 # @param entry The OAM entry defining this sprite.
 # @isSecondTile If specified, the tile to draw is the second of a double height sprite.
 ###
-.macro processSprite $entry isSecondTile
+.macro processSprite $entry
     .set $y1, $t4
     .set $x1, $t5 # overloaded with y2 since it's just to check we're on screen.
     .set $x2, $t6
@@ -494,16 +492,23 @@ xFlip:
     srl $t0, \$entry, 8
     andi $t0, $t0, 0x00FF
 
-    .ifb isSecondTile
-        addi $t0, $0, 1
-    .endif
+    beq $IS_8x16_MODE, $0, 1f
+        # TODO: Figure out if this is the top or bottom half of the sprite.
+        sub $t9, $SCAN_LINE, $y1
+        addi $t9, $t9, -8
+
+        bltz $t9, 2f
+            # +1 for the second half of the sprite.
+            addi $t0, $t0, 1
+        2:
+    1:
 
     # Get the tile from the cache.
     add $a0, $0, $t0
     jal cacheGetTile
 
     # Get the flags
-    andi $flags, \$entry, 0x00FF
+    andi $flags, \$entry, 0x00FF    
 
     # is y flipped
     andi $t0, $flags, Oam_Y_FLIP
@@ -682,6 +687,7 @@ xFlip:
 
 ###
 # Draws pixels for the window if it appears on this scanline.
+# TODO - fix same bugs fixed in processBackground
 ###
 .macro processWindow
     .set $tileMap, $t1
@@ -953,6 +959,7 @@ xFlip:
 
 ###
 #
+# TODO: Fix bug where last tile is screwy as we scroll.
 ###
 .macro processBackground
     .set $tileMap, $t1
