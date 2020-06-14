@@ -54,6 +54,12 @@ bool isRspBusy();
 void setDataReady(bool value);
 
 /**
+ * Sets which frame buffer the RSP should be targetting.
+ * @param id identifies the buffer (1 or 2)
+ */
+void setFrameBufferId(display_context_t id);
+
+/**
  * Gets whether the RSP has more data to be processed.
  */
 bool getDataReady();

@@ -128,7 +128,7 @@ static void mainLoop() {
                     playLogic(i);
                     break;
                 case Menu:
-                    menuLogic(i);
+                menuLogic(i);
                     break;
                 case Options:
                     optionsLogic(i);
@@ -147,7 +147,6 @@ static void mainLoop() {
                         break;
                     case Play:
                         playDraw(i);
-                        playAfter(i);
                         break;
                     case Menu:
                         menuDraw(i);
@@ -158,12 +157,10 @@ static void mainLoop() {
                     default: break;
                 }
             }
+
             display_show(rootState.Frame);
-            if  (rootState.Frame == 1) {
-                rootState.Frame = 2;
-            } else {
-                rootState.Frame = 1;
-            }
+            while(!(rootState.Frame = display_lock()));
+            setFrameBufferId(rootState.Frame);
         }
     }
 }

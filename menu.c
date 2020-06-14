@@ -181,13 +181,8 @@ static char addPlayer() {
 
     resetPlayState(newPlayer);
 
-    flushScreen();
-
     newPlayer->ActiveMode = Play;
     rootState.PlayerCount++;
-
-    // Now that we've flushed, we need to put the GB screen back.
-    playDraw(0);
     return 0;
 }
 
@@ -212,6 +207,8 @@ static void executeMenuItem(const byte playerNumber, const byte x, const byte y)
         }
     }
 
+    bool noFlush = false;
+
     switch((items)position) {
         case Resume:
             resumePlay(&rootState.Players[playerNumber]);
@@ -230,8 +227,13 @@ static void executeMenuItem(const byte playerNumber, const byte x, const byte y)
             break;
         case Options:
             showOptionsMenu(&rootState.Players[playerNumber]);
+            noFlush = true;
             break;
         default: ; break;
+    }
+
+    if (!noFlush) {
+        flushScreen();
     }
 }
 

@@ -226,7 +226,7 @@ SHIFT_CONSTS_LABEL:
 
 .set $SCAN_LINE, $s6
 
-.set $FRAME_BUFFER_OFFSET, $s7
+# nothing for $s7 currently.
 
 .set $VRAM_TILE_DATA_ADDRESS, $s8
 
@@ -1264,8 +1264,6 @@ main:
     lw $OUT_BUFFER_ADDRESS, (INPUT + Input_OUT_ADDRESS)($0)
     lw $VRAM_BASE, (INPUT + Input_VRAM_BASE)($0)
 
-    addi $FRAME_BUFFER_OFFSET, $0, 4
-
     ## Set up monochrome colour palette in memory
     liw $t0, LIGHTEST
     sw $t0, N64_PALETTE($0)
@@ -1351,18 +1349,25 @@ main:
 
         # Double buffer between frames.
         bne $SCAN_LINE, $0, 1f
-            lw $a0, (INPUT + Input_FRAME_BUFFER_1)($FRAME_BUFFER_OFFSET)
+            mfc0 $t0, $RSP_STATUS
+            andi $t0, $t0, SP_STATUS_GET_BUFFER
+
+            # when bit 9 is set, shift it to be a four instead - FRAME_BUFFER_2 is the next 4B pointer after FRAME_BUFFER_1
+            srl $t0, $t0, 7
+            lw $a0, (INPUT + Input_FRAME_BUFFER_1)($t0)
 
             setFrameBuffer 0, RGBA_FORMAT, COLOUR_DEPTH_16, 640, $a0
-            execRdp 2
 
             # Switch to the other buffer for the next iteration.
-            xori $FRAME_BUFFER_OFFSET, $FRAME_BUFFER_OFFSET, 4
-        1:
 
-        ## Sync before loading a new texture.
-        syncPipe 0
-        execRdp 1
+            ## Sync before loading a new texture.
+            syncPipe 8
+            execRdp 3
+            j 2f
+        1:
+            syncPipe 0
+            execRdp 1
+        2:
 
         ## DMA the data back to DRAM so that the RDP can pick it up.
         dmaOut N64_BUFFER, $OUT_BUFFER_ADDRESS, BUFFER_SIZE

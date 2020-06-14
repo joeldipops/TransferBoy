@@ -6,10 +6,12 @@ MKDFSPATH = /home/joeldipops/Projects/tools/libdragon/tools/mkdfs/mkdfs
 HEADERPATH = $(ROOTDIR)/mips64-elf/lib
 N64TOOL = /home/joeldipops/Projects/tools/libdragon/tools/n64tool
 HEADERNAME = header
+PROG_NAME = transferboy
+
 PRE_LD_FILE = $(PROG_NAME).ld
 LD_FILE = $(PROG_NAME)_generated.ld
 LINK_FLAGS = -L$(ROOTDIR)/mips64-elf/lib -ldragon -lm -lc -ldragonsys -T./$(LD_FILE)
-PROG_NAME = transferboy
+
 #O3FLAGS = -fgcse-after-reload -finline-functions -fipa-cp-clone -floop-interchange -floop-unroll-and-jam -fpredictive-commoning -fsplit-paths -ftree-loop-distribute-patterns -ftree-loop-distribution -ftree-loop-vectorize -ftree-partial-pre -ftree-slp-vectorize -funswitch-loops -fvect-cost-model -fversion-loops-for-strides
 OPTIMISATION_FLAGS = -O2
 CFLAGS = -std=gnu99 -march=vr4300 -mtune=vr4300 $(OPTIMISATION_FLAGS) -Wall -Wno-unused -Werror -I$(CURDIR) -I$(ROOTDIR)/mips64-elf/include 

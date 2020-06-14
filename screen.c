@@ -74,21 +74,23 @@ void loadSprite(sprite_t* spriteSheet, const byte spriteCode, const mirror_t mir
  * @param state program state
  */
 void flushScreen() {
-    // Background
-    display_show(2);
-    prepareRdpForSprite(1);
+    // Assure RDP is ready for new commands
+    rdp_sync(SYNC_PIPE);
+    // Remove any clipping windows
+    rdp_set_default_clipping();
+    // Enable sprite display instead of solid color fill
+    rdp_enable_texture_copy();
+
+    // Attach RDP to display
+    rdp_attach_display(1);
     loadSprite(getSpriteSheet(), BLUE_BG_TEXTURE, true);
     rdp_draw_textured_rectangle(0, 0, 0, RESOLUTION_X, RESOLUTION_Y, MIRROR_DISABLED);
-    rdp_detach_display();
-    display_show(1);
-    rdp_attach_display(1);
-    rdp_attach_display(2);
-    rdp_draw_textured_rectangle(0, 0, 0, RESOLUTION_X, RESOLUTION_Y, MIRROR_DISABLED);
+    hudDraw(1);
     rdp_detach_display();
 
-    display_show(2);
-    hudDraw(1);
-    display_show(1);
+    rdp_attach_display(2);
+    loadSprite(getSpriteSheet(), BLUE_BG_TEXTURE, true);
+    rdp_draw_textured_rectangle(0, 0, 0, RESOLUTION_X, RESOLUTION_Y, MIRROR_DISABLED);
     hudDraw(2);
     rdp_detach_display();
 }

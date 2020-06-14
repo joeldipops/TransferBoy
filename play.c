@@ -247,20 +247,3 @@ void playDraw(const byte playerNumber) {
         graphics_draw_text(rootState.Frame, 5, 450, text);
     }
 }
-
-/**
- * Does any necessary cleanup after drawing.
- * @param playerNumber player in play mode.
- */
-void playAfter(const byte playerNumber) {
-    if (rootState.Players[playerNumber].ActiveMode != Play) {
-        haltRsp();
-    } else {
-        // Swap the pointers.
-        //uintptr_t temp = (uintptr_t) rootState.Players[playerNumber].EmulationState.NextBuffer;
-        //rootState.Players[playerNumber].EmulationState.NextBuffer = rootState.Players[playerNumber].EmulationState.LastBuffer;
-        //rootState.Players[playerNumber].EmulationState.LastBuffer = (u16*) temp;
-    }
-}
-
-

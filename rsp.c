@@ -114,6 +114,14 @@ bool getDataReady() {
 }
 
 /**
+ * Sets which frame buffer the RSP should be targetting.
+ * @param id identifies the buffer (1 or 2)
+ */
+void setFrameBufferId(display_context_t id) {
+    SP_regs->status = id == 1 ? SP_BUFFER_1 : SP_BUFFER_2;
+}
+
+/**
  * Sets the RSP halt status so that it stops executing while we reload IMEM/DMEM
  */
 void haltRsp() {

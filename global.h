@@ -25,10 +25,10 @@
 #define SP_STATUS_BUSY_ON  0b00000100 << 8
 #define SP_DATA_PENDING    0b00001000 << 8
 #define SP_DATA_READY      0b00010000 << 8
+#define SP_BUFFER_1        0b00100000 << 8
+#define SP_BUFFER_2        0b01000000 << 8
 
-#define SP_STATUS_GET_IS_READY  0x100
-
-//#define LOCK_CPU_TO_PPU 1
-
+#define SP_STATUS_GET_IS_READY  0b00000001 << 8
+#define SP_STATUS_GET_BUFFER    0b00000010 << 8
 
 #endif
