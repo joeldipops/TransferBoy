@@ -38,13 +38,14 @@
 
 
 # RSP Interface Structure
-.eqv RspIn_IS_BUSY, 0x00
-.eqv RspIn_VRAM_BASE, 0x04
-.eqv RspIn_HRAM_BASE, 0x08
-.eqv RspIn_OAM_BASE, 0x0C
-.eqv RspIn_OUT_ADDRESS, 0x10
-.eqv RspIn_SCREEN_POSITION, 0x14
-.eqv RspIn_RECTANGLE_SIZE, 0x18
+.eqv Input_VRAM_BASE, 0x00
+.eqv Input_HRAM_BASE, 0x04
+.eqv Input_OAM_BASE, 0x08
+.eqv Input_OUT_ADDRESS, 0x0C
+.eqv Input_SCREEN_POSITION, 0x10
+.eqv Input_RECTANGLE_SIZE, 0x14
+.eqv Input_FRAME_BUFFER_1, 0x18
+.eqv Input_FRAME_BUFFER_2, 0x1C
 
 # PPU Settings Structure
 ## These are the gameboy LCD registers.
@@ -111,9 +112,9 @@
 .eqv GB_PALETTE_SIZE,   0x008 # 4 2 bit colours across four bytes for easy lookup.
 .eqv N64_PALETTE_SIZE,  0x010 # 4 32bit colours. # TODO - make these 16bit colours
 .eqv N64_BUFFER_SIZE,   0x280 # 160 32bit pixels per scan-line.
-.eqv UNPROCESSED_BUFFER_SIZE, 0x010 # 8x16bit tile lines.
+.eqv UNPROCESSED_BUFFER_SIZE, 0x010 # 8x16bit tile lines + 1 part tile. 
 .eqv PROCESSED_INDEX_SIZE,   0x100 # 256 possible x-values.
-.eqv PROCESSED_BUFFER_SIZE,   0x200 # 160 2bit pixels per scan-line
+.eqv PROCESSED_BUFFER_SIZE,   0x200 # 160 pixel bytes (only 2bits per pixel but having them in bytes makes processing easier.
 .eqv LINE_TILE_MAP_SIZE,0x020 # 32B 1 for each tile across the background (though we only see 20 tiles at a time)
 .eqv TILE_CACHE_SIZE,   CACHE_ENTRY_SIZE * 50   # 50 possible tiles
 .eqv PPU_SETTINGS_SIZE, 0x010 # 10 1byte registers.
@@ -225,7 +226,7 @@ SHIFT_CONSTS_LABEL:
 
 .set $SCAN_LINE, $s6
 
-.set $CACHE_POINTER, $s7
+.set $FRAME_BUFFER_OFFSET, $s7
 
 .set $VRAM_TILE_DATA_ADDRESS, $s8
 
@@ -275,11 +276,8 @@ massageMonochrome:
     lw $r0, N64_PALETTE($a0)
     jr $ra
 
-#ifndef USE_CACHE
-
 ###
-# Cache is a big waste of time because DMA probably faster than iterating
-# through the cache.
+# Currently misnamed as there is no cache, but there may be in the future...
 ###
 cacheGetTile:
     .set $tileId, $a0
@@ -298,82 +296,6 @@ cacheGetTile:
     jr $ra
 
     .set $tileId, 0
-
-#else
-
-###
-# Gets the address of a tile.
-# Either from the cache or the tile is DMA'd in and cached.
-# @input $a0 The tile ID.
-# @output $r0 Pointer to the tile data.
-###
-
-cacheGetTile:
-    .set $tileId, $a0
-    .set $pointer, $a1
-
-    # when there's nothing in the cache, short-circuit.
-    addi $t0, $0, TILE_CACHE
-    beq $t0, $CACHE_POINTER, cacheGetTile_notFound
-    
-    # Set the flag so we're never comparing 0 to 0.
-    lui $t0, 0x8000
-    or $tileId, $tileId, $t0
-
-    # Start at the current end of the cache and work back to the start.
-    add $pointer, $0, $CACHE_POINTER
-
-    cacheGetTile_whileNotFound:
-        addi $pointer, $pointer, -1 * CACHE_ENTRY_SIZE
-
-        # Check if tile id matches cache entry header.
-        lw $t0, 0($pointer)
-        bne $t0, $tileId, cacheGetTile_whileNotFound_continue
-
-            # We've found it. Return a pointer to the data.
-            addi $r0, $pointer, CACHE_HEADER_SIZE
-            jr $ra
-
-        cacheGetTile_whileNotFound_continue:
-        # Check that $pointer is still greater than the bottom of the cache
-        addi $t0, $0, TILE_CACHE
-        sub $t0, $pointer, $t0
-
-        # This is better than above, but gives me error ` Error: invalid operands (*ABS* and .data sections) for `*'`
-        #addi $t0, $pointer, -1 * TILE_CACHE
-    bltz $t0, cacheGetTile_whileNotFound
-    cacheGetTile_notFound:
-
-    # Tile isn't in the cache yet, so we need to DMA it in.
-
-    ## Set the tile id at the cache pointer as the header.
-    ### set a flag so we don't compare 0 to 0
-    lui $t0, 0x8000
-    or $tileId, $tileId, $t0
-    sw $tileId, 0($CACHE_POINTER)
-    ### Increment cache pointer so we can add data.
-    addi $CACHE_POINTER, $CACHE_POINTER, CACHE_HEADER_SIZE
-
-    ## Multiply tile ID by 16 to get address offset.
-    sll $tileId, $tileId, 4
-    ## Which is added to the address base.
-    add $tileId, $tileId, $VRAM_TILE_DATA_ADDRESS
-
-    stackPush 2
-    dmaIn_destR $tileId, $CACHE_POINTER, TILE_SIZE
-    stackPop 2
-
-    # Now that data has been loaded, return a pointer to it.
-    add $r0, $0, $CACHE_POINTER
-
-    ## Increment cache pointer to the next empty entry.
-    addi $CACHE_POINTER, $CACHE_POINTER, TILE_SIZE
-    jr $ra
-
-.set $tileId, 0
-.set $pointer, 0
-
-#endif
 
 ###
 # Reverses the order of the 8 half-words following $a0
@@ -633,7 +555,7 @@ xFlip:
     ## Find the sprites relevant to the current scanline so we don't have to loop through 40 sprites every pixel.
 
     # DMA in the entire OAM
-    lw $t0, (INPUT + RspIn_OAM_BASE)($0)
+    lw $t0, (INPUT + Input_OAM_BASE)($0)
     dmaIn $t0, OAM, OAM_SIZE
 
     addi $screenSpritesRemaining, $0, SPRITE_COUNT
@@ -1339,8 +1261,10 @@ main:
     dmaIn $t0, INPUT, INPUT_SIZE
 
     # Stash config in some registers for quick reference.
-    lw $OUT_BUFFER_ADDRESS, (INPUT + RspIn_OUT_ADDRESS)($0)
-    lw $VRAM_BASE, (INPUT + RspIn_VRAM_BASE)($0)
+    lw $OUT_BUFFER_ADDRESS, (INPUT + Input_OUT_ADDRESS)($0)
+    lw $VRAM_BASE, (INPUT + Input_VRAM_BASE)($0)
+
+    addi $FRAME_BUFFER_OFFSET, $0, 4
 
     ## Set up monochrome colour palette in memory
     liw $t0, LIGHTEST
@@ -1362,15 +1286,10 @@ main:
         # Set the Busy flag but lift the Ready flag.
         liw $t0, SP_DATA_PENDING
         ori $t0, $t0, SP_STATUS_BUSY_ON
-
         mtc0 $t0, $RSP_STATUS
 
-        # Bring in the configuration.
-        liw $t0, RSP_INTERFACE_ADDRESS
-        dmaIn $t0, INPUT, INPUT_SIZE
-
         # Load and cache the gameboy LCD registers.
-        lw $t0, (INPUT + RspIn_HRAM_BASE)($0)
+        lw $t0, (INPUT + Input_HRAM_BASE)($0)
         addi $t0, $t0, PPU_SETTINGS_OFFSET
         dmaIn $t0, PPU_SETTINGS, PPU_SETTINGS_SIZE
 
@@ -1396,14 +1315,9 @@ main:
         ## Cache if we're in 8x16 sprite mode.
         andi $IS_8x16_MODE, $t0, Lcdc_SPRITE_SIZE
 
-        ## Initialise some registers with constants.
-        ## TODO - allow this cache to persist across scan-lines.
-        addi $CACHE_POINTER, $0, TILE_CACHE
-
         # Initialise rendering of the line.
-
-        lw $START_POSITION, INPUT + RspIn_SCREEN_POSITION($0)
-        lw $RECTANGLE_SIZE, INPUT + RspIn_RECTANGLE_SIZE($0)
+        lw $START_POSITION, INPUT + Input_SCREEN_POSITION($0)
+        lw $RECTANGLE_SIZE, INPUT + Input_RECTANGLE_SIZE($0)
         andi $RECTANGLE_HEIGHT, $RECTANGLE_SIZE, 0x0000FFFF
 
         ## Cache the current scan line.
@@ -1435,6 +1349,17 @@ main:
 
         # Ask the RDP to render the line we just built.
 
+        # Double buffer between frames.
+        bne $SCAN_LINE, $0, 1f
+            lw $a0, (INPUT + Input_FRAME_BUFFER_1)($FRAME_BUFFER_OFFSET)
+
+            setFrameBuffer 0, RGBA_FORMAT, COLOUR_DEPTH_16, 640, $a0
+            execRdp 2
+
+            # Switch to the other buffer for the next iteration.
+            xori $FRAME_BUFFER_OFFSET, $FRAME_BUFFER_OFFSET, 4
+        1:
+
         ## Sync before loading a new texture.
         syncPipe 0
         execRdp 1
@@ -1453,9 +1378,16 @@ main:
         execRdp 6
 
         # Calculate where to draw the line.
-        add $a0, $START_POSITION, $0
+        add $a0, $SCAN_LINE, $0
+
+        # TODO - The multiplication here will depend on the height of the GB screen.
+        # While will be variable if I ever do 2-player mode.
+        sll $a0, $a0, 1
+        add $a0, $a0, $START_POSITION
+
+        andi $a1, $a0, 0x0000FFFF
+
         srl $a0, $a0, 16
-        andi $a1, $START_POSITION, 0x0000FFFF
 
         add $a2, $RECTANGLE_SIZE, $0
         srl $a2, $a2, 16

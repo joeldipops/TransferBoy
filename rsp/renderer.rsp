@@ -8,12 +8,12 @@
 ###
 # Constants
 ###
-.eqv RspIn_IN_ADDRESS, 0x00
-.eqv RspIn_OUT_ADDRESS, 0x04
-.eqv RspIn_SCREEN_POSITION, 0x08
-.eqv RspIn_RECTANGLE_SIZE, 0x0C
-.eqv RspIn_IS_COLOUR, 0x10
-.eqv RspIn_IS_BUSY, 0x14
+.eqv Input_IN_ADDRESS, 0x00
+.eqv Input_OUT_ADDRESS, 0x04
+.eqv Input_SCREEN_POSITION, 0x08
+.eqv Input_RECTANGLE_SIZE, 0x0C
+.eqv Input_IS_COLOUR, 0x10
+.eqv Input_IS_BUSY, 0x14
 
 .eqv INTERFACE_SIZE, 0x20
 
@@ -122,12 +122,12 @@ main:
     dmaIn $t0, DMEM_GB_BASE, INTERFACE_SIZE
 
     # Stash config in some registers so whole memory space is available.
-    lw $GB_BUFFER_ADDRESS, RspIn_IN_ADDRESS($0)
-    lw $OUT_BUFFER_ADDRESS, RspIn_OUT_ADDRESS($0)
-    lw $SCREEN_POSITION, RspIn_SCREEN_POSITION($0)
-    lw $RECTANGLE_SIZE, RspIn_RECTANGLE_SIZE($0)
+    lw $GB_BUFFER_ADDRESS, Input_IN_ADDRESS($0)
+    lw $OUT_BUFFER_ADDRESS, Input_OUT_ADDRESS($0)
+    lw $SCREEN_POSITION, Input_SCREEN_POSITION($0)
+    lw $RECTANGLE_SIZE, Input_RECTANGLE_SIZE($0)
     andi $RECTANGLE_HEIGHT, $RECTANGLE_SIZE, 0x0000FFFF
-    lw $IS_COLOUR, RspIn_IS_COLOUR($0)
+    lw $IS_COLOUR, Input_IS_COLOUR($0)
 
     bne $IS_COLOUR, $0, 1f
         # If monochrome, set up palette in memory
@@ -251,9 +251,9 @@ main:
     bgtz $RECTANGLE_COUNTER, .whileHasRectangles
 
     # Reset DRAM flag that says we're done with this frame.
-    sw $0, RspIn_IS_BUSY($0)
+    sw $0, Input_IS_BUSY($0)
     # Gotta zero out IS_COLOUR too because of the way values are packed.
-    sw $0, RspIn_IS_COLOUR
+    sw $0, Input_IS_COLOUR
 
     liw $t0, RSP_INTERFACE_ADDRESS
     dmaOut DMEM_GB_BASE, $t0, INTERFACE_SIZE

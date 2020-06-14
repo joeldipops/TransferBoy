@@ -14,8 +14,7 @@ extern const char ppuDMG_data_end __attribute((section(".data")));
 extern const char ppuDMG_data_size __attribute((section(".data")));
 
 typedef struct {
-    u32 Status;
-    u32 Settings[6];
+    u32 Settings[8];
 } RspInterface;
 
 /**

@@ -257,9 +257,9 @@ void playAfter(const byte playerNumber) {
         haltRsp();
     } else {
         // Swap the pointers.
-        uintptr_t temp = (uintptr_t) rootState.Players[playerNumber].EmulationState.NextBuffer;
-        rootState.Players[playerNumber].EmulationState.NextBuffer = rootState.Players[playerNumber].EmulationState.LastBuffer;
-        rootState.Players[playerNumber].EmulationState.LastBuffer = (u16*) temp;
+        //uintptr_t temp = (uintptr_t) rootState.Players[playerNumber].EmulationState.NextBuffer;
+        //rootState.Players[playerNumber].EmulationState.NextBuffer = rootState.Players[playerNumber].EmulationState.LastBuffer;
+        //rootState.Players[playerNumber].EmulationState.LastBuffer = (u16*) temp;
     }
 }
 

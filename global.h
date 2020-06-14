@@ -28,7 +28,7 @@
 
 #define SP_STATUS_GET_IS_READY  0x100
 
-#define LOCK_CPU_TO_PPU 1
+//#define LOCK_CPU_TO_PPU 1
 
 
 #endif

@@ -5,19 +5,23 @@
 
 #include "logger.h"
 
+#include <libdragon.h>
+
 typedef struct { // Extends ppuInterface
-    u32 Status;
     union {
-        u32 Settings[6];
+        u32 Settings[8];
         struct {
             uintptr_t VRamAddress;
             uintptr_t HRamAddress;
             uintptr_t OAMAddress;
             uintptr_t OutBuffer;
             Rectangle Screen;
+            uintptr_t FrameBuffer[2];
         };
     };
 } PpuInterface;
+
+extern void* __safe_buffer[];
 
 PpuInterface* ppuInterface;
 
@@ -33,6 +37,8 @@ void ppuInit(PlayerState* state) {
     ppuInterface->HRamAddress = (uintptr_t) state->EmulationState.HRAM;
     ppuInterface->OAMAddress = (uintptr_t) state->EmulationState.OAM;
     ppuInterface->OutBuffer = (uintptr_t)state->EmulationState.TextureBuffer;
+    ppuInterface->FrameBuffer[0] = (uintptr_t) (__safe_buffer[0]);
+    ppuInterface->FrameBuffer[1] = (uintptr_t) (__safe_buffer[1]);
 
     data_cache_hit_writeback(ppuInterface, sizeof(PpuInterface));
 

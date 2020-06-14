@@ -385,4 +385,33 @@ _execRdp:
         #liw $t0, \address
     ##endif
 .endm
+
+###
+# Executes the RDP Set Color Image command
+# Used to point the RDP to the frame buffer where it will draw pixels to.
+#
+###
+.macro setColorImage offset format size, width address
+    # Command 0x3F
+    lui $t0, 0xFF00
+
+    lui $t1, \format
+    lui $t2, \size
+    sll $t1, $t1, 5
+    sll $t2, $t2, 3
+    or $t1, $t1, $t2
+    or $t0, $t0, $t1
+
+    ori $t0, $t0, (\width - 1)
+    sw $t0, \offset($0)
+
+    sw \address, (\offset + 0x004)($0)
+.endm
+
+###
+# Alias for setColorImage with a name that makes sense.
+### 
+.macro setFrameBuffer offset format size, width address
+    setColorImage \offset \format \size \width \address
+.endm
 .set reorder # TODO - YTF is THIS necessary???

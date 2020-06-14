@@ -159,6 +159,11 @@ static void mainLoop() {
                 }
             }
             display_show(rootState.Frame);
+            if  (rootState.Frame == 1) {
+                rootState.Frame = 2;
+            } else {
+                rootState.Frame = 1;
+            }
         }
     }
 }

@@ -81,6 +81,7 @@ void flushScreen() {
     rdp_draw_textured_rectangle(0, 0, 0, RESOLUTION_X, RESOLUTION_Y, MIRROR_DISABLED);
     rdp_detach_display();
     display_show(1);
+    rdp_attach_display(1);
     rdp_attach_display(2);
     rdp_draw_textured_rectangle(0, 0, 0, RESOLUTION_X, RESOLUTION_Y, MIRROR_DISABLED);
     rdp_detach_display();
