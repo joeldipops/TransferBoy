@@ -6,6 +6,7 @@ Runs on https://github.com/DragonMinded/libdragon by DragonMinded.
 
 Other than those, credit to
 * saturnu and https://github.com/saturnu/libgbpak
+* Rasky, for these macros https://gist.github.com/rasky/d41e1ca2150b3274151a6fe7c76c0f2f
 * vieux - I borrowed some of his code ffrom https://github.com/vieux/Memory64-N64
 * AntonioND for "The Cycle Accurate Game Boy Docs" - https://github.com/AntonioND/giibiiadvance/tree/master/docs
 * Gekkio for https://github.com/Gekkio/mooneye-gb/tree/master/tests/emulator-only and https://gekkio.fi/files/gb-docs/gbctr.pdf
