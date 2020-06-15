@@ -54,6 +54,10 @@ static void onLoadProgressTimer(int ovfl) {
  * @param playerNumber identifies player loading a cartridge.
  */
 void startLoadProgressTimer(const byte playerNumber) {
+    // The main loop is locked up with loading the rom, so we need to have an internal
+    // display lock/show loop.
+    // This needs to be balanced with the main loop or things get out of whack.
+    display_show(rootState.Frame);
     _isLoading[playerNumber] = true;
 
     if (!_timer) {
@@ -81,6 +85,9 @@ void closeLoadProgressTimer(const byte playerNumber) {
         delete_timer(_timer);
         _timer = null;
     }
+
+    // Balance with the main loop.
+    while(!(rootState.Frame = display_lock()));
 }
 
 
