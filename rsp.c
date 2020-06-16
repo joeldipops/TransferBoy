@@ -13,10 +13,6 @@ extern const char ppuDMG_data_start __attribute((section(".data")));
 extern const char ppuDMG_data_end __attribute((section(".data")));
 extern const char ppuDMG_data_size __attribute((section(".data")));
 
-extern const char renderer_code_start __attribute((section(".data")));
-extern const char renderer_code_end __attribute((section(".data")));
-extern const char renderer_code_size __attribute((section(".data")));
-
 /**
  * Memory Address that RSP will read from to get data shared between the two processors.
  */
@@ -78,6 +74,9 @@ s8 prepareMicrocode(const Microcode code) {
 
     unsigned long size = 0;
     switch (code) {
+        // TODO: Reference these ucode files.
+        case UCODE_GBC_PPU:
+        case UCODE_SGB_PPU:
         case UCODE_DMG_PPU:
             size = (unsigned long) &ppuDMG_data_size;
             load_data((void*)&ppuDMG_data_start, size);
@@ -85,12 +84,6 @@ s8 prepareMicrocode(const Microcode code) {
             size = (unsigned long)&ppuDMG_code_size;
             load_ucode((void*)&ppuDMG_code_start, size);
             break;
-        case FRAME_RENDERER:
-            size = (unsigned long)&renderer_code_size;
-            load_ucode((void*)&renderer_code_start, size);
-        case UCODE_GBC_PPU:
-        case UCODE_SGB_PPU:
-            return RSP_ERR_UNIMPLEMENTED_UCODE;
         default:
             return RSP_ERR_INVALID_UCODE;
     }

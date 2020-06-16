@@ -42,7 +42,14 @@ void ppuInit(PlayerState* state) {
 
     data_cache_hit_writeback(ppuInterface, sizeof(PpuInterface));
 
-    prepareMicrocode(UCODE_DMG_PPU);
+    if (state->EmulationState.Cartridge.IsGbcSupported) {
+        prepareMicrocode(UCODE_GBC_PPU);
+    } else if (state->EmulationState.Cartridge.IsSgbSupported) {
+        // UCODE_SGB_PPU
+        prepareMicrocode(UCODE_SGB_PPU);
+    } else {
+        prepareMicrocode(UCODE_DMG_PPU);
+    }
 
     setDataReady(false);
     run_ucode();

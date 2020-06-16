@@ -1,2 +1,1430 @@
-nop
+#include <ucode.S>
+#include "../global.h"
+#include "init.rsp"
+#include "rspIncludes.rsp"
+#include "rdp.rsp"
+
+###------------------------------------------
+# Renders a scan line of the gameboy screen.
+#
+###------------------------------------------
+
+###
+# Constants
+###
+
+# OAM Structure
+.eqv Oam_Y_BLOCK, 0x00
+.eqv Oam_X_BLOCK, 0x01
+.eqv Oam_TILE_INDEX, 0x02
+.eqv Oam_FLAGS, 0x03
+.eqv OAM_ENTRY_SIZE, 0x04
+
+# Oam_FLAGS Structure
+.eqv Oam_PRIORITY,  0b10000000
+.eqv Oam_Y_FLIP,    0b01000000
+.eqv Oam_X_FLIP,    0b00100000
+.eqv Oam_PALETTE,   0b00010000
+
+.eqv OAM_X_OFFSET, 0x08
+.eqv OAM_Y_OFFSET, 0x10
+
+.eqv TILE_WIDTH, 0x08
+.eqv TILES_PER_WIDTH, 0x20
+.eqv TILES_PER_SCREEN, 0x14  # 20 tiles appear on screen at a time.
+.eqv TILE_SIZE, 0x10 # 8x8 2b pixels is 16B
+.eqv SPRITE_COUNT, 40 # 40 sprites in OAM
+.eqv SPRITE_LIMIT, 10 # 10 sprites per scanline
+
+
+# RSP Interface Structure
+.eqv Input_VRAM_BASE, 0x00
+.eqv Input_HRAM_BASE, 0x04
+.eqv Input_OAM_BASE, 0x08
+.eqv Input_OUT_ADDRESS, 0x0C
+.eqv Input_SCREEN_POSITION, 0x10
+.eqv Input_RECTANGLE_SIZE, 0x14
+.eqv Input_FRAME_BUFFER_1, 0x18
+.eqv Input_FRAME_BUFFER_2, 0x1C
+
+# PPU Settings Structure
+## These are the gameboy LCD registers.
+
+.eqv Ppu_LCD_CONTROL, 0x0
+.eqv Ppu_LCD_STATUS, 0x1
+.eqv Ppu_BACKGROUND_SCROLL_Y, 0x2
+.eqv Ppu_BACKGROUND_SCROLL_X, 0x3
+.eqv Ppu_CURRENT_LINE, 0x4         # This is the line we're drawing.
+.eqv Ppu_NEXT_INTERRUPT_LINE, 0x5  # Probably not important.  Interrupts to be handled elsewhere?
+.eqv Ppu_DMA_SOURCE, 0x6
+.eqv Ppu_BACKGROUND_PALETTE, 0x7
+.eqv Ppu_SPRITE_PALETTE_0, 0x8
+.eqv Ppu_SPRITE_PALETTE_1, 0x9
+.eqv Ppu_WINDOW_TOP, 0xA
+.eqv Ppu_WINDOW_LEFT, 0xB
+
+# LCDC Flags structure
+.eqv Lcdc_LCD_SWITCH,           0b10000000
+.eqv Lcdc_WINDOW_TILE_MAP,      0b01000000
+.eqv Lcdc_WINDOW_SWITCH,        0b00100000
+.eqv Lcdc_TILE_DATA,            0b00010000
+.eqv Lcdc_BACKGROUND_TILE_MAP,  0b00001000
+.eqv Lcdc_SPRITE_SIZE,          0b00000100
+.eqv Lcdc_SPRITE_SWITCH,        0b00000010
+.eqv Lcdc_LCD_PRIORITY,         0b00000001
+
+
+# N64 Palette Values
+.eqv LIGHTEST,0x0000FFFF
+.eqv LIGHTER, 0x0000A529
+.eqv DARKER,  0x00005295
+.eqv DARKEST, 0x00000001
+
+.eqv WINDOW_X_OFFSET, 7
+
+
+.eqv DMEM_SIZE, 0x1000
+.eqv BUFFER_SIZE, GB_LCD_WIDTH * 2 # ( x2 for 16bit colours)
+
+
+# We don't need anywhere NEAR 8 bytes for the cache header, but it keeps the 8byte alignment needed to DMA.
+.eqv CACHE_HEADER_SIZE, 0x08
+.eqv CACHE_ENTRY_SIZE, 0x18
+.eqv CacheEntry_HEADER, 0x00
+.eqv CacheEntry_DATA, CacheEntry_HEADER + CACHE_HEADER_SIZE
+
+.eqv TILE_CACHE_ENTRIES, 50
+
+.eqv TILE_MAP_0_OFFSET, 0x1800
+.eqv TILE_MAP_1_OFFSET, 0x1C00
+
+# In mode 0, indices are signed and data actually starts at $8800.
+.eqv TILE_DATA_0_OFFSET, 0x1000
+.eqv TILE_DATA_1_OFFSET, 0x0000
+.eqv PPU_SETTINGS_OFFSET, 0x0040
+
+###
+# Memory Map
+###
+# Sizes aligned to 8byte boundaries
+.eqv RDP_BUFFER_SIZE,   0x040 # max command length = ...?
+.eqv STACK_SIZE,        0x040 # Arbitrary length. Hopefully 64bytes is enough.
+.eqv GB_PALETTE_SIZE,   0x008 # 4 2 bit colours across four bytes for easy lookup.
+.eqv N64_PALETTE_SIZE,  0x010 # 4 32bit colours. # TODO - make these 16bit colours
+.eqv N64_BUFFER_SIZE,   0x280 # 160 32bit pixels per scan-line.
+.eqv UNPROCESSED_BUFFER_SIZE, 0x010 # 8x16bit tile lines + 1 part tile. 
+.eqv PROCESSED_INDEX_SIZE,   0x100 # 256 possible x-values.
+.eqv PROCESSED_BUFFER_SIZE,   0x200 # 160 pixel bytes (only 2bits per pixel but having them in bytes makes processing easier.
+.eqv LINE_TILE_MAP_SIZE,0x020 # 32B 1 for each tile across the background (though we only see 20 tiles at a time)
+.eqv TILE_CACHE_SIZE,   CACHE_ENTRY_SIZE * 50   # 50 possible tiles
+.eqv PPU_SETTINGS_SIZE, 0x010 # 10 1byte registers.
+.eqv INPUT_SIZE,        0x020 # 8 32bit words.
+.eqv OAM_SIZE,          OAM_ENTRY_SIZE * SPRITE_COUNT # 40 Sprites per screen.
+.eqv TEMP_TILE_SIZE,    TILE_SIZE # A single tile is 16B
+
+.data
+# RDP Commands staged here before being sent.
+RDP_BUFFER_LABEL:
+#define RDP_BUFFER %lo(RDP_BUFFER_LABEL)
+    .space RDP_BUFFER_SIZE
+
+# Call Stack
+STACK_BOTTOM_LABEL:
+#define STACK_BOTTOM %lo(STACK_BOTTOM_LABEL)
+    .space STACK_SIZE
+STACK_TOP_LABEL:
+#define STACK_TOP %lo(STACK_TOP_LABEL)
+    .space 8
+
+# Index table to DMG palette register values.
+GB_PALETTE_LABEL:
+#define GB_PALETTE %lo(GB_PALETTE_LABEL)
+    .space GB_PALETTE_SIZE
+
+# Index of four 16bit colours analogous to gameboy screen.
+N64_PALETTE_LABEL:
+#define N64_PALETTE %lo(N64_PALETTE_LABEL)
+    .space N64_PALETTE_SIZE
+
+# scan line of 16bit n64 pixels built up here.
+N64_BUFFER_LABEL:
+#define N64_BUFFER %lo(N64_BUFFER_LABEL)
+    .space N64_BUFFER_SIZE
+
+UNPROCESSED_BUFFER_LABEL:
+#define UNPROCESSED_BUFFER %lo(UNPROCESSED_BUFFER_LABEL)
+    .space UNPROCESSED_BUFFER_SIZE
+
+PROCESSED_INDEX_LABEL:
+#define PROCESSED_INDEX %lo(PROCESSED_INDEX_LABEL)
+    .space PROCESSED_INDEX_SIZE
+
+PROCESSED_BUFFER_LABEL:
+#define PROCESSED_BUFFER %lo(PROCESSED_BUFFER_LABEL)
+    .space PROCESSED_BUFFER_SIZE
+
+# list of VRAM tile indices in the current scan-line.
+LINE_TILE_MAP_LABEL:
+#define LINE_TILE_MAP %lo(LINE_TILE_MAP_LABEL)
+    .space LINE_TILE_MAP_SIZE
+
+# Cache tiles we have previously DMAd to cut down on future DMAs.
+TILE_CACHE_LABEL:
+#define TILE_CACHE %lo(TILE_CACHE_LABEL)
+    .space TILE_CACHE_SIZE
+
+# Copy of relevant gameboy LCD registers.
+PPU_SETTINGS_LABEL:
+#define PPU_SETTINGS %lo(PPU_SETTINGS_LABEL)
+    .space PPU_SETTINGS_SIZE
+
+# Config passed in from CPU
+INPUT_LABEL:
+#define INPUT %lo(INPUT_LABEL)
+    .space INPUT_SIZE
+
+# Copy of gameboy OAM (sprite memory)
+OAM_LABEL:
+#define OAM %lo(OAM_LABEL)
+    .space OAM_SIZE
+
+# Can stash a tile here temporarily while yflipping it.
+TEMP_TILE_LABEL:
+#define TEMP_TILE %lo(TEMP_TILE_LABEL)
+    .space TEMP_TILE_SIZE
+
+SHIFT_CONSTS_LABEL:
+#define SHIFT_CONSTS %lo(SHIFT_CONSTS_LABEL)
+    vsll_data
+    vsll8_data
+
+
+.text
+.set reorder
+.set at
+
+###
+# Register aliases
+###
+
+# Address to store massaged pixels where they will be picked up by the RDP
+.set $OUT_BUFFER_ADDRESS, $s0
+
+.set $IS_TILE_INDEX_SIGNED, $s1
+
+# Cached Height may not be necessary
+.set $RECTANGLE_HEIGHT, $s2
+
+# Cached value of LCDC bit 2 flag
+.set $IS_8x16_MODE, $s3
+
+# Left and Top position of line to render.
+.set $START_POSITION, $s4
+
+# Length & Width of the line to draw in N64 pixels so it can be scaled.
+.set $RECTANGLE_SIZE, $s5
+
+.set $SCAN_LINE, $s6
+
+# nothing for $s7 currently.
+
+.set $VRAM_TILE_DATA_ADDRESS, $s8
+
+.set $VRAM_BASE, $s9
+
+.set $VSR_CONSTS, $v29
+.set $VSL_CONSTS, $v30
+
+###
+# Lays a DMG palette out in an easily referencable table in memory.
+#
+# @input a0 The palette to set.
+###
+setPalette:
+    .set $palette, $a0
+
+    andi $t0, $palette, 0b00000011
+    sb $t0, GB_PALETTE($0)
+
+    srl $t0, $palette, 2
+    andi $t0, $t0, 0b00000011
+    sb $t0, (GB_PALETTE + 1)($0)
+
+    srl $t0, $palette, 4
+    andi $t0, $t0, 0b00000011
+    sb $t0, (GB_PALETTE + 2)($0)
+
+    srl $t0, $palette, 6
+    andi $t0, $t0, 0b00000011
+    sb $t0, (GB_PALETTE + 3)($0)
+
+    .set $palette, 0
+    jr $ra
+
+
+###
+# Takes a 2bit DMG colour index and converts to a 16bit n64 colour.
+#
+# @input a0 the dmg colour index (0 - 3)
+# @output r0 the 16bit dmg colour.
+###
+massageMonochrome:
+    # zero out irrelevant bits
+    andi $a0, $a0, 3
+    # and multiply by four since we deal with 32bit addresses
+    sll $a0, $a0, 2
+    lw $r0, N64_PALETTE($a0)
+    jr $ra
+
+###
+# Currently misnamed as there is no cache, but there may be in the future...
+###
+cacheGetTile:
+    .set $tileId, $a0
+
+    ## Multiply tile ID by 16 to get address offset.
+    sll $tileId, $tileId, 4
+    ## Which is added to the address base.
+    add $tileId, $tileId, $VRAM_TILE_DATA_ADDRESS
+
+    stackPush 2
+    dmaIn $tileId, TILE_CACHE, TILE_SIZE
+    stackPop 2
+
+    # Now that data has been loaded, return a pointer to it.
+    addi $r0, $0, TILE_CACHE
+    jr $ra
+
+    .set $tileId, 0
+
+###
+# Reverses the order of the 8 half-words following $a0
+# @param $a0 the address of the tile to flip.
+# @returns $r0 the address of the flipped data.
+# TODO: Make it work.
+###
+yFlip:
+    # may be able to do some combination of:
+    # lqv $v01, 0, 0, $a0
+    # srv $v01, 0, 16, $r0
+
+    # Store the entire tile into a 128bit vector register.
+    lqv $v01, 0, 0, $a0
+    addi $r0, $0, TEMP_TILE # set this while waiting for 3 delay slot vector load.
+    lrv $v01, 0, 0, $a0 # not sure if this line is necessary.
+
+    # Spit out the 16bit lines in reverse order.
+    mfc2 t0, $v01, 7
+    sh $t0, TEMP_TILE($0)
+    mfc2 t0, $v01, 6
+    sh $t0, (TEMP_TILE + 2)($0)
+    mfc2 t0, $v01, 5
+    sh $t0, (TEMP_TILE + 4)($0)
+    mfc2 t0, $v01, 4
+    sh $t0, (TEMP_TILE + 6)($0)
+    mfc2 t0, $v01, 3
+    sh $t0, (TEMP_TILE + 8)($0)
+    mfc2 t0, $v01, 2
+    sh $t0, (TEMP_TILE + 10)($0)
+    mfc2 t0, $v01, 1
+    sh $t0, (TEMP_TILE + 12)($0)
+    mfc2 t0, $v01, 0
+    sh $t0, (TEMP_TILE + 14)($0)
+
+    jr $ra
+
+###
+# Takes a 16bit tile row and flips it horizontally
+# @param $a0 Address of the tile row.
+# @returns $r0 New address of the flipped tile row.
+#
+# This is the long and unrolled way.
+# There's likely a better way, especially with the VU on our side.
+###
+xFlip:
+    lhu $a0, 0($a0)
+
+    andi $a1, $a0, 0b1000000010000000
+    srl $a2, $a1, 7
+
+    andi $a1, $a0, 0b0100000001000000
+    srl $a1, $a1, 5
+    or $a2, $a2, $a1
+
+    andi $a1, $a0, 0b0010000000100000
+    srl $a1, $a1, 3
+    or $a2, $a2, $a1
+
+    andi $a1, $a0, 0b0001000000010000
+    srl $a1, $a1, 1
+    or $a2, $a2, $a1
+
+    andi $a1, $a0, 0b0000100000001000
+    sll $a1, $a1, 1
+    or $a2, $a2, $a1
+
+    andi $a1, $a0, 0b0000010000000100
+    sll $a1, $a1, 3
+    or $a2, $a2, $a1
+
+    andi $a1, $a0, 0b0000001000000010
+    sll $a1, $a1, 5
+    or $a2, $a2, $a1
+
+    andi $a1, $a0, 0b0000000100000001
+    sll $a1, $a1, 7
+    or $a2, $a2, $a1
+
+    addi $r0, $0, TEMP_TILE
+    sh $a2, 0($r0)
+
+    jr $ra
+
+###
+#
+# @param entry The OAM entry defining this sprite.
+# @isSecondTile If specified, the tile to draw is the second of a double height sprite.
+###
+.macro processSprite $entry
+    .set $y1, $t4
+    .set $x1, $t5 # overloaded with y2 since it's just to check we're on screen.
+    .set $x2, $t6
+    .set $shiftBy, $t4 # overloaded
+    .set $spriteLine, $t7
+    .set $bufferIndex, $t8
+
+    # Check this sprite is on screen.
+    srl $t0, $entry, 16
+    andi $t0, $t0, 0x00FF # X loc is second byte.
+    addi $x1, $t0, -1 * OAM_X_OFFSET
+    addi $x2, $x1, TILE_WIDTH
+
+    # off the left of the screen.
+    bltz $x2, processSprite_done
+
+    # $x2 not used after this point
+    .set $flags, $x2 
+    .set $x2, 0
+
+    # off the right of the screen.
+    addi $t0, $0, GB_LCD_WIDTH - 1
+    bgt $x1, $t0, processSprite_done
+
+    # Get the tile index from the OAM entry.
+    srl $t0, \$entry, 8
+    andi $t0, $t0, 0x00FF
+
+    beq $IS_8x16_MODE, $0, 1f
+        # TODO: Figure out if this is the top or bottom half of the sprite.
+        sub $t9, $SCAN_LINE, $y1
+        addi $t9, $t9, -8
+
+        bltz $t9, 2f
+            # +1 for the second half of the sprite.
+            addi $t0, $t0, 1
+        2:
+    1:
+
+    # Get the tile from the cache.
+    add $a0, $0, $t0
+    jal cacheGetTile
+
+    # Get the flags
+    andi $flags, \$entry, 0x00FF    
+
+    # is y flipped
+    andi $t0, $flags, Oam_Y_FLIP
+    beq $t0, $0, 1f
+        add $a0, $0, $r0
+        jal yFlip
+    1:
+
+    # TODO - just have all three palettes available in DMEM each line.
+    # instead of resetting the palette each sprite.
+    andi $t0, $flags, Oam_PALETTE
+    bne $t0, $0, 1f
+        lbu $a0, (PPU_SETTINGS + Ppu_SPRITE_PALETTE_0)($0)
+        j 2f
+    1:
+        lbu $a0, (PPU_SETTINGS + Ppu_SPRITE_PALETTE_1)($0)
+    2:
+    jal setPalette
+
+    # Find the line of the tile we want to draw.
+    sub $t0, $SCAN_LINE, $y1
+    ## a % b == a & ( b -1 ) if b is a power of 2
+    and $t0, $t0, TILE_WIDTH - 1
+    ## Multiply by two to get the number of bytes to skip.
+    sll $t0, $t0, 1
+    ## $r0 now points to the line of the tile we want.
+    add $r0, $r0, $t0
+
+    # is x flipped.
+    andi $t0, $flags, Oam_X_FLIP
+    beq $t0, $0, 1f
+        add $a0, $0, $r0
+        jal xFlip
+    1:
+
+    or $spriteLine, $0, $r0
+
+    # This is the last time we need the flags, so change the name.
+    .set $hasPriority, $flags
+    andi $hasPriority, $flags, Oam_PRIORITY
+    .set $flags, 0
+
+    # gb tile data is NOT stored with the pixels in order like:
+    # 11001001 01011101
+    # 00112233 44556677
+
+    # but with the pixels spread across two bytes like:
+    # 11001001 01011101
+    # 01234567 01234567
+
+    
+    or $bufferIndex, $0, $x1
+    sll $bufferIndex, $bufferIndex, 1
+    addi $shiftBy, $0, 8
+
+    processSprite_whileHasPixels:
+        bltz $bufferIndex, processSprite_continue
+
+        addi $shiftBy, $shiftBy, -1
+
+        # Grab two bytes from the tile (8 pixels).
+        lhu $t0, 0($spriteLine)
+
+        # Shift so that the two bits are in bit 0 of both pixels.
+        srlv $t0, $t0, $shiftBy
+
+        # Put both pixels next to each other.
+        andi $a0, $t0, 0x100
+        andi $t0, $t0, 0x001
+
+        srl $a0, $a0, 7
+        or $a0, $a0, $t0
+
+        # $a0 now contains the two bits from the sprite
+
+        ## when priority flag == 0 and sprite colour == 0
+        bne $hasPriority, $0, processSprite_hasPriority
+            # Then this pixel is transparent.  Leave the background as it is and move on to next pixel.
+            beq $a0, $0, processSprite_continue
+            j processSprite_drawSprite
+
+        ## when priority flag is 1
+        processSprite_hasPriority:
+            lh $t0, N64_BUFFER($bufferIndex)
+            # check opacity bit of 
+            and $t0, $t0, 1
+            beq $t0, $0, processSprite_drawSprite
+
+            j processSprite_continue
+
+        processSprite_drawSprite:
+            # Look up the palette
+            lb $t0, GB_PALETTE($a0)
+
+            # massage it from gameboy format to n64 format.
+            jal massageMonochrome
+
+            # and push on to the buffer.
+            sh $r0, N64_BUFFER($bufferIndex)
+
+
+        processSprite_continue:
+        addi $bufferIndex, $bufferIndex, 2
+    bgtz $shiftBy, processSprite_whileHasPixels
+
+    .set $x1, 0
+    .set $shiftBy, 0
+    .set $bufferIndex, 0
+    processSprite_done:
+.endm
+
+###
+# Sets in DMEM up to 10 OAM entries for sprites that will appear on this scan line.
+###
+.macro processSprites
+    .set $entry, $t1
+    .set $screenSpritesRemaining, $t2
+    .set $lineSpritesRemaining, $t3
+    .set $y1, $t4
+    .set $y2, $t5
+
+    ## Find the sprites relevant to the current scanline so we don't have to loop through 40 sprites every pixel.
+
+    # DMA in the entire OAM
+    lw $t0, (INPUT + Input_OAM_BASE)($0)
+    dmaIn $t0, OAM, OAM_SIZE
+
+    addi $screenSpritesRemaining, $0, SPRITE_COUNT
+    addi $lineSpritesRemaining, $0, SPRITE_LIMIT
+    processSprites_whileHasOam:
+        # Load the OAM for the current sprite
+
+        ## Figure out what sprite we are on.
+        addi $t0, $0, SPRITE_COUNT
+        sub $t0, $t0, $screenSpritesRemaining
+        ## Multiply by four to get the address offset.
+        sll $t0, $t0, 2
+        lw $entry, OAM($t0)
+
+        ## We care about the Y position, which is at the top
+        srl $y1, $entry, 24
+
+        # Test that the sprite will appear on this scanline
+        addi $y1, $y1, -1 * OAM_Y_OFFSET
+
+        ## $t3 is lower bound, $t0 is upper bound.  Double it if 8x16 mode is on.
+        addi $y2, $y1, 8
+        beq $IS_8x16_MODE, $0, 1f
+            addi $y2, $y2, 8
+        1:
+
+        ## when bottom of the sprite is greater than the current scan line, we don't need to render it here.
+        sub $t0, $y1, $SCAN_LINE
+        bgtz $t0, processSprites_whileHasOam_continue
+
+        ## when top of the sprite is less than the current scan line, skip that too.
+        sub $t0, $y2, $SCAN_LINE
+        bltz $t0, processSprites_whileHasOam_continue
+            processSprite $entry
+
+            # There is a limit of 10 sprites per scanline. Once we've found that many relevant sprites, we're done.
+            addi $lineSpritesRemaining, $lineSpritesRemaining, -1
+            bltz $lineSpritesRemaining, processSprites_whileHasOam_break
+        processSprites_whileHasOam_continue:
+
+        addi $screenSpritesRemaining, $screenSpritesRemaining, -1
+        bgtz $screenSpritesRemaining, processSprites_whileHasOam
+    processSprites_whileHasOam_break:
+
+    # Set them all to 0 so we'll error if try to use them as registers.
+    .set $screenSpritesRemaining, 0
+    .set $lineSpritesRemaining, 0
+    .set $y1, 0
+    .set $y2, 0
+.endm
+
+###
+# Draws pixels for the window if it appears on this scanline.
+# TODO - fix same bugs fixed in processBackground
+###
+.macro processWindow
+    .set $tileMap, $t1
+    .set $top, $t2
+    .set $left, $t3
+    .set $topOffset, $t4
+    .set $maxTileIndex, $t5
+    .set $tileIndex, $t6
+    .set $loadIndex, $t7
+    .set $maxLoadIndex, $t8
+    .set $maxInnerIndex, $t9
+
+    # If window is disabled, there's nothing to draw.
+    lbu $t0, (PPU_SETTINGS + Ppu_LCD_CONTROL)($0)
+    and $t0, $t0, Lcdc_WINDOW_SWITCH
+        beq $t0, $0, processWindow_done
+
+    # When window starts after the current scanline, there's nothing to draw.
+    lbu $top, (PPU_SETTINGS + Ppu_WINDOW_TOP)($0)
+    sub $topOffset, $top, $SCAN_LINE
+        bgtz $topOffset, processWindow_done
+
+    sub $topOffset, $SCAN_LINE, $top
+
+    # When window starts off the end of the screen, there's nothing to draw.
+    lbu $left, (PPU_SETTINGS + Ppu_WINDOW_LEFT)($0)
+    addi $t0, $0, GB_LCD_WIDTH + WINDOW_X_OFFSET
+    sub $t0, $t0, $left
+        bltz $t0, processWindow_done
+
+    addi $maxTileIndex, $0, 20
+
+    lbu $a0, (PPU_SETTINGS + Ppu_BACKGROUND_PALETTE)($0)
+    jal setPalette
+
+    # Find the chunk of VRAM that corresponds to the tiles on this line.
+    lb $t0, (PPU_SETTINGS + Ppu_LCD_CONTROL)($0)
+    andi $t0, $t0, Lcdc_WINDOW_TILE_MAP
+    bne $t0, $0, 1f
+        addi $tileMap, $0, TILE_MAP_0_OFFSET
+        j 2f
+    1:
+        addi $tileMap, $0, TILE_MAP_1_OFFSET
+    2:
+
+    # DMA in a line of the tile map
+    ## Divide by 8 to get the tile line, then multiply by 32 since there's 32 tiles per scan line
+    srl $t0, $topOffset, 3
+    sll $t0, $t0, 5
+    ## add to the address in GB memory.
+    add $tileMap, $tileMap, $t0
+
+    ## And add that to get the location in n64 memory.
+    add $tileMap, $tileMap, $VRAM_BASE
+
+    .set $lineNumber, $topOffset
+    # which line of the tile are we on
+    ## a % b == a & ( b -1 ) if b is a power of 2
+    and $lineNumber, $topOffset, TILE_WIDTH - 1
+    .set $topOffset, 0
+
+    ## Multiply by two to get the number of bytes to skip.
+    sll $lineNumber, $lineNumber, 1
+
+    dmaIn $tileMap, LINE_TILE_MAP, 0x20
+
+    .set $tileLine, $tileMap
+    .set $tileMap, 0
+
+    # When $loadIndex gets to 16, exit the loop.
+    addi $maxLoadIndex, $0, 16
+
+    addi $tileIndex, $0, 0
+    processWindow_whileHasTiles:
+        add $loadIndex, $0, $0
+
+        # when in the third iteration, only go half way.
+        addi $a0, $tileIndex, 4
+        bne $a0, $maxTileIndex, 1f
+            addi $maxLoadIndex, $0, 8
+        1:
+
+        # get 8 tiles and put the line of pixels in a buffer
+        processWindow_whileLoadData:
+            bne $IS_TILE_INDEX_SIGNED, $0, 1f
+                lbu $a0, LINE_TILE_MAP($tileIndex)
+                j 2f
+            1:
+                lb $a0, LINE_TILE_MAP($tileIndex)
+            2:
+
+            jal cacheGetTile
+
+            # $tileLine now points to the line of the tile we want.
+            add $tileLine, $lineNumber, $r0
+
+            # add this line to the buffer.
+            lhu $a0, 0($tileLine)
+            sh $a0, UNPROCESSED_BUFFER($loadIndex)
+
+            # increment
+            addi $tileIndex, $tileIndex, 1
+            addi $loadIndex, $loadIndex, 2
+        bne $loadIndex, $maxLoadIndex, processWindow_whileLoadData
+
+        ## Shouldn't need to do this, but macros don't quite there yet.
+        addi $t0, $t0, UNPROCESSED_BUFFER
+
+        # Load our 8 tile lines into a bunch of vector registers
+        # Each vector represents the nth pixel in each tile.
+          lqv $v00, 0, 0, $8
+          lqv $v01, 0, 0, $8
+          lqv $v02, 0, 0, $8
+          lqv $v03, 0, 0, $8
+          lqv $v04, 0, 0, $8
+          lqv $v05, 0, 0, $8
+          lqv $v06, 0, 0, $8
+          lqv $v07, 0, 0, $8
+
+        # Shift and mask each so that the two bits relevant to a pixel are next to each other.
+          # vsrl $v00, $v00, 0  - for completeness.
+          vsrl $v01, $v01, 1
+          vsrl $v02, $v02, 2
+          vsrl $v03, $v03, 3
+          vsrl $v04, $v04, 4
+          vsrl $v05, $v05, 5
+          vsrl $v06, $v06, 6
+          vsrl $v07, $v07, 7
+
+        # Both pixels bits are now in bit 0 of their respective bytes
+        # And away any other bits and shift them next to each other.
+          vand $v09, $v00, $v27, 0b1000
+          vand $v00, $v00, $v28, 0b1000
+          vsrl $v09, $v09, 7
+          vor $v00, $v00, $v09, 0
+
+          vand $v09, $v01, $v27, 0b1000
+          vand $v01, $v01, $v28, 0b1000
+          vsrl $v09, $v09, 7
+          vor $v01, $v01, $v09, 0
+
+          vand $v09, $v02, $v27, 0b1000
+          vand $v02, $v02, $v28, 0b1000
+          vsrl $v09, $v09, 7
+          vor $v02, $v02, $v09, 0
+
+          vand $v09, $v03, $v27, 0b1000
+          vand $v03, $v03, $v28, 0b1000
+          vsrl $v09, $v09, 7
+          vor $v03, $v03, $v09, 0
+
+          vand $v09, $v04, $v27, 0b1000
+          vand $v04, $v04, $v28, 0b1000
+          vsrl $v09, $v09, 7
+          vor $v04, $v04, $v09, 0
+
+          vand $v09, $v05, $v27, 0b1000
+          vand $v05, $v05, $v28, 0b1000
+          vsrl $v09, $v09, 7
+          vor $v05, $v05, $v09, 0
+
+          vand $v09, $v06, $v27, 0b1000
+          vand $v06, $v06, $v28, 0b1000
+          vsrl $v09, $v09, 7
+          vor $v06, $v06, $v09, 0
+
+          vand $v09, $v07, $v27, 0b1000
+
+        # Find the start of this set of tiles.
+        # which is half the current maxLoadIndex
+        srl $t0, $maxLoadIndex, 1
+
+          vand $v07, $v07, $v28, 0b1000
+        sub $t0, $tileIndex, $t0
+
+          vsrl $v09, $v09, 7
+        # multiply $tileIndex by 8.  We split 8 two bit pixels across 16bits in to a byte each.
+        sll $t0, $t0, 3
+
+          vor $v07, $v07, $v09, 0
+        addi $t0, $t0, PROCESSED_BUFFER
+
+        # remember $8 is $t0 until I can get better macros.
+        # suv should take our two bits and put them into a byte instead of two.
+          vsll $v07, $v07, 7
+          suv $v07, 0, 0,  $8
+
+        # Dunno if this is a cen bug, a libdragon bug or I'm just using this wrong,
+        # but instead of providing a constant offset, I'm having to increment $t0
+        # to get suv to store to the right address.
+        # thankfully, this shouldn't add actual overhead due to SU/VU concurrency afaik
+        # but WTF
+        addi $t0, $t0, 0x08
+          vsll $v06, $v06, 7
+          suv $v06, 0, 0x0, $8
+
+        addi $t0, $t0, 0x08
+          vsll $v05, $v05, 7
+          suv $v05, 0, 0x0, $8
+
+        addi $t0, $t0, 0x08
+          vsll $v04, $v04, 7
+          suv $v04, 0, 0x00, $8
+
+        addi $t0, $t0, 0x08
+          vsll $v03, $v03, 7
+          suv $v03, 0, 0x00, $8
+
+        addi $t0, $t0, 0x08
+          vsll $v02, $v02, 7
+          suv $v02, 0, 0x00, $8
+
+        addi $t0, $t0, 0x08
+          vsll $v01, $v01, 7
+          suv $v01, 0, 0x00, $8
+
+        addi $t0, $t0, 0x08
+          vsll $v00, $v00, 7
+          suv $v00, 0, 0x00, $8
+
+        # Data now looks like this in DMEM
+        #   0   8   16  24...
+        #   1   9   17  25...
+
+    bne $tileIndex, $maxTileIndex, processWindow_whileHasTiles
+
+
+    # Iterate through our now ordered pixels.
+    .set $tileIndex, 0
+    .set $maxTileIndex, 0
+    .set $top, 0
+
+    .set $maxOutputIndex, $maxLoadIndex
+    .set $maxLoadIndex, 0
+    addi $maxOutputIndex, $0, GB_LCD_WIDTH * 2 # 16bit pixels.
+
+    .set $outputIndex, $left
+    addi $outputIndex, $left, -WINDOW_X_OFFSET
+    .set $left, 0
+
+    .set $inputIndex, $loadIndex
+    .set $loadIndex, 0
+    add $inputIndex, $0, $0
+
+    # less than 0, start at 0 and adjust input index.
+    bgtz $outputIndex, 1f
+        sub $inputIndex, $inputIndex, $outputIndex
+        add $outputIndex, $0, $0
+    1:
+
+    # double for 16bit
+    sll $outputIndex, $outputIndex, 1
+
+    processWindow_whileHasPixels:
+        lbu $t0, PROCESSED_INDEX($inputIndex)
+        lb $t0, PROCESSED_BUFFER($t0)
+
+        lb $a0, GB_PALETTE($t0)
+
+        jal massageMonochrome
+        sh $r0, N64_BUFFER($outputIndex)
+
+        addi $inputIndex, $inputIndex, 1
+        addi $outputIndex, $outputIndex, 2
+    bne $outputIndex, $maxOutputIndex, processWindow_whileHasPixels
+
+    processWindow_done:
+.endm
+
+###
+#
+# TODO: Fix bug where last tile is screwy as we scroll.
+###
+.macro processBackground
+    .set $tileMap, $t1
+    .set $tileLine, $t2
+    .set $loadIndex, $t3
+    .set $tileIndex, $t4
+    .set $lineNumber, $t5
+    .set $tilesToProcess, $t6
+    .set $maxLoadIndex, $t7
+    .set $pixelIndex, $t8
+    .set $tilesProcessed, $t9
+
+    # Set the palette
+    lbu $a0, (PPU_SETTINGS + Ppu_BACKGROUND_PALETTE)($0)
+    jal setPalette
+
+    # Find the chunk of VRAM that corresponds to the tiles on this line.
+    lb $t0, PPU_SETTINGS + Ppu_LCD_CONTROL($0)
+    andi $t0, $t0, Lcdc_BACKGROUND_TILE_MAP
+    bne $t0, $0, 1f
+        addi $tileMap, $0, TILE_MAP_0_OFFSET
+        j 2f
+    1:
+        addi $tileMap, $0, TILE_MAP_1_OFFSET
+    2:
+
+    # Figure out what line of the background we need to start with by adding the SCY register
+    lbu $t0, (PPU_SETTINGS + Ppu_BACKGROUND_SCROLL_Y)($0)
+    add $t0, $t0, $SCAN_LINE
+    # wrap around on 256
+    andi $t0, $t0, 0xFF
+
+    # DMA in a line of the tile map, 
+    ## Divide by 8 to get the tile line, then multiply by 32
+    ### Yes I'm trying to wrap my head around why I can't just << 2, but for scan-line 1, this would be tile 4 when it should be tile 0...
+    srl $t0, $t0, 3
+    sll $t0, $t0, 5
+
+    # add to tile map to get the address in GB Memory.
+    add $tileMap, $tileMap, $t0
+
+    ## And add to this to get the location in N64 memory.
+    add $tileMap, $tileMap, $VRAM_BASE
+
+    # DMA it in.
+    dmaIn $tileMap, LINE_TILE_MAP, 0x20
+
+    # which line of the tile are we on
+    ## a % b == a & ( b -1 ) if b is a power of 2
+    and $lineNumber, $SCAN_LINE, TILE_WIDTH - 1
+    ## Multiply by two to get the number of bytes to skip.
+    sll $lineNumber, $lineNumber, 1
+
+    # Get the x offset and then divide by 8 to get the starting tile.
+    lbu $tileIndex, (PPU_SETTINGS + Ppu_BACKGROUND_SCROLL_X)($0)
+    srl $tileIndex, $tileIndex, 3
+
+    add $tilesProcessed, $0, $0
+    addi $tilesToProcess, $0, 20
+
+    # We can fit 8 16b tiles at once in our vector regs.
+    addi $maxLoadIndex, $0, 16
+    processBackground_whileHasTiles:
+        add $loadIndex, $0, $0
+
+        # when in the third iteration, only go half way.
+        addi $a0, $tilesProcessed, 4
+        bne $a0, $tilesToProcess, 1f
+            addi $maxLoadIndex, $0, 8
+        1:
+
+        # get 8 tiles and put the line of pixels in a buffer
+        processBackground_whileLoadData:
+            bne $IS_TILE_INDEX_SIGNED, $0, 1f
+                lbu $a0, LINE_TILE_MAP($tileIndex)
+                j 2f
+            1:
+                lb $a0, LINE_TILE_MAP($tileIndex)
+            2:
+
+            jal cacheGetTile
+
+            # $tileLine now points to the line of the tile we want.
+            add $tileLine, $lineNumber, $r0
+
+            # add this line to the buffer.
+            lhu $a0, 0($tileLine)
+            sh $a0, UNPROCESSED_BUFFER($loadIndex)
+
+            # increment
+            addi $tileIndex, $tileIndex, 1
+            andi $tileIndex, $tileIndex, 0b00011111
+            addi $tilesProcessed, $tilesProcessed, 1
+            addi $loadIndex, $loadIndex, 2
+        bne $loadIndex, $maxLoadIndex, processBackground_whileLoadData
+
+        ## Shouldn't need to do this, but macros don't quite there yet.
+        addi $t0, $0, UNPROCESSED_BUFFER
+
+        # Load our 8 tile lines into a bunch of vector registers
+        # Each vector represents the nth pixel in each tile.
+          lqv $v00, 0, 0, $8
+          lqv $v01, 0, 0, $8
+          lqv $v02, 0, 0, $8
+          lqv $v03, 0, 0, $8
+          lqv $v04, 0, 0, $8
+          lqv $v05, 0, 0, $8
+          lqv $v06, 0, 0, $8
+          lqv $v07, 0, 0, $8
+
+        # Shift and mask each so that the two bits relevant to a pixel are next to each other.
+          # vsrl $v00, $v00, 0  - for completeness.
+          vsrl $v01, $v01, 1
+          vsrl $v02, $v02, 2
+          vsrl $v03, $v03, 3
+          vsrl $v04, $v04, 4
+          vsrl $v05, $v05, 5
+          vsrl $v06, $v06, 6
+          vsrl $v07, $v07, 7
+
+        # Both pixels bits are now in bit 0 of their respective bytes
+        # And away any other bits and shift them next to each other.
+          vand $v09, $v00, $v27, 0b1000
+          vand $v00, $v00, $v28, 0b1000
+          vsrl $v09, $v09, 7
+          vor $v00, $v00, $v09, 0
+
+          vand $v09, $v01, $v27, 0b1000
+          vand $v01, $v01, $v28, 0b1000
+          vsrl $v09, $v09, 7
+          vor $v01, $v01, $v09, 0
+
+          vand $v09, $v02, $v27, 0b1000
+          vand $v02, $v02, $v28, 0b1000
+          vsrl $v09, $v09, 7
+          vor $v02, $v02, $v09, 0
+
+          vand $v09, $v03, $v27, 0b1000
+          vand $v03, $v03, $v28, 0b1000
+          vsrl $v09, $v09, 7
+          vor $v03, $v03, $v09, 0
+
+          vand $v09, $v04, $v27, 0b1000
+          vand $v04, $v04, $v28, 0b1000
+          vsrl $v09, $v09, 7
+          vor $v04, $v04, $v09, 0
+
+          vand $v09, $v05, $v27, 0b1000
+          vand $v05, $v05, $v28, 0b1000
+          vsrl $v09, $v09, 7
+          vor $v05, $v05, $v09, 0
+
+          vand $v09, $v06, $v27, 0b1000
+          vand $v06, $v06, $v28, 0b1000
+          vsrl $v09, $v09, 7
+          vor $v06, $v06, $v09, 0
+
+        # Find the start of this set of tiles.
+        # which is half the current maxLoadIndex
+        srl $t0, $maxLoadIndex, 1
+
+          vand $v09, $v07, $v27, 0b1000
+        sub $t0, $tilesProcessed, $t0
+
+          vand $v07, $v07, $v28, 0b1000
+        # multiply $tileIndex by 8.  We split 8 two bit pixels across 16bits in to a byte each.
+        sll $t0, $t0, 3
+ 
+          vsrl $v09, $v09, 7
+        addi $t0, $t0, PROCESSED_BUFFER
+   
+          vor $v07, $v07, $v09, 0
+
+        # remember $8 is $t0 until I can get better macros.
+        # suv should take our two bits and put them into a byte instead of two.
+          vsll $v07, $v07, 7
+          suv $v07, 0, 0, $8
+
+        # Dunno if this is a cen bug, a libdragon bug or I'm just using this wrong,
+        # but instead of providing a constant offset, I'm having to increment $t0
+        # to get suv to store to the right address.
+        # thankfully, this shouldn't add actual overhead due to SU/VU concurrency afaik
+        # but WTF
+
+        # UPDATE: It's likely because I was passing a 32bit label instead of a 16bit offset. Currently unable to
+        # pass the requisite %lo(LABEL_NAME) to these macros though.
+
+        addi $t0, $t0, 0x08
+          vsll $v06, $v06, 7
+          suv $v06, 0, 0x0, $8
+
+        addi $t0, $t0, 0x08
+          vsll $v05, $v05, 7
+          suv $v05, 0, 0x0, $8
+
+        addi $t0, $t0, 0x08
+          vsll $v04, $v04, 7
+          suv $v04, 0, 0x00, $8
+
+        addi $t0, $t0, 0x08
+          vsll $v03, $v03, 7
+          suv $v03, 0, 0x00, $8
+
+        addi $t0, $t0, 0x08
+          vsll $v02, $v02, 7
+          suv $v02, 0, 0x00, $8
+
+        addi $t0, $t0, 0x08
+          vsll $v01, $v01, 7
+          suv $v01, 0, 0x00, $8
+
+        addi $t0, $t0, 0x08
+          vsll $v00, $v00, 7
+          suv $v00, 0, 0x00, $8
+
+        # Data now looks like this in DMEM
+        #   0   8   16  24...
+        #   1   9   17  25...
+    bne $tilesProcessed, $tilesToProcess, processBackground_whileHasTiles
+
+    .set $maxLoadIndex, 0
+    .set $tilesToProcess, 0
+    .set $tilesProcessed, 0
+
+    # Iterate through our now ordered pixels.
+    .set $inputIndex, $lineNumber
+    .set $lineNumber, 0
+    # Find which pixel of a tile to start with based on SCX
+    lbu $inputIndex, (PPU_SETTINGS + Ppu_BACKGROUND_SCROLL_X)($0)
+    and $inputIndex, $inputIndex, TILE_WIDTH - 1
+
+    .set $outputIndex, $tileIndex
+    .set $tileIndex, 0
+    add $outputIndex, $0, $0
+
+    .set $maxOutputIndex, $loadIndex
+    .set $loadIndex, 0
+    addi $maxOutputIndex, $0, GB_LCD_WIDTH * 2 # two bytes per pixel.
+
+    processBackground_whileHasPixels:
+        # Get the address of the next pixel since the VU has put them in a weird order
+        lbu $t0, PROCESSED_INDEX($inputIndex)
+
+        lb $t0, PROCESSED_BUFFER($t0)
+
+        # Cache whether this is the palette 0 position
+        or $a1, $t0, $0
+
+        lb $a0, GB_PALETTE($t0)
+        jal massageMonochrome
+
+        bne $a1, $0, 1f
+            # Reset the transparency bit
+            addi $a1, $0, -2
+            and $r0, $r0, $a1
+        1:
+
+        # Double pixel index for N64 colour since these are 16bit.
+        sh $r0, N64_BUFFER($outputIndex)
+
+        addi $inputIndex, $inputIndex, 1
+        addi $outputIndex, $outputIndex, 2
+    bne $outputIndex, $maxOutputIndex, processBackground_whileHasPixels
+
+    processBackground_done:
+.endm
+
+###
+# TODO - LOAD DATA SECTION PROPERLY AND AVOID THE SW etc
+###
+.macro setupVectorShifts
+    setup_vsll8 $v29
+    setup_vsll $v30
+
+    lui $t0, 0x8000
+    ori $t0, $t0, 0x4000
+    sw $t0, SHIFT_CONSTS($0)
+
+    lui $t0, 0x2000
+    ori $t0, $t0, 0x1000
+    sw $t0, (SHIFT_CONSTS + 4)($0)
+
+    lui $t0, 0x0800
+    ori $t0, $t0, 0x0400
+    sw $t0, (SHIFT_CONSTS + 8)($0)
+
+    lui $t0, 0x0200
+    ori $t0, $t0, 0x0100
+    sw $t0, (SHIFT_CONSTS + 0xC)($0)
+
+    addi $t0, $0, SHIFT_CONSTS
+      lqv $v29, 0, 0, $8 # $v29 = vrl shift consts $8 = t0
+
+    lui $t0, 0x0080
+    ori $t0, $t0, 0x0040
+    sw $t0, SHIFT_CONSTS($0)
+
+    lui $t0, 0x0020
+    ori $t0, $t0, 0x0010
+    sw $t0, (SHIFT_CONSTS + 4)($0)
+
+    lui $t0, 0x0008
+    ori $t0, $t0, 0x0004
+    sw $t0, (SHIFT_CONSTS + 8)($0)
+
+    lui $t0, 0x0002
+    ori $t0, $t0, 0x0001
+    sw $t0, (SHIFT_CONSTS + 0xC)($0)
+
+    addi $t0, $0, SHIFT_CONSTS
+      lqv $v30, 0, 0, $8 # $v30 = shift consts $8 = t0
+
+    # These are used for converting GB pixels 
+    # from abcdefgh ABCDEFGH format
+    #  to  aAbBcCdD eEfFgGhH format.
+    addi $t0, $0, 0x0001
+      mtc2 t0, $v28, 0
+
+    addi $t0, $0, 0x0100
+      mtc2 t0, $v27, 0
+.endm
+
+###
+# Because of the way pixels are placed in memory after being processed by the VU
+# An index helps as pick up the next pixel.
+###
+.macro setUpIndex
+    .set $tileLocation, $t2
+    .set $pixelLocation, $t3
+    .set $maxIndex, $t4
+    .set $maxTileLocation, $t5
+    .set $maxPixelLocation, $t6
+    .set $index, $t7
+
+    add $index, $0, $0
+    addi $maxIndex, $0, 256
+    addi $maxTileLocation, $0, 8
+
+    setUpIndex_whileHasChunks:
+        add $tileLocation, $0, $0
+        setUpIndex_whileHasTiles:
+            add $pixelLocation, $0, $tileLocation
+            addi $maxPixelLocation, $tileLocation, 64
+            setUpIndex_whileHasPixels:
+                andi $t0, $index, 0b11000000
+                add $t0, $t0, $pixelLocation
+                sb $t0, PROCESSED_INDEX($index)
+
+                addi $index, $index, 1
+                addi $pixelLocation, $pixelLocation, 8
+            bne $pixelLocation, $maxPixelLocation, setUpIndex_whileHasPixels
+            addi $tileLocation, $tileLocation, 1
+        bne $tileLocation, $maxTileLocation, setUpIndex_whileHasTiles
+    bne $index, $maxIndex, setUpIndex_whileHasChunks
+
+    .set $tileLocation, 0
+    .set $pixelLocation, 0
+    .set $maxIndex, 0
+    .set $maxTileLocation, 0
+    .set $maxPixelLocation, 0
+    .set $index, 0
+.endm
+
+###
+# 
+###
+main:
+    # init stack pointer.
+    addi $sp, $0, STACK_TOP
+
+    setupVectorShifts
+
+    setupIndex
+
+    # Bring in the configuration.
+    liw $t0, RSP_INTERFACE_ADDRESS
+    dmaIn $t0, INPUT, INPUT_SIZE
+
+    # Stash config in some registers for quick reference.
+    lw $OUT_BUFFER_ADDRESS, (INPUT + Input_OUT_ADDRESS)($0)
+    lw $VRAM_BASE, (INPUT + Input_VRAM_BASE)($0)
+
+    ## Set up monochrome colour palette in memory
+    liw $t0, LIGHTEST
+    sw $t0, N64_PALETTE($0)
+    liw $t0, LIGHTER
+    sw $t0, (N64_PALETTE + 4)($0)
+    liw $t0, DARKER
+    sw $t0, (N64_PALETTE + 8)($0)
+    liw $t0, DARKEST
+    sw $t0, (N64_PALETTE + 0xC)($0)
+
+    mainLoop:
+        # Stall until CPU is ready for us to pick up new data.
+        1:
+            mfc0 $t0, $RSP_STATUS
+            andi $t0, $t0, SP_STATUS_GET_IS_READY
+        beq $t0, $0, 1b
+
+        # Set the Busy flag but lift the Ready flag.
+        liw $t0, SP_DATA_PENDING
+        ori $t0, $t0, SP_STATUS_BUSY_ON
+        mtc0 $t0, $RSP_STATUS
+
+        # Load and cache the gameboy LCD registers.
+        lw $t0, (INPUT + Input_HRAM_BASE)($0)
+        addi $t0, $t0, PPU_SETTINGS_OFFSET
+        dmaIn $t0, PPU_SETTINGS, PPU_SETTINGS_SIZE
+
+        # Check whether the LCD is turned on, and if not, skip all this shebang.
+        lb $t0, (PPU_SETTINGS + Ppu_LCD_CONTROL)($0)
+
+        andi $t1, $t0, Lcdc_LCD_SWITCH
+            beq $t0, $0, main_continue
+
+        ## Cache VRAM tile data address
+        ## window & background data can be at 2 different addresses in VRAM
+
+        andi $t1, $t0, Lcdc_TILE_DATA
+        bne $t1, $0, 1f
+            addi $VRAM_TILE_DATA_ADDRESS, $VRAM_BASE, TILE_DATA_0_OFFSET
+            addi $IS_TILE_INDEX_SIGNED, $0, 1
+            j 2f
+        1:
+            add $VRAM_TILE_DATA_ADDRESS, $0, $VRAM_BASE
+            add $IS_TILE_INDEX_SIGNED, $0, $0
+        2:
+
+        ## Cache if we're in 8x16 sprite mode.
+        andi $IS_8x16_MODE, $t0, Lcdc_SPRITE_SIZE
+
+        # Initialise rendering of the line.
+        lw $START_POSITION, INPUT + Input_SCREEN_POSITION($0)
+        lw $RECTANGLE_SIZE, INPUT + Input_RECTANGLE_SIZE($0)
+        andi $RECTANGLE_HEIGHT, $RECTANGLE_SIZE, 0x0000FFFF
+
+        ## Cache the current scan line.
+        lbu $SCAN_LINE, (PPU_SETTINGS + Ppu_CURRENT_LINE)($0)
+
+        # Build up this scanline to a buffer than can be rendered as a texture.
+
+        ## Then the background
+        processBackground
+
+        ## Draw the window
+        processWindow
+
+        # Finally draw sprites
+        ## Sprite data is always at VRAM base.
+        add $VRAM_TILE_DATA_ADDRESS, $0, $VRAM_BASE
+        processSprites
+
+        # Ensure the transparency bit is set for all pixels.
+        .set $index, $t1
+        addi $index, $0, GB_LCD_WIDTH * 2
+        main_whileHasPixels:
+            addi $index, $index, -2
+            lhu $t0, N64_BUFFER($index)
+            ori $t0, $t0, 1
+            sh $t0, N64_BUFFER($index)
+        bgtz $index, main_whileHasPixels
+        .set $index, 0
+
+        # Ask the RDP to render the line we just built.
+
+        # Double buffer between frames.
+        bne $SCAN_LINE, $0, 1f
+            mfc0 $t0, $RSP_STATUS
+            andi $t0, $t0, SP_STATUS_GET_BUFFER
+
+            # when bit 9 is set, shift it to be a four instead - FRAME_BUFFER_2 is the next 4B pointer after FRAME_BUFFER_1
+            srl $t0, $t0, 7
+            lw $a0, (INPUT + Input_FRAME_BUFFER_1)($t0)
+
+            setFrameBuffer 0, RGBA_FORMAT, COLOUR_DEPTH_16, 640, $a0
+
+            # Switch to the other buffer for the next iteration.
+
+            ## Sync before loading a new texture.
+            syncPipe 8
+            execRdp 3
+            j 2f
+        1:
+            syncPipe 0
+            execRdp 1
+        2:
+
+        ## DMA the data back to DRAM so that the RDP can pick it up.
+        dmaOut N64_BUFFER, $OUT_BUFFER_ADDRESS, BUFFER_SIZE
+
+        ## Tell RDP where to look for texture data.
+        setTextureImage 0, RGBA_FORMAT, COLOUR_DEPTH_16, GB_LCD_WIDTH, $OUT_BUFFER_ADDRESS
+
+        ## Set up a tile now that the RDP has the data.
+        setTile 8, 1, RGBA_FORMAT, COLOUR_DEPTH_16, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+
+        ## Give tile a size & shape
+        loadTile 16, 1, 0, 0, GB_LCD_WIDTH, 1
+        execRdp 6
+
+        # Calculate where to draw the line.
+        add $a0, $SCAN_LINE, $0
+
+        # TODO - The multiplication here will depend on the height of the GB screen.
+        # While will be variable if I ever do 2-player mode.
+        sll $a0, $a0, 1
+        add $a0, $a0, $START_POSITION
+
+        andi $a1, $a0, 0x0000FFFF
+
+        srl $a0, $a0, 16
+
+        add $a2, $RECTANGLE_SIZE, $0
+        srl $a2, $a2, 16
+
+        add $a2, $a2, $a0
+        add $a3, $RECTANGLE_HEIGHT, $a1
+
+        ## Draw a rectangle with the texture we have set up
+        textureRectangle 0, 1, $a0, $a1, $a2, $a3, 0, 0, 2048, 512
+        execRdp 4
+
+        # Dunno why it's faster to send the RPD commands in two DMAS instead of one,
+        # but it seems it is.  Keeping this here until I figure it out.
+        #textureRectangle 0x18, 1, $a0, $a1, $a2, $a3, 0, 0, 2048, 512
+        #execRdp 0x18
+
+
+        # Clean-up now that we're done.
+    main_continue:
+        # Lift the IsBusy flag
+        addi $t0, $0, SP_STATUS_BUSY_OFF
+        mtc0 $t0, $RSP_STATUS
+
+    # Start again and wait for more data.
+    j mainLoop
+
+# job done
+stall:
+    nop
+    j stall
+    nop
+
 break
+# Fill remainder with break instruction
+#.org 2048, 0x0000000D
