@@ -3,7 +3,6 @@
 
 #include "core.h"
 #include "state.h"
-#include "rsp.h"
 #include "config.h"
 #include "lcd.h"
 #include "hwdefs.h"
@@ -357,7 +356,10 @@ void lcd_step(PlayerState* state) {
     s->IsCurrentLineLYC = (s->CurrentLine == s->NextInterruptLine);
 
     if (s->lcd_entered_hblank) {
-        //lcd_render_current_line(state);
-        ppuStep(state);
+        if (s->Cartridge.IsGbcSupported) {
+            lcd_render_current_line(state);
+        } else {
+            ppuStep(state);
+        }
     }
 }

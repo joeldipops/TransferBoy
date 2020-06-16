@@ -35,7 +35,8 @@ all: $(PROG_NAME)$(ROM_EXTENSION) $(PROG_NAME).mips
 $(CURDIR)/rsp/ppuDMG.o:
 	make -C $(CURDIR)/rsp rsp
 
-$(CURDIR)/rsp/ppuDMGData.o: $(CURDIR)/rsp/ppuDMG.o
+$(CURDIR)/rsp/renderer.o:
+	make -C $(CURDIR)/rsp rsp
 
 $(PROG_NAME)$(ROM_EXTENSION): $(PROG_NAME).elf $(PROG_NAME).dfs
 	$(OBJCOPY) $(PROG_NAME).elf $(PROG_NAME).bin -O binary
@@ -110,7 +111,7 @@ $(PROG_NAME).elf : $(CURDIR)/rsp/ppuDMG.o $(CURDIR)/rsp/ppuDMGData.o $(PROG_NAME
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/rsp.o $(CURDIR)/rsp.c
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/transferboy.o $(CURDIR)/transferboy.c
 
-	$(LD) -o $(PROG_NAME).elf $(CURDIR)/rsp/ppuDMG.o $(CURDIR)/rsp/ppuDMGData.o $(CURDIR)/obj/$(PROG_NAME).o $(LD_OFILES) $(LINK_FLAGS)
+	$(LD) -o $(PROG_NAME).elf $(CURDIR)/rsp/ppuDMG.o $(CURDIR)/rsp/ppuDMGData.o $(CURDIR)/rsp/renderer.o $(CURDIR)/obj/$(PROG_NAME).o $(LD_OFILES) $(LINK_FLAGS)
 
 $(LD_FILE) : $(PRE_LD_FILE)
 	cpp $(PRE_LD_FILE) | grep -v '^#'	>>$(LD_FILE)

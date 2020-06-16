@@ -20,6 +20,8 @@
 #include "fps.h"
 #include "ppu.h"
 
+#include "rsp.h"
+
 #include <libdragon.h>
 
 typedef enum {GameboyPalette, SuperGameboyPalette, GameboyColorPalette } PaletteType;
@@ -84,7 +86,11 @@ static void initialiseEmulator(GbState* state) {
  */
 void resetPlayState(PlayerState* state) {
     initialiseEmulator(&state->EmulationState);
-    ppuInit(state);
+    if (state->EmulationState.Cartridge.IsGbcSupported) {
+        prepareMicrocode(FRAME_RENDERER);
+    } else {
+        ppuInit(state);
+    }
     state->Meta.FrameCount = 0;
     resetSGBState(&state->SGBState);
 }
@@ -234,16 +240,81 @@ void playLogic(const byte playerNumber) {
 }
 
 /**
+ * @deprecated 
+ */
+typedef struct {
+    uintptr_t InAddress;
+    uintptr_t OutAddress;
+    Rectangle Screen;
+    bool IsColour;
+    byte IsColourPadding[3];
+    bool IsBusy;
+    byte IsBusyPadding[3];
+    uint32_t WordPadding[2];
+} Old_RspInterface;
+
+/**
+ * Kicks off the RSP to render the next frame.
+ * @param inBuffer gameboy screen buffer pixels are picked up by the RSP from here.
+ * @param outBuffer after RSP generates a texture, it will DMA it back into DRAM at this address.
+ * @param screen size and position of the textures drawn by the RSP.
+ * @param isColour if true, inBuffer words represent 2 bit DMG pixels.  Otherwise they are 16bit GBC pixels
+ * @deprecated
+ */
+void renderFrame(uintptr_t inBuffer, uintptr_t outBuffer, Rectangle* screen, bool isColour) {
+    Old_RspInterface* rspInterface = allocRspInterface(sizeof(Old_RspInterface));
+    data_cache_hit_invalidate(rspInterface, sizeof(Old_RspInterface));
+    // Let the RSP finish it's current frame & skip this one.
+    //..if (rspInterface->IsBusy) {
+    //  return;
+    //}
+
+    //if (rootState.Frame) {
+      //  rdp_detach_display();
+        //display_show(rootState.Frame);
+    //}
+    //while(!(rootState.Frame = display_lock()));
+    rdp_attach_display(rootState.Frame);
+
+    haltRsp();
+    rspInterface->InAddress = inBuffer;
+    rspInterface->OutAddress = outBuffer;
+    rspInterface->Screen = *screen;
+    rspInterface->IsColour = isColour;
+    rspInterface->IsBusy = true;
+
+    data_cache_hit_writeback(rspInterface, sizeof(Old_RspInterface));
+
+    run_ucode();
+}
+
+/**
  * Draws gameboy screen.
  * @param playerNumber player in play mode.
  */
 void playDraw(const byte playerNumber) {
-    if (SHOW_FRAME_COUNT) {
+    if (rootState.Players[playerNumber].EmulationState.Cartridge.IsGbcSupported) {
+        Rectangle screen = {};
+        getScreenPosition(playerNumber, &screen);
+
+        PaletteType palette = GameboyColorPalette;
+
+        screen = (Rectangle) { screen.Left, screen.Top, 320, 12 };
+
+        renderFrame(
+            (uintptr_t)rootState.Players[playerNumber].EmulationState.NextBuffer,
+            (uintptr_t)rootState.Players[playerNumber].EmulationState.TextureBuffer,
+            &screen,
+            palette == GameboyColorPalette
+        );
+    }
+
+    #ifdef SHOW_FRAME_COUNT
         string text = "";
 
         sprintf(text, "FPS: %d %lld", fps_get(), rootState.Players[playerNumber].Meta.FrameCount);
         graphics_set_color(GLOBAL_TEXT_COLOUR, 0x0);
         graphics_draw_box(rootState.Frame, 0, 450, 680, 10, GLOBAL_BACKGROUND_COLOUR);
         graphics_draw_text(rootState.Frame, 5, 450, text);
-    }
+    #endif
 }

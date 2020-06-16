@@ -13,9 +13,9 @@ extern const char ppuDMG_data_start __attribute((section(".data")));
 extern const char ppuDMG_data_end __attribute((section(".data")));
 extern const char ppuDMG_data_size __attribute((section(".data")));
 
-typedef struct {
-    u32 Settings[8];
-} RspInterface;
+extern const char renderer_code_start __attribute((section(".data")));
+extern const char renderer_code_end __attribute((section(".data")));
+extern const char renderer_code_size __attribute((section(".data")));
 
 /**
  * Memory Address that RSP will read from to get data shared between the two processors.
@@ -63,7 +63,6 @@ static void onRSPException() {
 void* allocRspInterface(size_t size) {
     if (size != sizeof(RspInterface)) {
         // Raise some sort of exception.
-
         return null;
     }
 
@@ -86,6 +85,9 @@ s8 prepareMicrocode(const Microcode code) {
             size = (unsigned long)&ppuDMG_code_size;
             load_ucode((void*)&ppuDMG_code_start, size);
             break;
+        case FRAME_RENDERER:
+            size = (unsigned long)&renderer_code_size;
+            load_ucode((void*)&renderer_code_start, size);
         case UCODE_GBC_PPU:
         case UCODE_SGB_PPU:
             return RSP_ERR_UNIMPLEMENTED_UCODE;
@@ -134,14 +136,4 @@ void haltRsp() {
  */
 bool isRspBusy() {
     return SP_regs->status & SP_STATUS_GET_IS_BUSY;
-}
-
-/**
- * Kicks off the RSP to render the next frame.
- * @param inBuffer gameboy screen buffer pixels are picked up by the RSP from here.
- * @param outBuffer after RSP generates a texture, it will DMA it back into DRAM at this address.
- * @param screen size and position of the textures drawn by the RSP.
- * @param isColour if true, inBuffer words represent 2 bit DMG pixels.  Otherwise they are 16bit GBC pixels
- */
-void renderFrame(uintptr_t inBuffer, uintptr_t outBuffer, Rectangle* screen, bool isColour) {
 }

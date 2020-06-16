@@ -1,19 +1,19 @@
 #include <ucode.S>
 #include "../global.h"
 #include "init.rsp"
-#include "rdp.rsp"
+#include "old_rdp.rsp"
 
 .set noat
 
 ###
 # Constants
 ###
-.eqv Input_IN_ADDRESS, 0x00
-.eqv Input_OUT_ADDRESS, 0x04
-.eqv Input_SCREEN_POSITION, 0x08
-.eqv Input_RECTANGLE_SIZE, 0x0C
-.eqv Input_IS_COLOUR, 0x10
-.eqv Input_IS_BUSY, 0x14
+.eqv RspIn_IN_ADDRESS, 0x00
+.eqv RspIn_OUT_ADDRESS, 0x04
+.eqv RspIn_SCREEN_POSITION, 0x08
+.eqv RspIn_RECTANGLE_SIZE, 0x0C
+.eqv RspIn_IS_COLOUR, 0x10
+.eqv RspIn_IS_BUSY, 0x14
 
 .eqv INTERFACE_SIZE, 0x20
 
@@ -31,6 +31,7 @@
 .eqv BATCH_HEIGHT, 6
 .eqv BATCH_COUNT, GB_LCD_HEIGHT / BATCH_HEIGHT
 .eqv PIXEL_SIZE, 2
+.eqv GB_BUFFER_SIZE, GB_LCD_WIDTH * GB_LCD_HEIGHT * PIXEL_SIZE
 
 ###
 # Register aliases
@@ -65,6 +66,113 @@
 
 # Stashed height of rectangle to save a few cycles.
 .set $RECTANGLE_HEIGHT, $s9
+
+###
+# Load Immediate Word
+# loads a 32bit immediate value into register.
+# @input \reg Register to load.
+# @input \word Value to load.
+###
+.macro liw reg word
+    lui \reg, \word >> 16
+    ori \reg, \reg, \word & 0xFFFF
+.endm
+
+
+###
+# See dmaIn macro below
+###
+_dmaIn:
+    # Don't do anything until DMA is no longer busy
+    1:
+        mfc0 $t0, $RSP_RESERVED
+    bne $t0, $0, 1b
+
+    2:
+        mfc0 $t0, $DMA_FULL
+    bne $t0, $0, 2b
+
+    # Set source.
+    mtc0 $a0, $DMA_DRAM
+
+    # Set destination
+    mtc0 $a1, $DMA_DMEM
+
+    # set length (which kicks off DMA)
+    addi $a2, $a2, -1
+    mtc0 $a2, $DMA_IN_LENGTH
+
+    # wait for DMA to complete
+    3:
+        mfc0 $t0, $DMA_BUSY
+    bne $t0, $0, 3b
+
+    # release the flag
+    mtc0 $0, $RSP_RESERVED
+    jr $ra
+
+
+###
+# Writes to the three DMA registers to kick off a transfer
+# from DRAM to DMEM then waits for it to complete.
+#
+# @input source Holds the source address in DRAM
+# @input dest Holds the destination adress in DMEM
+# @input length Holds the length of data to transfer.
+###
+.macro dmaIn source, dest, length
+    add $a0, $0, \source
+    addi $a1, $0, \dest
+    addi $a2, $0, \length
+    jal _dmaIn
+.endm
+
+###
+# See dmaOut macro below
+###
+_dmaOut:
+    # Don't do anything until DMA is not busy.
+    1:
+        mfc0 $t0, $RSP_RESERVED
+    bne $t0, $0, 1b
+
+    2:
+        mfc0 $t0, $DMA_FULL
+    bne $t0, $0, 2b
+
+    # Set source.
+    mtc0 $a0, $DMA_DMEM
+
+    # Set destination
+    mtc0 $a1, $DMA_DRAM
+
+    # set length (which kicks off DMA)
+    addi $a2, $a2, -1
+    mtc0 $a2, $DMA_OUT_LENGTH
+
+    # wait for DMA to complete
+    3:
+        mfc0 $t0, $DMA_BUSY
+    bne $t0, $0, 3b
+
+    # release the flag
+    mtc0 $0, $RSP_RESERVED
+    jr $ra
+
+###
+# Writes to the three DMA registers to kick off a transfer
+# from DMEM to DRAM then then waits for it to complete.
+#
+# @input source The source address in DMEM
+# @input dest The destination adress in DRAM
+# @input length The length of data to transfer.
+###
+.macro dmaOut source, dest, length
+    addi $a0, $0, \source
+    add $a1, $0, \dest
+    addi $a2, $0, \length
+    jal _dmaOut
+.endm
 
 ###
 # Takes a 2bit DMG colour index and converts to a 16bit n64 colour.
@@ -122,12 +230,12 @@ main:
     dmaIn $t0, DMEM_GB_BASE, INTERFACE_SIZE
 
     # Stash config in some registers so whole memory space is available.
-    lw $GB_BUFFER_ADDRESS, Input_IN_ADDRESS($0)
-    lw $OUT_BUFFER_ADDRESS, Input_OUT_ADDRESS($0)
-    lw $SCREEN_POSITION, Input_SCREEN_POSITION($0)
-    lw $RECTANGLE_SIZE, Input_RECTANGLE_SIZE($0)
+    lw $GB_BUFFER_ADDRESS, RspIn_IN_ADDRESS($0)
+    lw $OUT_BUFFER_ADDRESS, RspIn_OUT_ADDRESS($0)
+    lw $SCREEN_POSITION, RspIn_SCREEN_POSITION($0)
+    lw $RECTANGLE_SIZE, RspIn_RECTANGLE_SIZE($0)
     andi $RECTANGLE_HEIGHT, $RECTANGLE_SIZE, 0x0000FFFF
-    lw $IS_COLOUR, Input_IS_COLOUR($0)
+    lw $IS_COLOUR, RspIn_IS_COLOUR($0)
 
     bne $IS_COLOUR, $0, 1f
         # If monochrome, set up palette in memory
@@ -251,9 +359,9 @@ main:
     bgtz $RECTANGLE_COUNTER, .whileHasRectangles
 
     # Reset DRAM flag that says we're done with this frame.
-    sw $0, Input_IS_BUSY($0)
+    sw $0, RspIn_IS_BUSY($0)
     # Gotta zero out IS_COLOUR too because of the way values are packed.
-    sw $0, Input_IS_COLOUR
+    sw $0, RspIn_IS_COLOUR
 
     liw $t0, RSP_INTERFACE_ADDRESS
     dmaOut DMEM_GB_BASE, $t0, INTERFACE_SIZE
@@ -265,4 +373,4 @@ stall:
 
 break
 # Fill remainder with break instruction
-#.org 2048, 0x0000000D
+.org 2048, 0x0000000D
