@@ -7,7 +7,7 @@
  * IE. If CPU puts stuff here, it will be DMA'd into DMEM by RSP
  * We can reference this in our linker script if we run it through the cpp pre-compiler.
  */
-#define RSP_INTERFACE_ADDRESS 0x80041000
+#define RSP_INTERFACE_ADDRESS 0x80048000
 
 #define GB_FREQ 4194304 /* Hz */
 #define GB_LCD_WIDTH  160 /* px */

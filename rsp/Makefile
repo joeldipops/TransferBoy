@@ -1,37 +1,28 @@
-N64_INST = /home/joeldipops/Projects/tools/n64inst
-N64PREFIX = $(N64_INST)/bin/mips64-elf-
-CC = $(N64PREFIX)gcc
-AS = $(N64PREFIX)as
-LD = $(N64PREFIX)ld
-AR = $(N64PREFIX)ar
-OBJCOPY = $(N64PREFIX)objcopy
+include ../config.mk
 
-all: rsp
-clean: rsp-clean
+OUTPUT := $(addsuffix .text, $(basename $(RSP_SCRIPTS))) $(addsuffix .data, $(basename $(RSP_SCRIPTS)))
 
-rsp: ppuDMG.o ppuDMGData.o
+all: $(OUTPUT)
 
-ppuDMG: ppuDMG.o
+%.dsm: %.o
+	mips-linux-gnu-objdump $^ -m mips -D > $@
 
-ppuDMG.dsm: ppuDMGText.o
-	mips-linux-gnu-objdump ppuDMGText.o -m mips -D > ppuDMG.dsm
+%.o:  %.rsp
+	$(CC) -x assembler-with-cpp -c -o $@ $^
 
-ppuDMGText.o:  ppuDMG.rsp
-	$(CC) -x assembler-with-cpp -c -o ppuDMGText.o ppuDMG.rsp
+%.bin: %.o
+	$(OBJCOPY) -O binary -j .text $^ $@
 
-ppuDMG.bin: ppuDMGText.o
-	$(OBJCOPY) -O binary -j .data ppuDMGText.o ppuDMGData.bin
-	$(OBJCOPY) -O binary -j .text ppuDMGText.o ppuDMG.bin
+%_data.bin: %.o
+	$(OBJCOPY) -O binary -j .data $^ $@
 
-ppuDMGData.o: ppuDMGData.bin
-	$(OBJCOPY) -I binary -O elf32-bigmips -B mips4300 --redefine-sym _binary_ppuDMGData_bin_start=ppuDMG_data_start --redefine-sym _binary_ppuDMGData_bin_end=ppuDMG_data_end --redefine-sym _binary_ppuDMGData_bin_size=ppuDMG_data_size ppuDMGData.bin ppuDMGData.o
+%.data: %_data.bin
+	$(OBJCOPY) -I binary -O elf32-bigmips -B mips4300 --redefine-sym _binary_$(basename $@)_data_bin_start=$(basename $@)_data_start --redefine-sym _binary_$(basename $@)_data_bin_end=$(basename $@)_data_end --redefine-sym _binary_$(basename $@)_data_bin_size=$(basename $@)_data_size $^ $@
 
-ppuDMG.o: ppuDMG.bin
-	$(OBJCOPY) -I binary -O elf32-bigmips -B mips4300 --redefine-sym _binary_ppuDMG_bin_start=ppuDMG_code_start --redefine-sym _binary_ppuDMG_bin_end=ppuDMG_code_end --redefine-sym _binary_ppuDMG_bin_size=ppuDMG_code_size --rename-section .text=.data ppuDMG.bin ppuDMG.o
+%.text: %.bin
+	$(OBJCOPY) -I binary -O elf32-bigmips -B mips4300 --redefine-sym _binary_$(basename $@)_bin_start=$(basename $@)_code_start --redefine-sym _binary_$(basename $@)_bin_end=$(basename $@)_code_end --redefine-sym _binary_$(basename $@)_bin_size=$(basename $@)_code_size --rename-section .text=.data $^ $@
 
-ppuDMG: ppuDMG.o
+clean:
+	rm -f *.o *.bin *.data *.text
 
-rsp-clean:
-	rm -f *.o *.bin
-
-.PHONY : rsp rsp-clean
+.PHONY: all

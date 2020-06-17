@@ -44,7 +44,7 @@ void ppuInit(PlayerState* state) {
 
     if (state->EmulationState.Cartridge.IsGbcSupported) {
         prepareMicrocode(UCODE_GBC_PPU);
-    } else if (state->EmulationState.Cartridge.IsSgbSupported) {
+    } else if (state->EmulationState.Cartridge.Header.is_sgb_supported) {
         // UCODE_SGB_PPU
         prepareMicrocode(UCODE_SGB_PPU);
     } else {

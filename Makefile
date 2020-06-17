@@ -1,12 +1,6 @@
-N64_INST = /home/joeldipops/Projects/tools/n64inst
-ROOTDIR = $(N64_INST)
-GCCN64PREFIX = $(ROOTDIR)/bin/mips64-elf-
-CHKSUM64PATH = /home/joeldipops/Projects/tools/libdragon/tools/chksum64
-MKDFSPATH = /home/joeldipops/Projects/tools/libdragon/tools/mkdfs/mkdfs
-HEADERPATH = $(ROOTDIR)/mips64-elf/lib
-N64TOOL = /home/joeldipops/Projects/tools/libdragon/tools/n64tool
+include config.mk
+
 HEADERNAME = header
-PROG_NAME = transferboy
 
 PRE_LD_FILE = $(PROG_NAME).ld
 LD_FILE = $(PROG_NAME)_generated.ld
@@ -16,11 +10,6 @@ LINK_FLAGS = -L$(ROOTDIR)/mips64-elf/lib -ldragon -lm -lc -ldragonsys -T./$(LD_F
 OPTIMISATION_FLAGS = -O2
 CFLAGS = -std=gnu99 -march=vr4300 -mtune=vr4300 $(OPTIMISATION_FLAGS) -Wall -Wno-unused -Werror -I$(CURDIR) -I$(ROOTDIR)/mips64-elf/include 
 ASFLAGS = -mtune=vr4300 -march=vr4300
-CC = $(GCCN64PREFIX)gcc
-AS = $(GCCN64PREFIX)as
-LD = $(GCCN64PREFIX)ld
-
-OBJCOPY = $(GCCN64PREFIX)objcopy
 
 ifeq ($(N64_BYTE_SWAP),true)
 ROM_EXTENSION = .v64
@@ -32,8 +21,10 @@ endif
 
 all: $(PROG_NAME)$(ROM_EXTENSION) $(PROG_NAME).mips
 
-$(CURDIR)/rsp/ppuDMG.o:
-	make -C $(CURDIR)/rsp rsp
+$(CURDIR)/rsp/%.data:
+	make -C $(CURDIR)/rsp all
+$(CURDIR)/rsp/%.text:
+	make -C $(CURDIR)/rsp all
 
 $(PROG_NAME)$(ROM_EXTENSION): $(PROG_NAME).elf $(PROG_NAME).dfs
 	$(OBJCOPY) $(PROG_NAME).elf $(PROG_NAME).bin -O binary
@@ -75,7 +66,13 @@ LD_OFILES += $(CURDIR)/obj/rsp.o
 $(PROG_NAME).dsm: $(PROG_NAME).elf
 	mips-linux-gnu-objdump $(PROG_NAME).elf -m mips -D > $(PROG_NAME).dsm
 
-$(PROG_NAME).elf : $(CURDIR)/rsp/ppuDMG.o $(CURDIR)/rsp/ppuDMGData.o $(PROG_NAME).o $(LD_FILE)
+RSP_CODE := $(addprefix \
+	$(CURDIR)/rsp/, \
+	$(addsuffix .text, $(basename $(RSP_SCRIPTS))) \
+	$(addsuffix .data, $(basename $(RSP_SCRIPTS))) \
+)
+
+$(PROG_NAME).elf : $(RSP_CODE) $(PROG_NAME).o $(LD_FILE)
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/ppu.o $(CURDIR)/ppu.c
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/progressBar.o $(CURDIR)/progressBar.c
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/fps.o $(CURDIR)/fps.c
@@ -108,7 +105,7 @@ $(PROG_NAME).elf : $(CURDIR)/rsp/ppuDMG.o $(CURDIR)/rsp/ppuDMGData.o $(PROG_NAME
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/rsp.o $(CURDIR)/rsp.c
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/transferboy.o $(CURDIR)/transferboy.c
 
-	$(LD) -o $(PROG_NAME).elf $(CURDIR)/rsp/ppuDMG.o $(CURDIR)/rsp/ppuDMGData.o $(CURDIR)/obj/$(PROG_NAME).o $(LD_OFILES) $(LINK_FLAGS)
+	$(LD) -o $(PROG_NAME).elf $(RSP_CODE) $(CURDIR)/obj/$(PROG_NAME).o $(LD_OFILES) $(LINK_FLAGS)
 
 $(LD_FILE) : $(PRE_LD_FILE)
 	cpp $(PRE_LD_FILE) | grep -v '^#'	>>$(LD_FILE)

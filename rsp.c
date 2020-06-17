@@ -13,6 +13,22 @@ extern const char ppuDMG_data_start __attribute((section(".data")));
 extern const char ppuDMG_data_end __attribute((section(".data")));
 extern const char ppuDMG_data_size __attribute((section(".data")));
 
+extern const char ppuGBC_code_start __attribute((section(".data")));
+extern const char ppuGBC_code_end __attribute((section(".data")));
+extern const char ppuGBC_code_size __attribute((section(".data")));
+
+extern const char ppuGBC_data_start __attribute((section(".data")));
+extern const char ppuGBC_data_end __attribute((section(".data")));
+extern const char ppuGBC_data_size __attribute((section(".data")));
+
+extern const char ppuSGB_code_start __attribute((section(".data")));
+extern const char ppuSGB_code_end __attribute((section(".data")));
+extern const char ppuSGB_code_size __attribute((section(".data")));
+
+extern const char ppuSGB_data_start __attribute((section(".data")));
+extern const char ppuSGB_data_end __attribute((section(".data")));
+extern const char ppuSGB_data_size __attribute((section(".data")));
+
 /**
  * Memory Address that RSP will read from to get data shared between the two processors.
  */
@@ -76,7 +92,19 @@ s8 prepareMicrocode(const Microcode code) {
     switch (code) {
         // TODO: Reference these ucode files.
         case UCODE_GBC_PPU:
+            size = (unsigned long) &ppuGBC_data_size;
+            load_data((void*)&ppuGBC_data_start, size);
+
+            size = (unsigned long)&ppuGBC_code_size;
+            load_ucode((void*)&ppuGBC_code_start, size);
+            break;
         case UCODE_SGB_PPU:
+            size = (unsigned long) &ppuSGB_data_size;
+            load_data((void*)&ppuSGB_data_start, size);
+
+            size = (unsigned long)&ppuGBC_code_size;
+            load_ucode((void*)&ppuGBC_code_start, size);
+            break;        
         case UCODE_DMG_PPU:
             size = (unsigned long) &ppuDMG_data_size;
             load_data((void*)&ppuDMG_data_start, size);
