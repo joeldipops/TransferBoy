@@ -90,6 +90,24 @@ SECTIONS {
         __data_end = . ;
     }
 
+    /**
+     * These scripts must all be aligned to 8 bytes as the DMA channel to DMEM/IMEM can't address below 8 bytes.
+     */
+    .rspScripts : {
+        . = ALIGN(8);
+        *(.ppuGBC_data);
+        . = ALIGN(8);
+        *(.ppuGBC_text);
+        . = ALIGN(8);
+        *(.ppuSGB_data);
+        . = ALIGN(8);
+        *(.ppuSGB_text);
+        . = ALIGN(8);
+        *(.ppuDMG_data);
+        . = ALIGN(8);
+        *(.ppuDMG_text)
+    }
+
     . = ALIGN(8);
 
     .ctors : {

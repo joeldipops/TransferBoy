@@ -1,6 +1,9 @@
 #include <ucode.S>
 #include "../global.h"
-#include "init.rsp"
+
+entrypoint:
+    j main
+
 #include "rspIncludes.rsp"
 #include "rdp.rsp"
 

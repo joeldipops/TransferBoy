@@ -5,29 +5,29 @@
 #include "global.h"
 #include "logger.h"
 
-extern const char ppuDMG_code_start __attribute((section(".data")));
-extern const char ppuDMG_code_end __attribute((section(".data")));
-extern const char ppuDMG_code_size __attribute((section(".data")));
+extern const char ppuDMG_code_start __attribute((section(".rspScripts")));
+extern const char ppuDMG_code_end __attribute((section(".rspScripts")));
+extern const char ppuDMG_code_size __attribute((section(".rspScripts")));
 
-extern const char ppuDMG_data_start __attribute((section(".data")));
-extern const char ppuDMG_data_end __attribute((section(".data")));
-extern const char ppuDMG_data_size __attribute((section(".data")));
+extern const char ppuDMG_data_start __attribute((section(".rspScripts")));
+extern const char ppuDMG_data_end __attribute((section(".rspScripts")));
+extern const char ppuDMG_data_size __attribute((section(".rspScripts")));
 
-extern const char ppuGBC_code_start __attribute((section(".data")));
-extern const char ppuGBC_code_end __attribute((section(".data")));
-extern const char ppuGBC_code_size __attribute((section(".data")));
+extern const char ppuGBC_code_start __attribute((section(".rspScripts")));
+extern const char ppuGBC_code_end __attribute((section(".rspScripts")));
+extern const char ppuGBC_code_size __attribute((section(".rspScripts")));
 
-extern const char ppuGBC_data_start __attribute((section(".data")));
-extern const char ppuGBC_data_end __attribute((section(".data")));
-extern const char ppuGBC_data_size __attribute((section(".data")));
+extern const char ppuGBC_data_start __attribute((section(".rspScripts")));
+extern const char ppuGBC_data_end __attribute((section(".rspScripts")));
+extern const char ppuGBC_data_size __attribute((section(".rspScripts")));
 
-extern const char ppuSGB_code_start __attribute((section(".data")));
-extern const char ppuSGB_code_end __attribute((section(".data")));
-extern const char ppuSGB_code_size __attribute((section(".data")));
+extern const char ppuSGB_code_start __attribute((section(".rspScripts")));
+extern const char ppuSGB_code_end __attribute((section(".rspScripts")));
+extern const char ppuSGB_code_size __attribute((section(".rspScripts")));
 
-extern const char ppuSGB_data_start __attribute((section(".data")));
-extern const char ppuSGB_data_end __attribute((section(".data")));
-extern const char ppuSGB_data_size __attribute((section(".data")));
+extern const char ppuSGB_data_start __attribute((section(".rspScripts")));
+extern const char ppuSGB_data_end __attribute((section(".rspScripts")));
+extern const char ppuSGB_data_size __attribute((section(".rspScripts")));
 
 /**
  * Memory Address that RSP will read from to get data shared between the two processors.
@@ -89,6 +89,7 @@ s8 prepareMicrocode(const Microcode code) {
     set_SP_interrupt(1);
 
     unsigned long size = 0;
+
     switch (code) {
         // TODO: Reference these ucode files.
         case UCODE_GBC_PPU:
@@ -104,7 +105,7 @@ s8 prepareMicrocode(const Microcode code) {
 
             size = (unsigned long)&ppuGBC_code_size;
             load_ucode((void*)&ppuGBC_code_start, size);
-            break;        
+            break;
         case UCODE_DMG_PPU:
             size = (unsigned long) &ppuDMG_data_size;
             load_data((void*)&ppuDMG_data_start, size);

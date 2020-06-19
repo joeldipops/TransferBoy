@@ -20,11 +20,11 @@ all: $(OUTPUT)
 # Which are then reassembled back in to separate object files.
 # We simplify the label names here for easier referencing from CPU code
 %.data: %_data.bin
-	$(OBJCOPY) -I binary -O elf32-bigmips -B mips4300 --redefine-sym _binary_$(basename $@)_data_bin_start=$(basename $@)_data_start --redefine-sym _binary_$(basename $@)_data_bin_end=$(basename $@)_data_end --redefine-sym _binary_$(basename $@)_data_bin_size=$(basename $@)_data_size $^ $@
+	$(OBJCOPY) -I binary -O elf32-bigmips -B mips4300 --redefine-sym _binary_$(basename $@)_data_bin_start=$(basename $@)_data_start --redefine-sym _binary_$(basename $@)_data_bin_end=$(basename $@)_data_end --redefine-sym _binary_$(basename $@)_data_bin_size=$(basename $@)_data_size --rename-section .data=.$(basename $@)_data $^ $@
 
 # The text section is also relabelled as a data section, since as far as the CPU is concerned, it is.
 %.text: %.bin
-	$(OBJCOPY) -I binary -O elf32-bigmips -B mips4300 --redefine-sym _binary_$(basename $@)_bin_start=$(basename $@)_code_start --redefine-sym _binary_$(basename $@)_bin_end=$(basename $@)_code_end --redefine-sym _binary_$(basename $@)_bin_size=$(basename $@)_code_size --rename-section .text=.data $^ $@
+	$(OBJCOPY) -I binary -O elf32-bigmips -B mips4300 --redefine-sym _binary_$(basename $@)_bin_start=$(basename $@)_code_start --redefine-sym _binary_$(basename $@)_bin_end=$(basename $@)_code_end --redefine-sym _binary_$(basename $@)_bin_size=$(basename $@)_code_size --rename-section .data=.$(basename $@)_text $^ $@
 	
 
 # Produces a disassembly to help with debugging
