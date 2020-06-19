@@ -49,7 +49,7 @@ void rlcaHL(GbState* s, byte op) { // debug(s, "rlcaHL");
     NF = 0;
     HF = 0;
     CF = val >> 7;
-    mmu_write(s, HL, res);    
+    mmu_write(s, HL, res);
 }
 
 void rrcR8(GbState* s, byte op) { // debug(s, "rrcR8");
@@ -243,7 +243,106 @@ void ldR8N8(GbState* s, byte op) { // debug(s, "ldR8N8");
 void ldaHLN8(GbState* s, byte op) { // debug(s, "ldaHLN8");
     u8 src = IMM8;
     s->pc++;
-    mmu_write(s, HL, src);    
+    mmu_write(s, HL, src);
+}
+/** 
+ * ld B, R8s
+ */
+void ldBA(GbState* s, byte op) { // debug(s, "ldAB");
+    B = A;
+}
+void ldBB(GbState* s, byte op) { // debug(s, "ldAB");
+    ;
+}
+void ldBC(GbState* s, byte op) { // debug(s, "ldAC");
+    B = C;
+}
+void ldBD(GbState* s, byte op) { // debug(s, "ldAD");
+    B = D;
+}
+void ldBE(GbState* s, byte op) { // debug(s, "ldAE");
+    B = E;
+}
+void ldBH(GbState* s, byte op) { // debug(s, "ldAH");
+    B = H;
+}
+void ldBL(GbState* s, byte op) { // debug(s, "ldAL");
+    B = L;
+}
+
+/**
+ * ld C, R8s
+ */
+void ldCA(GbState* s, byte op) { // debug(s, "ldCA");
+    C = A;
+}
+void ldCB(GbState* s, byte op) { // debug(s, "ldCB");
+    C = B;
+}
+void ldCC(GbState* s, byte op) { // debug(s, "ldCC");
+    ;
+}
+void ldCD(GbState* s, byte op) { // debug(s, "ldCD");
+    C = D;
+}
+void ldCE(GbState* s, byte op) { // debug(s, "ldCE");
+    C = E;
+}
+void ldCH(GbState* s, byte op) { // debug(s, "ldCH");
+    C = H;
+}
+void ldCL(GbState* s, byte op) { // debug(s, "ldCL");
+    C = L;
+}
+
+/**
+ * ld C, R8s
+ */
+void ldDA(GbState* s, byte op) { // debug(s, "ldDA");
+    D = A;
+}
+void ldDB(GbState* s, byte op) { // debug(s, "ldDB");
+    D = B;
+}
+void ldDC(GbState* s, byte op) { // debug(s, "ldDC");
+    D = C;
+}
+void ldDD(GbState* s, byte op) { // debug(s, "ldDD");
+    D = D;
+}
+void ldDE(GbState* s, byte op) { // debug(s, "ldDE");
+    D = E;
+}
+void ldDH(GbState* s, byte op) { // debug(s, "ldDH");
+    D = H;
+}
+void ldDL(GbState* s, byte op) { // debug(s, "ldDL");
+    D = L;
+}
+
+/**
+ * ld A, R8s
+ */
+void ldAA(GbState* s, byte op) { // debug(s, "ldAB");
+    ;
+}
+void ldAB(GbState* s, byte op) { // debug(s, "ldAB");
+    A = B;
+}
+void ldAC(GbState* s, byte op) { // debug(s, "ldAC");
+    A = C;
+}
+void ldAD(GbState* s, byte op) { // debug(s, "ldAD");
+    A = D;
+}
+void ldAE(GbState* s, byte op) { // debug(s, "ldAE");
+    A = E;
+}
+void ldAH(GbState* s, byte op) { // debug(s, "ldAH");
+    A = H;
+}
+void ldAL(GbState* s, byte op) { // debug(s, "ldAL");
+    A = L;
 }
 void ldR8R8(GbState* s, byte op) { // debug(s, "ldR8R8");
     u8* src = REG8(0);
@@ -282,7 +381,7 @@ void ldAaHL(GbState* s, byte op) { // debug(s, "ldAaHL");
 
 void ldAaN16(GbState* s, byte op) { // debug(s, "ldAaN16");
     A = mmu_read(s, IMM16);
-    s->pc += 2;    
+    s->pc += 2;
 }
 
 void ldaN16A(GbState* s, byte op) { // debug(s, "ldaN16A");
@@ -293,15 +392,15 @@ void ldAaC(GbState* s, byte op) { // debug(s, "ldAaC");
     A = mmu_read(s, 0xff00 + C);
 }
 void ldaCA(GbState* s, byte op) { // debug(s, "ldaCA");
-    mmu_write(s, 0xff00 + C, A);    
+    mmu_write(s, 0xff00 + C, A);
 }
 void lddAaHL(GbState* s, byte op) { // debug(s, "lddAaHL");
     A = mmu_read(s, HL);
-    HL--;  
+    HL--;
 }
 void lddaHLA(GbState* s, byte op) { // debug(s, "lddaHLA");
     mmu_write(s, HL, A);
-    HL--;    
+    HL--;
 }
 void ldiaHLA(GbState* s, byte op) { // debug(s, "ldiaHLA");
     mmu_write(s, HL, A);
@@ -442,7 +541,7 @@ void sbcAN8(GbState* s, byte op) { // debug(s, "sbcAN8");
     HF = ((s32)A & 0xf) - (IMM8 & 0xf) - CF < 0;
     CF = A < IMM8 + CF;
     A = res;
-    s->pc++;    
+    s->pc++;
 }
 void sbcAR8(GbState* s, byte op) { // debug(s, "sbcAR8");
     u8 regval = *REG8(0);
@@ -485,18 +584,18 @@ void andAaHL(GbState* s, byte op) { // debug(s, "andAaHL");
     ZF = A == 0;
     NF = 0;
     HF = 1;
-    CF = 0;    
+    CF = 0;
 }
 
 void orAN8(GbState* s, byte op) { // debug(s, "orAN8");
     A |= IMM8;
     F = A ? 0 : FLAG_Z;
-    s->pc++;    
+    s->pc++;
 }
 void orAR8(GbState* s, byte op) { // debug(s, "orAR8");
     u8 srcval = *REG8(0);
     A |= srcval;
-    F = A ? 0 : FLAG_Z;    
+    F = A ? 0 : FLAG_Z;
 }
 void orAaHL(GbState* s, byte op) { // debug(s, "orAaHL");
     u8 srcval = mem(HL);
@@ -543,6 +642,13 @@ void cpAaHL(GbState* s, byte op) { // debug(s, "cpAaHL");
     CF = A < regval;
 }
 
+void incA(GbState* s, byte op) {
+    A++;
+    ZF = A == 0;
+    NF = 0;
+    HF = (A & 0xf) == 0xf;
+}
+
 void incR8(GbState* s, byte op) { // debug(s, "incR8");
     u8* reg = REG8(3);
     u8 val = *reg;
@@ -558,7 +664,7 @@ void incaHL(GbState* s, byte op) { // debug(s, "incaHL");
     ZF = res == 0;
     NF = 0;
     HF = (val & 0xf) == 0xf;
-    mmu_write(s, HL, res);    
+    mmu_write(s, HL, res);
 }
 
 void decR8(GbState* s, byte op) { // debug(s, "decR8");

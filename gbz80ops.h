@@ -43,6 +43,38 @@ void ldR8N8(GbState* state, byte op);
 void ldaHLN8(GbState* state, byte op);
 
 void ldR8R8(GbState* state, byte op);
+void ldAA(GbState* state, byte op);
+void ldAB(GbState* state, byte op);
+void ldAC(GbState* state, byte op);
+void ldAD(GbState* state, byte op);
+void ldAE(GbState* state, byte op);
+void ldAH(GbState* state, byte op);
+void ldAL(GbState* state, byte op);
+
+void ldBA(GbState* state, byte op);
+void ldBB(GbState* state, byte op);
+void ldBC(GbState* state, byte op);
+void ldBD(GbState* state, byte op);
+void ldBE(GbState* state, byte op);
+void ldBH(GbState* state, byte op);
+void ldBL(GbState* state, byte op);
+
+void ldCA(GbState* state, byte op);
+void ldCB(GbState* state, byte op);
+void ldCC(GbState* state, byte op);
+void ldCD(GbState* state, byte op);
+void ldCE(GbState* state, byte op);
+void ldCH(GbState* state, byte op);
+void ldCL(GbState* state, byte op);
+
+void ldDA(GbState* state, byte op);
+void ldDB(GbState* state, byte op);
+void ldDC(GbState* state, byte op);
+void ldDD(GbState* state, byte op);
+void ldDE(GbState* state, byte op);
+void ldDH(GbState* state, byte op);
+void ldDL(GbState* state, byte op);
+
 void ldaHLR8(GbState* state, byte op);
 void ldR8aHL(GbState* state, byte op);
 
@@ -99,6 +131,7 @@ void cpAN8(GbState* state, byte op);
 void cpAR8(GbState* state, byte op);
 void cpAaHL(GbState* state, byte op);
 
+void incA(GbState* state, byte op);
 void incR8(GbState* state, byte op);
 void incaHL(GbState* state, byte op);
 
@@ -143,11 +176,11 @@ static gbz80Operation opTable[] = {
 /*   0 */ nop,      ldR16N16,   ldaBCA,     incR16,     incR8,      decR8,      ldR8N8,     rlcA,       ldaN16SP,   addHLR16,   ldAaBC,     decR16,     incR8,      decR8,      ldR8N8,     rrcA,
 /*   1 */ stop,     ldR16N16,   ldaDEA,     incR16,     incR8,      decR8,      ldR8N8,     rlA,        jrN8,       addHLR16,   ldAaDE,     decR16,     incR8,      decR8,      ldR8N8,     rrA,
 /*   2 */ jrCCN8,   ldR16N16,   ldiaHLA,    incR16,     incR8,      decR8,      ldR8N8,     daa,        jrCCN8,     addHLR16,   ldiAaHL,    decR16,     incR8,      decR8,      ldR8N8,     cpl,
-/*   3 */ jrCCN8,   ldR16N16,   lddaHLA,    incR16,     incaHL,     decaHL,     ldaHLN8,    scf,        jrCCN8,     addHLR16,   lddAaHL,    decR16,     incR8,      decR8,      ldR8N8,     ccf,
-/*   4 */ ldR8R8,   ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8aHL,    ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8aHL,    ldR8R8,
-/*   5 */ ldR8R8,   ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8aHL,    ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8aHL,    ldR8R8,
+/*   3 */ jrCCN8,   ldR16N16,   lddaHLA,    incR16,     incaHL,     decaHL,     ldaHLN8,    scf,        jrCCN8,     addHLR16,   lddAaHL,    decR16,     incA,      decR8,      ldR8N8,     ccf,
+/*   4 */ ldBB,     ldBC,       ldBD,       ldBE,       ldBH,       ldBL,       ldR8aHL,    ldBA,       ldCB,       ldCC,       ldCD,       ldCE,       ldCH,       ldCL,     ldR8aHL,    ldCA,
+/*   5 */ ldDB,     ldDC,       ldDD,       ldDE,       ldDH,       ldDL,       ldR8aHL,    ldDA,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8aHL,    ldR8R8,
 /*   6 */ ldR8R8,   ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8aHL,    ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8aHL,    ldR8R8,
-/*   7 */ ldaHLR8,  ldaHLR8,    ldaHLR8,    ldaHLR8,    ldaHLR8,    ldaHLR8,    halt,       ldaHLR8,    ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8R8,     ldR8aHL,    ldR8R8,
+/*   7 */ ldaHLR8,  ldaHLR8,    ldaHLR8,    ldaHLR8,    ldaHLR8,    ldaHLR8,    halt,       ldaHLR8,    ldAB,       ldAC,       ldAD,       ldAE,       ldAH,       ldAL,       ldR8aHL,    ldAA,
 /*   8 */ addAR8,   addAR8,     addAR8,     addAR8,     addAR8,     addAR8,     addAaHL,    addAR8,     adcAR8,     adcAR8,     adcAR8,     adcAR8,     adcAR8,     adcAR8,     adcAaHL,    adcAR8,
 /*   9 */ subAR8,   subAR8,     subAR8,     subAR8,     subAR8,     subAR8,     subAaHL,    subAR8,     sbcAR8,     sbcAR8,     sbcAR8,     sbcAR8,     sbcAR8,     sbcAR8,     sbcAaHL,    sbcAR8,
 /*   A */ andAR8,   andAR8,     andAR8,     andAR8,     andAR8,     andAR8,     andAaHL,    andAR8,     xorAR8,     xorAR8,     xorAR8,     xorAR8,     xorAR8,     xorAR8,     xorAaHL,    xorAR8,
