@@ -1,6 +1,9 @@
 #include <ucode.S>
 #include "../global.h"
-#include "init.rsp"
+
+entrypoint:
+    j main
+
 #include "rspIncludes.rsp"
 #include "rdp.rsp"
 
@@ -1161,49 +1164,11 @@ xFlip:
 .endm
 
 ###
-# TODO - LOAD DATA SECTION PROPERLY AND AVOID THE SW etc
+# 
 ###
 .macro setupVectorShifts
     setup_vsll8 $v29
     setup_vsll $v30
-
-    lui $t0, 0x8000
-    ori $t0, $t0, 0x4000
-    sw $t0, SHIFT_CONSTS($0)
-
-    lui $t0, 0x2000
-    ori $t0, $t0, 0x1000
-    sw $t0, (SHIFT_CONSTS + 4)($0)
-
-    lui $t0, 0x0800
-    ori $t0, $t0, 0x0400
-    sw $t0, (SHIFT_CONSTS + 8)($0)
-
-    lui $t0, 0x0200
-    ori $t0, $t0, 0x0100
-    sw $t0, (SHIFT_CONSTS + 0xC)($0)
-
-    addi $t0, $0, SHIFT_CONSTS
-      lqv $v29, 0, 0, $8 # $v29 = vrl shift consts $8 = t0
-
-    lui $t0, 0x0080
-    ori $t0, $t0, 0x0040
-    sw $t0, SHIFT_CONSTS($0)
-
-    lui $t0, 0x0020
-    ori $t0, $t0, 0x0010
-    sw $t0, (SHIFT_CONSTS + 4)($0)
-
-    lui $t0, 0x0008
-    ori $t0, $t0, 0x0004
-    sw $t0, (SHIFT_CONSTS + 8)($0)
-
-    lui $t0, 0x0002
-    ori $t0, $t0, 0x0001
-    sw $t0, (SHIFT_CONSTS + 0xC)($0)
-
-    addi $t0, $0, SHIFT_CONSTS
-      lqv $v30, 0, 0, $8 # $v30 = shift consts $8 = t0
 
     # These are used for converting GB pixels 
     # from abcdefgh ABCDEFGH format
