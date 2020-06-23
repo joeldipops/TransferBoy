@@ -891,7 +891,7 @@ xFlip:
     .set $lineNumber, $t5
     .set $tilesToProcess, $t6
     .set $maxLoadIndex, $t7
-    .set $pixelIndex, $t8
+    .set $isOffset, $t8
     .set $tilesProcessed, $t9
 
     # Set the palette
@@ -935,8 +935,12 @@ xFlip:
     ## Multiply by two to get the number of bytes to skip.
     sll $lineNumber, $lineNumber, 1
 
-    # Get the x offset and then divide by 8 to get the starting tile.
+    # Get the x offset 
     lbu $tileIndex, (PPU_SETTINGS + Ppu_BACKGROUND_SCROLL_X)($0)
+
+    # stash the remainder so we know if there's an extra tile to process.
+    and $isOffset, $tileIndex, TILE_WIDTH - 1
+    # divide by 8 to get the starting tile.
     srl $tileIndex, $tileIndex, 3
 
     add $tilesProcessed, $0, $0
@@ -950,7 +954,13 @@ xFlip:
         # when in the third iteration, only go half way.
         addi $a0, $tilesProcessed, 4
         bne $a0, $tilesToProcess, 1f
-            addi $maxLoadIndex, $0, 8
+            # If SCX wasn't on an 8 pixel boundary, process one extra tile to get the last few pixels.
+            beq $isOffset, $0, 2f
+                addi $maxLoadIndex, $0, 10
+                addi $tilesToProcess, $tilesToProcess, 1
+                j 1f
+            2:
+                addi $maxLoadIndex, $0, 8
         1:
 
         # get 8 tiles and put the line of pixels in a buffer
@@ -976,6 +986,7 @@ xFlip:
             andi $tileIndex, $tileIndex, 0b00011111
             addi $tilesProcessed, $tilesProcessed, 1
             addi $loadIndex, $loadIndex, 2
+
         bne $loadIndex, $maxLoadIndex, processBackground_whileLoadData
 
         ## Shouldn't need to do this, but macros don't quite there yet.
