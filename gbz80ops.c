@@ -646,7 +646,7 @@ void incA(GbState* s, byte op) {
     A++;
     ZF = A == 0;
     NF = 0;
-    HF = (A & 0xf) == 0xf;
+    HF = ((A - 1) & 0xf) == 0xf;
 }
 
 void incR8(GbState* s, byte op) { // debug(s, "incR8");
