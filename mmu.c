@@ -610,7 +610,7 @@ inline void mmu_write(GbState* s, u16 location, byte value) {
  * Reads two bytes from an address in virtual gameboy memory.
  */
 u16 mmu_read16(GbState *s, u16 location) {
-    return (0xFF & mmu_read(s, location))  | ((u16)(0xFF & mmu_read(s, location + 1) ) << 8);
+    return (mmu_read(s, location))  | ((u16)(mmu_read(s, location + 1) ) << 8);
 }
 
 /**
