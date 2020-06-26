@@ -7,7 +7,7 @@
 static void mmu_hdma_do(GbState *s) {
     // DMA one block (0x10 byte), should be called at start of H-Blank. */
     for (int i = 0; i < 0x10; i++) {
-        u8 dat = 0xFF & mmu_read(s, s->io_hdma_next_src++)  ;
+        u8 dat = mmu_read(s, s->io_hdma_next_src++)  ;
         mmu_write(s, s->io_hdma_next_dst++, dat);
     }
 
@@ -40,7 +40,7 @@ static void mmu_hdma_start(GbState *s, u8 lenmode) {
 
     if (!mode_hblank) {
         for (u16 i = 0; i < len; i++)
-            mmu_write(s, dst++, 0xFF & mmu_read(s, src++));
+            mmu_write(s, dst++, mmu_read(s, src++));
 
         s->GbcHdmaControl = 0xff; // done
         u32 clks = blocks * GB_HDMA_BLOCK_CLKS;
@@ -91,7 +91,7 @@ static void writeDmaSource(GbState* s, byte offset, byte value) {
     // is accessible) but it's okay to be instantaneous. Normally
     // roms loop for ~200 cycles or so to wait.  
     for (unsigned i = 0; i < OAM_SIZE; i++) {
-        s->OAM[i] = 0xFF & mmu_read(s, (value << 8) + i) ;
+        s->OAM[i] = mmu_read(s, (value << 8) + i) ;
     }
 }
 
@@ -510,9 +510,6 @@ static void writeOam(GbState* s, u16 location, byte value) {
         s->OAM[location - 0xfe00] = value;
     }
 }
-
-#include "logger.h"
-#include "state.h"
 
 /**
  * 0x0000 - 0x3FFF
