@@ -7,7 +7,7 @@
 static void mmu_hdma_do(GbState *s) {
     // DMA one block (0x10 byte), should be called at start of H-Blank. */
     for (int i = 0; i < 0x10; i++) {
-        u8 dat = mmu_read(s, s->io_hdma_next_src++);
+        u8 dat = 0xFF & mmu_read(s, s->io_hdma_next_src++)  ;
         mmu_write(s, s->io_hdma_next_dst++, dat);
     }
 
@@ -40,7 +40,7 @@ static void mmu_hdma_start(GbState *s, u8 lenmode) {
 
     if (!mode_hblank) {
         for (u16 i = 0; i < len; i++)
-            mmu_write(s, dst++, mmu_read(s, src++));
+            mmu_write(s, dst++, 0xFF & mmu_read(s, src++));
 
         s->GbcHdmaControl = 0xff; // done
         u32 clks = blocks * GB_HDMA_BLOCK_CLKS;
@@ -91,7 +91,7 @@ static void writeDmaSource(GbState* s, byte offset, byte value) {
     // is accessible) but it's okay to be instantaneous. Normally
     // roms loop for ~200 cycles or so to wait.  
     for (unsigned i = 0; i < OAM_SIZE; i++) {
-        s->OAM[i] = mmu_read(s, (value << 8) + i);
+        s->OAM[i] = 0xFF & mmu_read(s, (value << 8) + i) ;
     }
 }
 
@@ -140,11 +140,11 @@ static void writeHram(GbState* s, byte offset, byte value) {
     s->HRAM[offset] = value;
 }
 
-static byte readHram(GbState* s, byte offset) {
+static u32 readHram(GbState* s, byte offset) {
     return s->HRAM[offset];
 }
 
-static byte readJoypadIo(GbState* s, byte offset) {
+static u32 readJoypadIo(GbState* s, byte offset) {
     // FF00: Joypad
     u8 rv = 0;
     if ((s->JoypadIo & (1 << 4)) == 0)
@@ -153,21 +153,21 @@ static byte readJoypadIo(GbState* s, byte offset) {
         rv =  (s->JoypadIo & 0xf0) | (s->io_buttons_buttons & 0x0f);
     else
         rv = (s->JoypadIo & 0xf0) | (s->io_buttons_buttons & 0x0f);
-    return rv;    
+    return rv;
 }
 
 // FF4F GbcVRAMBank
-static byte readGbcVRAMBank(GbState* s, byte offset) {
+static u32 readGbcVRAMBank(GbState* s, byte offset) {
     return s->GbcVRAMBank & 1;
 }
 
 // FF69 Background Palette data
-static byte readBackgroundPaletteData(GbState* s, byte offset) {
+static u32 readBackgroundPaletteData(GbState* s, byte offset) {
     return s->io_lcd_BGPD[s->GbcBackgroundPaletteIndexRegister & 0x3f];    
 }
 
 // FF6B Sprite Palette data
-static byte readSpritePaletteData(GbState* s, byte offset) {
+static u32 readSpritePaletteData(GbState* s, byte offset) {
     return s->io_lcd_OBPD[s->GbcSpritePaletteIndexRegister & 0x3f];
 }
 
@@ -182,7 +182,7 @@ static void writeNone(GbState* s, u16 location, byte value) {
 /**
  * When the result of a read operation is undefined.
  */
-static byte readNone(GbState* s, u16 location) {
+static u32 readNone(GbState* s, u16 location) {
     return 0xFF;
 }
 
@@ -209,11 +209,11 @@ static void mbc1writeRom01(GbState* s, u16 location, byte value) {
     value &= 0xF;
     if (value == 0) {
         s->SRAM = (byte*) disabledRAMPage;
-        s->isSRAMDisabled = true;        
+        s->isSRAMDisabled = true;
     } else if (value == 0x0A) {
         s->isSRAMDisabled = false;
         if (s->RomRamSelect == SRAM_SELECT) {
-            s->SRAM = s->Cartridge.Ram.Data + s->SRAMBankNumber * SRAM_BANK_SIZE;               
+            s->SRAM = s->Cartridge.Ram.Data + s->SRAMBankNumber * SRAM_BANK_SIZE;
         } else {
             s->SRAM = s->Cartridge.Ram.Data;
         }
@@ -282,7 +282,7 @@ static void mbc2writeRom0123(GbState* s, u16 location, byte value) {
 static void mbc3writeRom23(GbState* s, u16 location, byte value) {
     s->RomBankLower = value & 0x7f;
     byte bank = s->RomBankLower < 1 ? s->RomBankLower + 1 : s->RomBankLower;
-    s->ROMX = s->Cartridge.Rom.Data + (bank * ROM_BANK_SIZE);       
+    s->ROMX = s->Cartridge.Rom.Data + (bank * ROM_BANK_SIZE);
 }
 
 /**
@@ -295,7 +295,7 @@ static inline void mbc5switchRomBank(GbState* s, u16 location, byte value) {
         bank = bank % s->Cartridge.RomBankCount;
     }
 
-    s->ROMX = s->Cartridge.Rom.Data + (bank * ROM_BANK_SIZE);        
+    s->ROMX = s->Cartridge.Rom.Data + (bank * ROM_BANK_SIZE);
 }
 
 /**
@@ -310,8 +310,8 @@ static void mbc5writeRom2(GbState* s, u16 location, byte value) {
  * 3000 - 3FFF: ROM bank upper switch.
  */
 static void mbc5writeRom3(GbState* s, u16 location, byte value) {
-    s->RomBankUpper = value & 1;     
-    mbc5switchRomBank(s, location, value);    
+    s->RomBankUpper = value & 1;
+    mbc5switchRomBank(s, location, value);
 }
 
 /**
@@ -326,11 +326,11 @@ static void mbc1writeRom45(GbState* s, u16 location, byte value) {
         byte bank = getMbc1RomBank(s->RomBankLower, value, s->Cartridge.RomBankCount);
 
         s->RomBankUpper = bank >> 5;
-        s->ROMX = s->Cartridge.Rom.Data + (bank * ROM_BANK_SIZE);                
+        s->ROMX = s->Cartridge.Rom.Data + (bank * ROM_BANK_SIZE);
     }
 
     if (s->Cartridge.RamBankCount > 1) {
-        s->SRAMBankNumber = value;    
+        s->SRAMBankNumber = value;
     }
 
     if (s->RomRamSelect == ROM_SELECT) {
@@ -468,7 +468,7 @@ static void hasRTCwriteSRAM(GbState* s, u16 location, byte value) {
         s->SRAM[location - 0xA000] = value;
     }
 
-    s->isSRAMDirty = 1;        
+    s->isSRAMDirty = 1;
 }
 
 /**
@@ -478,7 +478,7 @@ static void writeSRAM(GbState* s, u16 location, byte value) {
     // Could potentially point SRAM to some junk address when sram is disabled
     // if this check has any perf impact.
     s->SRAM[location - 0xA000] = value;
-    s->isSRAMDirty = 1;        
+    s->isSRAMDirty = 1;
 }
 
 /**
@@ -511,58 +511,61 @@ static void writeOam(GbState* s, u16 location, byte value) {
     }
 }
 
+#include "logger.h"
+#include "state.h"
+
 /**
  * 0x0000 - 0x3FFF
  */
-static byte readRom0(GbState* s, u16 location) {
-    return s->ROM0[location];
+static u32 readRom0(GbState* s, u16 location) {
+    return *((u32*)(s->ROM0 + location));
 }
 
 /**
  * 0x4000 - 0x7FFF
  */
-static byte readRomX(GbState* s, u16 location) {
-    return s->ROMX[location - 0x4000];
-}   
+static u32 readRomX(GbState* s, u16 location) {
+    return *((u32*)(s->ROMX + location - 0x4000));
+}
 
 
 /**
  * 0x0 - 0x0
  */
-static byte readVRAM(GbState* s, u16 location) {
-    return s->VRAM[location - 0x8000];
+static u32 readVRAM(GbState* s, u16 location) {
+    return *((u32*)(s->VRAM + location - 0x8000));
 }
 
 /**
  * 0xA000 - 0xBFFF
  */
-static byte mbc2readSRAM(GbState* s, u16 location) {
-    return s->SRAM[(location - 0xA000) % 0x200] | 0xF0;
+static u32 mbc2readSRAM(GbState* s, u16 location) {
+    return *((u32*)(s->SRAM + ((location - 0xA000) % 0x200))) | 0xF0F0F0F0;
 }
 
 /**
  * 0xA000 - 0xBFFF
  */
-static byte readSRAM(GbState* s, u16 location) {
-    return s->SRAM[location - 0xA000];
+static u32 readSRAM(GbState* s, u16 location) {
+    return *((u32*)(s->SRAM + location - 0xA000);
     // May need a block for RTC stuff accuracy
 }
 
 /**
  * 0xC000 - 0xCFFF
  */
-static byte readWRAM0(GbState* s, u16 location) {
-    return s->WRAM0[location - 0xc000];
+static u32 readWRAM0(GbState* s, u16 location) {
+    return *((u32*)(s->WRAM0 + location - 0xC000);
 }
 
 /**
  * 0xD000 - 0xDFFF
  */
-static byte readWRAMX(GbState* s, u16 location) {
-    return s->WRAMX[location - 0xd000];
+static u32 readWRAMX(GbState* s, u16 location) {
+    return *((u32*)(s->WRAMX + location - 0xd000);
 }
 
-static byte readEcho(GbState* s, u16 location) {
+static u32 readEcho(GbState* s, u16 location) {
     if (location < 0xF000) {
         return readWRAM0(s, location - 0x2000);
     } else {
@@ -570,9 +573,9 @@ static byte readEcho(GbState* s, u16 location) {
     }
 }
  
-static byte readOAM(GbState* s, u16 location) {
+static u32 readOAM(GbState* s, u16 location) {
     if (location <= 0xFE9F) {
-        return s->OAM[location - 0xfe00];
+        return *((u32*)(s->OAM + location - 0xfe00);
     } else {
         return 0;
     }
@@ -588,8 +591,12 @@ static void writeGbcSpeedSwitch(GbState* s, u8 location, u8 value) {
  * @param location address to read from.
  * @returns value at that address.
  */
-inline byte mmu_read(GbState* s, u16 location) {
+inline u32 mmu_read32(GbState* s, u16 location) {
     return s->mmuReads[location >> 8](s, location);
+}
+
+inline u8 mmu_read(GbState* s, u16 location) {
+    return mmu_read32(s, location) >> 24;
 }
 
 /**
@@ -606,7 +613,7 @@ inline void mmu_write(GbState* s, u16 location, byte value) {
  * Reads two bytes from an address in virtual gameboy memory.
  */
 u16 mmu_read16(GbState *s, u16 location) {
-    return mmu_read(s, location) | ((u16)mmu_read(s, location + 1) << 8);
+    return (0xFF & mmu_read(s, location))  | ((u16)(0xFF & mmu_read(s, location + 1) ) << 8);
 }
 
 /**
@@ -655,7 +662,7 @@ static mmuWriteHramOperation mmuWriteHramTable[] = {
 /*   F */ writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram
 };
 
-typedef byte (*mmuReadHramOperation)(GbState*, byte);
+typedef u32 (*mmuReadHramOperation)(GbState*, u8);
 static mmuReadHramOperation mmuReadHramTable[] = {
 //        0         1         2         3         4         5         6         7         8         9         A         B         C         D         E         F       
 /*   0 */ readJoypadIo, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, 
@@ -676,7 +683,7 @@ static mmuReadHramOperation mmuReadHramTable[] = {
 /*   F */ readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, 
 };
 
-static byte readHigh(GbState* s, u16 location) {
+static u32 readHigh(GbState* s, u16 location) {
     u8 lowcation = location & 0x00FF;
     return mmuReadHramTable[lowcation](s, lowcation);
 }
