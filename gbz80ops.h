@@ -4,173 +4,173 @@
 #include "core.h"
 #include "types.h"
 
-void rlcR8(GbState* state, byte op, u32 instruction);
-void rlcaHL(GbState* state, byte op, u32 instruction);
+void rlcR8(GbState* state, u32 instruction);
+void rlcaHL(GbState* state, u32 instruction);
 
-void rrcR8(GbState* state, byte op, u32 instruction);
-void rrcaHL(GbState* state, byte op, u32 instruction);
+void rrcR8(GbState* state, u32 instruction);
+void rrcaHL(GbState* state, u32 instruction);
 
-void rlR8(GbState* state, byte op, u32 instruction);
-void rlaHL(GbState* state, byte op, u32 instruction);
+void rlR8(GbState* state, u32 instruction);
+void rlaHL(GbState* state, u32 instruction);
 
-void rrR8(GbState* state, byte op, u32 instruction);
-void rraHL(GbState* state, byte op, u32 instruction);
+void rrR8(GbState* state, u32 instruction);
+void rraHL(GbState* state, u32 instruction);
 
-void slaR8(GbState* state, byte op, u32 instruction);
-void slaaHL(GbState* state, byte op, u32 instruction);
+void slaR8(GbState* state, u32 instruction);
+void slaaHL(GbState* state, u32 instruction);
 
-void sraR8(GbState* state, byte op, u32 instruction);
-void sraaHL(GbState* state, byte op, u32 instruction);
+void sraR8(GbState* state, u32 instruction);
+void sraaHL(GbState* state, u32 instruction);
 
-void swapR8(GbState* state, byte op, u32 instruction);
-void swapaHL(GbState* state, byte op, u32 instruction);
+void swapR8(GbState* state, u32 instruction);
+void swapaHL(GbState* state, u32 instruction);
 
-void srlR8(GbState* state, byte op, u32 instruction);
-void srlaHL(GbState* state, byte op, u32 instruction);
+void srlR8(GbState* state, u32 instruction);
+void srlaHL(GbState* state, u32 instruction);
 
-void bitU3R8(GbState* state, byte op, u32 instruction);
-void bitU3aHL(GbState* state, byte op, u32 instruction);
+void bitU3R8(GbState* state, u32 instruction);
+void bitU3aHL(GbState* state, u32 instruction);
 
-void resU3R8(GbState* state, byte op, u32 instruction);
-void resU3aHL(GbState* state, byte op, u32 instruction);
+void resU3R8(GbState* state, u32 instruction);
+void resU3aHL(GbState* state, u32 instruction);
 
-void setU3R8(GbState* state, byte op, u32 instruction);
-void setU3aHL(GbState* state, byte op, u32 instruction);
+void setU3R8(GbState* state, u32 instruction);
+void setU3aHL(GbState* state, u32 instruction);
 
-void ext(GbState* state, byte op, u32 instruction);
+void ext(GbState* state, u32 instruction);
 
-void ldR8N8(GbState* state, byte op, u32 instruction);
-void ldaHLN8(GbState* state, byte op, u32 instruction);
+void ldR8N8(GbState* state, u32 instruction);
+void ldaHLN8(GbState* state, u32 instruction);
 
-void ldR8R8(GbState* state, byte op, u32 instruction);
-void ldAA(GbState* state, byte op, u32 instruction);
-void ldAB(GbState* state, byte op, u32 instruction);
-void ldAC(GbState* state, byte op, u32 instruction);
-void ldAD(GbState* state, byte op, u32 instruction);
-void ldAE(GbState* state, byte op, u32 instruction);
-void ldAH(GbState* state, byte op, u32 instruction);
-void ldAL(GbState* state, byte op, u32 instruction);
+void ldR8R8(GbState* state, u32 instruction);
+void ldAA(GbState* state, u32 instruction);
+void ldAB(GbState* state, u32 instruction);
+void ldAC(GbState* state, u32 instruction);
+void ldAD(GbState* state, u32 instruction);
+void ldAE(GbState* state, u32 instruction);
+void ldAH(GbState* state, u32 instruction);
+void ldAL(GbState* state, u32 instruction);
 
-void ldBA(GbState* state, byte op, u32 instruction);
-void ldBB(GbState* state, byte op, u32 instruction);
-void ldBC(GbState* state, byte op, u32 instruction);
-void ldBD(GbState* state, byte op, u32 instruction);
-void ldBE(GbState* state, byte op, u32 instruction);
-void ldBH(GbState* state, byte op, u32 instruction);
-void ldBL(GbState* state, byte op, u32 instruction);
+void ldBA(GbState* state, u32 instruction);
+void ldBB(GbState* state, u32 instruction);
+void ldBC(GbState* state, u32 instruction);
+void ldBD(GbState* state, u32 instruction);
+void ldBE(GbState* state, u32 instruction);
+void ldBH(GbState* state, u32 instruction);
+void ldBL(GbState* state, u32 instruction);
 
-void ldCA(GbState* state, byte op, u32 instruction);
-void ldCB(GbState* state, byte op, u32 instruction);
-void ldCC(GbState* state, byte op, u32 instruction);
-void ldCD(GbState* state, byte op, u32 instruction);
-void ldCE(GbState* state, byte op, u32 instruction);
-void ldCH(GbState* state, byte op, u32 instruction);
-void ldCL(GbState* state, byte op, u32 instruction);
+void ldCA(GbState* state, u32 instruction);
+void ldCB(GbState* state, u32 instruction);
+void ldCC(GbState* state, u32 instruction);
+void ldCD(GbState* state, u32 instruction);
+void ldCE(GbState* state, u32 instruction);
+void ldCH(GbState* state, u32 instruction);
+void ldCL(GbState* state, u32 instruction);
 
-void ldDA(GbState* state, byte op, u32 instruction);
-void ldDB(GbState* state, byte op, u32 instruction);
-void ldDC(GbState* state, byte op, u32 instruction);
-void ldDD(GbState* state, byte op, u32 instruction);
-void ldDE(GbState* state, byte op, u32 instruction);
-void ldDH(GbState* state, byte op, u32 instruction);
-void ldDL(GbState* state, byte op, u32 instruction);
+void ldDA(GbState* state, u32 instruction);
+void ldDB(GbState* state, u32 instruction);
+void ldDC(GbState* state, u32 instruction);
+void ldDD(GbState* state, u32 instruction);
+void ldDE(GbState* state, u32 instruction);
+void ldDH(GbState* state, u32 instruction);
+void ldDL(GbState* state, u32 instruction);
 
-void ldaHLR8(GbState* state, byte op, u32 instruction);
-void ldR8aHL(GbState* state, byte op, u32 instruction);
+void ldaHLR8(GbState* state, u32 instruction);
+void ldR8aHL(GbState* state, u32 instruction);
 
-void ldAaBC(GbState* state, byte op, u32 instruction);
-void ldAaDE(GbState* state, byte op, u32 instruction);
-void ldAaN16(GbState* state, byte op, u32 instruction);
-void ldaBCA(GbState* state, byte op, u32 instruction);
-void ldaDEA(GbState* state, byte op, u32 instruction);
-void ldaN16A(GbState* state, byte op, u32 instruction);
-void ldAaC(GbState* state, byte op, u32 instruction);
-void ldaCA(GbState* state, byte op, u32 instruction);
-void lddAaHL(GbState* state, byte op, u32 instruction);
-void lddaHLA(GbState* state, byte op, u32 instruction);
-void ldiaHLA(GbState* state, byte op, u32 instruction);
-void ldiAaHL(GbState* state, byte op, u32 instruction);
-void ldhAaN8(GbState* state, byte op, u32 instruction);
-void ldhaN8A(GbState* state, byte op, u32 instruction);
-void ldR16N16(GbState* state, byte op, u32 instruction);
-void ldSPHL(GbState* state, byte op, u32 instruction);
-void ldHLSPN8(GbState* state, byte op, u32 instruction);
-void ldaN16SP(GbState* state, byte op, u32 instruction);
-void pushR16(GbState* state, byte op, u32 instruction);
-void popR16(GbState* state, byte op, u32 instruction);
+void ldAaBC(GbState* state, u32 instruction);
+void ldAaDE(GbState* state, u32 instruction);
+void ldAaN16(GbState* state, u32 instruction);
+void ldaBCA(GbState* state, u32 instruction);
+void ldaDEA(GbState* state, u32 instruction);
+void ldaN16A(GbState* state, u32 instruction);
+void ldAaC(GbState* state, u32 instruction);
+void ldaCA(GbState* state, u32 instruction);
+void lddAaHL(GbState* state, u32 instruction);
+void lddaHLA(GbState* state, u32 instruction);
+void ldiaHLA(GbState* state, u32 instruction);
+void ldiAaHL(GbState* state, u32 instruction);
+void ldhAaN8(GbState* state, u32 instruction);
+void ldhaN8A(GbState* state, u32 instruction);
+void ldR16N16(GbState* state, u32 instruction);
+void ldSPHL(GbState* state, u32 instruction);
+void ldHLSPN8(GbState* state, u32 instruction);
+void ldaN16SP(GbState* state, u32 instruction);
+void pushR16(GbState* state, u32 instruction);
+void popR16(GbState* state, u32 instruction);
 
-void addAN8(GbState* state, byte op, u32 instruction);
-void addAR8(GbState* state, byte op, u32 instruction);
-void addAaHL(GbState* state, byte op, u32 instruction);
+void addAN8(GbState* state, u32 instruction);
+void addAR8(GbState* state, u32 instruction);
+void addAaHL(GbState* state, u32 instruction);
 
-void adcAN8(GbState* state, byte op, u32 instruction);
-void adcAR8(GbState* state, byte op, u32 instruction);
-void adcAaHL(GbState* state, byte op, u32 instruction);
+void adcAN8(GbState* state, u32 instruction);
+void adcAR8(GbState* state, u32 instruction);
+void adcAaHL(GbState* state, u32 instruction);
 
-void subAN8(GbState* state, byte op, u32 instruction);
-void subAR8(GbState* state, byte op, u32 instruction);
-void subAaHL(GbState* state, byte op, u32 instruction);
+void subAN8(GbState* state, u32 instruction);
+void subAR8(GbState* state, u32 instruction);
+void subAaHL(GbState* state, u32 instruction);
 
-void sbcAN8(GbState* state, byte op, u32 instruction);
-void sbcAR8(GbState* state, byte op, u32 instruction);
-void sbcAaHL(GbState* state, byte op, u32 instruction);
+void sbcAN8(GbState* state, u32 instruction);
+void sbcAR8(GbState* state, u32 instruction);
+void sbcAaHL(GbState* state, u32 instruction);
 
-void andAN8(GbState* state, byte op, u32 instruction);
-void andAR8(GbState* state, byte op, u32 instruction);
-void andAaHL(GbState* state, byte op, u32 instruction);
+void andAN8(GbState* state, u32 instruction);
+void andAR8(GbState* state, u32 instruction);
+void andAaHL(GbState* state, u32 instruction);
 
-void orAN8(GbState* state, byte op, u32 instruction);
-void orAR8(GbState* state, byte op, u32 instruction);
-void orAaHL(GbState* state, byte op, u32 instruction);
+void orAN8(GbState* state, u32 instruction);
+void orAR8(GbState* state, u32 instruction);
+void orAaHL(GbState* state, u32 instruction);
 
-void xorAN8(GbState* state, byte op, u32 instruction);
-void xorAR8(GbState* state, byte op, u32 instruction);
-void xorAaHL(GbState* state, byte op, u32 instruction);
+void xorAN8(GbState* state, u32 instruction);
+void xorAR8(GbState* state, u32 instruction);
+void xorAaHL(GbState* state, u32 instruction);
 
-void cpAN8(GbState* state, byte op, u32 instruction);
-void cpAR8(GbState* state, byte op, u32 instruction);
-void cpAaHL(GbState* state, byte op, u32 instruction);
+void cpAN8(GbState* state, u32 instruction);
+void cpAR8(GbState* state, u32 instruction);
+void cpAaHL(GbState* state, u32 instruction);
 
-void incA(GbState* state, byte op, u32 instruction);
-void incR8(GbState* state, byte op, u32 instruction);
-void incaHL(GbState* state, byte op, u32 instruction);
+void incA(GbState* state, u32 instruction);
+void incR8(GbState* state, u32 instruction);
+void incaHL(GbState* state, u32 instruction);
 
-void decR8(GbState* state, byte op, u32 instruction);
-void decaHL(GbState* state, byte op, u32 instruction);
+void decR8(GbState* state, u32 instruction);
+void decaHL(GbState* state, u32 instruction);
 
-void incR16(GbState* state, byte op, u32 instruction);
-void decR16(GbState* state, byte op, u32 instruction);
-void addHLR16(GbState* state, byte op, u32 instruction);
-void addSPN8(GbState* state, byte op, u32 instruction);
-void daa(GbState* state, byte op, u32 instruction);
-void cpl(GbState* state, byte op, u32 instruction);
-void ccf(GbState* state, byte op, u32 instruction);
-void scf(GbState* state, byte op, u32 instruction);
-void rlcA(GbState* state, byte op, u32 instruction);
-void rlA(GbState* state, byte op, u32 instruction);
-void rrcA(GbState* state, byte op, u32 instruction);
-void rrA(GbState* state, byte op, u32 instruction);
-void nop(GbState* state, byte op, u32 instruction);
-void halt(GbState* state, byte op, u32 instruction);
-void stop(GbState* state, byte op, u32 instruction);
-void di(GbState* state, byte op, u32 instruction);
-void ei(GbState* state, byte op, u32 instruction);
-void jpN16(GbState* state, byte op, u32 instruction);
-void jpCCN16(GbState* state, byte op, u32 instruction);
-void jpHL(GbState* state, byte op, u32 instruction);
-void jrN8(GbState* state, byte op, u32 instruction);
-void jrCCN8(GbState* state, byte op, u32 instruction);
-void callN16(GbState* state, byte op, u32 instruction);
-void callCCN16(GbState* state, byte op, u32 instruction);
-void rstVec(GbState* state, byte op, u32 instruction);
-void retCC(GbState* state, byte op, u32 instruction);
-void reti(GbState* state, byte op, u32 instruction);
-void ret(GbState* state, byte op, u32 instruction);
+void incR16(GbState* state, u32 instruction);
+void decR16(GbState* state, u32 instruction);
+void addHLR16(GbState* state, u32 instruction);
+void addSPN8(GbState* state, u32 instruction);
+void daa(GbState* state, u32 instruction);
+void cpl(GbState* state, u32 instruction);
+void ccf(GbState* state, u32 instruction);
+void scf(GbState* state, u32 instruction);
+void rlcA(GbState* state, u32 instruction);
+void rlA(GbState* state, u32 instruction);
+void rrcA(GbState* state, u32 instruction);
+void rrA(GbState* state, u32 instruction);
+void nop(GbState* state, u32 instruction);
+void halt(GbState* state, u32 instruction);
+void stop(GbState* state, u32 instruction);
+void di(GbState* state, u32 instruction);
+void ei(GbState* state, u32 instruction);
+void jpN16(GbState* state, u32 instruction);
+void jpCCN16(GbState* state, u32 instruction);
+void jpHL(GbState* state, u32 instruction);
+void jrN8(GbState* state, u32 instruction);
+void jrCCN8(GbState* state, u32 instruction);
+void callN16(GbState* state, u32 instruction);
+void callCCN16(GbState* state, u32 instruction);
+void rstVec(GbState* state, u32 instruction);
+void retCC(GbState* state, u32 instruction);
+void reti(GbState* state, u32 instruction);
+void ret(GbState* state, u32 instruction);
 
 // handler for undefined op codes.
-void undefined(GbState* state, byte op, u32 instruction);
+void undefined(GbState* state, u32 instruction);
 
-typedef void (*gbz80Operation)(GbState*, byte, u32);
+typedef void (*gbz80Operation)(GbState*, u32);
 static gbz80Operation opTable[] = {
 //        0         1           2           3           4           5           6           7           8           9           A           B           C           D           E           F   
 /*   0 */ nop,      ldR16N16,   ldaBCA,     incR16,     incR8,      decR8,      ldR8N8,     rlcA,       ldaN16SP,   addHLR16,   ldAaBC,     decR16,     incR8,      decR8,      ldR8N8,     rrcA,

@@ -235,6 +235,6 @@ void cpu_step(GbState *s) {
     if (!s->halt_for_interrupts) {
         // Move PC forward, then go and run the operation.
         s->pc++;
-        opTable[opCode](s, opCode, instruction);
+        opTable[opCode](s, instruction);
     }
 }
