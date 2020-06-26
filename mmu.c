@@ -4,10 +4,12 @@
 #include "hwdefs.h"
 #include "rtc.h"
 
+#define READ_32(pointer, offset) (pointer[offset]) | (pointer[offset + 1]) << 8 | (pointer[offset + 2] << 16) | (pointer[offset + 3] << 24)
+
 static void mmu_hdma_do(GbState *s) {
     // DMA one block (0x10 byte), should be called at start of H-Blank. */
     for (int i = 0; i < 0x10; i++) {
-        u8 dat = mmu_read(s, s->io_hdma_next_src++)  ;
+        u8 dat = mmu_read(s, s->io_hdma_next_src++);
         mmu_write(s, s->io_hdma_next_dst++, dat);
     }
 
@@ -141,7 +143,7 @@ static void writeHram(GbState* s, byte offset, byte value) {
 }
 
 static u32 readHram(GbState* s, byte offset) {
-    return  *((u32*)(s->HRAM + offset));
+    return  READ_32(s->HRAM, offset);
 }
 
 static u32 readJoypadIo(GbState* s, byte offset) {
@@ -153,22 +155,22 @@ static u32 readJoypadIo(GbState* s, byte offset) {
         rv =  (s->JoypadIo & 0xf0) | (s->io_buttons_buttons & 0x0f);
     else
         rv = (s->JoypadIo & 0xf0) | (s->io_buttons_buttons & 0x0f);
-    return rv << 24;
+    return rv;
 }
 
 // FF4F GbcVRAMBank
 static u32 readGbcVRAMBank(GbState* s, byte offset) {
-    return (s->GbcVRAMBank & 1) << 24;
+    return (s->GbcVRAMBank & 1);
 }
 
 // FF69 Background Palette data
 static u32 readBackgroundPaletteData(GbState* s, byte offset) {
-    return (s->io_lcd_BGPD[s->GbcBackgroundPaletteIndexRegister & 0x3f]) << 24;
+    return (s->io_lcd_BGPD[s->GbcBackgroundPaletteIndexRegister & 0x3f]);
 }
 
 // FF6B Sprite Palette data
 static u32 readSpritePaletteData(GbState* s, byte offset) {
-    return (s->io_lcd_OBPD[s->GbcSpritePaletteIndexRegister & 0x3f]) << 24;
+    return (s->io_lcd_OBPD[s->GbcSpritePaletteIndexRegister & 0x3f]);
 }
 
 /**
@@ -515,14 +517,14 @@ static void writeOam(GbState* s, u16 location, byte value) {
  * 0x0000 - 0x3FFF
  */
 static u32 readRom0(GbState* s, u16 location) {
-    return *((u32*)(s->ROM0 + location));
+    return READ_32(s->ROM0, location);
 }
 
 /**
  * 0x4000 - 0x7FFF
  */
 static u32 readRomX(GbState* s, u16 location) {
-    return *((u32*)(s->ROMX + location - 0x4000));
+    return READ_32(s->ROMX, location - 0x4000);
 }
 
 
@@ -530,21 +532,21 @@ static u32 readRomX(GbState* s, u16 location) {
  * 0x0 - 0x0
  */
 static u32 readVRAM(GbState* s, u16 location) {
-    return *((u32*)(s->VRAM + location - 0x8000));
+    return READ_32(s->VRAM, location - 0x8000);
 }
 
 /**
  * 0xA000 - 0xBFFF
  */
 static u32 mbc2readSRAM(GbState* s, u16 location) {
-    return *((u32*)(s->SRAM + ((location - 0xA000) % 0x200))) | 0xF0F0F0F0;
+    return READ_32(s->SRAM, ((location - 0xA000) % 0x200)) | 0xF0F0F0F0;
 }
 
 /**
  * 0xA000 - 0xBFFF
  */
 static u32 readSRAM(GbState* s, u16 location) {
-    return *((u32*)(s->SRAM + location - 0xA000));
+    return READ_32(s->SRAM, location - 0xA000);
     // May need a block for RTC stuff accuracy
 }
 
@@ -552,14 +554,14 @@ static u32 readSRAM(GbState* s, u16 location) {
  * 0xC000 - 0xCFFF
  */
 static u32 readWRAM0(GbState* s, u16 location) {
-    return *((u32*)(s->WRAM0 + location - 0xC000));
+    return READ_32(s->WRAM0, location - 0xC000);
 }
 
 /**
  * 0xD000 - 0xDFFF
  */
 static u32 readWRAMX(GbState* s, u16 location) {
-    return *((u32*)(s->WRAMX + location - 0xd000));
+    return READ_32(s->WRAMX, location - 0xD000);
 }
 
 static u32 readEcho(GbState* s, u16 location) {
@@ -572,7 +574,7 @@ static u32 readEcho(GbState* s, u16 location) {
  
 static u32 readOAM(GbState* s, u16 location) {
     if (location <= 0xFE9F) {
-        return *((u32*)(s->OAM + location - 0xfe00));
+        return READ_32(s->OAM, location - 0xfe00);
     } else {
         return 0;
     }
@@ -593,7 +595,7 @@ inline u32 mmu_read32(GbState* s, u16 location) {
 }
 
 inline u8 mmu_read(GbState* s, u16 location) {
-    return mmu_read32(s, location) >> 24;
+    return mmu_read32(s, location) & 0xFF;
 }
 
 /**

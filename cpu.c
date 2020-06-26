@@ -224,17 +224,17 @@ void cpu_step(GbState *s) {
     cpu_handle_interrupts(s);
 
     u32 instruction = mmu_read32(s, s->pc);
-    u8 opCode = instruction >> 24;
+    u8 opCode = instruction & 0xFF;
 
     s->last_op_cycles = cycles_per_instruction[opCode];
     if (opCode == 0xcb) {
-        u8 extOp = (instruction >> 16) && 0xFF;
+        u8 extOp = (instruction >> 8) & 0xFF;
         s->last_op_cycles = cycles_per_instruction_cb[extOp];
     }
 
     if (!s->halt_for_interrupts) {
         // Move PC forward, then go and run the operation.
         s->pc++;
-        opTable[opCode](s, opCode);
+        opTable[opCode](s, opCode, instruction);
     }
 }
