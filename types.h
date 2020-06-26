@@ -104,7 +104,7 @@ typedef enum {
 struct gb_state;
 
 typedef void (*mmuWriteOperation)(struct gb_state*, u16, u8);
-typedef byte (*mmuReadOperation)(struct gb_state*, u16);
+typedef u32 (*mmuReadOperation)(struct gb_state*, u16);
 
 typedef struct gb_state {
     mmuWriteOperation mmuWrites[0x100];

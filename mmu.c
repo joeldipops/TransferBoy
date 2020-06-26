@@ -141,7 +141,7 @@ static void writeHram(GbState* s, byte offset, byte value) {
 }
 
 static u32 readHram(GbState* s, byte offset) {
-    return s->HRAM[offset];
+    return  *((u32*)(s->HRAM + offset));
 }
 
 static u32 readJoypadIo(GbState* s, byte offset) {
@@ -153,22 +153,22 @@ static u32 readJoypadIo(GbState* s, byte offset) {
         rv =  (s->JoypadIo & 0xf0) | (s->io_buttons_buttons & 0x0f);
     else
         rv = (s->JoypadIo & 0xf0) | (s->io_buttons_buttons & 0x0f);
-    return rv;
+    return rv << 24;
 }
 
 // FF4F GbcVRAMBank
 static u32 readGbcVRAMBank(GbState* s, byte offset) {
-    return s->GbcVRAMBank & 1;
+    return (s->GbcVRAMBank & 1) << 24;
 }
 
 // FF69 Background Palette data
 static u32 readBackgroundPaletteData(GbState* s, byte offset) {
-    return s->io_lcd_BGPD[s->GbcBackgroundPaletteIndexRegister & 0x3f];    
+    return (s->io_lcd_BGPD[s->GbcBackgroundPaletteIndexRegister & 0x3f]) << 24;
 }
 
 // FF6B Sprite Palette data
 static u32 readSpritePaletteData(GbState* s, byte offset) {
-    return s->io_lcd_OBPD[s->GbcSpritePaletteIndexRegister & 0x3f];
+    return (s->io_lcd_OBPD[s->GbcSpritePaletteIndexRegister & 0x3f]) << 24;
 }
 
 /**
@@ -183,7 +183,7 @@ static void writeNone(GbState* s, u16 location, byte value) {
  * When the result of a read operation is undefined.
  */
 static u32 readNone(GbState* s, u16 location) {
-    return 0xFF;
+    return 0xFFFFFFFF;
 }
 
 /**
@@ -547,7 +547,7 @@ static u32 mbc2readSRAM(GbState* s, u16 location) {
  * 0xA000 - 0xBFFF
  */
 static u32 readSRAM(GbState* s, u16 location) {
-    return *((u32*)(s->SRAM + location - 0xA000);
+    return *((u32*)(s->SRAM + location - 0xA000));
     // May need a block for RTC stuff accuracy
 }
 
@@ -555,14 +555,14 @@ static u32 readSRAM(GbState* s, u16 location) {
  * 0xC000 - 0xCFFF
  */
 static u32 readWRAM0(GbState* s, u16 location) {
-    return *((u32*)(s->WRAM0 + location - 0xC000);
+    return *((u32*)(s->WRAM0 + location - 0xC000));
 }
 
 /**
  * 0xD000 - 0xDFFF
  */
 static u32 readWRAMX(GbState* s, u16 location) {
-    return *((u32*)(s->WRAMX + location - 0xd000);
+    return *((u32*)(s->WRAMX + location - 0xd000));
 }
 
 static u32 readEcho(GbState* s, u16 location) {
@@ -575,7 +575,7 @@ static u32 readEcho(GbState* s, u16 location) {
  
 static u32 readOAM(GbState* s, u16 location) {
     if (location <= 0xFE9F) {
-        return *((u32*)(s->OAM + location - 0xfe00);
+        return *((u32*)(s->OAM + location - 0xfe00));
     } else {
         return 0;
     }

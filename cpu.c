@@ -221,21 +221,20 @@ void cpu_timers_step(GbState *s) {
 }
 
 void cpu_step(GbState *s) {
-    u8 op;
-
     cpu_handle_interrupts(s);
 
-    op = mmu_read(s, s->pc);
+    u32 instruction = mmu_read32(s, s->pc);
+    u8 opCode = instruction >> 24;
 
-    s->last_op_cycles = cycles_per_instruction[op];
-    if (op == 0xcb) {
-        u8 extOp = mmu_read(s, s->pc + 1);
+    s->last_op_cycles = cycles_per_instruction[opCode];
+    if (opCode == 0xcb) {
+        u8 extOp = (instruction >> 16) && 0xFF;
         s->last_op_cycles = cycles_per_instruction_cb[extOp];
     }
 
     if (!s->halt_for_interrupts) {
         // Move PC forward, then go and run the operation.
         s->pc++;
-        opTable[op](s, op);
+        opTable[opCode](s, opCode);
     }
 }
