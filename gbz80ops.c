@@ -516,7 +516,7 @@ void subAN8(GbState* s, u32 instruction) { // debug(s, "subAN8");
     NF = 1;
     // TODO - ytf do I still need mmu_read here to calculate HF? Should just be IMM8
     // IMM8 expands to ((instruction >> 8) & 0xFF)
-    HF = ((s32)A & 0xf) - ((mmu_read(s, s->pc)) & 0xf) < 0;
+    HF = ((s32)A & 0xf) - ((s32)IMM8 & 0xf) < 0;
     CF = A < IMM8;
     A = res;
     s->pc++;
@@ -545,7 +545,7 @@ void sbcAN8(GbState* s, u32 instruction) { // debug(s, "sbcAN8");
     ZF = res == 0;
     NF = 1;
     // TODO - ytf do I still need mmu_read here to calculate HF? Should just be IMM8
-    HF = ((s32)A & 0xf) - ((mmu_read(s, s->pc)) & 0xf) - CF < 0;
+    HF = ((s32)A & 0xf) - ((s32)IMM8 & 0xf) - CF < 0;
     CF = A < IMM8 + CF;
     A = res;
     s->pc++;
@@ -557,7 +557,7 @@ void sbcAR8(GbState* s, u32 instruction) { // debug(s, "sbcAR8");
     NF = 1;
     HF = ((s32)A & 0xf) - (regval & 0xf) - CF < 0;
     CF = A < regval + CF;
-    A = res;    
+    A = res;
 }
 void sbcAaHL(GbState* s, u32 instruction) { // debug(s, "sbcAaHL");
     u8 regval = mem(HL);

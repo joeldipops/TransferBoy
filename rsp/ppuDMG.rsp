@@ -1348,6 +1348,8 @@ main:
         ## DMA the data back to DRAM so that the RDP can pick it up.
         dmaOut N64_BUFFER, $OUT_BUFFER_ADDRESS, BUFFER_SIZE
 
+        # TODO:  Instead of building these RDP commands part by part, have them all in memory ready to go for each iteration.
+
         ## Tell RDP where to look for texture data.
         setTextureImage 0, RGBA_FORMAT, COLOUR_DEPTH_16, GB_LCD_WIDTH, $OUT_BUFFER_ADDRESS
 

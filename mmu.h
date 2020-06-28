@@ -35,7 +35,7 @@ void mmu_step(GbState *s);
  * @param location address to read from.
  * @returns value at that address.
  */
-u8 mmu_read(GbState* s, u16 location);
+#define mmu_read(s, location) (mmu_read32(s, location) & 0xFF)
 
 u32 mmu_read32(GbState* s, u16 location);
 
