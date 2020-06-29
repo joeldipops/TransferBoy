@@ -16,8 +16,6 @@
 #include "mmu.h"
 #include "hwdefs.h"
 
-static const u8 flagmasks[] = { FLAG_Z, FLAG_Z, FLAG_C, FLAG_C };
-
 static int cycles_per_instruction[] = {
   /* 0   1   2   3   4   5   6   7   8   9   a   b   c   d   e   f       */
      4, 12,  8,  8,  4,  4,  8,  4, 20,  8,  8,  8,  4,  4,  8,  4, /* 0 */

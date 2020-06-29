@@ -284,9 +284,11 @@ void ldaHLN8(GbState* s, u32 instruction) { // debug(s, "ldaHLN8");
 void ldBA(GbState* s, u32 instruction) { // debug(s, "ldAB");
     B = A;
 }
+/*
 void ldBB(GbState* s, u32 instruction) { // debug(s, "ldAB");
     ;
 }
+*/
 void ldBC(GbState* s, u32 instruction) { // debug(s, "ldAC");
     B = C;
 }
@@ -312,9 +314,11 @@ void ldCA(GbState* s, u32 instruction) { // debug(s, "ldCA");
 void ldCB(GbState* s, u32 instruction) { // debug(s, "ldCB");
     C = B;
 }
+/*
 void ldCC(GbState* s, u32 instruction) { // debug(s, "ldCC");
     ;
 }
+*/
 void ldCD(GbState* s, u32 instruction) { // debug(s, "ldCD");
     C = D;
 }
@@ -340,9 +344,11 @@ void ldDB(GbState* s, u32 instruction) { // debug(s, "ldDB");
 void ldDC(GbState* s, u32 instruction) { // debug(s, "ldDC");
     D = C;
 }
+/*
 void ldDD(GbState* s, u32 instruction) { // debug(s, "ldDD");
     D = D;
 }
+*/
 void ldDE(GbState* s, u32 instruction) { // debug(s, "ldDE");
     D = E;
 }
@@ -383,14 +389,43 @@ void ldR8R8(GbState* s, u32 instruction) { // debug(s, "ldR8R8");
     u8 srcval = *src;
     *dst = srcval;
 }
-void ldR8aHL(GbState* s, u32 instruction) { // debug(s, "ldR8aHL");
-    u8* dst = REG8(3);
-    u8 srcval = mem(HL);
-    *dst = srcval;
+
+void ldBaHL(GbState* s, u32 instruction) {  // debug(s, "ldR8aHL");
+    B = mem(HL);
 }
-void ldaHLR8(GbState* s, u32 instruction) { // debug(s, "ldaHLR8");
-    u8* src = REG8(0);
-    mmu_write(s, HL, *src);
+void ldCaHL(GbState* s, u32 instruction) {  // debug(s, "ldR8aHL");
+    C = mem(HL);
+}
+void ldDaHL(GbState* s, u32 instruction) {  // debug(s, "ldR8aHL");
+    D = mem(HL);
+}
+void ldEaHL(GbState* s, u32 instruction) {  // debug(s, "ldR8aHL");
+    E = mem(HL);
+}
+void ldHaHL(GbState* s, u32 instruction) {  // debug(s, "ldR8aHL");
+    H = mem(HL);
+}
+void ldLaHL(GbState* s, u32 instruction) {  // debug(s, "ldR8aHL");
+    L = mem(HL);
+}
+
+void ldaHLB(GbState* s, u32 instruction) { // debug(s, "ldaHLR8");
+    mmu_write(s, HL, B);
+}
+void ldaHLC(GbState* s, u32 instruction) { // debug(s, "ldaHLR8");
+    mmu_write(s, HL, C);
+}
+void ldaHLD(GbState* s, u32 instruction) { // debug(s, "ldaHLR8");
+    mmu_write(s, HL, D);
+}
+void ldaHLE(GbState* s, u32 instruction) { // debug(s, "ldaHLR8");
+    mmu_write(s, HL, E);
+}
+void ldaHLH(GbState* s, u32 instruction) { // debug(s, "ldaHLR8");
+    mmu_write(s, HL, H);
+}
+void ldaHLL(GbState* s, u32 instruction) { // debug(s, "ldaHLR8");
+    mmu_write(s, HL, L);
 }
 
 void ldaBCA(GbState* s, u32 instruction) { // debug(s, "ldaBCA");
@@ -490,13 +525,32 @@ void ldaN16SP(GbState* s, u32 instruction) { // debug(s, "ldaN16SP");
     mmu_write16(s, IMM16, s->sp);
     s->pc += 2; 
 }
-void pushR16(GbState* s, u32 instruction) { // debug(s, "pushR16");
-    u16 *src = REG16S(4);
-    mmu_push16(s,*src);
+
+void pushBC(GbState* s, u32 instruction) { // debug(s, "pushR16");
+    mmu_push16(s, BC);
 }
-void popR16(GbState* s, u32 instruction) { // debug(s, "popR16");
-    u16 *dst = REG16S(4);
-    *dst = mmu_pop16(s);
+void pushDE(GbState* s, u32 instruction) { // debug(s, "pushR16");
+    mmu_push16(s, DE);
+}
+void pushHL(GbState* s, u32 instruction) { // debug(s, "pushR16");
+    mmu_push16(s, HL);
+}
+void pushAF(GbState* s, u32 instruction) { // debug(s, "pushR16");
+    mmu_push16(s, AF);
+}
+
+void popBC(GbState* s, u32 instruction) { // debug(s, "popR16");
+    BC = mmu_pop16(s);
+}
+void popDE(GbState* s, u32 instruction) { // debug(s, "popR16");
+    DE = mmu_pop16(s);
+}
+void popHL(GbState* s, u32 instruction) { // debug(s, "popR16");
+    HL = mmu_pop16(s);
+}
+void popAF(GbState* s, u32 instruction) { // debug(s, "popR16");
+    AF = mmu_pop16(s);
+    // Bottom 4 bits of F don't exist.
     F = F & 0xf0;
 }
 
@@ -623,14 +677,63 @@ void andAN8(GbState* s, u32 instruction) { // debug(s, "andAN8");
     HF = 1;
     CF = 0;
 }
-void andAR8(GbState* s, u32 instruction) { // debug(s, "andAR8");
-    u8 val = *REG8(0);
-    A = A & val;
+
+void andAA(GbState* s, u32 instruction) { // debug(s, "andAR8");
+    A = A & A;
     ZF = A == 0;
     NF = 0;
     HF = 1;
-    CF = 0;    
+    CF = 0;
 }
+
+void andAB(GbState* s, u32 instruction) { // debug(s, "andAR8");
+    A = A & B;
+    ZF = A == 0;
+    NF = 0;
+    HF = 1;
+    CF = 0;
+}
+
+void andAC(GbState* s, u32 instruction) { // debug(s, "andAR8");
+    A = A & C;
+    ZF = A == 0;
+    NF = 0;
+    HF = 1;
+    CF = 0;
+}
+
+void andAD(GbState* s, u32 instruction) { // debug(s, "andAR8");
+    A = A & D;
+    ZF = A == 0;
+    NF = 0;
+    HF = 1;
+    CF = 0;
+}
+
+void andAE(GbState* s, u32 instruction) { // debug(s, "andAR8");
+    A = A & E;
+    ZF = A == 0;
+    NF = 0;
+    HF = 1;
+    CF = 0;
+}
+
+void andAH(GbState* s, u32 instruction) { // debug(s, "andAR8");
+    A = A & H;
+    ZF = A == 0;
+    NF = 0;
+    HF = 1;
+    CF = 0;
+}
+
+void andAL(GbState* s, u32 instruction) { // debug(s, "andAR8");
+    A = A & L;
+    ZF = A == 0;
+    NF = 0;
+    HF = 1;
+    CF = 0;
+}
+
 void andAaHL(GbState* s, u32 instruction) { // debug(s, "andAaHL");
     u8 val = mem(HL);
     A = A & val;
@@ -645,15 +748,40 @@ void orAN8(GbState* s, u32 instruction) { // debug(s, "orAN8");
     F = A ? 0 : FLAG_Z;
     s->pc++;
 }
-void orAR8(GbState* s, u32 instruction) { // debug(s, "orAR8");
-    u8 srcval = *REG8(0);
-    A |= srcval;
+
+void orAA(GbState* s, u32 instruction) { // debug(s, "orAR8");
+    A |= A;
     F = A ? 0 : FLAG_Z;
 }
+void orAB(GbState* s, u32 instruction) { // debug(s, "orAR8");
+    A |= B;
+    F = A ? 0 : FLAG_Z;
+}
+void orAC(GbState* s, u32 instruction) { // debug(s, "orAR8");
+    A |= C;
+    F = A ? 0 : FLAG_Z;
+}
+void orAD(GbState* s, u32 instruction) { // debug(s, "orAR8");
+    A |= D;
+    F = A ? 0 : FLAG_Z;
+}
+void orAE(GbState* s, u32 instruction) { // debug(s, "orAR8");
+    A |= E;
+    F = A ? 0 : FLAG_Z;
+}
+void orAH(GbState* s, u32 instruction) { // debug(s, "orAR8");
+    A |= H;
+    F = A ? 0 : FLAG_Z;
+}
+void orAL(GbState* s, u32 instruction) { // debug(s, "orAR8");
+    A |= L;
+    F = A ? 0 : FLAG_Z;
+}
+
 void orAaHL(GbState* s, u32 instruction) { // debug(s, "orAaHL");
     u8 srcval = mem(HL);
     A |= srcval;
-    F = A ? 0 : FLAG_Z;    
+    F = A ? 0 : FLAG_Z;
 }
 
 void xorAN8(GbState* s, u32 instruction) { // debug(s, "xorAN8");
@@ -827,18 +955,54 @@ void incSP(GbState* s, u32 instruction) {
     s->sp++;
 }
 
-void decR16(GbState* s, u32 instruction) { // debug(s, "decR16");
-    u16 *reg = REG16(4);
-    *reg -= 1;
+void decBC(GbState* s, u32 instruction) { // debug(s, "decR16");
+    BC--;
 }
-void addHLR16(GbState* s, u32 instruction) { // debug(s, "addHLR16");
-    u16 *src = REG16(4);
-    u32 tmp = HL + *src;
+
+void decDE(GbState* s, u32 instruction) { // debug(s, "decR16");
+    DE--;
+}
+
+void decHL(GbState* s, u32 instruction) { // debug(s, "decR16");
+    HL--;
+}
+
+void decSP(GbState* s, u32 instruction) { // debug(s, "decR16");
+    s->sp--;
+}
+
+void addHLBC(GbState* s, u32 instruction) { // debug(s, "addHLR16");
+    HF = (((HL & 0xfff) + (BC & 0xfff)) & 0x1000) ? 1 : 0;
+    u32 tmp = HL + BC;
     NF = 0;
-    HF = (((HL & 0xfff) + (*src & 0xfff)) & 0x1000) ? 1 : 0;
-    CF = tmp > 0xffff;
-    HL = tmp;   
+    CF = tmp > 0xFFFF;
+    HL = tmp;
 }
+
+void addHLDE(GbState* s, u32 instruction) { // debug(s, "addHLR16");
+    HF = (((HL & 0xfff) + (DE & 0xfff)) & 0x1000) ? 1 : 0;
+    u32 tmp = HL + DE;
+    NF = 0;
+    CF = tmp > 0xFFFF;
+    HL = tmp;
+}
+
+void addHLHL(GbState* s, u32 instruction) { // debug(s, "addHLR16");
+    HF = (((HL & 0xfff) + (HL & 0xfff)) & 0x1000) ? 1 : 0;
+    u32 tmp = HL + HL;
+    NF = 0;
+    CF = tmp > 0xFFFF;
+    HL = tmp;
+}
+
+void addHLSP(GbState* s, u32 instruction) { // debug(s, "addHLR16");
+    HF = (((HL & 0xfff) + (s->sp & 0xfff)) & 0x1000) ? 1 : 0;
+    u32 tmp = HL + s->sp;
+    NF = 0;
+    CF = tmp > 0xFFFF;
+    HL = tmp;
+}
+
 void addSPN8(GbState* s, u32 instruction) { // debug(s, "addSPN8");
     s8 off = (s8)IMM8;
     u32 res = s->sp + off;
@@ -879,12 +1043,12 @@ void scf(GbState* s, u32 instruction) { // debug(s, "scf");
 void rlcA(GbState* s, u32 instruction) { // debug(s, "rlcA");
     u8 res = (A << 1) | (A >> 7);
     F = (A >> 7) ? FLAG_C : 0;
-    A = res;    
+    A = res;
 }
 void rlA(GbState* s, u32 instruction) { // debug(s, "rlA");
     u8 res = A << 1 | (CF ? 1 : 0);
     F = (A & (1 << 7)) ? FLAG_C : 0;
-    A = res;    
+    A = res;
 }
 void rrcA(GbState* s, u32 instruction) { // debug(s, "rrcA");
     F = (A & 1) ? FLAG_C : 0;
@@ -932,22 +1096,52 @@ void jpCCN16(GbState* s, u32 instruction) { // debug(s, "jpCCN16");
         s->pc = IMM16;
     else
         s->pc += 2;
-    return;    
+    return;
 }
 void jpHL(GbState* s, u32 instruction) { // debug(s, "jpHL");
-    s->pc = HL;    
+    s->pc = HL;
 }
 void jrN8(GbState* s, u32 instruction) { // debug(s, "jrN8");
-    s->pc += (s8)IMM8 + 1;    
+    s->pc += (s8)IMM8 + 1;
 }
+
+void jrNZN8(GbState* s, u32 instruction) { // debug(s, "jrCCN8");
+    if (!(F & FLAG_Z)) {
+        s->pc += (s8)IMM8;
+    }
+    s->pc++;
+}
+
+void jrNCN8(GbState* s, u32 instruction) { // debug(s, "jrCCN8");
+    if (!(F & FLAG_C)) {
+        s->pc += (s8)IMM8;
+    }
+    s->pc++;
+}
+
+void jrZN8(GbState* s, u32 instruction) { // debug(s, "jrCCN8");
+    if (F & FLAG_Z) {
+        s->pc += (s8)IMM8;
+    }
+    s->pc++;
+}
+
+void jrCN8(GbState* s, u32 instruction) { // debug(s, "jrCCN8");
+    if (F & FLAG_C) {
+        s->pc += (s8)IMM8;
+    }
+    s->pc++;
+}
+
 void jrCCN8(GbState* s, u32 instruction) { // debug(s, "jrCCN8");
     u8 flag = (op >> 3) & 3;
 
     if (((F & flagmasks[flag]) ? 1 : 0) == (flag & 1)) {
         s->pc += (s8)IMM8;
     }
-    s->pc++;    
+    s->pc++;
 }
+
 void callN16(GbState* s, u32 instruction) { // debug(s, "callN16");
     u16 dst = IMM16;
     mmu_push16(s, s->pc + 2);
@@ -973,10 +1167,10 @@ void retCC(GbState* s, u32 instruction) { // debug(s, "retCC");
 }
 void reti(GbState* s, u32 instruction) { // debug(s, "reti");
     s->pc = mmu_pop16(s);
-    s->interrupts_master_enabled = 1;    
+    s->interrupts_master_enabled = 1;
 }
 void ret(GbState* s, u32 instruction) { // debug(s, "ret");
-    s->pc = mmu_pop16(s);    
+    s->pc = mmu_pop16(s);
 }
 
 /**
