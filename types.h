@@ -161,7 +161,7 @@ typedef struct gb_state {
 
     u16 sp;
     u16 pc;
-    
+
     // Tracks All ROM & SRAM banks
     GameBoyCartridge Cartridge;
 
@@ -652,6 +652,10 @@ typedef struct gb_state {
 
     struct emu_cpu_state *emu_cpu_state;
 } GbState;
+
+//register u32 PC asm ("$23"); // $s8
+//register u32 F asm ("$22"); // $s7
+
 
 typedef struct player_input GbController;
 
