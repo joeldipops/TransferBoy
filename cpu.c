@@ -84,7 +84,7 @@ void cpu_reset_state(GbState *s) {
     s->reg16.HL = 0x014D;
 
     s->sp = 0xFFFE;
-    s->pc = 0x0100;
+    PC = 0x0100;
 
     // Use GBC mode if compatible.
     if (s->Cartridge.IsGbcSupported) {
@@ -181,9 +181,9 @@ static void cpu_handle_interrupts(GbState *s) {
                 s->interrupts_master_enabled = 0;
                 s->InterruptFlags ^= 1 << i;
 
-                mmu_push16(s, s->pc);
+                mmu_push16(s, PC);
 
-                s->pc = i * 0x8 + 0x40;
+                PC = i * 0x8 + 0x40;
 
                 s->halt_for_interrupts = 0;
                 return;
@@ -221,7 +221,7 @@ void cpu_timers_step(GbState *s) {
 void cpu_step(GbState *s) {
     cpu_handle_interrupts(s);
 
-    u32 instruction = mmu_read32(s, s->pc);
+    u32 instruction = mmu_read32(s, PC);
     u8 opCode = instruction & 0xFF;
 
     s->last_op_cycles = cycles_per_instruction[opCode];
@@ -232,7 +232,7 @@ void cpu_step(GbState *s) {
 
     if (!s->halt_for_interrupts) {
         // Move PC forward, then go and run the operation.
-        s->pc++;
+        PC++;
         opTable[opCode](s, instruction);
     }
 }

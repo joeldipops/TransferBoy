@@ -66,11 +66,6 @@ void ppuStep(PlayerState* state) {
             return;
         }
 
-        Rectangle screen;
-        getScreenPosition(0, &screen);
-        ppuInterface->Screen.Top = screen.Top + (state->EmulationState.CurrentLine * (screen.Height / GB_LCD_HEIGHT));
-
-        data_cache_hit_writeback(ppuInterface, sizeof(PpuInterface));
         data_cache_hit_writeback(state->EmulationState.OAM, OAM_SIZE);
         data_cache_hit_writeback(state->EmulationState.HRAM, HRAM_SIZE);
         if (state->EmulationState.isVramDirty) {

@@ -653,8 +653,20 @@ typedef struct gb_state {
     struct emu_cpu_state *emu_cpu_state;
 } GbState;
 
-//register u32 PC asm ("$23"); // $s8
-//register u32 F asm ("$22"); // $s7
+register u16 PC asm ("$23"); // $s8
+register union {
+    u8 rF;
+    struct __attribute__((packed)) {
+        u8 ZF:1;
+        u8 NF:1;
+        u8 HF:1;
+        u8 CF:1;
+        u8 pad1:1;
+        u8 pad2:1;
+        u8 pad3:1;
+        u8 pad4:1;
+    } flags;
+} FF asm ("$22"); // $s7
 
 
 typedef struct player_input GbController;

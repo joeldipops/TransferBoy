@@ -111,7 +111,7 @@ sByte applyBios(GbState* s, ByteArray* bios) {
     s->ROM0 = s->BIOS;
 
     s->in_bios = 1;
-    s->pc = 0;
+    PC = 0;
 
     return 0;
 }
