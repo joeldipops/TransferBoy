@@ -32,7 +32,13 @@ void sraaHL(GbState* state, u32 instruction);
 void swapR8(GbState* state, u32 instruction);
 void swapaHL(GbState* state, u32 instruction);
 
-void srlR8(GbState* state, u32 instruction);
+void srlA(GbState* state, u32 instruction);
+void srlB(GbState* state, u32 instruction);
+void srlC(GbState* state, u32 instruction);
+void srlD(GbState* state, u32 instruction);
+void srlE(GbState* state, u32 instruction);
+void srlH(GbState* state, u32 instruction);
+void srlL(GbState* state, u32 instruction);
 void srlaHL(GbState* state, u32 instruction);
 
 void bit0A(GbState* state, u32 instruction);
@@ -352,7 +358,7 @@ static gbz80Operation extendedOpTable[] = {
 /*   0 */   rlcB,  rlcC,    rlcD,   rlcE,   rlcH,   rlcL,   rlcaHL, rlcA,  rrcR8,  rrcR8,  rrcR8,  rrcR8,  rrcR8,  rrcR8,  rrcaHL,  rrcR8,
 /*   1 */   rlR8,   rlR8,   rlR8,   rlR8,   rlR8,   rlR8,   rlaHL,  rlR8,   rrR8,   rrR8,   rrR8,   rrR8,   rrR8,   rrR8,   rraHL,   rrR8,
 /*   2 */   slaR8,  slaR8,  slaR8,  slaR8,  slaR8,  slaR8,  slaaHL, slaR8,  sraR8,  sraR8,  sraR8,  sraR8,  sraR8,  sraR8,  sraaHL,  sraR8,
-/*   3 */   swapR8, swapR8, swapR8, swapR8, swapR8, swapR8, swapaHL,swapR8, srlR8,  srlR8,  srlR8,  srlR8,  srlR8,  srlR8,  srlaHL,  srlR8,
+/*   3 */   swapR8, swapR8, swapR8, swapR8, swapR8, swapR8, swapaHL,swapR8, srlB,  srlC,  srlD,  srlE,  srlH,  srlL,  srlaHL,  srlA,
 /*   4 */   bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bit0aHL,bit0A,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bit1aHL,bit1A,
 /*   5 */   bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bit2aHL,bit2A,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bit3aHL,bit3A,
 /*   6 */   bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bit4aHL,bit4A,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bitU3R8,bit5aHL,bit5A,

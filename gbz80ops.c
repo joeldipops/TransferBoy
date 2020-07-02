@@ -213,15 +213,47 @@ void swapaHL(GbState* s, u32 instruction) { // debug(s, "swapaHL");
     mmu_write(s, HL, res);
 }
 
-void srlR8(GbState* s, u32 instruction) { // debug(s, "srlR8");
-    u8 *reg = REG8(0);
-    u8 val = *reg;
-    CF = val & 0x1;
-    val = val >> 1;
-    ZF = val == 0;
-    NF = 0;
-    HF = 0;
-    *reg = val;
+void srlA(GbState* s, u32 instruction) {
+    F = 0;
+    CF = A & 1;
+    A = A >> 1;
+    ZF = A == 0;
+}
+void srlB(GbState* s, u32 instruction) {
+    F = 0;
+    CF = B & 1;
+    B = B >> 1;
+    ZF = B == 0;
+}
+void srlC(GbState* s, u32 instruction) {
+    F = 0;
+    CF = C & 1;
+    C = C >> 1;
+    ZF = C == 0;
+}
+void srlD(GbState* s, u32 instruction) {
+    F = 0;
+    CF = D & 1;
+    D = D >> 1;
+    ZF = D == 0;
+}
+void srlE(GbState* s, u32 instruction) {
+    F = 0;
+    CF = E & 1;
+    E = E >> 1;
+    ZF = E == 0;
+}
+void srlH(GbState* s, u32 instruction) {
+    F = 0;
+    CF = H & 1;
+    H = H >> 1;
+    ZF = H == 0;
+}
+void srlL(GbState* s, u32 instruction) {
+    F = 0;
+    CF = L & 1;
+    L = L >> 1;
+    ZF = L == 0;
 }
 
 void srlaHL(GbState* s, u32 instruction) { // debug(s, "srlaHL");
@@ -705,8 +737,7 @@ void ldSPHL(GbState* s, u32 instruction) { // debug(s, "ldSPHL");
 
 void ldHLSPN8(GbState* s, u32 instruction) { // debug(s, "ldHLSPN8");
     u32 res = (u32)s->sp + (s8)IMM8;
-    ZF = 0;
-    NF = 0;
+    F = 0;
     HF = (s->sp & 0xf) + (IMM8 & 0xf) > 0xf;
     CF = (s->sp & 0xff) + (IMM8 & 0xff) > 0xff;
     HL = (u16)res;
@@ -1050,75 +1081,57 @@ void sbcAaHL(GbState* s, u32 instruction) { // debug(s, "sbcAaHL");
 void andAN8(GbState* s, u32 instruction) { // debug(s, "andAN8");
     A = A & IMM8;
     PC++;
+    F = FLAG_H;
     ZF = A == 0;
-    NF = 0;
-    HF = 1;
-    CF = 0;
 }
 
 void andAA(GbState* s, u32 instruction) { // debug(s, "andAR8");
     A = A & A;
+    F = FLAG_H;
     ZF = A == 0;
-    NF = 0;
-    HF = 1;
-    CF = 0;
 }
 
 void andAB(GbState* s, u32 instruction) { // debug(s, "andAR8");
     A = A & B;
+    F = FLAG_H;
     ZF = A == 0;
-    NF = 0;
-    HF = 1;
-    CF = 0;
 }
 
 void andAC(GbState* s, u32 instruction) { // debug(s, "andAR8");
     A = A & C;
+    F = FLAG_H;
     ZF = A == 0;
-    NF = 0;
-    HF = 1;
-    CF = 0;
 }
 
 void andAD(GbState* s, u32 instruction) { // debug(s, "andAR8");
     A = A & D;
+    F = FLAG_H;
     ZF = A == 0;
-    NF = 0;
-    HF = 1;
-    CF = 0;
 }
 
 void andAE(GbState* s, u32 instruction) { // debug(s, "andAR8");
     A = A & E;
+    F = FLAG_H;
     ZF = A == 0;
-    NF = 0;
-    HF = 1;
-    CF = 0;
 }
 
 void andAH(GbState* s, u32 instruction) { // debug(s, "andAR8");
     A = A & H;
+    F = FLAG_H;
     ZF = A == 0;
-    NF = 0;
-    HF = 1;
-    CF = 0;
 }
 
 void andAL(GbState* s, u32 instruction) { // debug(s, "andAR8");
     A = A & L;
+    F = FLAG_H;
     ZF = A == 0;
-    NF = 0;
-    HF = 1;
-    CF = 0;
 }
 
 void andAaHL(GbState* s, u32 instruction) { // debug(s, "andAaHL");
     u8 val = mem(HL);
     A = A & val;
+    F = FLAG_H;
     ZF = A == 0;
-    NF = 0;
-    HF = 1;
-    CF = 0;
 }
 
 void orAN8(GbState* s, u32 instruction) { // debug(s, "orAN8");
@@ -1169,7 +1182,7 @@ void xorAN8(GbState* s, u32 instruction) { // debug(s, "xorAN8");
 }
 void xorAA(GbState* s, u32 instruction) { // debug(s, "xorAR8");
     A = 0;
-    F = FLAG_Z; 
+    F = FLAG_Z;
 }
 void xorAB(GbState* s, u32 instruction) { // debug(s, "xorAR8");
     A ^= B;
@@ -1177,28 +1190,28 @@ void xorAB(GbState* s, u32 instruction) { // debug(s, "xorAR8");
 }
 void xorAC(GbState* s, u32 instruction) { // debug(s, "xorAR8");
     A ^= C;
-    F = A ? 0 : FLAG_Z; 
+    F = A ? 0 : FLAG_Z;
 }
 void xorAD(GbState* s, u32 instruction) { // debug(s, "xorAR8");
     A ^= D;
-    F = A ? 0 : FLAG_Z; 
+    F = A ? 0 : FLAG_Z;
 }
 void xorAE(GbState* s, u32 instruction) { // debug(s, "xorAR8");
     A ^= E;
-    F = A ? 0 : FLAG_Z; 
+    F = A ? 0 : FLAG_Z;
 }
 void xorAH(GbState* s, u32 instruction) { // debug(s, "xorAR8");
     A ^= H;
-    F = A ? 0 : FLAG_Z; 
+    F = A ? 0 : FLAG_Z;
 }
 void xorAL(GbState* s, u32 instruction) { // debug(s, "xorAR8");
     A ^= L;
-    F = A ? 0 : FLAG_Z; 
+    F = A ? 0 : FLAG_Z;
 }
 void xorAaHL(GbState* s, u32 instruction) { // debug(s, "xorAaHL");
     u8 srcval = mem(HL);
     A ^= srcval;
-    F = A ? 0 : FLAG_Z; 
+    F = A ? 0 : FLAG_Z;
 }
 
 void cpAN8(GbState* s, u32 instruction) { // debug(s, "cpAN8");
@@ -1212,12 +1225,6 @@ void cpAN8(GbState* s, u32 instruction) { // debug(s, "cpAN8");
 
 void cpAA(GbState* s, u32 instruction) { // debug(s, "cpAR8");
     F = FLAG_Z | FLAG_N;
-    /*
-    ZF = 1
-    NF = 1;
-    HF = 0;
-    CF = 0;
-    */
 }
 void cpAB(GbState* s, u32 instruction) { // debug(s, "cpAR8");
     ZF = A == B;
@@ -1446,8 +1453,7 @@ void addHLSP(GbState* s, u32 instruction) { // debug(s, "addHLR16");
 void addSPN8(GbState* s, u32 instruction) { // debug(s, "addSPN8");
     s8 off = (s8)IMM8;
     u32 res = s->sp + off;
-    ZF = 0;
-    NF = 0;
+    F = 0;
     HF = (s->sp & 0xf) + (IMM8 & 0xf) > 0xf;
     CF = (s->sp & 0xff) + (IMM8 & 0xff) > 0xff;
     s->sp = res;
