@@ -4,7 +4,10 @@
 #include "hwdefs.h"
 #include "rtc.h"
 
-#define READ_32(pointer, offset) (pointer[offset]) | (pointer[offset + 1]) << 8 | (pointer[offset + 2] << 16) | (pointer[offset + 3] << 24)
+/**
+ * Gets the three bytes after the given address - 24bits is the maximum size of a GB instruction.
+ */
+#define READ_24(pointer, offset) (pointer[offset]) | (pointer[offset + 1]) << 8 | (pointer[offset + 2] << 16)// | (pointer[offset + 3] << 24)
 
 static void mmu_hdma_do(GbState *s) {
     // DMA one block (0x10 byte), should be called at start of H-Blank. */
@@ -143,7 +146,7 @@ static void writeHram(GbState* s, byte offset, byte value) {
 }
 
 static u32 readHram(GbState* s, byte offset) {
-    return  READ_32(s->HRAM, offset);
+    return  READ_24(s->HRAM, offset);
 }
 
 static u32 readJoypadIo(GbState* s, byte offset) {
@@ -517,14 +520,14 @@ static void writeOam(GbState* s, u16 location, byte value) {
  * 0x0000 - 0x3FFF
  */
 static u32 readRom0(GbState* s, u16 location) {
-    return READ_32(s->ROM0, location);
+    return READ_24(s->ROM0, location);
 }
 
 /**
  * 0x4000 - 0x7FFF
  */
 static u32 readRomX(GbState* s, u16 location) {
-    return READ_32(s->ROMX, location - 0x4000);
+    return READ_24(s->ROMX, location - 0x4000);
 }
 
 
@@ -532,21 +535,21 @@ static u32 readRomX(GbState* s, u16 location) {
  * 0x0 - 0x0
  */
 static u32 readVRAM(GbState* s, u16 location) {
-    return READ_32(s->VRAM, location - 0x8000);
+    return READ_24(s->VRAM, location - 0x8000);
 }
 
 /**
  * 0xA000 - 0xBFFF
  */
 static u32 mbc2readSRAM(GbState* s, u16 location) {
-    return READ_32(s->SRAM, ((location - 0xA000) % 0x200)) | 0xF0F0F0F0;
+    return READ_24(s->SRAM, ((location - 0xA000) % 0x200)) | 0xF0F0F0F0;
 }
 
 /**
  * 0xA000 - 0xBFFF
  */
 static u32 readSRAM(GbState* s, u16 location) {
-    return READ_32(s->SRAM, location - 0xA000);
+    return READ_24(s->SRAM, location - 0xA000);
     // May need a block for RTC stuff accuracy
 }
 
@@ -554,14 +557,14 @@ static u32 readSRAM(GbState* s, u16 location) {
  * 0xC000 - 0xCFFF
  */
 static u32 readWRAM0(GbState* s, u16 location) {
-    return READ_32(s->WRAM0, location - 0xC000);
+    return READ_24(s->WRAM0, location - 0xC000);
 }
 
 /**
  * 0xD000 - 0xDFFF
  */
 static u32 readWRAMX(GbState* s, u16 location) {
-    return READ_32(s->WRAMX, location - 0xD000);
+    return READ_24(s->WRAMX, location - 0xD000);
 }
 
 static u32 readEcho(GbState* s, u16 location) {
@@ -574,7 +577,7 @@ static u32 readEcho(GbState* s, u16 location) {
  
 static u32 readOAM(GbState* s, u16 location) {
     if (location <= 0xFE9F) {
-        return READ_32(s->OAM, location - 0xfe00);
+        return READ_24(s->OAM, location - 0xfe00);
     } else {
         return 0;
     }
@@ -590,7 +593,7 @@ static void writeGbcSpeedSwitch(GbState* s, u8 location, u8 value) {
  * @param location address to read from.
  * @returns value at that address.
  */
-inline u32 mmu_read32(GbState* s, u16 location) {
+inline u32 mmu_read24(GbState* s, u16 location) {
     return s->mmuReads[location >> 8](s, location);
 }
 
@@ -608,7 +611,7 @@ inline void mmu_write(GbState* s, u16 location, byte value) {
  * Reads two bytes from an address in virtual gameboy memory.
  */
 u16 mmu_read16(GbState *s, u16 location) {
-    return mmu_read32(s, location) & 0xFFFF;
+    return mmu_read24(s, location) & 0xFFFF;
 }
 
 /**

@@ -35,9 +35,9 @@ void mmu_step(GbState *s);
  * @param location address to read from.
  * @returns value at that address.
  */
-#define mmu_read(s, location) (mmu_read32(s, location) & 0xFF)
+#define mmu_read(s, location) (mmu_read24(s, location) & 0xFF)
 
-u32 mmu_read32(GbState* s, u16 location);
+u32 mmu_read24(GbState* s, u16 location);
 
 /**
  * Writes to an address in the virtual gameboy memory.

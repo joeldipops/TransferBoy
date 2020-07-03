@@ -221,7 +221,7 @@ void cpu_timers_step(GbState *s) {
 void cpu_step(GbState *s) {
     cpu_handle_interrupts(s);
 
-    u32 instruction = mmu_read32(s, PC);
+    u32 instruction = mmu_read24(s, PC);
     u8 opCode = instruction & 0xFF;
 
     s->last_op_cycles = cycles_per_instruction[opCode];
