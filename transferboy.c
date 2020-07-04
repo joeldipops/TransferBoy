@@ -38,7 +38,9 @@ static void initialiseSubsystems() {
     init_interrupts();
     timer_init();
 
-    new_timer(TIMER_TICKS(1000000), TF_CONTINUOUS, fps_timer);
+    #ifdef SHOW_FRAME_COUNT
+        new_timer(TIMER_TICKS(1000000), TF_CONTINUOUS, fps_timer);
+    #endif
 
     controller_init();
     dfs_init(DFS_DEFAULT_LOCATION);

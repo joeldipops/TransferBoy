@@ -175,7 +175,9 @@ void playLogic(const byte playerNumber) {
 
     if (s->lcd_entered_vblank) {
 
-        fps_frame();
+        #ifdef SHOW_FRAME_COUNT
+            fps_frame();
+        #endif
 
         playerState->Meta.FrameCount++;
 
