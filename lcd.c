@@ -57,9 +57,11 @@ static void lcd_render_current_line(PlayerState* state) {
         return;
     }
 
-    if (FRAMES_TO_SKIP && ((state->Meta.FrameCount + 1) % (FRAMES_TO_SKIP + 1))) {
-        return;
-    }
+    #ifdef FRAMES_TO_SKIP
+        if ((state->Meta.FrameCount + 1) % (FRAMES_TO_SKIP + 1)) {
+            return;
+        }
+    #endif
 
     int y = gb_state->CurrentLine;
 

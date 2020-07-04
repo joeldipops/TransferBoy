@@ -168,32 +168,37 @@ void playLogic(const byte playerNumber) {
 
     emu_step(playerState);
 
-    if (IS_SGB_ENABLED && s->Cartridge.Header.is_sgb_supported) {
-        processSGBData(playerState);
-        performSGBFunctions(playerState);
-    }
+    #ifdef IS_SGB_ENABLED
+        if (s->Cartridge.Header.is_sgb_supported) {
+            processSGBData(playerState);
+            performSGBFunctions(playerState);
+        }
+    #endif
 
     if (s->lcd_entered_vblank) {
 
         #ifdef SHOW_FRAME_COUNT
             fps_frame();
+            playerState->Meta.FrameCount++;
         #endif
 
-        playerState->Meta.FrameCount++;
+        #ifdef FRAMES_TO_SKIP
+            if (playerState->Meta.FrameCount % (FRAMES_TO_SKIP + 1)) {
+                playerState->WasFrameSkipped = true;
+                return;
+            } else {
+                playerState->WasFrameSkipped = false;
+            }
+        #endif
 
-        if (FRAMES_TO_SKIP && (playerState->Meta.FrameCount % (FRAMES_TO_SKIP + 1))) {
-            playerState->WasFrameSkipped = true;
-            return;
-        } else {
-            playerState->WasFrameSkipped = false;
-        }
-
-        if (IS_SGB_ENABLED && s->Cartridge.Header.is_sgb_supported) {
-            applySGBPalettes(
-                &playerState->SGBState, 
-                s->NextBuffer
-            );
-        }
+        #ifdef IS_SGB_ENABLED
+            if (s->Cartridge.Header.is_sgb_supported) {
+                applySGBPalettes(
+                    &playerState->SGBState, 
+                    s->NextBuffer
+                );
+            }
+        #endif
 
         GbController* input = calloc(1, sizeof(GbController));
 
@@ -232,9 +237,11 @@ void playLogic(const byte playerNumber) {
         }
 
         // Audio off until I can test it properly.
-        if (IS_AUDIO_ENABLED && playerState->AudioEnabled) {
-            playAudio(s);
-        }
+        #ifdef IS_AUDIO_ENABLED
+            if (playerState->AudioEnabled) {
+                playAudio(s);
+            }
+        #endif
 
         rootState.RequiresRepaint = true;
         rootState.RequiresControllerRead = true;
