@@ -619,11 +619,11 @@ xFlip:
     .set $top, $t2
     .set $left, $t3
     .set $topOffset, $t4
-    .set $maxTileIndex, $t5
+    .set $tilesToProcess, $t5
     .set $tileIndex, $t6
     .set $loadIndex, $t7
     .set $maxLoadIndex, $t8
-    .set $maxInnerIndex, $t9
+    .set $isOffset, $t9
 
     # If window is disabled, there's nothing to draw.
     lbu $t0, (PPU_SETTINGS + Ppu_LCD_CONTROL)($0)
@@ -635,18 +635,11 @@ xFlip:
     sub $topOffset, $top, $SCAN_LINE
         bgtz $topOffset, processWindow_done
 
-    sub $topOffset, $SCAN_LINE, $top
-
     # When window starts off the end of the screen, there's nothing to draw.
     lbu $left, (PPU_SETTINGS + Ppu_WINDOW_LEFT)($0)
     addi $t0, $0, GB_LCD_WIDTH + WINDOW_X_OFFSET
     sub $t0, $t0, $left
         bltz $t0, processWindow_done
-
-    addi $maxTileIndex, $0, 20
-
-    lbu $a0, (PPU_SETTINGS + Ppu_BACKGROUND_PALETTE)($0)
-    jal setPalette
 
     # Find the chunk of VRAM that corresponds to the tiles on this line.
     lb $t0, (PPU_SETTINGS + Ppu_LCD_CONTROL)($0)
@@ -658,15 +651,21 @@ xFlip:
         addi $tileMap, $0, TILE_MAP_1_OFFSET
     2:
 
+    sub $topOffset, $SCAN_LINE, $top
+
     # DMA in a line of the tile map
     ## Divide by 8 to get the tile line, then multiply by 32 since there's 32 tiles per scan line
     srl $t0, $topOffset, 3
     sll $t0, $t0, 5
-    ## add to the address in GB memory.
+
+    # add to tile map to get the address in GB Memory.
     add $tileMap, $tileMap, $t0
 
-    ## And add that to get the location in n64 memory.
+    ## And add to this to get the location in N64 memory.
     add $tileMap, $tileMap, $VRAM_BASE
+
+    # DMA it in.
+    dmaIn $tileMap, LINE_TILE_MAP, 0x20
 
     .set $lineNumber, $topOffset
     # which line of the tile are we on
@@ -677,22 +676,39 @@ xFlip:
     ## Multiply by two to get the number of bytes to skip.
     sll $lineNumber, $lineNumber, 1
 
-    dmaIn $tileMap, LINE_TILE_MAP, 0x20
-
     .set $tileLine, $tileMap
     .set $tileMap, 0
 
+    # Only process until the end of the screen.
+    ## Stash if there's an offset, since we'll need to add an extra tile.
+    andi $isOffset, $left, TILE_WIDTH - 1
+    srl $r0, $left, 3
+    addi $t0, $0, 20
+    sub $tilesToProcess, $t0, $r0
+
+    # Add one more due to WINDOW_X_OFFSET
+    addi $tilesToProcess, $tilesToProcess, 1
+
     # When $loadIndex gets to 16, exit the loop.
     addi $maxLoadIndex, $0, 16
+
+    .set $tilesProcessed, $top
+    add $tilesProcessed, $0, $0
+    .set $top, 0
 
     addi $tileIndex, $0, 0
     processWindow_whileHasTiles:
         add $loadIndex, $0, $0
 
         # when in the third iteration, only go half way.
-        addi $a0, $tileIndex, 4
-        bne $a0, $maxTileIndex, 1f
-            addi $maxLoadIndex, $0, 8
+        addi $a0, $tilesProcessed, 4
+        bne $a0, $tilesToProcess, 1f
+            beq $isOffset, $0, 2f
+                addi $maxLoadIndex, $0, 10
+                addi $tilesToProcess, $tilesToProcess, 1
+                j 1f
+            2:
+                addi $maxLoadIndex, $0, 8
         1:
 
         # get 8 tiles and put the line of pixels in a buffer
@@ -715,6 +731,9 @@ xFlip:
 
             # increment
             addi $tileIndex, $tileIndex, 1
+            ## TODO: Not sure if this line is needed for window.
+            andi $tileIndex, $tileIndex, 0b00011111
+            addi $tilesProcessed, $tilesProcessed, 1
             addi $loadIndex, $loadIndex, 2
         bne $loadIndex, $maxLoadIndex, processWindow_whileLoadData
 
@@ -786,7 +805,7 @@ xFlip:
         srl $t0, $maxLoadIndex, 1
 
           vand $v07, $v07, $v28, 0b1000
-        sub $t0, $tileIndex, $t0
+        sub $t0, $tilesProcessed, $t0
 
           vsrl $v09, $v09, 7
         # multiply $tileIndex by 8.  We split 8 two bit pixels across 16bits in to a byte each.
@@ -837,12 +856,12 @@ xFlip:
         #   0   8   16  24...
         #   1   9   17  25...
 
-    bne $tileIndex, $maxTileIndex, processWindow_whileHasTiles
-
+    sub $t0, $tilesToProcess, $tilesProcessed
+    bgtz $t0, processWindow_whileHasTiles
 
     # Iterate through our now ordered pixels.
     .set $tileIndex, 0
-    .set $maxTileIndex, 0
+    .set $tilesToProcess, 0
     .set $top, 0
 
     .set $maxOutputIndex, $maxLoadIndex
@@ -1385,6 +1404,7 @@ main:
         #textureRectangle 0x18, 1, $a0, $a1, $a2, $a3, 0, 0, 2048, 512
         #execRdp 0x18
 
+        nop
 
         # Clean-up now that we're done.
     main_continue:
