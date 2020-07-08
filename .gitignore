@@ -9,6 +9,8 @@ filesystem/
 *.dfs
 *.bin
 *.z64
+*.data
+*.text
 !transferboy64.z64
 !transferboy.z64
 transferboy_generated.ld
