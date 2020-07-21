@@ -113,10 +113,77 @@ void bit5aHL(GbState* state, u32 instruction);
 void bit6aHL(GbState* state, u32 instruction);
 void bit7aHL(GbState* state, u32 instruction);
 
-void bitU3R8(GbState* state, u32 instruction);
+void res0B(GbState* state, u32 instruction);
+void res1B(GbState* state, u32 instruction);
+void res2B(GbState* state, u32 instruction);
+void res3B(GbState* state, u32 instruction);
+void res4B(GbState* state, u32 instruction);
+void res5B(GbState* state, u32 instruction);
+void res6B(GbState* state, u32 instruction);
+void res7B(GbState* state, u32 instruction);
 
-void resU3R8(GbState* state, u32 instruction);
-void resU3aHL(GbState* state, u32 instruction);
+void res0C(GbState* state, u32 instruction);
+void res1C(GbState* state, u32 instruction);
+void res2C(GbState* state, u32 instruction);
+void res3C(GbState* state, u32 instruction);
+void res4C(GbState* state, u32 instruction);
+void res5C(GbState* state, u32 instruction);
+void res6C(GbState* state, u32 instruction);
+void res7C(GbState* state, u32 instruction);
+
+void res0D(GbState* state, u32 instruction);
+void res1D(GbState* state, u32 instruction);
+void res2D(GbState* state, u32 instruction);
+void res3D(GbState* state, u32 instruction);
+void res4D(GbState* state, u32 instruction);
+void res5D(GbState* state, u32 instruction);
+void res6D(GbState* state, u32 instruction);
+void res7D(GbState* state, u32 instruction);
+
+void res0E(GbState* state, u32 instruction);
+void res1E(GbState* state, u32 instruction);
+void res2E(GbState* state, u32 instruction);
+void res3E(GbState* state, u32 instruction);
+void res4E(GbState* state, u32 instruction);
+void res5E(GbState* state, u32 instruction);
+void res6E(GbState* state, u32 instruction);
+void res7E(GbState* state, u32 instruction);
+
+void res0H(GbState* state, u32 instruction);
+void res1H(GbState* state, u32 instruction);
+void res2H(GbState* state, u32 instruction);
+void res3H(GbState* state, u32 instruction);
+void res4H(GbState* state, u32 instruction);
+void res5H(GbState* state, u32 instruction);
+void res6H(GbState* state, u32 instruction);
+void res7H(GbState* state, u32 instruction);
+
+void res0L(GbState* state, u32 instruction);
+void res1L(GbState* state, u32 instruction);
+void res2L(GbState* state, u32 instruction);
+void res3L(GbState* state, u32 instruction);
+void res4L(GbState* state, u32 instruction);
+void res5L(GbState* state, u32 instruction);
+void res6L(GbState* state, u32 instruction);
+void res7L(GbState* state, u32 instruction);
+
+void res0aHL(GbState* state, u32 instruction);
+void res1aHL(GbState* state, u32 instruction);
+void res2aHL(GbState* state, u32 instruction);
+void res3aHL(GbState* state, u32 instruction);
+void res4aHL(GbState* state, u32 instruction);
+void res5aHL(GbState* state, u32 instruction);
+void res6aHL(GbState* state, u32 instruction);
+void res7aHL(GbState* state, u32 instruction);
+
+void res0A(GbState* state, u32 instruction);
+void res1A(GbState* state, u32 instruction);
+void res2A(GbState* state, u32 instruction);
+void res3A(GbState* state, u32 instruction);
+void res4A(GbState* state, u32 instruction);
+void res5A(GbState* state, u32 instruction);
+void res6A(GbState* state, u32 instruction);
+void res7A(GbState* state, u32 instruction);
 
 void setU3R8(GbState* state, u32 instruction);
 void setU3aHL(GbState* state, u32 instruction);
@@ -408,19 +475,19 @@ static gbz80Operation opTable[] = {
 };
 
 static gbz80Operation extendedOpTable[] = {
-//          0       1       2       3       4       5       6           7       8       9       A       B       C       D       E       F   
-/*   0 */   rlcB,   rlcC,   rlcD,   rlcE,   rlcH,   rlcL,   rlcaHL,     rlcA,   rrcR8,  rrcR8,  rrcR8,  rrcR8,  rrcR8,  rrcR8,  rrcaHL, rrcR8,
-/*   1 */   rlR8,   rlR8,   rlR8,   rlR8,   rlR8,   rlR8,   rlaHL,      rlR8,   rrR8,   rrR8,   rrR8,   rrR8,   rrR8,   rrR8,   rraHL,  rrR8,
-/*   2 */   slaR8,  slaR8,  slaR8,  slaR8,  slaR8,  slaR8,  slaaHL,     slaR8,  sraR8,  sraR8,  sraR8,  sraR8,  sraR8,  sraR8,  sraaHL, sraR8,
-/*   3 */   swapR8, swapR8, swapR8, swapR8, swapR8, swapR8, swapaHL,    swapR8, srlB,   srlC,   srlD,   srlE,   srlH,   srlL,   srlaHL, srlA,
-/*   4 */   bit0B,  bit0C,  bit0D,  bit0E,  bit0H,  bit0L,  bit0aHL,    bit0A,  bit1B,  bit1C,  bit1D,  bit1E,  bit1H,  bit1L,  bit1aHL,bit1A,
-/*   5 */   bit2B,  bit2C,  bit2D,  bit2E,  bit2H,  bit2L,  bit2aHL,    bit2A,  bit3B,  bit3C,  bit3D,  bit3E,  bit3H,  bit3L,  bit3aHL,bit3A,
-/*   6 */   bit4B,  bit4C,  bit4D,  bit4E,  bit4H,  bit4L,  bit4aHL,    bit4A,  bit5B,  bit5C,  bit5D,  bit5E,  bit5H,  bit5L,  bit5aHL,bit5A,
-/*   7 */   bit6B,  bit6C,  bit6D,  bit6E,  bit6H,  bit6L,  bit6aHL,    bit6A,  bit7B,  bit7C,  bit7D,  bit7E,  bit7H,  bit7L,  bit7aHL,bit7A,
-/*   8 */   resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3aHL,   resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3aHL,resU3R8,
-/*   9 */   resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3aHL,   resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3aHL,resU3R8,
-/*   A */   resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3aHL,   resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3aHL,resU3R8,
-/*   B */   resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3aHL,   resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3R8,resU3aHL,resU3R8,
+//          0       1       2       3       4       5       6           7       8       9       A       B       C       D       E           F   
+/*   0 */   rlcB,   rlcC,   rlcD,   rlcE,   rlcH,   rlcL,   rlcaHL,     rlcA,   rrcR8,  rrcR8,  rrcR8,  rrcR8,  rrcR8,  rrcR8,  rrcaHL,     rrcR8,
+/*   1 */   rlR8,   rlR8,   rlR8,   rlR8,   rlR8,   rlR8,   rlaHL,      rlR8,   rrR8,   rrR8,   rrR8,   rrR8,   rrR8,   rrR8,   rraHL,      rrR8,
+/*   2 */   slaR8,  slaR8,  slaR8,  slaR8,  slaR8,  slaR8,  slaaHL,     slaR8,  sraR8,  sraR8,  sraR8,  sraR8,  sraR8,  sraR8,  sraaHL,     sraR8,
+/*   3 */   swapR8, swapR8, swapR8, swapR8, swapR8, swapR8, swapaHL,    swapR8, srlB,   srlC,   srlD,   srlE,   srlH,   srlL,   srlaHL,     srlA,
+/*   4 */   bit0B,  bit0C,  bit0D,  bit0E,  bit0H,  bit0L,  bit0aHL,    bit0A,  bit1B,  bit1C,  bit1D,  bit1E,  bit1H,  bit1L,  bit1aHL,    bit1A,
+/*   5 */   bit2B,  bit2C,  bit2D,  bit2E,  bit2H,  bit2L,  bit2aHL,    bit2A,  bit3B,  bit3C,  bit3D,  bit3E,  bit3H,  bit3L,  bit3aHL,    bit3A,
+/*   6 */   bit4B,  bit4C,  bit4D,  bit4E,  bit4H,  bit4L,  bit4aHL,    bit4A,  bit5B,  bit5C,  bit5D,  bit5E,  bit5H,  bit5L,  bit5aHL,    bit5A,
+/*   7 */   bit6B,  bit6C,  bit6D,  bit6E,  bit6H,  bit6L,  bit6aHL,    bit6A,  bit7B,  bit7C,  bit7D,  bit7E,  bit7H,  bit7L,  bit7aHL,    bit7A,
+/*   8 */   res0B,  res0C,  res0D,  res0E,  res0H,  res0L,  res0aHL,    res0A,  res1B,  res1C,  res1D,  res1E,  res1H,  res1L,  res1aHL,   res1A,
+/*   9 */   res2B,  res2C,  res2D,  res2E,  res2H,  res2L,  res2aHL,    res2A,  res3B,  res3C,  res3D,  res3E,  res3H,  res3L,  res3aHL,   res3A,
+/*   A */   res4B,  res4C,  res4D,  res4E,  res4H,  res4L,  res4aHL,    res4A,  res5B,  res5C,  res5D,  res5E,  res5H,  res5L,  res5aHL,   res5A,
+/*   B */   res6B,  res6C,  res6D,  res6E,  res6H,  res6L,  res6aHL,    res6A,  res7B,  res7C,  res7D,  res7E,  res7H,  res7L,  res7aHL,   res7A,
 /*   C */   setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3aHL,   setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3aHL,setU3R8,
 /*   D */   setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3aHL,   setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3aHL,setU3R8,
 /*   E */   setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3aHL,   setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3R8,setU3aHL,setU3R8,
