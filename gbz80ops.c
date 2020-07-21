@@ -99,6 +99,32 @@ void rlcaHL(GbState* s, u32 instruction) { // debug(s, "rlcaHL");
     mmu_write(s, HL, res);
 }
 
+#define RRC_R8(r8) \
+    CF = r8 & 1;\
+    r8 = (r8 >> 1) | ((r8 & 1) << 7);\
+    ZF = r8 == 0;\
+    NF = 0;\
+    HF = 0
+
+void rrcB(GbState* s, u32 instruction) {
+    RRC_R8(B);
+}
+void rrcC(GbState* s, u32 instruction) {
+    RRC_R8(C);
+}
+void rrcD(GbState* s, u32 instruction) {
+    RRC_R8(D);
+}
+void rrcE(GbState* s, u32 instruction) {
+    RRC_R8(E);
+}
+void rrcH(GbState* s, u32 instruction) {
+    RRC_R8(H);
+}
+void rrcL(GbState* s, u32 instruction) {
+    RRC_R8(L);
+}
+
 void rrcR8(GbState* s, u32 instruction) { // debug(s, "rrcR8");
     u8 *reg = REG8(0);
     u8 val = *reg;
@@ -109,6 +135,7 @@ void rrcR8(GbState* s, u32 instruction) { // debug(s, "rrcR8");
     CF = val & 1;
     *reg = res; 
 }
+
 void rrcaHL(GbState* s, u32 instruction) { // debug(s, "rrcaHL");
     u8 val = mem(HL);
     u8 res = (val >> 1) | ((val & 1) << 7);
@@ -117,6 +144,37 @@ void rrcaHL(GbState* s, u32 instruction) { // debug(s, "rrcaHL");
     HF = 0;
     CF = val & 1;
     mmu_write(s, HL, res);
+}
+
+void rrcA(GbState* s, u32 instruction) {
+    RRC_R8(A);
+}
+
+#define RL_R8(r8) \
+    u8 temp = (r8 << 1) | (CF ? 1 : 0);\
+    CF = r8 >> 7;\
+    r8 = temp;\
+    ZF = r8 == 0;\
+    NF = 0;\
+    HF = 0
+
+void rlB(GbState* s, u32 instruction) { // debug(s, "rlR8");
+    RL_R8(B);
+}
+void rlC(GbState* s, u32 instruction) { // debug(s, "rlR8");
+    RL_R8(C);
+}
+void rlD(GbState* s, u32 instruction) { // debug(s, "rlR8");
+    RL_R8(D);
+}
+void rlE(GbState* s, u32 instruction) { // debug(s, "rlR8");
+    RL_R8(E);
+}
+void rlH(GbState* s, u32 instruction) { // debug(s, "rlR8");
+    RL_R8(H);
+}
+void rlL(GbState* s, u32 instruction) { // debug(s, "rlR8");
+    RL_R8(L);
 }
 
 void rlR8(GbState* s, u32 instruction) { // debug(s, "rlR8");
@@ -139,6 +197,37 @@ void rlaHL(GbState* s, u32 instruction) { // debug(s, "rlaHL");
     mmu_write(s, HL, res);
 }
 
+void rlA(GbState* s, u32 instruction) { // debug(s, "rlR8");
+    RL_R8(A);
+}
+
+#define RR_R8(r8) \
+    u8 temp = (r8 >> 1) | (CF << 7);\
+    CF = r8 & 0x1;\
+    r8 = temp;\
+    ZF = r8 == 0;\
+    NF = 0;\
+    HF = 0
+
+void rrB(GbState* s, u32 instruction) { // debug(s, "rrR8");
+    RR_R8(B);
+}
+void rrC(GbState* s, u32 instruction) { // debug(s, "rrR8");
+    RR_R8(C);
+}
+void rrD(GbState* s, u32 instruction) { // debug(s, "rrR8");
+    RR_R8(D);
+}
+void rrE(GbState* s, u32 instruction) { // debug(s, "rrR8");
+    RR_R8(E);
+}
+void rrH(GbState* s, u32 instruction) { // debug(s, "rrR8");
+    RR_R8(H);
+}
+void rrL(GbState* s, u32 instruction) { // debug(s, "rrR8");
+    RR_R8(L);
+}
+
 void rrR8(GbState* s, u32 instruction) { // debug(s, "rrR8");
     u8 *reg = REG8(0);
     u8 val = *reg;
@@ -159,16 +248,38 @@ void rraHL(GbState* s, u32 instruction) { // debug(s, "rraHL");
     mmu_write(s, HL, res);
 }
 
-void slaR8(GbState* s, u32 instruction) { // debug(s, "slaR8");
-    u8 *reg = REG8(0);
-    u8 val = *reg;
-    CF = val >> 7;
-    val = val << 1;
-    ZF = val == 0;
-    NF = 0;
-    HF = 0;
-    *reg = val;
+void rrA(GbState* s, u32 instruction) { // debug(s, "rrR8");
+    RR_R8(A);
 }
+
+
+
+#define SLA_R8(r8) \
+    CF = r8 >> 7;\
+    r8 = r8 << 1;\
+    ZF = r8 == 0;\
+    NF = 0;\
+    HF = 0
+
+void slaB(GbState* s, u32 instruction) {
+    SLA_R8(B);
+}
+void slaC(GbState* s, u32 instruction) {
+    SLA_R8(C);
+}
+void slaD(GbState* s, u32 instruction) {
+    SLA_R8(D);
+}
+void slaE(GbState* s, u32 instruction) {
+    SLA_R8(E);
+}
+void slaH(GbState* s, u32 instruction) {
+    SLA_R8(H);
+}
+void slaL(GbState* s, u32 instruction) {
+    SLA_R8(L);
+}
+
 void slaaHL(GbState* s, u32 instruction) { // debug(s, "slaaHL");
     u8 val = mem(HL);
     CF = val >> 7;
@@ -179,16 +290,36 @@ void slaaHL(GbState* s, u32 instruction) { // debug(s, "slaaHL");
     mmu_write(s, HL, val);
 }
 
-void sraR8(GbState* s, u32 instruction) { // debug(s, "sraR8");
-    u8 *reg = REG8(0);
-    u8 val = *reg;
-    CF = val & 0x1;
-    val = (val >> 1) | (val & (1<<7));
-    ZF = val == 0;
-    NF = 0;
-    HF = 0;
-    *reg = val;
+void slaA(GbState* s, u32 instruction) {
+    SLA_R8(A);
 }
+
+#define SRA_R8(r8) \
+    CF = r8 & 0x1;\
+    r8 = (r8 >> 1) | (r8 & (1 << 7));\
+    ZF = r8 == 0;\
+    NF = 0;\
+    HF = 0
+
+void sraB(GbState* s, u32 instruction) { // debug(s, "sraR8");
+    SRA_R8(B);
+}
+void sraC(GbState* s, u32 instruction) { // debug(s, "sraR8");
+    SRA_R8(C);
+}
+void sraD(GbState* s, u32 instruction) { // debug(s, "sraR8");
+    SRA_R8(D);
+}
+void sraE(GbState* s, u32 instruction) { // debug(s, "sraR8");
+    SRA_R8(E);
+}
+void sraH(GbState* s, u32 instruction) { // debug(s, "sraR8");
+    SRA_R8(H);
+}
+void sraL(GbState* s, u32 instruction) { // debug(s, "sraR8");
+    SRA_R8(L);
+}
+
 void sraaHL(GbState* s, u32 instruction) { // debug(s, "sraaHL");
     u8 val = mem(HL);
     CF = val & 0x1;
@@ -199,18 +330,41 @@ void sraaHL(GbState* s, u32 instruction) { // debug(s, "sraaHL");
     mmu_write(s, HL, val);
 }
 
-void swapR8(GbState* s, u32 instruction) { // debug(s, "swapR8");
-    u8 *reg = REG8(0);
-    u8 val = *reg;
-    u8 res = ((val << 4) & 0xf0) | ((val >> 4) & 0xf);
-    F = res == 0 ? FLAG_Z : 0;
-    *reg = res;
+void sraA(GbState* s, u32 instruction) { // debug(s, "sraR8");
+    SRA_R8(A);
 }
+
+#define SWAP_R8(r8) \
+    r8 = ((r8 << 4) & 0xf0) | ((r8 >> 4) & 0xf);\
+    F = r8 == 0 ? FLAG_Z : 0
+
+void swapB(GbState* s, u32 instruction) { // debug(s, "swapR8");
+    SWAP_R8(B);
+}
+void swapC(GbState* s, u32 instruction) { // debug(s, "swapR8");
+    SWAP_R8(C);
+}
+void swapD(GbState* s, u32 instruction) { // debug(s, "swapR8");
+    SWAP_R8(D);
+}
+void swapE(GbState* s, u32 instruction) { // debug(s, "swapR8");
+    SWAP_R8(E);
+}
+void swapH(GbState* s, u32 instruction) { // debug(s, "swapR8");
+    SWAP_R8(H);
+}
+void swapL(GbState* s, u32 instruction) { // debug(s, "swapR8");
+    SWAP_R8(L);
+}
+
 void swapaHL(GbState* s, u32 instruction) { // debug(s, "swapaHL");
     u8 val = mem(HL);
     u8 res = ((val << 4) & 0xf0) | ((val >> 4) & 0xf);
     F = res == 0 ? FLAG_Z : 0;
     mmu_write(s, HL, res);
+}
+void swapA(GbState* s, u32 instruction) { // debug(s, "swapR8");
+    SWAP_R8(A);
 }
 
 void srlA(GbState* s, u32 instruction) {
@@ -660,13 +814,6 @@ void res7aHL(GbState* s, u32 instruction) { // debug(s, "resU3aHL");
     RES_U3aHL(7);
 }
 
-void resU3aHL(GbState* s, u32 instruction) { // debug(s, "resU3aHL");
-    u8 bit = (op >> 3) & 7;
-    u8 val = mem(HL);
-    val = val & ~(1<<bit);
-    mmu_write(s, HL, val);
-}
-
 void res0A(GbState* s, u32 instruction) {
     RES_U3R8(0, A);
 }
@@ -692,20 +839,206 @@ void res7A(GbState* s, u32 instruction) {
     RES_U3R8(7, A);
 }
 
+#define SET_U3R8(u3, r8) \
+    r8 = r8 | (1 << u3)
 
-
-void setU3R8(GbState* s, u32 instruction) { // debug(s, "setU3R8");
-    u8 bit = (op >> 3) & 7;
-    u8 *reg = REG8(0);
-    u8 val = *reg;
-    val |= (1 << bit);
-    *reg = val;
+void set0B(GbState* s, u32 instruction) {
+    SET_U3R8(0, B);
 }
-void setU3aHL(GbState* s, u32 instruction) { // debug(s, "setU3aHL");
-    u8 bit = (op >> 3) & 7;
-    u8 val = mem(HL);
-    val |= (1 << bit);
-    mmu_write(s, HL, val);
+void set1B(GbState* s, u32 instruction) {
+    SET_U3R8(1, B);
+}
+void set2B(GbState* s, u32 instruction) {
+    SET_U3R8(2, B);
+}
+void set3B(GbState* s, u32 instruction) {
+    SET_U3R8(3, B);
+}
+void set4B(GbState* s, u32 instruction) {
+    SET_U3R8(4, B);
+}
+void set5B(GbState* s, u32 instruction) {
+    SET_U3R8(5, B);
+}
+void set6B(GbState* s, u32 instruction) {
+    SET_U3R8(6, B);
+}
+void set7B(GbState* s, u32 instruction) {
+    SET_U3R8(7, B);
+}
+void set0C(GbState* s, u32 instruction) {
+    SET_U3R8(0, C);
+}
+void set1C(GbState* s, u32 instruction) {
+    SET_U3R8(1, C);
+}
+void set2C(GbState* s, u32 instruction) {
+    SET_U3R8(2, C);
+}
+void set3C(GbState* s, u32 instruction) {
+    SET_U3R8(3, C);
+}
+void set4C(GbState* s, u32 instruction) {
+    SET_U3R8(4, C);
+}
+void set5C(GbState* s, u32 instruction) {
+    SET_U3R8(5, C);
+}
+void set6C(GbState* s, u32 instruction) {
+    SET_U3R8(6, C);
+}
+void set7C(GbState* s, u32 instruction) {
+    SET_U3R8(7, C);
+}
+void set0D(GbState* s, u32 instruction) {
+    SET_U3R8(0, D);
+}
+void set1D(GbState* s, u32 instruction) {
+    SET_U3R8(1, D);
+}
+void set2D(GbState* s, u32 instruction) {
+    SET_U3R8(2, D);
+}
+void set3D(GbState* s, u32 instruction) {
+    SET_U3R8(3, D);
+}
+void set4D(GbState* s, u32 instruction) {
+    SET_U3R8(4, D);
+}
+void set5D(GbState* s, u32 instruction) {
+    SET_U3R8(5, D);
+}
+void set6D(GbState* s, u32 instruction) {
+    SET_U3R8(6, D);
+}
+void set7D(GbState* s, u32 instruction) {
+    SET_U3R8(7, D);
+}
+void set0E(GbState* s, u32 instruction) {
+    SET_U3R8(0, E);
+}
+void set1E(GbState* s, u32 instruction) {
+    SET_U3R8(1, E);
+}
+void set2E(GbState* s, u32 instruction) {
+    SET_U3R8(2, E);
+}
+void set3E(GbState* s, u32 instruction) {
+    SET_U3R8(3, E);
+}
+void set4E(GbState* s, u32 instruction) {
+    SET_U3R8(4, E);
+}
+void set5E(GbState* s, u32 instruction) {
+    SET_U3R8(5, E);
+}
+void set6E(GbState* s, u32 instruction) {
+    SET_U3R8(6, E);
+}
+void set7E(GbState* s, u32 instruction) {
+    SET_U3R8(7, E);
+}
+void set0H(GbState* s, u32 instruction) {
+    SET_U3R8(0, H);
+}
+void set1H(GbState* s, u32 instruction) {
+    SET_U3R8(1, H);
+}
+void set2H(GbState* s, u32 instruction) {
+    SET_U3R8(2, H);
+}
+void set3H(GbState* s, u32 instruction) {
+    SET_U3R8(3, H);
+}
+void set4H(GbState* s, u32 instruction) {
+    SET_U3R8(4, H);
+}
+void set5H(GbState* s, u32 instruction) {
+    SET_U3R8(5, H);
+}
+void set6H(GbState* s, u32 instruction) {
+    SET_U3R8(6, H);
+}
+void set7H(GbState* s, u32 instruction) {
+    SET_U3R8(7, H);
+}
+void set0L(GbState* s, u32 instruction) {
+    SET_U3R8(0, L);
+}
+void set1L(GbState* s, u32 instruction) {
+    SET_U3R8(1, L);
+}
+void set2L(GbState* s, u32 instruction) {
+    SET_U3R8(2, L);
+}
+void set3L(GbState* s, u32 instruction) {
+    SET_U3R8(3, L);
+}
+void set4L(GbState* s, u32 instruction) {
+    SET_U3R8(4, L);
+}
+void set5L(GbState* s, u32 instruction) {
+    SET_U3R8(5, L);
+}
+void set6L(GbState* s, u32 instruction) {
+    SET_U3R8(6, L);
+}
+void set7L(GbState* s, u32 instruction) {
+    SET_U3R8(7, L);
+}
+
+#define SET_U3aHL(u3) \
+    u8 val = mem(HL) | (1 << u3);\
+    mmu_write(s, HL, val)
+
+void set0aHL(GbState* s, u32 instruction) { // debug(s, "setU3aHL");
+    SET_U3aHL(0);
+}
+void set1aHL(GbState* s, u32 instruction) { // debug(s, "setU3aHL");
+    SET_U3aHL(1);
+}
+void set2aHL(GbState* s, u32 instruction) { // debug(s, "setU3aHL");
+    SET_U3aHL(2);
+}
+void set3aHL(GbState* s, u32 instruction) { // debug(s, "setU3aHL");
+    SET_U3aHL(3);
+}
+void set4aHL(GbState* s, u32 instruction) { // debug(s, "setU3aHL");
+    SET_U3aHL(4);
+}
+void set5aHL(GbState* s, u32 instruction) { // debug(s, "setU3aHL");
+    SET_U3aHL(5);
+}
+void set6aHL(GbState* s, u32 instruction) { // debug(s, "setU3aHL");
+    SET_U3aHL(6);
+}
+void set7aHL(GbState* s, u32 instruction) { // debug(s, "setU3aHL");
+    SET_U3aHL(7);
+}
+
+void set0A(GbState* s, u32 instruction) {
+    SET_U3R8(0, A);
+}
+void set1A(GbState* s, u32 instruction) {
+    SET_U3R8(1, A);
+}
+void set2A(GbState* s, u32 instruction) {
+    SET_U3R8(2, A);
+}
+void set3A(GbState* s, u32 instruction) {
+    SET_U3R8(3, A);
+}
+void set4A(GbState* s, u32 instruction) {
+    SET_U3R8(4, A);
+}
+void set5A(GbState* s, u32 instruction) {
+    SET_U3R8(5, A);
+}
+void set6A(GbState* s, u32 instruction) {
+    SET_U3R8(6, A);
+}
+void set7A(GbState* s, u32 instruction) {
+    SET_U3R8(7, A);
 }
 
 void ext(GbState* s, u32 instruction) { // debug(s, "ext");
@@ -1676,16 +2009,16 @@ void scf(GbState* s, u32 instruction) { // debug(s, "scf");
     HF = 0;
     CF = 1;
 }
-void rlA(GbState* s, u32 instruction) { // debug(s, "rlA");
+void rla(GbState* s, u32 instruction) { // debug(s, "rlA");
     u8 res = A << 1 | (CF ? 1 : 0);
     F = (A & (1 << 7)) ? FLAG_C : 0;
     A = res;
 }
-void rrcA(GbState* s, u32 instruction) { // debug(s, "rrcA");
+void rrca(GbState* s, u32 instruction) { // debug(s, "rrcA");
     F = (A & 1) ? FLAG_C : 0;
     A = (A >> 1) | ((A & 1) << 7);
 }
-void rrA(GbState* s, u32 instruction) { // debug(s, "rrA");
+void rra(GbState* s, u32 instruction) { // debug(s, "rrA");
     u8 res = (A >> 1) | (CF << 7);
     F = 0;
     CF = A & 0x1;
