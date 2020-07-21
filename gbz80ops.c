@@ -125,17 +125,6 @@ void rrcL(GbState* s, u32 instruction) {
     RRC_R8(L);
 }
 
-void rrcR8(GbState* s, u32 instruction) { // debug(s, "rrcR8");
-    u8 *reg = REG8(0);
-    u8 val = *reg;
-    u8 res = (val >> 1) | ((val & 1) << 7);
-    ZF = res == 0;
-    NF = 0;
-    HF = 0;
-    CF = val & 1;
-    *reg = res; 
-}
-
 void rrcaHL(GbState* s, u32 instruction) { // debug(s, "rrcaHL");
     u8 val = mem(HL);
     u8 res = (val >> 1) | ((val & 1) << 7);
@@ -177,16 +166,6 @@ void rlL(GbState* s, u32 instruction) { // debug(s, "rlR8");
     RL_R8(L);
 }
 
-void rlR8(GbState* s, u32 instruction) { // debug(s, "rlR8");
-    u8 *reg = REG8(0);
-    u8 val = *reg;
-    u8 res = (val << 1) | (CF ? 1 : 0);
-    ZF = res == 0;
-    NF = 0;
-    HF = 0;
-    CF = val >> 7;
-    *reg = res;
-}
 void rlaHL(GbState* s, u32 instruction) { // debug(s, "rlaHL");
     u8 val = mem(HL);
     u8 res = (val << 1) | (CF ? 1 : 0);
@@ -228,16 +207,6 @@ void rrL(GbState* s, u32 instruction) { // debug(s, "rrR8");
     RR_R8(L);
 }
 
-void rrR8(GbState* s, u32 instruction) { // debug(s, "rrR8");
-    u8 *reg = REG8(0);
-    u8 val = *reg;
-    u8 res = (val >> 1) | (CF << 7);
-    ZF = res == 0;
-    NF = 0;
-    HF = 0;
-    CF = val & 0x1;
-    *reg = res;
-}
 void rraHL(GbState* s, u32 instruction) { // debug(s, "rraHL");
     u8 val = mem(HL);
     u8 res = (val >> 1) | (CF << 7);
@@ -775,14 +744,6 @@ void res6L(GbState* s, u32 instruction) {
 }
 void res7L(GbState* s, u32 instruction) {
     RES_U3R8(7, L);
-}
-
-void resU3R8(GbState* s, u32 instruction) { // debug(s, "resU3R8");
-    u8 bit = (op >> 3) & 7;
-    u8 *reg = REG8(0);
-    u8 val = *reg;
-    val = val & ~(1<<bit);
-    *reg = val;
 }
 
 #define RES_U3aHL(u3) \
