@@ -1,0 +1,18 @@
+This document explains what was involved so far in my attempt to emulate the Gameboy's Pixel Processining Unit (PPU) on the N64 RSP.
+
+**CPU**
+Once the CPU has loaded the RSP script in to IMEM,  it them provides it with a bunch of memory addresses that the RSP will need, such as the location of 
+the Gameboy's VRAM, and the address of the N64's Frame Buffer.  Currently it does that the really dodgy way of using a linker script to enforce a 
+shared memory address where once-off configuration can DMA'd from.    Turns out that the CPU can just write directly to DMEM, so sooner or 
+later I'll fix it to just do that.  
+
+When the emulation starts, the CPU then sets the flag to start the RSP running and tracks the PPU mode until it gets to H-Blank.  
+Any time VRAM is written to, I set a flag.  Come H-Blank, I need to make sure that D-Cache is written back to DRAM so that the RSP can DMA in 
+the most recent values in OAM, VRAM and the IO registers.  For OAM and HRAM this doesn't make much of a splash, but VRAM is quite a big chunk of 
+memory and can take time, so the flag ensures I only do the cache write-back when necessary.  
+After that, I can wait for the RSP to finish rendering the previous line by checking the semaphores at 0xA4040000, then tell it that the CPU has 
+hit H-Blank by setting a different semaphore at that address.
+
+Oh the CPU also raises/lowers another semaphore to indicate which of the two frame buffers the RSP/RDP should be writing to.
+
+**RSP**
