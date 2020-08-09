@@ -39,72 +39,49 @@ void rlca(GbState* s, u32 instruction) { // debug(s, "rlcA");
     F = (A >> 7) ? FLAG_C : 0;
     A = res;
 }
+
+#define RLC_R8(r8) \
+    F = 0;\
+    CF = r8 >> 7;\
+    r8 = (r8 << 1) | (r8 >> 7);\
+    ZF = r8 == 0
+
 void rlcA(GbState* s, u32 instruction) { // debug(s, "rlcR8");
-    CF = A >> 7;
-    A = (A << 1) | (A >> 7);
-    ZF = A == 0;
-    NF = 0;
-    HF = 0;
+    RLC_R8(A);
 }
 void rlcB(GbState* s, u32 instruction) { // debug(s, "rlcR8");
-    CF = B >> 7;
-    B = (B << 1) | (B >> 7);
-    ZF = B == 0;
-    NF = 0;
-    HF = 0;
+    RLC_R8(B);
 }
 void rlcC(GbState* s, u32 instruction) { // debug(s, "rlcR8");
-    CF = C >> 7;
-    C = (C << 1) | (C >> 7);
-    ZF = C == 0;
-    NF = 0;
-    HF = 0;
+    RLC_R8(C);
 }
 void rlcD(GbState* s, u32 instruction) { // debug(s, "rlcR8");
-    CF = D >> 7;
-    D = (D << 1) | (D >> 7);
-    ZF = D == 0;
-    NF = 0;
-    HF = 0;
+    RLC_R8(D);
 }
 void rlcE(GbState* s, u32 instruction) { // debug(s, "rlcR8");
-    CF = E >> 7;
-    E = (E << 1) | (E >> 7);
-    ZF = E == 0;
-    NF = 0;
-    HF = 0;
+    RLC_R8(E);
 }
 void rlcH(GbState* s, u32 instruction) { // debug(s, "rlcR8");
-    CF = H >> 7;
-    H = (H << 1) | (H >> 7);
-    ZF = H == 0;
-    NF = 0;
-    HF = 0;
+    RLC_R8(H);
 }
 void rlcL(GbState* s, u32 instruction) { // debug(s, "rlcR8");
-    CF = L >> 7;
-    L = (L << 1) | (L >> 7);
-    ZF = L == 0;
-    NF = 0;
-    HF = 0;
+    RLC_R8(L);
 }
 
 void rlcaHL(GbState* s, u32 instruction) { // debug(s, "rlcaHL");
+    F = 0;
     u8 val = mem(HL);
     u8 res = (val << 1) | (val >> 7);
     ZF = res == 0;
-    NF = 0;
-    HF = 0;
     CF = val >> 7;
     mmu_write(s, HL, res);
 }
 
 #define RRC_R8(r8) \
+    F = 0;\
     CF = r8 & 1;\
     r8 = (r8 >> 1) | ((r8 & 1) << 7);\
-    ZF = r8 == 0;\
-    NF = 0;\
-    HF = 0
+    ZF = r8 == 0
 
 void rrcB(GbState* s, u32 instruction) {
     RRC_R8(B);
@@ -126,11 +103,10 @@ void rrcL(GbState* s, u32 instruction) {
 }
 
 void rrcaHL(GbState* s, u32 instruction) { // debug(s, "rrcaHL");
+    F = 0;
     u8 val = mem(HL);
     u8 res = (val >> 1) | ((val & 1) << 7);
     ZF = res == 0;
-    NF = 0;
-    HF = 0;
     CF = val & 1;
     mmu_write(s, HL, res);
 }
@@ -141,11 +117,10 @@ void rrcA(GbState* s, u32 instruction) {
 
 #define RL_R8(r8) \
     u8 temp = (r8 << 1) | (CF ? 1 : 0);\
+    F = 0;\
     CF = r8 >> 7;\
     r8 = temp;\
-    ZF = r8 == 0;\
-    NF = 0;\
-    HF = 0
+    ZF = r8 == 0;
 
 void rlB(GbState* s, u32 instruction) { // debug(s, "rlR8");
     RL_R8(B);
@@ -169,9 +144,8 @@ void rlL(GbState* s, u32 instruction) { // debug(s, "rlR8");
 void rlaHL(GbState* s, u32 instruction) { // debug(s, "rlaHL");
     u8 val = mem(HL);
     u8 res = (val << 1) | (CF ? 1 : 0);
+    F = 0;
     ZF = res == 0;
-    NF = 0;
-    HF = 0;
     CF = val >> 7;
     mmu_write(s, HL, res);
 }
@@ -182,11 +156,10 @@ void rlA(GbState* s, u32 instruction) { // debug(s, "rlR8");
 
 #define RR_R8(r8) \
     u8 temp = (r8 >> 1) | (CF << 7);\
+    F = 0;\
     CF = r8 & 0x1;\
     r8 = temp;\
-    ZF = r8 == 0;\
-    NF = 0;\
-    HF = 0
+    ZF = r8 == 0
 
 void rrB(GbState* s, u32 instruction) { // debug(s, "rrR8");
     RR_R8(B);
@@ -210,9 +183,8 @@ void rrL(GbState* s, u32 instruction) { // debug(s, "rrR8");
 void rraHL(GbState* s, u32 instruction) { // debug(s, "rraHL");
     u8 val = mem(HL);
     u8 res = (val >> 1) | (CF << 7);
+    F = 0;
     ZF = res == 0;
-    NF = 0;
-    HF = 0;
     CF = val & 0x1;
     mmu_write(s, HL, res);
 }
@@ -224,11 +196,10 @@ void rrA(GbState* s, u32 instruction) { // debug(s, "rrR8");
 
 
 #define SLA_R8(r8) \
+    F = 0;\
     CF = r8 >> 7;\
     r8 = r8 << 1;\
     ZF = r8 == 0;\
-    NF = 0;\
-    HF = 0
 
 void slaB(GbState* s, u32 instruction) {
     SLA_R8(B);
@@ -251,11 +222,10 @@ void slaL(GbState* s, u32 instruction) {
 
 void slaaHL(GbState* s, u32 instruction) { // debug(s, "slaaHL");
     u8 val = mem(HL);
+    F = 0;
     CF = val >> 7;
     val = val << 1;
     ZF = val == 0;
-    NF = 0;
-    HF = 0;
     mmu_write(s, HL, val);
 }
 
@@ -264,11 +234,10 @@ void slaA(GbState* s, u32 instruction) {
 }
 
 #define SRA_R8(r8) \
+    F = 0;\
     CF = r8 & 0x1;\
     r8 = (r8 >> 1) | (r8 & (1 << 7));\
-    ZF = r8 == 0;\
-    NF = 0;\
-    HF = 0
+    ZF = r8 == 0
 
 void sraB(GbState* s, u32 instruction) { // debug(s, "sraR8");
     SRA_R8(B);
@@ -291,11 +260,10 @@ void sraL(GbState* s, u32 instruction) { // debug(s, "sraR8");
 
 void sraaHL(GbState* s, u32 instruction) { // debug(s, "sraaHL");
     u8 val = mem(HL);
+    F = 0;
     CF = val & 0x1;
     val = (val >> 1) | (val & (1<<7));
     ZF = val == 0;
-    NF = 0;
-    HF = 0;
     mmu_write(s, HL, val);
 }
 
@@ -336,56 +304,40 @@ void swapA(GbState* s, u32 instruction) { // debug(s, "swapR8");
     SWAP_R8(A);
 }
 
+#define SRL_R8(r8) \
+    F = 0;\
+    CF = r8 & 1;\
+    r8 = r8 >> 1;\
+    ZF = r8 == 0
+
 void srlA(GbState* s, u32 instruction) {
-    F = 0;
-    CF = A & 1;
-    A = A >> 1;
-    ZF = A == 0;
+    SRL_R8(A);
 }
 void srlB(GbState* s, u32 instruction) {
-    F = 0;
-    CF = B & 1;
-    B = B >> 1;
-    ZF = B == 0;
+    SRL_R8(B);
 }
 void srlC(GbState* s, u32 instruction) {
-    F = 0;
-    CF = C & 1;
-    C = C >> 1;
-    ZF = C == 0;
+    SRL_R8(C);
 }
 void srlD(GbState* s, u32 instruction) {
-    F = 0;
-    CF = D & 1;
-    D = D >> 1;
-    ZF = D == 0;
+    SRL_R8(D);
 }
 void srlE(GbState* s, u32 instruction) {
-    F = 0;
-    CF = E & 1;
-    E = E >> 1;
-    ZF = E == 0;
+    SRL_R8(E);
 }
 void srlH(GbState* s, u32 instruction) {
-    F = 0;
-    CF = H & 1;
-    H = H >> 1;
-    ZF = H == 0;
+    SRL_R8(H);
 }
 void srlL(GbState* s, u32 instruction) {
-    F = 0;
-    CF = L & 1;
-    L = L >> 1;
-    ZF = L == 0;
+    SRL_R8(L);
 }
 
 void srlaHL(GbState* s, u32 instruction) { // debug(s, "srlaHL");
+    F = 0;
     u8 val = mem(HL);
     CF = val & 0x1;
     val = val >> 1;
     ZF = val == 0;
-    NF = 0;
-    HF = 0;
     mmu_write(s, HL, val);
 }
 

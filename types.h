@@ -668,7 +668,6 @@ register union {
     } flags;
 } FF asm ("$22"); // $s7
 
-
 typedef struct player_input GbController;
 
 
