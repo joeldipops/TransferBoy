@@ -1351,18 +1351,10 @@ main:
             srl $t0, $t0, 7
             lw $a0, (INPUT + Input_FRAME_BUFFER_1)($t0)
 
-            setFrameBuffer 0, RGBA_FORMAT, COLOUR_DEPTH_16, 640, $a0
-
             # Switch to the other buffer for the next iteration.
-
-            ## Sync before loading a new texture.
-            syncPipe 8
-            execRdp 3
-            j 2f
+            setFrameBuffer 0, RGBA_FORMAT, COLOUR_DEPTH_16, 640, $a0
+            execRdp 2
         1:
-            syncPipe 0
-            execRdp 1
-        2:
 
         ## DMA the data back to DRAM so that the RDP can pick it up.
         dmaOut N64_BUFFER, $OUT_BUFFER_ADDRESS, BUFFER_SIZE
@@ -1405,8 +1397,6 @@ main:
         # but it seems it is.  Keeping this here until I figure it out.
         #textureRectangle 0x18, 1, $a0, $a1, $a2, $a3, 0, 0, 2048, 512
         #execRdp 0x18
-
-        nop
 
         # Clean-up now that we're done.
     main_continue:
