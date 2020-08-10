@@ -6,19 +6,19 @@
 #include "logger.h"
 #include "state.h"
 
-#define CF s->flags.CF
-#define HF s->flags.HF
-#define NF s->flags.NF
-#define ZF s->flags.ZF
-#define A s->reg8.A
-#define F s->reg8.F
+#define CF FF.flags.CF
+#define HF FF.flags.HF
+#define NF FF.flags.NF
+#define ZF FF.flags.ZF
+#define A rA
+#define F FF.rF
 #define B s->reg8.B
 #define C s->reg8.C
 #define D s->reg8.D
 #define E s->reg8.E
 #define H s->reg8.H
 #define L s->reg8.L
-#define AF s->reg16.AF
+#define AF (A << 8) | FF.rF
 #define BC s->reg16.BC
 #define DE s->reg16.DE
 #define HL s->reg16.HL
@@ -27,10 +27,6 @@
 #define mem(loc) (mmu_read(s, loc))
 #define IMM8  ((instruction >> 8) & 0xFF)
 #define IMM16 ((instruction >> 8) & 0xFFFF)
-#define REG8(bitpos) s->emu_cpu_state->reg8_lut[(op >> bitpos) & 7]
-#define REG16(bitpos) s->emu_cpu_state->reg16_lut[((op >> bitpos) & 3)]
-#define REG16S(bitpos) s->emu_cpu_state->reg16s_lut[((op >> bitpos) & 3)]
-#define FLAG(bitpos) ((op >> bitpos) & 3)
 
 static const u8 flagmasks[] = { FLAG_Z, FLAG_Z, FLAG_C, FLAG_C };
 
@@ -1351,9 +1347,10 @@ void popHL(GbState* s, u32 instruction) { // debug(s, "popR16");
 }
 
 void popAF(GbState* s, u32 instruction) { // debug(s, "popR16");
-    AF = mmu_pop16(s);
+    u16 res = mmu_pop16(s);
+    A = (res & 0xFF00) >> 8;
     // Bottom 4 bits of F don't exist.
-    F = F & 0xf0;
+    F = (res & 0x00F0);
 }
 
 void addAN8(GbState* s, u32 instruction) { // debug(s, "addAN8");
