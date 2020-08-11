@@ -979,9 +979,10 @@ void ldHN8(GbState* s, u32 instruction) { // debug(s, "ldR8N8");
 void ldLN8(GbState* s, u32 instruction) { // debug(s, "ldR8N8");
     LD_R8N8(L);
 }
+/*
 void ldAN8(GbState* s, u32 instruction) { // debug(s, "ldR8N8");
     LD_R8N8(A);
-}
+}*/
 
 void ldaHLN8(GbState* s, u32 instruction) { // debug(s, "ldaHLN8");
     u8 src = IMM8;

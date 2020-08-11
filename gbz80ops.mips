@@ -1,6 +1,43 @@
+
+
 # Exports
 .globl nop
+.globl ldAN8
+
+.set $A, $s5
+.set $F, $s6
+.set $PC, $s7
+
+.set noreorder
+.set noat
 
 nop:
     jr $ra
+      nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
 
+ldAN8:
+    # Set the relevant portion of $a1 in A
+    srl $A, $a1, 0x8
+    #ifdef USE_SAFE_PC
+        # increment PC, but as if it was 16bits
+        andi $v0, $PC, 0xFFFF
+        jr $ra
+          addiu $PC, $v0, 1
+    #else
+        jr $ra
+          addiu $PC, $PC, 1
+        nop
+    #endif
+    nop
+    nop
+    nop
+    nop
+
+.set at
+.set reorder

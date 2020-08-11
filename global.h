@@ -8,6 +8,7 @@
  * We can reference this in our linker script if we run it through the cpp pre-compiler.
  */
 #define RSP_INTERFACE_ADDRESS 0x80060000
+//#define USE_SAFE_PC 1
 
 #define GB_FREQ 4194304 /* Hz */
 #define GB_LCD_WIDTH  160 /* px */
