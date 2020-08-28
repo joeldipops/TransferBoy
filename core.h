@@ -81,4 +81,16 @@ AlignedPointer malloc_aligned(size_t size, byte alignment);
  * @param ptr Holds pointer to memory to be freed.
  */
 void free_aligned(AlignedPointer ptr);
+
+typedef enum {
+    PROFILE_JUNK,           // 0
+    PROFILE_C_SCAN,         // 1
+    PROFILE_CPU,            // 2
+    PROFILE_LCD,            // 3
+    PROFILE_MMU,            // 4
+    PROFILE_TIMERS,         // 5
+    PROFILE_CYCLE_ADJUST,   // 6
+    PROFILE_DEVICE,         // 7
+    PROFILE_DRAW            // 8
+} ProfileSection;
 #endif

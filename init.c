@@ -10,6 +10,7 @@
 #include "text.h"
 #include "hwdefs.h"
 #include "progressBar.h"
+#include "debug.h"
 #include <libdragon.h>
 
 
@@ -125,6 +126,7 @@ void initLogic(const byte playerNumber) {
         }
 
         preparePlayMode(playerNumber);
+        INIT_PROFILE;
     }
 }
 

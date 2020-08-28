@@ -67,6 +67,7 @@ LD_OFILES += $(CURDIR)/obj/cpu.o
 LD_OFILES += $(CURDIR)/obj/emu.o
 LD_OFILES += $(CURDIR)/obj/lcd.o
 LD_OFILES += $(CURDIR)/obj/mmu.o
+LD_OFILES += $(CURDIR)/obj/debug.o
 LD_OFILES += $(CURDIR)/obj/c_gbz80ops.o
 LD_OFILES += $(CURDIR)/obj/s_gbz80ops.o
 LD_OFILES += $(CURDIR)/obj/gbc_state.o
@@ -79,6 +80,7 @@ $(PROG_NAME).dsm: $(PROG_NAME).elf
 	mips-linux-gnu-objdump $(PROG_NAME).elf -m mips -D > $(PROG_NAME).dsm
 
 $(PROG_NAME).elf : $(CURDIR)/rsp/ppuDMG.o $(CURDIR)/rsp/ppuDMGData.o $(PROG_NAME).o $(LD_FILE)
+	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/debug.o $(CURDIR)/debug.c
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/ppu.o $(CURDIR)/ppu.c
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/progressBar.o $(CURDIR)/progressBar.c
 	$(CC) $(CFLAGS) -c -o $(CURDIR)/obj/fps.o $(CURDIR)/fps.c
