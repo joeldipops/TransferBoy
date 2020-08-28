@@ -12,6 +12,7 @@
 #include "hwdefs.h"
 #include "rsp.h"
 #include "fps.h"
+#include "debug.h"
 #include <time.h>
 #include <string.h>
 #include <stdlib.h>
@@ -75,16 +76,18 @@ static void generateState() {
  * todo - audio.
  */
 static void mainLoop() {
-    bool allQuit = false;
     rootState.RequiresRepaint = true;
     rootState.RequiresControllerRead = true;
     uLong iterations = 0;
 
+    Mode modes[MAX_PLAYERS];
+    for(byte i = 0; i < MAX_PLAYERS; i++) {
+        modes[i] = 0;
+    }
+
     while(!(rootState.Frame = display_lock())); 
 
-    while (!allQuit) {
-        allQuit = true;
-
+    while (true) {
         // Read controller about once per frame.
         if (rootState.RequiresControllerRead || iterations > GB_LCD_FRAME_CLKS / 2) {
             controller_scan();
@@ -104,25 +107,13 @@ static void mainLoop() {
             iterations++;
         }
 
-        Mode modes[MAX_PLAYERS];
-        for(byte i = 0; i < MAX_PLAYERS; i++) {
-            modes[i] = 0;
-        }
+        UPDATE_PROFILE(PROFILE_C_SCAN);
 
-        // Cache this as it may change in the below calls.
-        byte playerCount = rootState.PlayerCount;
-
-        for (byte i = 0; i < playerCount; i++) {
-            if (allQuit && rootState.Players[i].ActiveMode != Quit) {
-                allQuit = false;
-            }
-
+        #if MAX_PLAYERS >= 2
+        for (byte i = 0; i < rootState.PlayerCount; i++) {
             modes[i] = rootState.Players[i].ActiveMode;
 
             switch(modes[i]) {
-                case Quit:
-                    allQuit &= true;
-                    break;
                 case Init:
                     initLogic(i);
                     break;
@@ -130,7 +121,7 @@ static void mainLoop() {
                     playLogic(i);
                     break;
                 case Menu:
-                menuLogic(i);
+                    menuLogic(i);
                     break;
                 case Options:
                     optionsLogic(i);
@@ -164,6 +155,58 @@ static void mainLoop() {
             while(!(rootState.Frame = display_lock()));
             setFrameBufferId(rootState.Frame);
         }
+        #else
+            modes[0] = rootState.Players[0].ActiveMode;
+
+            switch(modes[0]) {
+                case Init:
+                    initLogic(0);
+                    break;
+                case Play:
+                    playLogic(0);
+                    break;
+                case Menu:
+                    menuLogic(0);
+                    break;
+                case Options:
+                    optionsLogic(0);
+                    break;
+                default: break;
+            }
+
+        if (rootState.RequiresRepaint) {
+            rootState.RequiresRepaint = false;
+
+                switch(modes[0]) {
+                    case Init:
+                        initDraw(0);
+                        break;
+                    case Play:
+                        playDraw(0);
+                        break;
+                    case Menu:
+                        menuDraw(0);
+                        break;
+                    case Options:
+                        optionsDraw(0);
+                        break;
+                    default: break;
+            }
+
+            display_show(rootState.Frame);
+            while(!(rootState.Frame = display_lock()));
+            setFrameBufferId(rootState.Frame);
+        }
+
+        UPDATE_PROFILE(PROFILE_DRAW);
+
+        #ifdef IS_PROFILING
+        if (rootState.Players[0].Meta.FrameCount >= 50) {
+            displayProfile();
+        }
+        #endif
+
+        #endif
     }
 }
 

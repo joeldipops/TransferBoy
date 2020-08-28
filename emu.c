@@ -13,7 +13,7 @@
 #include "state.h"
 #include "ppu.h"
 #include "config.h"
-
+#include "debug.h"
 /**
  * Initialize the emulator state of the gameboy. This state belongs to the
  * emulator, not the state of the emulated hardware.
@@ -24,16 +24,22 @@ void emu_init(GbState *s) {
 
 void emu_step(PlayerState* state) {
     GbState* s = &state->EmulationState;
+    UPDATE_PROFILE(PROFILE_JUNK);
     cpu_step(s);
+    UPDATE_PROFILE(PROFILE_CPU);
     lcd_step(state);
+    UPDATE_PROFILE(PROFILE_LCD);
     mmu_step(s);
+    UPDATE_PROFILE(PROFILE_MMU);
     cpu_timers_step(s);
+    UPDATE_PROFILE(PROFILE_TIMERS);
 
     s->time_cycles += s->last_op_cycles;
     if (s->time_cycles >= GB_FREQ) {
         s->time_cycles %= GB_FREQ;
         s->time_seconds++;
     }
+    UPDATE_PROFILE(PROFILE_CYCLE_ADJUST);
 }
 
 void emu_process_inputs(GbState *s, struct player_input *input) {

@@ -2,13 +2,11 @@
 #define STATE_INCLUDED
 
 #include "core.h"
+#include "config.h"
 #include "sgbDefs.h"
 #include "controller.h"
 #include "tpakio.h"
 #include "types.h"
-
-// Abysmal performance aside, 2 player mode is fundamentally broken until the RSP knows how to handle it.
-#define MAX_PLAYERS 1
 
 typedef struct {
     uLong FrameCount;

@@ -55,6 +55,7 @@ LD_OFILES += $(CURDIR)/obj/cpu.o
 LD_OFILES += $(CURDIR)/obj/emu.o
 LD_OFILES += $(CURDIR)/obj/lcd.o
 LD_OFILES += $(CURDIR)/obj/mmu.o
+LD_OFILES += $(CURDIR)/obj/debug.o
 LD_OFILES += $(CURDIR)/obj/c_gbz80ops.o
 LD_OFILES += $(CURDIR)/obj/s_gbz80ops.o
 LD_OFILES += $(CURDIR)/obj/gbc_state.o

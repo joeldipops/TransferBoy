@@ -19,6 +19,7 @@
 #include "logger.h"
 #include "fps.h"
 #include "ppu.h"
+#include "debug.h"
 
 #include "rsp.h"
 
@@ -154,6 +155,7 @@ void playLogic(const byte playerNumber) {
     PlayerState* playerState = &rootState.Players[playerNumber];
     GbState* s = &playerState->EmulationState;
 
+    #if MAX_PLAYERS >= 2
     if (rootState.PlayerCount == 2 && isRequestingTransfer()) {
         GbState* states[2] = {
             &rootState.Players[0].EmulationState,
@@ -161,6 +163,7 @@ void playLogic(const byte playerNumber) {
         };
         exchangeLinkData(states);
     }
+    #endif
 
     emu_step(playerState);
 
@@ -243,6 +246,7 @@ void playLogic(const byte playerNumber) {
         rootState.RequiresRepaint = true;
         rootState.RequiresControllerRead = true;
     }
+    UPDATE_PROFILE(PROFILE_DEVICE);
 }
 
 /**
