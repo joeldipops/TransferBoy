@@ -33,13 +33,6 @@ void emu_step(PlayerState* state) {
     UPDATE_PROFILE(PROFILE_MMU);
     cpu_timers_step(s);
     UPDATE_PROFILE(PROFILE_TIMERS);
-
-    s->time_cycles += s->last_op_cycles;
-    if (s->time_cycles >= GB_FREQ) {
-        s->time_cycles %= GB_FREQ;
-        s->time_seconds++;
-    }
-    UPDATE_PROFILE(PROFILE_CYCLE_ADJUST);
 }
 
 void emu_process_inputs(GbState *s, struct player_input *input) {
