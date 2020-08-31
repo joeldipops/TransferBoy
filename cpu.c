@@ -197,23 +197,37 @@ static void cpu_handle_interrupts(GbState *s) {
 }
 
 void cpu_timers_step(GbState *s) {
-    u32 freq = s->IsInDoubleSpeedMode ? GB_FREQ : 2 * GB_FREQ;
-    u32 div_cycles_per_tick = freq / GB_DIV_FREQ;
     s->io_timer_DIV_cycles += s->last_op_cycles;
-    if (s->io_timer_DIV_cycles >= div_cycles_per_tick) {
-        s->io_timer_DIV_cycles %= div_cycles_per_tick;
-        s->TimerClock++;
+
+    u32 timer_cycles_per_tick;
+
+    if (s->IsInDoubleSpeedMode) {
+        u32 freq = 2 * GB_FREQ;
+        if (s->io_timer_DIV_cycles >= GB_DIV_DOUBLE_CYCLES_PER_TICK) {
+            s->io_timer_DIV_cycles = s->io_timer_DIV_cycles & GB_DIV_DOUBLE_CYCLES_PER_TICK;
+            s->TimerClock++;
+        }
+    } else {
+        u32 freq = GB_FREQ;
+        if (s->io_timer_DIV_cycles >= GB_DIV_CYCLES_PER_TICK) {
+            s->io_timer_DIV_cycles = s->io_timer_DIV_cycles & GB_DIV_CYCLES_PER_TICK;
+            s->TimerClock++;
+        }
     }
 
     if (s->TimerControl & (1<<2)) { /* Timer enable */
         s->io_timer_TIMA_cycles += s->last_op_cycles;
-        u32 timer_hz = GB_TIMA_FREQS[s->TimerControl & 0x3];
-        u32 timer_cycles_per_tick = freq / timer_hz;
+
+        u32 timer_cycles_per_tick = s->IsInDoubleSpeedMode
+            ? GB_TIMA_DOUBLE_CYCLES_PER_TICK[s->TimerControl & 0x3]
+            : GB_TIMA_CYCLES_PER_TICK[s->TimerControl & 0x3]
+        ;
+
         if (s->io_timer_TIMA_cycles >= timer_cycles_per_tick) {
-            s->io_timer_TIMA_cycles %= timer_cycles_per_tick;
+            s->io_timer_TIMA_cycles = s->io_timer_TIMA_cycles & timer_cycles_per_tick;
             s->TimerCounter++;
             if (s->TimerCounter == 0) {
-                s->TimerCounter = s->TimerCounter;
+                s->TimerCounter = s->TimerResetValue;
                 s->InterruptFlags |= 1 << 2;
             }
         }

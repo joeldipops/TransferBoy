@@ -598,8 +598,6 @@ typedef struct gb_state {
     // the CPU executing the instruction, but the MMU could
     // take longer in the case of some DMA ops.
     u32 last_op_cycles;
-    u32 time_cycles;
-    u32 time_seconds;
 
     bool in_bios:1; // At start BIOS is temporarily mapped at 0000-0100.
     bool halt_for_interrupts:1; // Don't run instructions until interrupt.
