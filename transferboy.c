@@ -194,9 +194,12 @@ static void mainLoop() {
             }
 
             display_show(rootState.Frame);
-            while(!(rootState.Frame = display_lock()));
-            setFrameBufferId(rootState.Frame);
+            #ifdef IS_DOUBLE_BUFFERED
+                while(!(rootState.Frame = display_lock()));
+                setFrameBufferId(rootState.Frame);
+            #endif
         }
+
 
         UPDATE_PROFILE(PROFILE_DRAW);
 

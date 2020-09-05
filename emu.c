@@ -25,6 +25,8 @@ void emu_init(GbState *s) {
 void emu_step(PlayerState* state) {
     GbState* s = &state->EmulationState;
     UPDATE_PROFILE(PROFILE_JUNK);
+    cpu_handle_interrupts(s);
+    UPDATE_PROFILE(PROFILE_INTERRUPTS);
     cpu_step(s);
     UPDATE_PROFILE(PROFILE_CPU);
     lcd_step(state);

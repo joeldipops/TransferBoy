@@ -19,5 +19,9 @@ static const bool HIDE_DISABLED_OPTIONS = true;
 //#define IS_SGB_ENABLED 1
 //#define IS_PROFILING 1
 
+// Current implementation of double buffering is slow as fuck, so leaving it out for now while 
+// I track down other performance bottlenecks.
+//#define IS_DOUBLE_BUFFERED
+
 
 #endif

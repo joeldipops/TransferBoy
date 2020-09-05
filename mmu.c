@@ -153,7 +153,7 @@ static byte readJoypadIo(GbState* s, byte offset) {
         rv =  (s->JoypadIo & 0xf0) | (s->io_buttons_buttons & 0x0f);
     else
         rv = (s->JoypadIo & 0xf0) | (s->io_buttons_buttons & 0x0f);
-    return rv;    
+    return rv;
 }
 
 // FF4F GbcVRAMBank

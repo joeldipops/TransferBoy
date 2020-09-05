@@ -89,7 +89,7 @@ typedef enum {
     PROFILE_LCD,            // 3
     PROFILE_MMU,            // 4
     PROFILE_TIMERS,         // 5
-    PROFILE_CYCLE_ADJUST,   // 6
+    PROFILE_INTERRUPTS,     // 6
     PROFILE_DEVICE,         // 7
     PROFILE_DRAW            // 8
 } ProfileSection;

@@ -174,7 +174,7 @@ void cpu_reset_state(GbState *s) {
     s->isSRAMDisabled = true;
 }
 
-static void cpu_handle_interrupts(GbState *s) {
+void cpu_handle_interrupts(GbState *s) {
     u8 interrupts = s->InterruptSwitch & s->InterruptFlags;
 
     if (s->interrupts_master_enabled) {
@@ -215,7 +215,7 @@ void cpu_timers_step(GbState *s) {
         }
     }
 
-    if (s->TimerControl & (1<<2)) { /* Timer enable */
+    if (s->TimerControl & (1<<2)) { // Timer enable
         s->io_timer_TIMA_cycles += s->last_op_cycles;
 
         u32 timer_cycles_per_tick = s->IsInDoubleSpeedMode
@@ -236,8 +236,6 @@ void cpu_timers_step(GbState *s) {
 
 void cpu_step(GbState *s) {
     u8 op;
-
-    cpu_handle_interrupts(s);
 
     op = mmu_read(s, s->pc);
 
