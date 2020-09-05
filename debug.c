@@ -2,7 +2,39 @@
 #include <string.h>
 #include "debug.h"
 #include "state.h"
+#include "logger.h"
 #include <libdragon.h>
+
+#ifdef IS_DEBUGGING
+
+/**
+ * If in debugging mode, print gb registers and message then wait for input.
+ */
+void debug(GbState *s, string message) {
+    if (IsDebugging) {
+        printRegisters(s);
+        bool isPaused = true;
+        while(isPaused) {
+            controller_scan();
+            N64ControllerState input = get_keys_pressed();
+            if (!input.c[0].start) {
+                isPaused = false;
+            }
+        }
+
+        logAndPauseFrame(0, message);
+        isPaused = true;
+        while(isPaused) {
+            controller_scan();
+            N64ControllerState input = get_keys_pressed();
+            if (!input.c[0].start) {
+                isPaused = false;
+            }
+        }
+    }
+}
+
+#endif
 
 #ifdef IS_PROFILING
 

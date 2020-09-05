@@ -2,6 +2,12 @@
 #define DEBUG_INCLUDED
 
 #include "config.h"
+#include "state.h"
+
+/**
+ * Print current instruction for debugging.
+ */
+void debug(GbState *s, string pnemonic);
 
 #ifdef IS_PROFILING
 
