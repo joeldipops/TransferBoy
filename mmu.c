@@ -151,6 +151,42 @@ static byte readHram(GbState* s, byte offset) {
     return s->HRAM[offset];
 }
 
+static byte readSC(GbState* s, byte offset) {
+    return s->HRAM[offset] | 0x7E;
+}
+
+static byte readTAC(GbState* s, byte offset) {
+    return s->HRAM[offset] | 0xF8;
+}
+
+static byte readIF(GbState* s, byte offset) {
+    return s->HRAM[offset] | 0xE0;
+}
+
+static byte readSTAT(GbState* s, byte offset) {
+    return s->HRAM[offset] | 0x80;
+}
+
+static byte readNR10(GbState* s, byte offset) {
+    return s->HRAM[offset] | 0x80;
+}
+
+static byte readNR30(GbState* s, byte offset) {
+    return s->HRAM[offset] | 0x7F;
+}
+
+static byte readNR32(GbState* s, byte offset) {
+    return s->HRAM[offset] | 0x9F;
+}
+
+static byte readNR41(GbState* s, byte offset) {
+    return s->HRAM[offset] | 0xC0;
+}
+
+static byte readNR44(GbState* s, byte offset) {
+    return s->HRAM[offset] | 0x3F;
+}
+
 static byte readJoypadIo(GbState* s, byte offset) {
     // FF00: Joypad
     u8 rv = 0;
@@ -160,17 +196,22 @@ static byte readJoypadIo(GbState* s, byte offset) {
         rv =  (s->JoypadIo & 0xf0) | (s->io_buttons_buttons & 0x0f);
     else
         rv = (s->JoypadIo & 0xf0) | (s->io_buttons_buttons & 0x0f);
-    return rv;
+    return rv | 0xC0;
 }
 
 // FF4F GbcVRAMBank
 static byte readGbcVRAMBank(GbState* s, byte offset) {
-    return s->GbcVRAMBank & 1;
+    // TODO - install instead of test.
+    if (s->Cartridge.IsGbcSupported) {
+        return s->GbcVRAMBank & 1;
+    } else {
+        return 0xFF;
+    }
 }
 
 // FF69 Background Palette data
 static byte readBackgroundPaletteData(GbState* s, byte offset) {
-    return s->io_lcd_BGPD[s->GbcBackgroundPaletteIndexRegister & 0x3f];    
+    return s->io_lcd_BGPD[s->GbcBackgroundPaletteIndexRegister & 0x3f];
 }
 
 // FF6B Sprite Palette data
@@ -190,6 +231,10 @@ static void writeNone(GbState* s, u16 location, byte value) {
  * When the result of a read operation is undefined.
  */
 static byte readNone(GbState* s, u16 location) {
+    return 0xFF;
+}
+
+static byte readNoneH(GbState* s, byte offset) {
     return 0xFF;
 }
 
@@ -216,11 +261,11 @@ static void mbc1writeRom01(GbState* s, u16 location, byte value) {
     value &= 0xF;
     if (value == 0) {
         s->SRAM = (byte*) disabledRAMPage;
-        s->isSRAMDisabled = true;        
+        s->isSRAMDisabled = true;
     } else if (value == 0x0A) {
         s->isSRAMDisabled = false;
         if (s->RomRamSelect == SRAM_SELECT) {
-            s->SRAM = s->Cartridge.Ram.Data + s->SRAMBankNumber * SRAM_BANK_SIZE;               
+            s->SRAM = s->Cartridge.Ram.Data + s->SRAMBankNumber * SRAM_BANK_SIZE;
         } else {
             s->SRAM = s->Cartridge.Ram.Data;
         }
@@ -259,8 +304,8 @@ static void mbc1writeRom23(GbState* s, u16 location, byte value) {
     
     byte bank = getMbc1RomBank(value, s->RomBankUpper, s->Cartridge.RomBankCount);
 
-    s->RomBankLower = bank & 0x1F;    
-    s->ROMX = s->Cartridge.Rom.Data + (bank * ROM_BANK_SIZE);    
+    s->RomBankLower = bank & 0x1F;
+    s->ROMX = s->Cartridge.Rom.Data + (bank * ROM_BANK_SIZE);
 }
 
 /**
@@ -333,11 +378,11 @@ static void mbc1writeRom45(GbState* s, u16 location, byte value) {
         byte bank = getMbc1RomBank(s->RomBankLower, value, s->Cartridge.RomBankCount);
 
         s->RomBankUpper = bank >> 5;
-        s->ROMX = s->Cartridge.Rom.Data + (bank * ROM_BANK_SIZE);                
+        s->ROMX = s->Cartridge.Rom.Data + (bank * ROM_BANK_SIZE);
     }
 
     if (s->Cartridge.RamBankCount > 1) {
-        s->SRAMBankNumber = value;    
+        s->SRAMBankNumber = value;
     }
 
     if (s->RomRamSelect == ROM_SELECT) {
@@ -353,7 +398,6 @@ static void mbc1writeRom45(GbState* s, u16 location, byte value) {
 
             s->ROM0 = s->Cartridge.Rom.Data + (bank0) * ROM_BANK_SIZE;            
         }
-
 
         // Swap in new RAM bank.
         if (!s->isSRAMDisabled) {
@@ -385,7 +429,7 @@ static void mbc5writeRom45(GbState* s, u16 location, byte value) {
 
     // Swap in new RAM bank.
     if (!s->isSRAMDisabled) {
-        s->SRAM = s->Cartridge.Ram.Data + s->SRAMBankNumber * SRAM_BANK_SIZE;    
+        s->SRAM = s->Cartridge.Ram.Data + s->SRAMBankNumber * SRAM_BANK_SIZE;
     }   
 }
 
@@ -420,7 +464,7 @@ static void mbc1writeRom67(GbState* s, u16 location, byte value) {
         s->ROM0 = s->Cartridge.Rom.Data;
     } else {
         if (!s->isSRAMDisabled) {
-            s->SRAM = s->Cartridge.Ram.Data + s->SRAMBankNumber * SRAM_BANK_SIZE;    
+            s->SRAM = s->Cartridge.Ram.Data + s->SRAMBankNumber * SRAM_BANK_SIZE;
         }
     }
 }
@@ -475,7 +519,7 @@ static void hasRTCwriteSRAM(GbState* s, u16 location, byte value) {
         s->SRAM[location - 0xA000] = value;
     }
 
-    s->isSRAMDirty = 1;        
+    s->isSRAMDirty = 1;
 }
 
 /**
@@ -485,7 +529,7 @@ static void writeSRAM(GbState* s, u16 location, byte value) {
     // Could potentially point SRAM to some junk address when sram is disabled
     // if this check has any perf impact.
     s->SRAM[location - 0xA000] = value;
-    s->isSRAMDirty = 1;        
+    s->isSRAMDirty = 1;
 }
 
 /**
@@ -499,7 +543,7 @@ static void writeWRAM0(GbState* s, u16 location, byte value) {
  * 0xD000 - 0xDFFF: Switchable RAM
  */
 static void writeWRAMX(GbState* s, u16 location, byte value) {
-    s->WRAMX[location - 0xd000] = value; 
+    s->WRAMX[location - 0xd000] = value;
 }
 
 /**
@@ -665,14 +709,14 @@ static mmuWriteHramOperation mmuWriteHramTable[] = {
 typedef byte (*mmuReadHramOperation)(GbState*, byte);
 static mmuReadHramOperation mmuReadHramTable[] = {
 //        0         1         2         3         4         5         6         7         8         9         A         B         C         D         E         F       
-/*   0 */ readJoypadIo, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, 
-/*   1 */ readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, 
-/*   2 */ readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, 
+/*   0 */ readJoypadIo, readHram,readSC,readNoneH, readHram, readHram, readHram, readTAC, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readIF, 
+/*   1 */ readNR10, readHram, readHram, readHram, readHram, readNoneH, readHram, readHram, readHram, readHram, readNR30, readHram, readNR32, readHram, readHram, readNoneH, 
+/*   2 */ readNR41, readHram, readHram, readNR44, readHram, readHram, readHram, readNoneH, readNoneH, readNoneH, readHram, readHram, readHram, readHram, readHram, readHram, 
 /*   3 */ readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, 
-/*   4 */ readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readGbcVRAMBank, 
-/*   5 */ readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, 
-/*   6 */ readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readBackgroundPaletteData, readHram, readSpritePaletteData, readHram, readHram, readHram, readHram, 
-/*   7 */ readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, 
+/*   4 */ readHram, readSTAT, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readNoneH, readNoneH, readNoneH, readGbcVRAMBank, 
+/*   5 */ readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, 
+/*   6 */ readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readBackgroundPaletteData, readNoneH, readSpritePaletteData, readNoneH, readNoneH, readNoneH, readNoneH, 
+/*   7 */ readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, 
 /*   8 */ readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, 
 /*   9 */ readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, 
 /*   A */ readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, 
