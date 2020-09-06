@@ -4,10 +4,12 @@
 #include "config.h"
 #include "state.h"
 
+void startDebugging();
+
 /**
  * Print current instruction for debugging.
  */
-void debug(GbState *s, string pnemonic);
+void debug(GbState *s, string message);
 
 #ifdef IS_PROFILING
 

@@ -611,8 +611,11 @@ typedef struct gb_state {
     u8 io_lcd_BGPD[0x40]; // Background palettes (color, CGB)
     u8 io_lcd_OBPD[0x40]; // Sprite/object palettes for CGB.
 
-    u32 io_timer_DIV_cycles;
-    u32 io_timer_TIMA_cycles;
+    u16 InternalClock;
+
+    // Not actually a thing in a GB, it's actually a complicated algorithm based on bits 3 through 9 of InternalClock
+    u16 TIMAClock;
+    bool IsTimerPending;
 
     u8 io_buttons_dirs;
     u8 io_buttons_buttons;

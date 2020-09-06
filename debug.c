@@ -5,6 +5,10 @@
 #include "logger.h"
 #include <libdragon.h>
 
+void startDebugging() {
+    IsDebugging = true;
+}
+
 #ifdef IS_DEBUGGING
 
 /**

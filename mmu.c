@@ -100,6 +100,13 @@ static void writeGbcVRAMBank(GbState* s, byte offset, byte value) {
     s->VRAM = s->VRAMBanks + (s->GbcVRAMBank * VRAM_BANK_SIZE); 
 }
 
+/**
+ * Whenever DIV register is written to, it resets.
+ */
+static void writeDiv(GbState* s, byte offset, byte value) {
+    s->TimerClock = 0;
+}
+
 static void writeBiosSwitch(GbState* s, byte offset, byte value) {
     s->in_bios = 0;
     // Blow away the bios.
@@ -637,7 +644,7 @@ void mmu_push16(GbState *s, u16 value) {
 typedef void (*mmuWriteHramOperation)(GbState*, byte, byte);
 static mmuWriteHramOperation mmuWriteHramTable[] = {
 //        0         1         2         3         4         5         6         7         8         9         A         B         C         D         E         F   
-/*   0 */ writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,
+/*   0 */ writeHram,writeHram,writeHram,writeHram,writeDiv,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,
 /*   1 */ writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,
 /*   2 */ writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeAudioChannelSwitch,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,
 /*   3 */ writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,

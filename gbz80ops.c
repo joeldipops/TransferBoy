@@ -662,10 +662,10 @@ void rrA(GbState* s, byte op) { DEBUG("rrA");
     NF = 0;
     HF = 0;
     CF = A & 0x1;
-    A = res;    
+    A = res;
 }
 void halt(GbState* s, byte op){
-    s->halt_for_interrupts = 1;    
+    s->halt_for_interrupts = 1;
 }
 void stop(GbState* s, byte op) { DEBUG("stop");
     // For GBC games, stop instruction also handles the speed switch.
@@ -748,6 +748,4 @@ void ret(GbState* s, byte op) { DEBUG("ret");
 /**
  * An undefined op code should cause the cpu to hang.
  */
-void undefined(GbState* s, byte op) { DEBUG("undefined");
-    logAndPauseFrame(0, "UNDEFINED");
-}
+void undefined(GbState* s, byte op) { DEBUG("undefined"); }

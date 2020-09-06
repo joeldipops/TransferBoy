@@ -45,6 +45,7 @@ $(PROG_NAME)$(ROM_EXTENSION): $(PROG_NAME).elf $(PROG_NAME).dfs
 	$(CHKSUM64PATH) $(PROG_NAME)$(ROM_EXTENSION)
 
 LD_OFILES =  $(CURDIR)/obj/core.o
+LD_OFILES += $(CURDIR)/obj/debug.o
 LD_OFILES += $(CURDIR)/obj/ppu.o
 LD_OFILES +=  $(CURDIR)/obj/progressBar.o
 LD_OFILES += $(CURDIR)/obj/fps.o
@@ -67,7 +68,6 @@ LD_OFILES += $(CURDIR)/obj/cpu.o
 LD_OFILES += $(CURDIR)/obj/emu.o
 LD_OFILES += $(CURDIR)/obj/lcd.o
 LD_OFILES += $(CURDIR)/obj/mmu.o
-LD_OFILES += $(CURDIR)/obj/debug.o
 LD_OFILES += $(CURDIR)/obj/c_gbz80ops.o
 LD_OFILES += $(CURDIR)/obj/s_gbz80ops.o
 LD_OFILES += $(CURDIR)/obj/gbc_state.o
