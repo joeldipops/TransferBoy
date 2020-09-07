@@ -19,7 +19,7 @@ static const bool HIDE_DISABLED_OPTIONS = true;
 //#define IS_PROFILING 1
 
 // Compile with debug features.
-#define IS_DEBUGGING 1
+//#define IS_DEBUGGING 1
 // Is currently in debug mode.
 static bool IsDebugging = false;
 

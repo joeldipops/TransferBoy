@@ -201,6 +201,8 @@ void cpu_handle_interrupts(GbState *s) {
 }
 
 void cpu_timers_step(GbState *s) {
+    // I /think/ that you're not supposed to trigger the timer interrupt until the next cycle after it's detected.
+    // But I'm not certain.  So this code may be better moved to where IsTimerPending = true instead.  Would be nice to save a check each cycle...
     if (s->IsTimerPending) {
         s->TimerCounter = s->TimerResetValue;
         s->InterruptFlags |= 1 << 2;
