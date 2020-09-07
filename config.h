@@ -3,7 +3,6 @@
 #include "core.h"
 
 
-static bool IS_DEBUGGING = true;
 static const bool VALIDATE_CHECKSUMS = false;
 // If this is true, carts above a certain size cannot be loaded.  Should only be false for debugging purposes.
 static const bool RESERVE_WORKING_MEMORY = true;
@@ -18,6 +17,15 @@ static const bool HIDE_DISABLED_OPTIONS = true;
 //#define IS_AUDIO_ENABLED 1
 //#define IS_SGB_ENABLED 1
 //#define IS_PROFILING 1
+
+// Compile with debug features.
+//#define IS_DEBUGGING 1
+// Is currently in debug mode.
+static bool IsDebugging = false;
+
+// Current implementation of double buffering is slow as fuck, so leaving it out for now while 
+// I track down other performance bottlenecks.
+//#define IS_DOUBLE_BUFFERED
 
 
 #endif

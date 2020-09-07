@@ -12,29 +12,6 @@
 const byte VERTICAL_MARGIN = 30;
 const byte HORIZONTAL_MARGIN = 30;
 
-void debug(GbState *s, string pnemonic) {
-    if (IS_DEBUGGING) {
-        printRegisters(s);
-        bool isPaused = true;
-        while(isPaused) {
-            controller_scan();
-            N64ControllerState input = get_keys_pressed();
-            if (!input.c[0].start) {
-                isPaused = false;
-            }
-        }
-        logAndPauseFrame(0, pnemonic);
-        isPaused = true;
-        while(isPaused) {
-            controller_scan();
-            N64ControllerState input = get_keys_pressed();
-            if (!input.c[0].start) {
-                isPaused = false;
-            }
-        }
-    }
-}
-
 /**
  * Prints the pre-sprintf'd text to the display.
  * @private

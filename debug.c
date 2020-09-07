@@ -2,7 +2,36 @@
 #include <string.h>
 #include "debug.h"
 #include "state.h"
+#include "logger.h"
 #include <libdragon.h>
+
+void startDebugging() {
+    IsDebugging = true;
+}
+
+void stopDebugging() {
+    IsDebugging = false;
+}
+
+#ifdef IS_DEBUGGING
+
+static long offset = 0;
+
+// This is SRAM, which is only 0x8000 bytes. I know I can write to the entire cart-space, but I don't know if CEN64 can give me the related log file.
+#define LOGFILE = 0xA8000000;
+
+/**
+ * If in debugging mode, print gb registers and message then wait for input.
+ */
+void debug(GbState *s, string message) {
+    if (IsDebugging) {
+        u32 length = strlen(message);
+        dma_write(message, 0xA8000000 + offset, length);
+        offset += length;
+    }
+}
+
+#endif
 
 #ifdef IS_PROFILING
 

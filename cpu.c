@@ -15,25 +15,26 @@
 #include "cpu.h"
 #include "mmu.h"
 #include "hwdefs.h"
+#include "debug.h"
 
 static int cycles_per_instruction[] = {
   /* 0   1   2   3   4   5   6   7   8   9   a   b   c   d   e   f       */
      4, 12,  8,  8,  4,  4,  8,  4, 20,  8,  8,  8,  4,  4,  8,  4, /* 0 */
-     4, 12,  8,  8,  4,  4,  8,  4, 12,  8,  8,  8,  4,  4,  8,  4, /* 1 */
+     0, 12,  8,  8,  4,  4,  8,  4, 12,  8,  8,  8,  4,  4,  8,  4, /* 1 */
      8, 12,  8,  8,  4,  4,  8,  4,  8,  8,  8,  8,  4,  4,  8,  4, /* 2 */
      8, 12,  8,  8, 12, 12, 12,  4,  8,  8,  8,  8,  4,  4,  8,  4, /* 3 */
      4,  4,  4,  4,  4,  4,  8,  4,  4,  4,  4,  4,  4,  4,  8,  4, /* 4 */
      4,  4,  4,  4,  4,  4,  8,  4,  4,  4,  4,  4,  4,  4,  8,  4, /* 5 */
      4,  4,  4,  4,  4,  4,  8,  4,  4,  4,  4,  4,  4,  4,  8,  4, /* 6 */
-     8,  8,  8,  8,  8,  8,  4,  8,  4,  4,  4,  4,  4,  4,  8,  4, /* 7 */
+     8,  8,  8,  8,  8,  8,  0,  8,  4,  4,  4,  4,  4,  4,  8,  4, /* 7 */
      4,  4,  4,  4,  4,  4,  8,  4,  4,  4,  4,  4,  4,  4,  8,  4, /* 8 */
      4,  4,  4,  4,  4,  4,  8,  4,  4,  4,  4,  4,  4,  4,  8,  4, /* 9 */
      4,  4,  4,  4,  4,  4,  8,  4,  4,  4,  4,  4,  4,  4,  8,  4, /* a */
      4,  4,  4,  4,  4,  4,  8,  4,  4,  4,  4,  4,  8,  4,  8,  4, /* b */
      8, 12, 12, 16, 12, 16,  8, 16,  8, 16, 12,  0, 12, 24,  8, 16, /* c */
-     8, 12, 12,  4, 12, 16,  8, 16,  8, 16, 12,  4, 12,  4,  8, 16, /* d */
-    12, 12,  8,  4,  4, 16,  8, 16, 16,  4, 16,  4,  4,  4,  8, 16, /* e */
-    12, 12,  8,  4,  4, 16,  8, 16, 12,  8, 16,  4,  0,  4,  8, 16, /* f */
+     8, 12, 12,  0, 12, 16,  8, 16,  8, 16, 12,  0, 12,  0,  8, 16, /* d */
+    12, 12,  8,  0,  0, 16,  8, 16, 16,  4, 16,  0,  0,  0,  8, 16, /* e */
+    12, 12,  8,  4,  0, 16,  8, 16, 12,  8, 16,  4,  0,  0,  8, 16, /* f */
 };
 
 static int cycles_per_instruction_cb[] = {
@@ -119,9 +120,13 @@ void cpu_reset_state(GbState *s) {
     memset(s->io_lcd_BGPD, 0, sizeof(s->io_lcd_BGPD));
     memset(s->io_lcd_OBPD, 0, sizeof(s->io_lcd_OBPD));
 
-    s->io_timer_DIV_cycles = 0x00;
-    s->TimerClock  = 0x00;
-    s->io_timer_TIMA_cycles = 0x00;
+    // This will differ between GB types.
+    s->InternalClock = 0xABCC;
+    s->TIMAClock = 0x00;
+    s->IsTimerPending = false;
+
+     s->TimerClock  = 0x00;
+
     s->TimerCounter = 0x00;
     s->TimerResetValue = 0x00;
     s->TimerControl = 0x00;
@@ -172,9 +177,8 @@ void cpu_reset_state(GbState *s) {
     s->isSRAMDisabled = true;
 }
 
-static void cpu_handle_interrupts(GbState *s) {
+void cpu_handle_interrupts(GbState *s) {
     u8 interrupts = s->InterruptSwitch & s->InterruptFlags;
-
     if (s->interrupts_master_enabled) {
         for (int i = 0; i < 5; i++) {
             if (interrupts & (1 << i)) {
@@ -195,34 +199,52 @@ static void cpu_handle_interrupts(GbState *s) {
 }
 
 void cpu_timers_step(GbState *s) {
-    u32 freq = s->IsInDoubleSpeedMode ? GB_FREQ : 2 * GB_FREQ;
-    u32 div_cycles_per_tick = freq / GB_DIV_FREQ;
-    s->io_timer_DIV_cycles += s->last_op_cycles;
-    if (s->io_timer_DIV_cycles >= div_cycles_per_tick) {
-        s->io_timer_DIV_cycles %= div_cycles_per_tick;
-        s->TimerClock++;
+    // I /think/ that you're not supposed to trigger the timer interrupt until the next cycle after it's detected.
+    // But I'm not certain.  So this code may be better moved to where IsTimerPending = true instead.  Would be nice to save a check each cycle...
+    if (s->IsTimerPending) {
+        s->TimerCounter = s->TimerResetValue;
+        s->InterruptFlags |= 1 << 2;
+        s->IsTimerPending = false;
     }
 
-    if (s->TimerControl & (1<<2)) { /* Timer enable */
-        s->io_timer_TIMA_cycles += s->last_op_cycles;
-        u32 timer_hz = GB_TIMA_FREQS[s->TimerControl & 0x3];
-        u32 timer_cycles_per_tick = freq / timer_hz;
-        if (s->io_timer_TIMA_cycles >= timer_cycles_per_tick) {
-            s->io_timer_TIMA_cycles %= timer_cycles_per_tick;
+    s->InternalClock += s->last_op_cycles;
+
+    if (s->IsInDoubleSpeedMode) {
+        if (s->InternalClock >= GB_DIV_DOUBLE_CYCLES_PER_TICK) {
+            s->InternalClock = s->InternalClock & GB_DIV_DOUBLE_CYCLES_PER_TICK;
+            s->TimerClock++;
+        }
+    } else {
+        if (s->InternalClock >= GB_DIV_CYCLES_PER_TICK) {
+            s->InternalClock = s->InternalClock & GB_DIV_CYCLES_PER_TICK;
+            s->TimerClock++;
+        }
+    }
+
+    if (s->TimerControl & (1<<2)) { // Timer enable
+        s->TIMAClock += s->last_op_cycles;
+
+        u32 timer_cycles_per_tick = s->IsInDoubleSpeedMode
+            ? GB_TIMA_DOUBLE_CYCLES_PER_TICK[s->TimerControl & 0x3]
+            : GB_TIMA_CYCLES_PER_TICK[s->TimerControl & 0x3]
+        ;
+
+        if (s->TIMAClock >= timer_cycles_per_tick) {
+            s->TIMAClock = s->TIMAClock & timer_cycles_per_tick;
             s->TimerCounter++;
             if (s->TimerCounter == 0) {
-                s->TimerCounter = s->TimerCounter;
-                s->InterruptFlags |= 1 << 2;
+                s->IsTimerPending = true;
             }
         }
     }
 }
 
 void cpu_step(GbState *s) {
-    cpu_handle_interrupts(s);
-
     u32 instruction = mmu_read24(s, PC);
     u8 opCode = instruction & 0xFF;
+    u8 op;
+
+    op = mmu_read(s, s->pc);
 
     s->last_op_cycles = cycles_per_instruction[opCode];
     if (opCode == 0xcb) {

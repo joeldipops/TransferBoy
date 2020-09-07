@@ -105,6 +105,13 @@ static void writeGbcVRAMBank(GbState* s, byte offset, byte value) {
     s->VRAM = s->VRAMBanks + (s->GbcVRAMBank * VRAM_BANK_SIZE); 
 }
 
+/**
+ * Whenever DIV register is written to, it resets.
+ */
+static void writeDiv(GbState* s, byte offset, byte value) {
+    s->TimerClock = 0;
+}
+
 static void writeBiosSwitch(GbState* s, byte offset, byte value) {
     s->in_bios = 0;
     // Blow away the bios.
@@ -149,6 +156,42 @@ static u32 readHram(GbState* s, byte offset) {
     return  READ_24(s->HRAM, offset);
 }
 
+static u32 readSC(GbState* s, byte offset) {
+    return s->HRAM[offset] | 0x7E;
+}
+
+static u32 readTAC(GbState* s, byte offset) {
+    return s->HRAM[offset] | 0xF8;
+}
+
+static u32 readIF(GbState* s, byte offset) {
+    return s->HRAM[offset] | 0xE0;
+}
+
+static u32 readSTAT(GbState* s, byte offset) {
+    return s->HRAM[offset] | 0x80;
+}
+
+static u32 readNR10(GbState* s, byte offset) {
+    return s->HRAM[offset] | 0x80;
+}
+
+static u32 readNR30(GbState* s, byte offset) {
+    return s->HRAM[offset] | 0x7F;
+}
+
+static u32 readNR32(GbState* s, byte offset) {
+    return s->HRAM[offset] | 0x9F;
+}
+
+static u32 readNR41(GbState* s, byte offset) {
+    return s->HRAM[offset] | 0xC0;
+}
+
+static u32 readNR44(GbState* s, byte offset) {
+    return s->HRAM[offset] | 0x3F;
+}
+
 static u32 readJoypadIo(GbState* s, byte offset) {
     // FF00: Joypad
     u8 rv = 0;
@@ -158,17 +201,22 @@ static u32 readJoypadIo(GbState* s, byte offset) {
         rv =  (s->JoypadIo & 0xf0) | (s->io_buttons_buttons & 0x0f);
     else
         rv = (s->JoypadIo & 0xf0) | (s->io_buttons_buttons & 0x0f);
-    return rv;
+    return rv | 0xC0;
 }
 
 // FF4F GbcVRAMBank
 static u32 readGbcVRAMBank(GbState* s, byte offset) {
-    return (s->GbcVRAMBank & 1);
+    // TODO - install instead of test.
+    if (s->Cartridge.IsGbcSupported) {
+        return s->GbcVRAMBank & 1;
+    } else {
+        return 0xFF;
+    }
 }
 
 // FF69 Background Palette data
 static u32 readBackgroundPaletteData(GbState* s, byte offset) {
-    return (s->io_lcd_BGPD[s->GbcBackgroundPaletteIndexRegister & 0x3f]);
+    return s->io_lcd_BGPD[s->GbcBackgroundPaletteIndexRegister & 0x3f];
 }
 
 // FF6B Sprite Palette data
@@ -189,6 +237,10 @@ static void writeNone(GbState* s, u16 location, byte value) {
  */
 static u32 readNone(GbState* s, u16 location) {
     return 0xFFFFFFFF;
+}
+
+static u32 readNoneH(GbState* s, byte offset) {
+    return 0xFF;
 }
 
 /**
@@ -257,8 +309,8 @@ static void mbc1writeRom23(GbState* s, u16 location, byte value) {
     
     byte bank = getMbc1RomBank(value, s->RomBankUpper, s->Cartridge.RomBankCount);
 
-    s->RomBankLower = bank & 0x1F;    
-    s->ROMX = s->Cartridge.Rom.Data + (bank * ROM_BANK_SIZE);    
+    s->RomBankLower = bank & 0x1F;
+    s->ROMX = s->Cartridge.Rom.Data + (bank * ROM_BANK_SIZE);
 }
 
 /**
@@ -352,7 +404,6 @@ static void mbc1writeRom45(GbState* s, u16 location, byte value) {
             s->ROM0 = s->Cartridge.Rom.Data + (bank0) * ROM_BANK_SIZE;            
         }
 
-
         // Swap in new RAM bank.
         if (!s->isSRAMDisabled) {
             s->SRAM = s->Cartridge.Ram.Data + s->SRAMBankNumber * SRAM_BANK_SIZE;
@@ -383,7 +434,7 @@ static void mbc5writeRom45(GbState* s, u16 location, byte value) {
 
     // Swap in new RAM bank.
     if (!s->isSRAMDisabled) {
-        s->SRAM = s->Cartridge.Ram.Data + s->SRAMBankNumber * SRAM_BANK_SIZE;    
+        s->SRAM = s->Cartridge.Ram.Data + s->SRAMBankNumber * SRAM_BANK_SIZE;
     }   
 }
 
@@ -418,7 +469,7 @@ static void mbc1writeRom67(GbState* s, u16 location, byte value) {
         s->ROM0 = s->Cartridge.Rom.Data;
     } else {
         if (!s->isSRAMDisabled) {
-            s->SRAM = s->Cartridge.Ram.Data + s->SRAMBankNumber * SRAM_BANK_SIZE;    
+            s->SRAM = s->Cartridge.Ram.Data + s->SRAMBankNumber * SRAM_BANK_SIZE;
         }
     }
 }
@@ -497,7 +548,7 @@ static void writeWRAM0(GbState* s, u16 location, byte value) {
  * 0xD000 - 0xDFFF: Switchable RAM
  */
 static void writeWRAMX(GbState* s, u16 location, byte value) {
-    s->WRAMX[location - 0xd000] = value; 
+    s->WRAMX[location - 0xd000] = value;
 }
 
 /**
@@ -642,7 +693,7 @@ void mmu_push16(GbState *s, u16 value) {
 typedef void (*mmuWriteHramOperation)(GbState*, byte, byte);
 static mmuWriteHramOperation mmuWriteHramTable[] = {
 //        0         1         2         3         4         5         6         7         8         9         A         B         C         D         E         F   
-/*   0 */ writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,
+/*   0 */ writeHram,writeHram,writeHram,writeHram,writeDiv,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,
 /*   1 */ writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,
 /*   2 */ writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeAudioChannelSwitch,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,
 /*   3 */ writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,writeHram,
@@ -663,14 +714,14 @@ static mmuWriteHramOperation mmuWriteHramTable[] = {
 typedef u32 (*mmuReadHramOperation)(GbState*, u8);
 static mmuReadHramOperation mmuReadHramTable[] = {
 //        0         1         2         3         4         5         6         7         8         9         A         B         C         D         E         F       
-/*   0 */ readJoypadIo, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, 
-/*   1 */ readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, 
-/*   2 */ readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, 
+/*   0 */ readJoypadIo, readHram,readSC,readNoneH, readHram, readHram, readHram, readTAC, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readIF, 
+/*   1 */ readNR10, readHram, readHram, readHram, readHram, readNoneH, readHram, readHram, readHram, readHram, readNR30, readHram, readNR32, readHram, readHram, readNoneH, 
+/*   2 */ readNR41, readHram, readHram, readNR44, readHram, readHram, readHram, readNoneH, readNoneH, readNoneH, readHram, readHram, readHram, readHram, readHram, readHram, 
 /*   3 */ readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, 
-/*   4 */ readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readGbcVRAMBank, 
-/*   5 */ readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, 
-/*   6 */ readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readBackgroundPaletteData, readHram, readSpritePaletteData, readHram, readHram, readHram, readHram, 
-/*   7 */ readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, 
+/*   4 */ readHram, readSTAT, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readNoneH, readNoneH, readNoneH, readGbcVRAMBank, 
+/*   5 */ readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, 
+/*   6 */ readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readBackgroundPaletteData, readNoneH, readSpritePaletteData, readNoneH, readNoneH, readNoneH, readNoneH, 
+/*   7 */ readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, readNoneH, 
 /*   8 */ readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, 
 /*   9 */ readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, 
 /*   A */ readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, readHram, 

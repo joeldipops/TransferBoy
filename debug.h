@@ -2,6 +2,16 @@
 #define DEBUG_INCLUDED
 
 #include "config.h"
+#include "state.h"
+
+void startDebugging();
+void stopDebugging();
+void isDebugging();
+
+/**
+ * Print current instruction for debugging.
+ */
+void debug(GbState *s, string message);
 
 #ifdef IS_PROFILING
 
