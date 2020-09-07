@@ -614,7 +614,7 @@ typedef struct gb_state {
     u16 InternalClock;
 
     // Not actually a thing in a GB, it's actually a complicated algorithm based on bits 3 through 9 of InternalClock
-    u16 TIMAClock;
+    u8 TIMAClock;
     bool IsTimerPending;
 
     u8 io_buttons_dirs;
