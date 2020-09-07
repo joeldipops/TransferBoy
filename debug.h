@@ -5,6 +5,8 @@
 #include "state.h"
 
 void startDebugging();
+void stopDebugging();
+void isDebugging();
 
 /**
  * Print current instruction for debugging.

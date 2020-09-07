@@ -9,32 +9,25 @@ void startDebugging() {
     IsDebugging = true;
 }
 
+void stopDebugging() {
+    IsDebugging = false;
+}
+
 #ifdef IS_DEBUGGING
+
+static long offset = 0;
+
+// This is SRAM, which is only 0x8000 bytes. I know I can write to the entire cart-space, but I don't know if CEN64 can give me the related log file.
+#define LOGFILE = 0xA8000000;
 
 /**
  * If in debugging mode, print gb registers and message then wait for input.
  */
 void debug(GbState *s, string message) {
     if (IsDebugging) {
-        printRegisters(s);
-        bool isPaused = true;
-        while(isPaused) {
-            controller_scan();
-            N64ControllerState input = get_keys_pressed();
-            if (!input.c[0].start) {
-                isPaused = false;
-            }
-        }
-
-        logAndPauseFrame(0, message);
-        isPaused = true;
-        while(isPaused) {
-            controller_scan();
-            N64ControllerState input = get_keys_pressed();
-            if (!input.c[0].start) {
-                isPaused = false;
-            }
-        }
+        u32 length = strlen(message);
+        dma_write(message, 0xA8000000 + offset, length);
+        offset += length;
     }
 }
 

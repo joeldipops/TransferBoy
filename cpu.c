@@ -200,8 +200,6 @@ void cpu_handle_interrupts(GbState *s) {
     }
 }
 
-bool resetNextCycle = false;
-
 void cpu_timers_step(GbState *s) {
     if (s->IsTimerPending) {
         s->TimerCounter = s->TimerResetValue;
