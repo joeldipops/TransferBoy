@@ -11,7 +11,7 @@ void isDebugging();
 /**
  * Print current instruction for debugging.
  */
-void debug(GbState *s, string message);
+void debug(string message, ...);
 
 #ifdef IS_PROFILING
 

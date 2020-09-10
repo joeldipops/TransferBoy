@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdarg.h>
 #include "debug.h"
 #include "state.h"
 #include "logger.h"
@@ -17,14 +18,29 @@ void stopDebugging() {
 
 static long offset = 0;
 
-// This is SRAM, which is only 0x8000 bytes. I know I can write to the entire cart-space, but I don't know if CEN64 can give me the related log file.
+// This is SRAM, which is only 0x8000 bytes. I know somehow I can write to the entire cart-space, but I don't know if CEN64 can give me the related log file.
 #define LOGFILE = 0xA8000000;
 
+
 /**
- * If in debugging mode, print gb registers and message then wait for input.
+ * If in debugging mode, write to cart-space which can be reviewed later.
  */
-void debug(GbState *s, string message) {
-    if (IsDebugging) {
+void debug(string message, ...) {
+    if (IsDebugging && offset < 0x8000) {
+        va_list args;
+        va_start(args, message);
+
+        vsprintf(message, message, args);
+
+        va_end(args);
+
+        // Need to read up on how to actually log to cart-space before this is any use
+        // The below seems correct, but (in cen64 at least) results in all kind of wacky
+        // output in that memory range.
+        // 0xA8... is the 0x8000 byte SRAM, it's better I write to a different, arbitrarily large space on the SD-card,
+        // But I need to do more research before I figure out how to do that.
+        //logAndPauseFrame(rootState.Frame, message);
+
         u32 length = strlen(message);
         dma_write(message, 0xA8000000 + offset, length);
         offset += length;
