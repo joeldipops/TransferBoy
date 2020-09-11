@@ -33,7 +33,7 @@ void emu_step(PlayerState* state) {
     UPDATE_PROFILE(PROFILE_LCD);
     mmu_step(s);
     UPDATE_PROFILE(PROFILE_MMU);
-    cpu_timers_step(s);
+    s->TimersStep(s);
     UPDATE_PROFILE(PROFILE_TIMERS);
 }
 

@@ -51,7 +51,7 @@ void ppuInit(PlayerState* state) {
 void ppuStep(PlayerState* state) {
     if (state->EmulationState.lcd_entered_hblank) {
 
-        if (state->EmulationState.CurrentLine >= GB_LCD_HEIGHT) { /* VBlank */
+        if (state->EmulationState.CurrentLine >= GB_LCD_HEIGHT) { // VBlank
             return;
         }
 

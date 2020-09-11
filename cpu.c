@@ -79,6 +79,158 @@ void cpu_init_emu_cpu_state(GbState *s) {
     s->emu_cpu_state->reg16s_lut[3] = &s->reg16.AF;
 }
 
+void cpu_handle_interrupts(GbState *s) {
+    u8 interrupts = s->InterruptSwitch & s->InterruptFlags;
+    if (s->interrupts_master_enabled) {
+        for (int i = 0; i < 5; i++) {
+            if (interrupts & (1 << i)) {
+                s->interrupts_master_enabled = 0;
+                s->InterruptFlags ^= 1 << i;
+
+                mmu_push16(s, s->pc);
+
+                s->pc = i * 0x8 + 0x40;
+
+                s->halt_for_interrupts = 0;
+                return;
+            }
+        }
+    } else if (interrupts) {
+        s->halt_for_interrupts = 0;
+    }
+}
+
+/**
+ * Updates the timer registers and sets the timer interrupt.
+ */
+void timersStep(GbState* s) {
+    s->InternalClock += s->last_op_cycles;
+
+    if (s->InternalClock >= GB_DIV_CYCLES_PER_TICK) {
+        s->InternalClock = s->InternalClock & GB_DIV_CYCLES_PER_TICK;
+        s->TimerClock++;
+    }
+
+    if (s->TimerControl & (1<<2)) { // Timer enable
+        s->TIMAClock += s->last_op_cycles;
+
+        u32 timer_cycles_per_tick = GB_TIMA_CYCLES_PER_TICK[s->TimerControl & 0x3];
+
+        if (s->TIMAClock >= timer_cycles_per_tick) {
+            s->TIMAClock = s->TIMAClock & timer_cycles_per_tick;
+            s->TimerCounter++;
+            if (s->TimerCounter == 0) {
+                s->TimersStep = timersStepPendingInterrupt;
+            }
+        }
+    }
+}
+
+/**
+ * Updates the timer registers and sets the timer interrupt when in GBC double speed mode.
+ */
+void timersStepDouble(GbState* s) {
+    s->InternalClock += s->last_op_cycles;
+
+    if (s->InternalClock >= GB_DIV_DOUBLE_CYCLES_PER_TICK) {
+        s->InternalClock = s->InternalClock & GB_DIV_DOUBLE_CYCLES_PER_TICK;
+        s->TimerClock++;
+    }
+
+    if (s->TimerControl & (1<<2)) { // Timer enable
+        s->TIMAClock += s->last_op_cycles;
+
+        u32 timer_cycles_per_tick = GB_TIMA_DOUBLE_CYCLES_PER_TICK[s->TimerControl & 0x3];
+
+        if (s->TIMAClock >= timer_cycles_per_tick) {
+            s->TIMAClock = s->TIMAClock & timer_cycles_per_tick;
+            s->TimerCounter++;
+            if (s->TimerCounter == 0) {
+                s->TimersStep = timersStepPendingInterrupt;
+            }
+        }
+    }
+}
+
+/**
+ * Called the cycle after the timer overflows. Sets the interrupt flag to actually trigger.
+ * Then continues with the timer step as normal.
+ */
+void timersStepPendingInterrupt(GbState* s) {
+    // I /think/ that you're not supposed to trigger the timer interrupt until the next cycle after it's detected.
+    // But I'm not certain.  So this code may be better moved to where IsTimerPending = true instead.  Would be nice to save a check each cycle...
+    s->TimerCounter = s->TimerResetValue;
+    s->InterruptFlags |= 1 << 2;
+
+    if (s->IsInDoubleSpeedMode) {
+        s->TimersStep = timersStepDouble;
+    } else {
+        s->TimersStep = timersStep;
+    }
+
+    s->TimersStep(s);
+}
+
+// Leaving this here for now because it magically makes the code run better...because of alignment or something...
+void cpu_timers_step(GbState *s) {
+    // I /think/ that you're not supposed to trigger the timer interrupt until the next cycle after it's detected.
+    // But I'm not certain.  So this code may be better moved to where IsTimerPending = true instead.  Would be nice to save a check each cycle...
+    //if (s->IsTimerPending) {
+        s->TimerCounter = s->TimerResetValue;
+        s->InterruptFlags |= 1 << 2;
+        ;//s->IsTimerPending = false;
+    //}
+
+    s->InternalClock += s->last_op_cycles;
+
+    if (s->IsInDoubleSpeedMode) {
+        if (s->InternalClock >= GB_DIV_DOUBLE_CYCLES_PER_TICK) {
+            s->InternalClock = s->InternalClock & GB_DIV_DOUBLE_CYCLES_PER_TICK;
+            s->TimerClock++;
+        }
+    } else {
+        if (s->InternalClock >= GB_DIV_CYCLES_PER_TICK) {
+            s->InternalClock = s->InternalClock & GB_DIV_CYCLES_PER_TICK;
+            s->TimerClock++;
+        }
+    }
+
+    if (s->TimerControl & (1<<2)) { // Timer enable
+        s->TIMAClock += s->last_op_cycles;
+
+        u32 timer_cycles_per_tick = s->IsInDoubleSpeedMode
+            ? GB_TIMA_DOUBLE_CYCLES_PER_TICK[s->TimerControl & 0x3]
+            : GB_TIMA_CYCLES_PER_TICK[s->TimerControl & 0x3]
+        ;
+
+        if (s->TIMAClock >= timer_cycles_per_tick) {
+            s->TIMAClock = s->TIMAClock & timer_cycles_per_tick;
+            s->TimerCounter++;
+            if (s->TimerCounter == 0) {
+                ;//
+            }
+        }
+    }
+}
+
+void cpu_step(GbState *s) {
+    u8 op;
+
+    op = mmu_read(s, s->pc);
+
+    s->last_op_cycles = cycles_per_instruction[op];
+    if (op == 0xcb) {
+        u8 extOp = mmu_read(s, s->pc + 1);
+        s->last_op_cycles = cycles_per_instruction_cb[extOp];
+    }
+
+    if (!s->halt_for_interrupts) {
+        // Move PC forward, then go and run the operation.
+        s->pc++;
+        opTable[op](s, op);
+    }
+}
+
 /* Resets the CPU state (registers and such) to the state at bootup. */
 void cpu_reset_state(GbState *s) {
     s->reg16.AF = 0x01B0;
@@ -125,7 +277,7 @@ void cpu_reset_state(GbState *s) {
     // This will differ between GB types.
     s->InternalClock = 0xABCC;
     s->TIMAClock = 0x00;
-    s->IsTimerPending = false;
+    s->TimersStep = timersStep;
 
      s->TimerClock  = 0x00;
 
@@ -177,84 +329,4 @@ void cpu_reset_state(GbState *s) {
     s->RomBankUpper = 0;
     s->RomRamSelect = ROM_SELECT;
     s->isSRAMDisabled = true;
-}
-
-void cpu_handle_interrupts(GbState *s) {
-    u8 interrupts = s->InterruptSwitch & s->InterruptFlags;
-    if (s->interrupts_master_enabled) {
-        for (int i = 0; i < 5; i++) {
-            if (interrupts & (1 << i)) {
-                s->interrupts_master_enabled = 0;
-                s->InterruptFlags ^= 1 << i;
-
-                mmu_push16(s, s->pc);
-
-                s->pc = i * 0x8 + 0x40;
-
-                s->halt_for_interrupts = 0;
-                return;
-            }
-        }
-    } else if (interrupts) {
-        s->halt_for_interrupts = 0;
-    }
-}
-
-void cpu_timers_step(GbState *s) {
-    // I /think/ that you're not supposed to trigger the timer interrupt until the next cycle after it's detected.
-    // But I'm not certain.  So this code may be better moved to where IsTimerPending = true instead.  Would be nice to save a check each cycle...
-    if (s->IsTimerPending) {
-        s->TimerCounter = s->TimerResetValue;
-        s->InterruptFlags |= 1 << 2;
-        s->IsTimerPending = false;
-    }
-
-    s->InternalClock += s->last_op_cycles;
-
-    if (s->IsInDoubleSpeedMode) {
-        if (s->InternalClock >= GB_DIV_DOUBLE_CYCLES_PER_TICK) {
-            s->InternalClock = s->InternalClock & GB_DIV_DOUBLE_CYCLES_PER_TICK;
-            s->TimerClock++;
-        }
-    } else {
-        if (s->InternalClock >= GB_DIV_CYCLES_PER_TICK) {
-            s->InternalClock = s->InternalClock & GB_DIV_CYCLES_PER_TICK;
-            s->TimerClock++;
-        }
-    }
-
-    if (s->TimerControl & (1<<2)) { // Timer enable
-        s->TIMAClock += s->last_op_cycles;
-
-        u32 timer_cycles_per_tick = s->IsInDoubleSpeedMode
-            ? GB_TIMA_DOUBLE_CYCLES_PER_TICK[s->TimerControl & 0x3]
-            : GB_TIMA_CYCLES_PER_TICK[s->TimerControl & 0x3]
-        ;
-
-        if (s->TIMAClock >= timer_cycles_per_tick) {
-            s->TIMAClock = s->TIMAClock & timer_cycles_per_tick;
-            s->TimerCounter++;
-            if (s->TimerCounter == 0) {
-                s->IsTimerPending = true;
-            }
-        }
-    }
-}
-
-void cpu_step(GbState *s) {
-    u8 op;
-
-    op = mmu_read(s, s->pc);
-
-    s->last_op_cycles = cycles_per_instruction[op];
-    if (op == 0xcb) {
-        u8 extOp = mmu_read(s, s->pc + 1);
-        s->last_op_cycles = cycles_per_instruction_cb[extOp];
-    }
-
-    if (!s->halt_for_interrupts) {
-        // Move PC forward, then go and run the operation.
-        s->pc++;
-        opTable[op](s, op);
-    }
 }

@@ -675,8 +675,14 @@ void stop(GbState* s, byte op) { DEBUG("stop");
 
         if (s->IsInDoubleSpeedMode) {
             s->io_lcd_mode_cycles_left *= 2;
+            if (s->TimersStep != timersStepPendingInterrupt) {
+                s->TimersStep = timersStepDouble;
+            }
         } else {
             s->io_lcd_mode_cycles_left /= 2;
+            if (s->TimersStep != timersStepPendingInterrupt) {
+                s->TimersStep = timersStep;
+            }
         }
 
     } else {
