@@ -103,6 +103,8 @@ typedef enum {
 
 struct gb_state;
 
+typedef void (*emuStep)(struct gb_state*);
+
 typedef void (*mmuWriteOperation)(struct gb_state*, u16, u8);
 typedef u32 (*mmuReadOperation)(struct gb_state*, u16);
 
@@ -615,7 +617,7 @@ typedef struct gb_state {
 
     // Not actually a thing in a GB, it's actually a complicated algorithm based on bits 3 through 9 of InternalClock
     u8 TIMAClock;
-    bool IsTimerPending;
+    emuStep TimersStep;
 
     u8 io_buttons_dirs;
     u8 io_buttons_buttons;

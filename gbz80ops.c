@@ -2419,8 +2419,14 @@ void stop(GbState* s, u32 instruction) {
 
         if (s->IsInDoubleSpeedMode) {
             s->io_lcd_mode_cycles_left *= 2;
+            if (s->TimersStep != timersStepPendingInterrupt) {
+                s->TimersStep = timersStepDouble;
+            }
         } else {
             s->io_lcd_mode_cycles_left /= 2;
+            if (s->TimersStep != timersStepPendingInterrupt) {
+                s->TimersStep = timersStep;
+            }
         }
 
     } else {
