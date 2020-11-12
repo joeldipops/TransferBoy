@@ -51,7 +51,7 @@ The rumble pak is pretty simple.  There are only two addresses and three values 
 ## Transfer Pak Details
 
 ### Memory Addresses and Checksum
-Although TPak addresses are presented as 16bit, the lower five bits are not part of the address but are instead reserved for a CRC Checksum.  This is why the device is read from and written to in 32byte chunks because that's as precise as the address can get.  I've determined that calculating the checksum is not actually necessary to do I/O with the Transfer Pak.  From https://github.com/sanni/cartreader/blob/master/Cart_Reader/N64.ino#L512 the algorithm to calculate the crc seems to be 
+Although TPak addresses are presented as 16bit, the lower five bits are not part of the address but are instead reserved for a Checksum.  This is why the device is read from and written to in 32byte chunks because that's as precise as the address can get.  I've determined that calculating the checksum is not actually necessary to do I/O with the Transfer Pak.  From https://github.com/sanni/cartreader/blob/master/Cart_Reader/N64.ino#L512 the algorithm to calculate the check seems to be 
 
 ```
 for bits 15 -> 5
@@ -62,7 +62,7 @@ for bits 15 -> 5
 --|-|-|-|-|-|-|-|-|-|-
  0x01|0x1A|0x0D|0x1C|0x0E|0x07|0x19|0x16|0x0B|0x1F|0x15
 
-I haven't tested this yet...
+Bigbass from the N64 discord has tested and confirmed this.
 
 ### Address Space Details
 
